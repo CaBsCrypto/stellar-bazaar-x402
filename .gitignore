@@ -1,0 +1,11 @@
+node_modules
+.next
+out
+.env*
+!.env.example
+*.tsbuildinfo
+graphify-out/
+*.log
+npm-debug.log*
+work/
+outputs/
