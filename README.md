@@ -4,6 +4,10 @@
 
 **Spanish-first discovery for paid HTTP APIs and MCP tools on Stellar.**
 
+**Live MVP:** [stellar-bazaar-x402.vercel.app](https://stellar-bazaar-x402.vercel.app) · [Publisher Kit](https://stellar-bazaar-x402.vercel.app/publish)
+
+The hosted site is a public preview of the same local-MVP scope: discovery, conformance, provider drafts, and the read-only reference endpoint. It does **not** enable live x402 payments, wallets, signatures, or Stellar transactions.
+
 Stellar Bazaar x402 is an open-source proof of concept for finding paid services, inspecting their machine-readable terms, and eventually invoking them through x402 settlement on Stellar. Bazaar indexes **services and callable routes**—not people, agent profiles, freelancers, or generic skills.
 
 > **Current status:** local Instawards MVP. Discovery, catalogue navigation, and the deterministic read-only Swap Risk Quote endpoint work locally. There is no wallet, payment, signature, facilitator call, chain write, Testnet transaction, or financial advice. `@x402/stellar` exact payment on Testnet is the next milestone.
@@ -126,7 +130,7 @@ npm run build
 
 ## Deployment
 
-No hosted deployment exists yet. Run locally using the steps above. A public deployment requires a separate explicit action to select a host/project, review environment settings, and deploy; this repository does not invent or advertise a pending URL.
+The public MVP is deployed at [https://stellar-bazaar-x402.vercel.app](https://stellar-bazaar-x402.vercel.app) and connected to this GitHub repository. Production deployments track the repository through Vercel Git integration. You can also run the exact project locally using the steps above.
 
 ## License
 
