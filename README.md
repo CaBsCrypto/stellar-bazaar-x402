@@ -21,6 +21,9 @@ It is **not** a wallet, escrow, freelancer marketplace, Passport, agent-profile 
 - One real local reference provider: `GET /api/reference/swap-risk`.
 - Deterministic read-only Swap Risk Quote with structured `200` and `400` responses.
 - Three conspicuous catalogue fixtures to demonstrate the target breadth.
+- Deterministic natural-language ranking with visible scores/reasons and structured filters.
+- Local Publisher Kit at `/publish` that validates and generates a copyable service-card manifest.
+- Discovery APIs at `/api/discovery/resources` and `/api/discovery/search` with MCP-ready structured responses.
 - No payment or network side effects.
 
 The reference provider is intentionally in-process for delivery speed and is marked for extraction into a separate service after the MVP.
@@ -78,6 +81,15 @@ Open `http://localhost:3000`. The working service is at `/resources/swap-risk-qu
 GET /api/reference/swap-risk?pair=XLM%2FUSDC&amount=2500&side=buy
 ```
 
+Providers can open `/publish` to create a local, non-indexed draft. They retain pricing, payment destination, service terms, and responsibility for delivering results. Automatic indexing is future work and will require a valid x402 discovery extension—not a form submission.
+
+Discovery examples:
+
+```text
+GET /api/discovery/resources?kind=http&scheme=exact&maxPrice=0.03
+GET /api/discovery/search?query=riesgo%20swap&kind=http
+```
+
 Validation:
 
 ```bash
@@ -110,6 +122,11 @@ npm run build
 - [Architecture diagrams](docs/ARCHITECTURE.md)
 - [Proposal outline](docs/PROPOSAL_OUTLINE.md)
 - [Discovery contract draft](docs/DISCOVERY_CONTRACT.md)
+- [MCP discovery surface](docs/MCP_DISCOVERY.md)
+
+## Deployment
+
+No hosted deployment exists yet. Run locally using the steps above. A public deployment requires a separate explicit action to select a host/project, review environment settings, and deploy; this repository does not invent or advertise a pending URL.
 
 ## License
 

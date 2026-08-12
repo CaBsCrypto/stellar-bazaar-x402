@@ -1,0 +1,2 @@
+import type {PaidService,ServiceCard} from "./types";
+export function toServiceCard(s:PaidService):ServiceCard{return {version:"bazaar.service-card/v0",id:s.id,name:s.name,description:s.description,kind:s.kind,url:s.routeTemplate.startsWith("/")?"http://localhost:3000":"https://demo.bazaar.invalid",routeTemplate:s.routeTemplate,input:s.input.map(name=>({name,type:name==="amount"?"number":"string",required:true})),network:s.network,payment:{...s.payment,destination:"GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF"},provider:{name:s.provider},tags:s.tags}}

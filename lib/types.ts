@@ -19,6 +19,24 @@ export interface PaidService {
   featured?: boolean;
 }
 
+export interface ServiceCard {
+  version: "bazaar.service-card/v0";
+  id: string;
+  name: string;
+  description: string;
+  kind: ServiceKind;
+  url: string;
+  routeTemplate: string;
+  input: Array<{ name: string; type: "string" | "number" | "boolean"; required: boolean }>;
+  network: "stellar:testnet";
+  payment: { scheme: PaymentScheme; asset: string; amount: string; destination: string };
+  provider: { name: string };
+  tags: string[];
+}
+
+export interface ValidationOutcome { rule: string; status: "pass" | "warning" | "fail"; reason: string }
+export interface RankedService { service: PaidService; score: number; reasons: string[] }
+
 export interface StructuredError {
   code: string;
   message: string;
