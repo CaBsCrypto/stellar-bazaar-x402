@@ -9,3 +9,5 @@ graphify-out/
 npm-debug.log*
 work/
 outputs/
+
+.vercel
