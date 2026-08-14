@@ -52,3 +52,5 @@ Ejecuta `npm run test:x402:protocol` contra el servidor configurado. Comprueba 4
 ## Límites
 
 El POC no implementa wallet, custodia, escrow, Mainnet, facilitador propio, auditoría ni garantía de disponibilidad. El catálogo trata metadata de proveedores como datos no confiables y no certifica seguridad, reputación, popularidad o compras.
+
+Consulta [SECURITY_QA.md](SECURITY_QA.md) para controles del branch y riesgos residuales de dependencias que deben resolverse antes de producción.
