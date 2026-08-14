@@ -1,0 +1,2 @@
+import{HTTPFacilitatorClient}from"@x402/core/server";import{X402_FACILITATOR_URL,requireServerX402Config}from"./x402-config";
+let client:HTTPFacilitatorClient|undefined;export function getFacilitatorClient(){if(!client){const{apiKey}=requireServerX402Config(),auth={Authorization:`Bearer ${apiKey}`};client=new HTTPFacilitatorClient({url:X402_FACILITATOR_URL,createAuthHeaders:async()=>({verify:auth,settle:auth,supported:auth})})}return client}
