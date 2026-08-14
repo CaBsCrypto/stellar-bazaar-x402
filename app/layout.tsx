@@ -3,6 +3,7 @@ import "./globals.css";
 import "./reference.css";
 import "./product.css";
 import "./publisher.css";
+import "./testnet.css";
 
 export const metadata: Metadata = {
   title: "Stellar Bazaar x402 — Discovery POC",

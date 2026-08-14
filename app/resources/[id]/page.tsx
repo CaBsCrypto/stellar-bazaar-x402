@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PaymentDemo } from "@/components/PaymentDemo";
+import { TestnetPaymentDemo } from "@/components/TestnetPaymentDemo";
 import { getService, services } from "@/lib/catalog";
 
 export function generateStaticParams() { return services.map(({ id }) => ({ id })); }
@@ -26,7 +27,7 @@ export default async function ResourcePage({ params }: { params: Promise<{ id: s
           <div className="io-grid"><div><span>INPUT</span>{service.input.map((field) => <code key={field}>{field}: string</code>)}</div><div><span>OUTPUT</span>{service.output.map((field) => <code key={field}>{field}</code>)}</div></div>
           <aside className="disclaimer"><strong>Importante</strong> Este recurso, proveedor, precio y respuesta son fixtures. La demo no ofrece recomendación financiera ni prueba compatibilidad x402/upstream.</aside>
         </section>
-        <PaymentDemo service={service} />
+        <div><PaymentDemo service={service} />{service.id==="swap-risk-quote"&&<TestnetPaymentDemo/>}</div>
       </div>
     </main>
   );

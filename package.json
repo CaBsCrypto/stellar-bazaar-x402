@@ -8,8 +8,17 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit"
+    ,"x402:setup-wallets": "node scripts/setup-testnet-wallets.mjs"
+    ,"x402:test-client": "node scripts/test-x402-client.mjs"
+    ,"x402:fetch-facilitator-key": "node scripts/fetch-testnet-facilitator-key.mjs"
+    ,"test:x402:protocol": "node scripts/test-x402-protocol.mjs"
   },
   "dependencies": {
+    "@stellar/stellar-sdk": "14.4.2",
+    "@x402/core": "2.20.0",
+    "@x402/express": "2.20.0",
+    "@x402/fetch": "2.20.0",
+    "@x402/stellar": "2.20.0",
     "next": "16.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

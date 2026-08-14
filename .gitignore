@@ -3,6 +3,7 @@ node_modules
 out
 .env*
 !.env.example
+.env.x402.local
 *.tsbuildinfo
 graphify-out/
 *.log

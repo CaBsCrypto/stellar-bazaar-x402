@@ -72,6 +72,8 @@ flowchart LR
 
 ## Run locally
 
+Para reproducir el flujo x402 exact validado exclusivamente en Stellar Testnet, consulta [docs/DEMO_TESTNET.md](docs/DEMO_TESTNET.md). El sitio público actual sigue siendo el MVP de discovery; esta rama no está desplegada en producción.
+
 Requirements: Node.js 20+ and npm.
 
 ```bash
