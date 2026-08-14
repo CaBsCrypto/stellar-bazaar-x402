@@ -7,13 +7,17 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
-    ,"x402:setup-wallets": "node scripts/setup-testnet-wallets.mjs"
-    ,"x402:test-client": "node scripts/test-x402-client.mjs"
-    ,"x402:fetch-facilitator-key": "node scripts/fetch-testnet-facilitator-key.mjs"
-    ,"test:x402:protocol": "node scripts/test-x402-protocol.mjs"
+    "typecheck": "tsc --noEmit",
+    "x402:setup-wallets": "node scripts/setup-testnet-wallets.mjs",
+    "x402:test-client": "node scripts/test-x402-client.mjs",
+    "x402:fetch-facilitator-key": "node scripts/fetch-testnet-facilitator-key.mjs",
+    "test:x402:protocol": "node scripts/test-x402-protocol.mjs",
+    "test:e2e:external": "node scripts/test-external-provider-e2e.mjs",
+    "test:e2e:external:testnet": "node scripts/e2e-external-provider-testnet.mjs",
+    "test:contract:external:public": "node scripts/test-public-quote-contract.mjs"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@stellar/stellar-sdk": "14.4.2",
     "@x402/core": "2.20.0",
     "@x402/express": "2.20.0",
@@ -21,7 +25,8 @@
     "@x402/stellar": "2.20.0",
     "next": "16.3.1",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "react-dom": "^18.3.1",
+    "zod": "4.1.12"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",

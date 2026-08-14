@@ -1,6 +1,6 @@
-# External provider E2E backlog
+# External provider E2E backlog and status
 
-Proposed branch: `feat/external-provider-e2e`, created only after the security upgrade and x402 branch sequencing is resolved. This document is a plan; it does not change the standalone Quote repository or implement cross-project runtime code.
+Branch: `feat/external-provider-e2e`. The CI/mock profile and Bazaar's external contract/discovery surfaces are implemented without changing the standalone Quote repository. The real external Testnet profile remains blocked because the provider has no deployment and publicly declares payments/MCP transport unavailable.
 
 ## Boundary
 
@@ -50,4 +50,4 @@ Bazaar connects to the standalone Stellar DeFi Quote Service exclusively through
 - Manually gated Testnet walkthrough and sanitized evidence template.
 - Update docs/claim matrix: local CI evidence vs Testnet validation vs public/production availability.
 
-Do not begin until both repositories have clean security baselines and the team approves the exact public provider URL, service-card destination/price and Testnet budget.
+Before enabling the manual settlement runner, require the standalone provider to publish its exact public HTTPS URL and versioned x402 service card with approved destination/price. Re-run security baselines and retain the existing Testnet budget controls.

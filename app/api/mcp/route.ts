@@ -1,0 +1,4 @@
+import{WebStandardStreamableHTTPServerTransport}from"@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";import{createDiscoveryMcpServer}from"@/lib/mcp-discovery-server";
+export const runtime="nodejs";export const dynamic="force-dynamic";
+async function handle(request:Request){const transport=new WebStandardStreamableHTTPServerTransport({sessionIdGenerator:undefined,enableJsonResponse:true});const server=createDiscoveryMcpServer();await server.connect(transport);return transport.handleRequest(request)}
+export const POST=handle;export async function GET(){return Response.json({ok:true,name:"stellar-bazaar-discovery",version:"0.1.0",transport:"streamable-http",mode:"read-only",endpoint:"/api/mcp",paidCall:false,notice:"Use MCP POST requests; this server discovers service cards and never signs or pays."})}export async function DELETE(){return new Response(null,{status:405,headers:{Allow:"GET, POST"}})}

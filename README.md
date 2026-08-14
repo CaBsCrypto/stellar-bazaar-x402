@@ -74,6 +74,8 @@ flowchart LR
 
 Para reproducir el flujo x402 exact validado exclusivamente en Stellar Testnet, consulta [docs/DEMO_TESTNET.md](docs/DEMO_TESTNET.md). El sitio público actual sigue siendo el MVP de discovery; esta rama no está desplegada en producción.
 
+The external-provider sprint adds a truthful contract-only record for the independent Quote repository and a real read-only MCP discovery endpoint. See [external E2E evidence](docs/EXTERNAL_PROVIDER_E2E.md) and [MCP capabilities](docs/MCP_DISCOVERY.md). It does not claim the standalone provider is deployed or x402-enabled.
+
 Requirements: Node.js 20+ and npm.
 
 ```bash
