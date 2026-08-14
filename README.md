@@ -6,6 +6,10 @@
 
 **Live MVP:** [stellar-bazaar-x402.vercel.app](https://stellar-bazaar-x402.vercel.app) · [Publisher Kit](https://stellar-bazaar-x402.vercel.app/publish)
 
+Provider/agent onboarding in this branch: `/onboarding`. Read-only MCP discovery: `/api/mcp` (claim as live only after branch deployment verification). See [agent onboarding](docs/MCP_AGENT_ONBOARDING.md) and [provider onboarding](docs/PROVIDER_ONBOARDING.md).
+
+Future design only: [Workflow Bundles / Paquetes de capacidades](docs/WORKFLOW_BUNDLES_FUTURE.md) describes objective-oriented compositions without claiming orchestration, custody, employment, or paid multi-service execution.
+
 The hosted site is a public preview of the same local-MVP scope: discovery, conformance, provider drafts, and the read-only reference endpoint. It does **not** enable live x402 payments, wallets, signatures, or Stellar transactions.
 
 Stellar Bazaar x402 is an open-source proof of concept for finding paid services, inspecting their machine-readable terms, and eventually invoking them through x402 settlement on Stellar. Bazaar indexes **services and callable routes**—not people, agent profiles, freelancers, or generic skills.

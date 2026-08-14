@@ -1,0 +1,1 @@
+import{NextResponse}from"next/server";import{pilotCapabilityCard}from"@/lib/pilot-cards";export function GET(){return NextResponse.json({ok:true,capabilities:pilotCapabilityCard},{headers:{"Cache-Control":"public, max-age=60"}})}
