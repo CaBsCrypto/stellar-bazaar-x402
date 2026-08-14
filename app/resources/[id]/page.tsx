@@ -6,8 +6,9 @@ import { getService, services } from "@/lib/catalog";
 
 export function generateStaticParams() { return services.map(({ id }) => ({ id })); }
 
-export default function ResourcePage({ params }: { params: { id: string } }) {
-  const service = getService(params.id);
+export default async function ResourcePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const service = getService(id);
   if (!service) notFound();
   return (
     <main>
