@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {Catalog} from "@/components/Catalog";
+import {WorkflowShowcase} from "@/components/WorkflowShowcase";
 
 const buyerSteps=[
   ["01","Descubre","Busca APIs HTTP y tools MCP por intención y filtros."],
@@ -16,12 +17,14 @@ const providerSteps=[
 
 export default function Home(){return <main>
   <div className="mock-banner">MVP LOCAL · SWAP RISK QUOTE ES READ-ONLY Y REAL · PAGOS x402 / STELLAR AÚN NO IMPLEMENTADOS</div>
-  <nav className="nav shell"><Link href="/" className="brand"><span>✦</span> Stellar Bazaar <sup>x402</sup></Link><div className="nav-links"><a href="#producto">Qué es</a><a href="#catalogo">Catálogo</a><a href="#flujos">Flujos</a><Link href="/publish">Publica tu servicio</Link><a href="https://github.com/CaBsCrypto/stellar-bazaar-x402">GitHub ↗</a></div><span className="network-pill"><i/> Local MVP</span></nav>
+  <nav className="nav shell"><Link href="/" className="brand"><span>✦</span> Stellar Bazaar <sup>x402</sup></Link><div className="nav-links"><a href="#producto">Qué es</a><a href="#catalogo">Catálogo</a><a href="#workflows">Workflows</a><a href="#flujos">Flujos</a><Link href="/publish">Publica tu servicio</Link><a href="https://github.com/CaBsCrypto/stellar-bazaar-x402">GitHub ↗</a></div><span className="network-pill"><i/> Local MVP</span></nav>
   <header className="hero shell"><div className="hero-copy"><span className="kicker">DISCOVERY LAYER FOR PAID SERVICES ON STELLAR</span><h1>Encuentra el servicio.<br/><em>Entiende antes de pagar.</em></h1><p>Un catálogo Stellar-native de APIs HTTP y herramientas MCP pagadas. El MVP demuestra discovery y una llamada local real; x402 exact en Testnet es el siguiente paso.</p><div className="hero-actions"><Link className="primary" href="/resources/swap-risk-quote">Probar Swap Risk Quote →</Link><a className="ghost" href="#catalogo">Explorar catálogo</a></div><div className="trust-line"><span>Servicios, no perfiles</span><span>Metadata visible</span><span>Sin custodia ni firma</span></div></div><div className="orbital" aria-label="Flujo conceptual de discovery"><div className="orbit orbit-one"><span>HTTP</span></div><div className="orbit orbit-two"><span>MCP</span></div><div className="core"><small>DISCOVER</small><strong>✦</strong><span>x402 future</span></div><div className="floating quote">HOY<br/><b>LOCAL API ✓</b></div><div className="floating settle">DESPUÉS<br/><b>TESTNET x402</b></div></div></header>
 
   <section className="definition shell" id="producto"><div><span className="kicker">UNA FRONTERA CLARA</span><h2>Bazaar indexa servicios pagados.</h2><p>Ayuda a buyers y agentes a encontrar rutas invocables, comparar metadata relevante y llegar al proveedor correcto.</p><Link href="/resources/swap-risk-quote" className="text-link">Ver un recurso funcionando →</Link></div><div className="definition-grid"><article className="yes"><span>SÍ ES</span><strong>Discovery + catálogo</strong><p>Service cards, búsqueda, filtros, contratos de entrada/salida y requisitos de pago declarados.</p></article><article className="no"><span>NO ES</span><strong>Wallet ni marketplace de perfiles</strong><p>No custodia, no firma, no escrow, no Passport y no contrata personas o agentes.</p></article></div></section>
 
   <div className="shell"><Catalog/></div>
+
+  <WorkflowShowcase/>
 
   <section className="journeys shell" id="flujos"><div className="section-heading"><div><span className="kicker">DOS CAMINOS, UN CATÁLOGO</span><h2>Cómo entra y sale valor.</h2></div><p>Los pasos futuros están marcados explícitamente.</p></div><div className="journey-grid"><div className="journey"><div className="journey-title"><span>BUYER / AGENT</span><h3>De intención a resultado</h3></div>{buyerSteps.map(([n,title,copy],i)=><article key={n} className={i===2?"future-step":""}><b>{n}</b><div><strong>{title}</strong><p>{copy}</p></div>{i===2&&<em>FUTURO TESTNET</em>}</article>)}</div><div className="journey provider"><div className="journey-title"><span>PROVIDER</span><h3>De servicio a índice</h3></div>{providerSteps.map(([n,title,copy],i)=><article key={n} className={i===2?"future-step":""}><b>{n}</b><div><strong>{title}</strong><p>{copy}</p></div>{i===2&&<em>FUTURO TESTNET</em>}</article>)}</div></div></section>
 
