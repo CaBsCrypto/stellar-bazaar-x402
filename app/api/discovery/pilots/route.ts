@@ -1,0 +1,1 @@
+import{NextResponse}from"next/server";import{pilotCards}from"@/lib/pilot-cards";export function GET(){return NextResponse.json({ok:true,results:pilotCards,count:pilotCards.length,indexStatus:"pilot-not-indexed",notice:{es:"Fixtures de onboarding; no son servicios disponibles.",en:"Onboarding fixtures; these are not available services."}})}
