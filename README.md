@@ -146,23 +146,26 @@ sequenceDiagram
 2. **Second Verified On-Chain Settlement (2026-08-18):**
    * **Inner Soroban Transfer Tx Hash:** [`4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11`](https://stellar.expert/explorer/testnet/tx/4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11)
    * **Same parties/amount:** payer `GC3CK5A4...VDL4` → recipient `GDVR2KDK5...RMCQ`, `0.001 USDC` exact; seller delta `+0.0010000 USDC` verified on Horizon.
-3. **Production Deployment (Vercel):**
+3. **Third Verified Settlement — Autonomous Agent (2026-08-18):**
+   * **Inner Soroban Transfer Tx Hash:** [`5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2`](https://stellar.expert/explorer/testnet/tx/5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2)
+   * Paid via `agent:quickstart` after the `swap-risk-quote` card was pointed at the paid `/api/x402/swap-risk` endpoint; seller delta `+0.0010000 USDC` verified on Horizon (ledger `4214711`).
+4. **Production Deployment (Vercel):**
    * Live at `https://stellar-bazaar-x402.vercel.app` with server-only facilitator key (regenerated 2026-08-18) and seller address in Production + Preview.
    * Post-deploy smoke: landing/publish/MCP/discovery/reference → 200; unpaid x402 → 402 + `PAYMENT-REQUIRED` v2; ecosystem/MCP/agent/publisher suites re-run against the public URL.
-4. **Streamable HTTP MCP Server (`/api/mcp`):**
+5. **Streamable HTTP MCP Server (`/api/mcp`):**
    * 7 standard RFC tools: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, plus read-only `list_workflow_bundles` / `get_workflow_bundle` (composition fixtures, `execution:false`).
    * `search_services` supports opaque cursor pagination (`limit` 1–50, `nextCursor`, `partialResults`) and deterministic error envelopes (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`).
-3. **Official Agent SDK (`lib/bazaar-agent-client.ts`):**
+6. **Official Agent SDK (`lib/bazaar-agent-client.ts`):**
    * Strongly typed SDK for agent discovery, pre-flight safety policy checks, and automated x402 payment handling in 3 lines of code.
-4. **Dynamic Provider Ingest API (`/api/publisher/ingest`):**
+7. **Dynamic Provider Ingest API (`/api/publisher/ingest`):**
    * Deterministic registration with 11-rule conformance engine and strict injection prevention.
-5. **External Provider Contract & E2E Validation:**
+8. **External Provider Contract & E2E Validation:**
    * Truthful contract-only record for independent quote repositories and read-only MCP discovery endpoints. See [external E2E evidence](docs/EXTERNAL_PROVIDER_E2E.md) and [MCP capabilities](docs/MCP_DISCOVERY.md).
-6. **6 Global Pilot Bundles:**
+9. **6 Global Pilot Bundles:**
    * Agent Governance & Policy (`agent-policy-pilot`), Website Intelligence, Video Repurpose, Campaign Builder, Research Scout, and Design Brief.
-7. **Workflow Bundle Schema & Fixtures (read-only):**
+10. **Workflow Bundle Schema & Fixtures (read-only):**
    * `bazaar.workflow-bundle/v1` with 15 deterministic conformance rules (cycles, gates, artifacts, price) and 2 fixture bundles. See [WORKFLOW_BUNDLES_FUTURE.md](docs/WORKFLOW_BUNDLES_FUTURE.md).
-8. **Automated 5-in-1 E2E Test Suite (`scripts/test-e2e-ecosystem.mjs`):**
+11. **Automated 5-in-1 E2E Test Suite (`scripts/test-e2e-ecosystem.mjs`):**
    * Complete end-to-end ecosystem validation with **zero fund risk**.
 
 ---
