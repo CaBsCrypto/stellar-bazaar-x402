@@ -145,9 +145,11 @@ sequenceDiagram
    * Strongly typed SDK for agent discovery, pre-flight safety policy checks, and automated x402 payment handling in 3 lines of code.
 4. **Dynamic Provider Ingest API (`/api/publisher/ingest`):**
    * Deterministic registration with 11-rule conformance engine and strict injection prevention.
-5. **6 Global Pilot Bundles:**
+5. **External Provider Contract & E2E Validation:**
+   * Truthful contract-only record for independent quote repositories and read-only MCP discovery endpoints. See [external E2E evidence](docs/EXTERNAL_PROVIDER_E2E.md) and [MCP capabilities](docs/MCP_DISCOVERY.md).
+6. **6 Global Pilot Bundles:**
    * Agent Governance & Policy (`agent-policy-pilot`), Website Intelligence, Video Repurpose, Campaign Builder, Research Scout, and Design Brief.
-6. **Automated 5-in-1 E2E Test Suite (`scripts/test-e2e-ecosystem.mjs`):**
+7. **Automated 5-in-1 E2E Test Suite (`scripts/test-e2e-ecosystem.mjs`):**
    * Complete end-to-end ecosystem validation with **zero fund risk**.
 
 ---
@@ -155,6 +157,8 @@ sequenceDiagram
 ## 🚀 Quickstart
 
 ### 1. Installation & Local Run
+
+Requirements: Node.js 20+ and npm.
 
 ```bash
 # Clone the repository

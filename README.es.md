@@ -145,9 +145,11 @@ sequenceDiagram
    * SDK fuertemente tipado para interactuar, evaluar políticas de gasto y auto-liquidar pagos x402 en 3 líneas de código.
 4. **Auto-Registro de Proveedores (`/api/publisher/ingest`):**
    * Registro dinámico con verificación determinista de 11 reglas de conformidad.
-5. **6 Pilotos Globales Estructurados:**
+5. **Contrato de Proveedor Externo y Validación E2E:**
+   * Registro transparente para repositorios independientes de cotización y endpoints MCP de solo lectura. Ver [evidencia externa E2E](docs/EXTERNAL_PROVIDER_E2E.md) y [capacidades MCP](docs/MCP_DISCOVERY.md).
+6. **6 Pilotos Globales Estructurados:**
    * Gobernanza de Agentes (`agent-policy-pilot`), Inteligencia Web, Reutilización de Video, Creador de Campañas, Explorador de Investigación y Brief de Diseño.
-6. **Arnés de Pruebas Automatizado 5-en-1 (`scripts/test-e2e-ecosystem.mjs`):**
+7. **Arnés de Pruebas Automatizado 5-en-1 (`scripts/test-e2e-ecosystem.mjs`):**
    * Validación integral de punta a punta con **cero riesgo de fondos**.
 
 ---
@@ -155,6 +157,8 @@ sequenceDiagram
 ## 🚀 Inicio Rápido (Quickstart)
 
 ### 1. Instalación y Ejecución Local
+
+Requisitos: Node.js 20+ y npm.
 
 ```bash
 # Clonar el repositorio

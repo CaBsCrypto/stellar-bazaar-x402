@@ -1,0 +1,3 @@
+import {NextResponse} from "next/server";import{getExternalQuoteCard}from"@/lib/external-provider";
+export const dynamic="force-dynamic";
+export function GET(){try{return NextResponse.json({ok:true,resource:getExternalQuoteCard(),notice:{es:"Contrato externo público; no implica disponibilidad ni pago activo.",en:"Public external contract; does not imply availability or active payment."}},{headers:{"Cache-Control":"no-store"}})}catch{return NextResponse.json({ok:false,error:{code:"EXTERNAL_PROVIDER_CONFIG_INVALID",message:"External provider URL must be HTTPS or loopback for local tests.",retryable:false,stage:"discover"}},{status:503})}}

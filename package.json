@@ -16,6 +16,9 @@
     "test:e2e:ecosystem": "node scripts/test-e2e-ecosystem.mjs",
     "test:agent:safety": "node scripts/test-agent-autonomous-flow.mjs",
     "test:publisher:ingest": "node scripts/test-publisher-ingest.mjs",
+    "test:e2e:external": "node scripts/test-external-provider-e2e.mjs",
+    "test:e2e:external:testnet": "node scripts/e2e-external-provider-testnet.mjs",
+    "test:contract:external:public": "node scripts/test-public-quote-contract.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {
