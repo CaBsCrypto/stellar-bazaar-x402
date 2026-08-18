@@ -19,3 +19,36 @@ Negative coverage: no payment, tamper, wrong network, asset, payTo and amount, e
 `npm run test:e2e:external:testnet` fails closed unless `RUN_EXTERNAL_X402_TESTNET=1` and ignored local secrets are present. It then requires an HTTPS provider manifest explicitly declaring `stellar:testnet`, `exact`, `10000` atomic and payment enabled. The current provider fails this preflight, before authorization or settlement.
 
 Once the standalone provider independently publishes the protected endpoint and valid card, implement/review the final settlement runner, preserve the 0.001 USDC cap, and record only sanitized public receipt evidence.
+
+## Sanitized evidence template (approved schema)
+
+Only these fields may be printed/saved when the manual Testnet runner is enabled. Never seeds, API keys, auth payloads or private account data.
+
+```json
+{
+  "profile": "manual-testnet",
+  "provider": { "baseUrl": "<https origin only>", "endpoint": "POST /api/quote" },
+  "serviceCard": { "id": "stellar-defi-quote-service", "version": "bazaar.external-provider/v1" },
+  "payment": {
+    "network": "stellar:testnet",
+    "scheme": "exact",
+    "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+    "amount": "10000",
+    "payer": "<G… shortened>",
+    "recipient": "<G… shortened>"
+  },
+  "http": {
+    "unpaidStatus": 402,
+    "settledStatus": 200,
+    "paymentRequired": true,
+    "paymentResponse": true
+  },
+  "result": { "mode": "<provider-declared>", "hash": "<sha256 of provider result JSON>" },
+  "receipt": {
+    "transaction": "<tx hash>",
+    "ledger": 0,
+    "timestamp": "<ISO 8601 UTC>",
+    "explorer": "https://stellar.expert/explorer/testnet/tx/<tx hash>"
+  }
+}
+```

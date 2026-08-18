@@ -143,17 +143,26 @@ sequenceDiagram
    * **Monto:** `0.001 USDC` (`10000` stroops)
    * **Contrato SEP-41:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`
    * **Gas Patrocinado:** Relayer Fee-Bump de OpenZeppelin (`GA6THKUY...`)
-2. **Servidor MCP Streamable HTTP (`/api/mcp`):**
-   * 5 herramientas estándar: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`.
-3. **SDK Oficial para Agentes (`lib/bazaar-agent-client.ts`):**
+2. **Segunda Liquidación On-Chain Verificada (2026-08-18):**
+   * **Hash Tx Interna Soroban:** [`4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11`](https://stellar.expert/explorer/testnet/tx/4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11)
+   * **Mismas partes/importe:** payer `GC3CK5A4...VDL4` → recipient `GDVR2KDK5...RMCQ`, `0.001 USDC` exact; delta seller `+0.0010000 USDC` verificado en Horizon.
+   * **Tercera (agente autónomo):** [`5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2`](https://stellar.expert/explorer/testnet/tx/5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2) — el card `swap-risk-quote` ahora apunta al endpoint pagado x402.
+3. **Despliegue en Producción (Vercel):**
+   * Live en `https://stellar-bazaar-x402.vercel.app` con key de facilitador server-only regenerada (2026-08-18) y dirección del seller en Production + Preview.
+4. **Servidor MCP Streamable HTTP (`/api/mcp`):**
+   * 7 herramientas estándar: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, y de solo lectura `list_workflow_bundles` / `get_workflow_bundle` (fixtures de composición, `execution:false`).
+   * `search_services` con paginación por cursor opaco (`limit` 1–50, `nextCursor`, `partialResults`) y envelopes de error deterministas (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`).
+5. **SDK Oficial para Agentes (`lib/bazaar-agent-client.ts`):**
    * SDK fuertemente tipado para interactuar, evaluar políticas de gasto y auto-liquidar pagos x402 en 3 líneas de código.
-4. **Auto-Registro de Proveedores (`/api/publisher/ingest`):**
+6. **Auto-Registro de Proveedores (`/api/publisher/ingest`):**
    * Registro dinámico con verificación determinista de 11 reglas de conformidad.
-5. **Contrato de Proveedor Externo y Validación E2E:**
+7. **Contrato de Proveedor Externo y Validación E2E:**
    * Registro transparente para repositorios independientes de cotización y endpoints MCP de solo lectura. Ver [evidencia externa E2E](docs/EXTERNAL_PROVIDER_E2E.md) y [capacidades MCP](docs/MCP_DISCOVERY.md).
-6. **6 Pilotos Globales Estructurados:**
+8. **6 Pilotos Globales Estructurados:**
    * Gobernanza de Agentes (`agent-policy-pilot`), Inteligencia Web, Reutilización de Video, Creador de Campañas, Explorador de Investigación y Brief de Diseño.
-7. **Arnés de Pruebas Automatizado 5-en-1 (`scripts/test-e2e-ecosystem.mjs`):**
+9. **Workflow Bundles — Schema y Fixtures (solo lectura):**
+   * `bazaar.workflow-bundle/v1` con 15 reglas de conformance deterministas (ciclos, gates, artifacts, precio) y 2 bundles fixture. Ver [WORKFLOW_BUNDLES_FUTURE.md](docs/WORKFLOW_BUNDLES_FUTURE.md).
+10. **Arnés de Pruebas Automatizado 5-en-1 (`scripts/test-e2e-ecosystem.mjs`):**
    * Validación integral de punta a punta con **cero riesgo de fondos**.
 
 ---

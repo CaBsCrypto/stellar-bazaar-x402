@@ -143,8 +143,15 @@ sequenceDiagram
    * **Amount:** `0.001 USDC` (`10000` stroops)
    * **SEP-41 Contract:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`
    * **Facilitator Sponsorship:** OpenZeppelin Fee-Bump relayer (`GA6THKUY...`)
-2. **Streamable HTTP MCP Server (`/api/mcp`):**
-   * 5 standard RFC tools: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`.
+2. **Second Verified On-Chain Settlement (2026-08-18):**
+   * **Inner Soroban Transfer Tx Hash:** [`4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11`](https://stellar.expert/explorer/testnet/tx/4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11)
+   * **Same parties/amount:** payer `GC3CK5A4...VDL4` → recipient `GDVR2KDK5...RMCQ`, `0.001 USDC` exact; seller delta `+0.0010000 USDC` verified on Horizon.
+3. **Production Deployment (Vercel):**
+   * Live at `https://stellar-bazaar-x402.vercel.app` with server-only facilitator key (regenerated 2026-08-18) and seller address in Production + Preview.
+   * Post-deploy smoke: landing/publish/MCP/discovery/reference → 200; unpaid x402 → 402 + `PAYMENT-REQUIRED` v2; ecosystem/MCP/agent/publisher suites re-run against the public URL.
+4. **Streamable HTTP MCP Server (`/api/mcp`):**
+   * 7 standard RFC tools: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, plus read-only `list_workflow_bundles` / `get_workflow_bundle` (composition fixtures, `execution:false`).
+   * `search_services` supports opaque cursor pagination (`limit` 1–50, `nextCursor`, `partialResults`) and deterministic error envelopes (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`).
 3. **Official Agent SDK (`lib/bazaar-agent-client.ts`):**
    * Strongly typed SDK for agent discovery, pre-flight safety policy checks, and automated x402 payment handling in 3 lines of code.
 4. **Dynamic Provider Ingest API (`/api/publisher/ingest`):**
@@ -153,7 +160,9 @@ sequenceDiagram
    * Truthful contract-only record for independent quote repositories and read-only MCP discovery endpoints. See [external E2E evidence](docs/EXTERNAL_PROVIDER_E2E.md) and [MCP capabilities](docs/MCP_DISCOVERY.md).
 6. **6 Global Pilot Bundles:**
    * Agent Governance & Policy (`agent-policy-pilot`), Website Intelligence, Video Repurpose, Campaign Builder, Research Scout, and Design Brief.
-7. **Automated 5-in-1 E2E Test Suite (`scripts/test-e2e-ecosystem.mjs`):**
+7. **Workflow Bundle Schema & Fixtures (read-only):**
+   * `bazaar.workflow-bundle/v1` with 15 deterministic conformance rules (cycles, gates, artifacts, price) and 2 fixture bundles. See [WORKFLOW_BUNDLES_FUTURE.md](docs/WORKFLOW_BUNDLES_FUTURE.md).
+8. **Automated 5-in-1 E2E Test Suite (`scripts/test-e2e-ecosystem.mjs`):**
    * Complete end-to-end ecosystem validation with **zero fund risk**.
 
 ---
