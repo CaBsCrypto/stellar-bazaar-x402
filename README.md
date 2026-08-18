@@ -14,7 +14,7 @@ The hosted site is a public preview of the same local-MVP scope: discovery, conf
 
 Stellar Bazaar x402 is an open-source proof of concept for finding paid services, inspecting their machine-readable terms, and eventually invoking them through x402 settlement on Stellar. Bazaar indexes **services and callable routes**—not people, agent profiles, freelancers, or generic skills.
 
-> **Current status:** local Instawards MVP. Discovery, catalogue navigation, and the deterministic read-only Swap Risk Quote endpoint work locally. There is no wallet, payment, signature, facilitator call, chain write, Testnet transaction, or financial advice. `@x402/stellar` exact payment on Testnet is the next milestone.
+> **Current status:** Testnet-validated MVP. Discovery (REST & Streamable MCP), catalogue navigation, bilingual pilot fixtures (including Agent Governance & Policy), and deterministic Swap Risk Quote work locally. Real `exact` USDC micropayments over Stellar Testnet via `@x402/stellar` and OpenZeppelin Facilitator are fully verified on-chain.
 
 ## What it is—and is not
 
@@ -24,15 +24,17 @@ It is **not** a wallet, escrow, freelancer marketplace, Passport, agent-profile 
 
 ## Working MVP
 
-- Spanish-first responsive landing and searchable HTTP/MCP catalogue.
+- Spanish-first responsive landing and searchable HTTP/MCP catalogue with complete English metadata parity.
+- 6 bilingual pilot fixtures (including *Website Intelligence*, *Video Repurpose*, and *Agent Governance & Policy*).
 - Service details with route template, inputs, outputs, network, asset, scheme, and declared price.
-- One real local reference provider: `GET /api/reference/swap-risk`.
-- Deterministic read-only Swap Risk Quote with structured `200` and `400` responses.
-- Three conspicuous catalogue fixtures to demonstrate the target breadth.
+- Live `exact` x402 payment flow on `stellar:testnet` (USDC SEP-41) verified on-chain via OpenZeppelin facilitator.
+- Deterministic read-only Swap Risk Quote with structured `200`, `400`, and `402` responses.
+- Streamable MCP discovery server at `/api/mcp` with 5 standard tools (`get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`).
 - Deterministic natural-language ranking with visible scores/reasons and structured filters.
-- Local Publisher Kit at `/publish` that validates and generates a copyable service-card manifest.
-- Discovery APIs at `/api/discovery/resources` and `/api/discovery/search` with MCP-ready structured responses.
-- No payment or network side effects.
+- Local Publisher Kit at `/publish` that validates and generates copyable service-card manifests.
+- Discovery APIs at `/api/discovery/resources`, `/api/discovery/pilots`, and `/api/discovery/search`.
+- Unified zero-fund-risk E2E test harness (`scripts/test-e2e-ecosystem.mjs`) covering all 5 protocol and discovery stages.
+- Decoupled standalone provider architecture tested with external microservices.
 
 The reference provider is intentionally in-process for delivery speed and is marked for extraction into a separate service after the MVP.
 
@@ -119,11 +121,11 @@ npm run build
 
 ## Roadmap
 
-1. **Current:** discovery UI, catalogue contracts, deterministic local Swap Risk Quote.
-2. **Next:** `exact` payment on `stellar:testnet` using an existing facilitator and `@x402/stellar`; USDC default.
-3. **Discovery hardening:** validated PaymentPayload extension, route-template integrity, evaluated search/ranking, deterministic extension outcomes, HTTP + MCP helpers.
+1. **Completed:** discovery UI & REST API, catalogue contracts, deterministic local Swap Risk Quote.
+2. **Completed:** `exact` payment on `stellar:testnet` using OpenZeppelin facilitator and `@x402/stellar` (USDC default, live on-chain settlements verified).
+3. **Current / Hardening:** validated PaymentPayload extensions, route-template integrity, evaluated search/ranking, standalone decoupled provider testing (`stellar-defi-quote-service`, `website-intelligence-service`).
 4. **Facilitator:** permissively licensed self-hostable `/verify`, `/settle`, `/supported` only after auth-entry security and conformance work.
-5. **Later:** Stellar `upto`, any SEP-41 token, pubnet, operational readiness, external audit, and upstream contribution.
+5. **Later:** Stellar `upto`, arbitrary SEP-41 tokens, pubnet/mainnet, operational readiness, external audit, and upstream contribution.
 
 ## Documentation
 

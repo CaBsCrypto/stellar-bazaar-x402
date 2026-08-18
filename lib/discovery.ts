@@ -1,4 +1,4 @@
-import type {PaidService, RankedService, ServiceCard, ValidationOutcome} from "./types";
+import type {PaidService, RankedService, ServiceCard, ValidationOutcome} from "./types.ts";
 
 const aliases:Record<string,string[]>={riesgo:["risk","security"],swap:["swap","liquidity","defi"],contrato:["contract","soroban"],mercado:["market","market-data"],libro:["ledger"],cuenta:["ledger","stellar"],herramienta:["mcp"],datos:["analytics","market-data"]};
 const tokens=(value:string)=>value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").split(/[^a-z0-9]+/).filter(Boolean);
