@@ -1,5 +1,5 @@
 # ✦ Stellar Bazaar x402
-### *Spanish-First Discovery Catalog & Atomic x402 Micropayments for AI Agents on Stellar*
+### *Universal Machine-Readable Discovery & Atomic x402 Micropayments for the Global AI Agent Economy on Stellar*
 
 <div align="center">
 
@@ -16,31 +16,31 @@
 
 ---
 
-## 🌟 Executive Pitch: The Agent-to-Agent (A2A) Economy
+## 🌟 Executive Pitch: The Global Agent-to-Agent (A2A) Economy
 
-Autonomous **AI Agents** (Claude, Cursor, LangChain, CrewAI, AutoGen) are revolutionizing software, but they face a **critical bottleneck**:
+Autonomous **AI Agents** (Claude, Cursor, LangChain, CrewAI, AutoGen) are rapidly transforming software into an autonomous economy, but they face a **fundamental infrastructure bottleneck**:
 
-> **The Dilemma:** AI Agents cannot swipe human credit cards, cannot commit to $50/month recurring SaaS plans for a single query, and passing master API keys inside LLM prompts is a catastrophic security risk.
+> **The Problem:** AI Agents cannot hold human credit cards, cannot commit to $50/month recurring SaaS subscription tiers for single-task executions, and passing master API keys inside LLM prompts creates unacceptable security liabilities.
 
 ```
-       [ THE CURRENT PROBLEM ]                         [ THE STELLAR BAZAAR x402 SOLUTION ]
+       [ LEGACY HUMAN WEB ]                            [ STELLAR BAZAAR x402 GLOBAL INFRASTRUCTURE ]
  ❌ Monthly human subscription paywalls            ✅ Atomic per-request micropayments (e.g. 0.001 USDC)
- ❌ Master API key leaks in prompt context         ✅ Zero shared keys; direct cryptographic payment per call
- ❌ Human-centric closed service directories       ✅ Machine-readable catalog (Streamable MCP + REST)
+ ❌ Master API key leaks in prompt context         ✅ Zero shared secrets; direct cryptographic payment per call
+ ❌ Human-centric closed service directories       ✅ Global machine-readable catalog (Streamable MCP + REST)
  ❌ Ambiguous service level agreements             ✅ Deterministic ServiceCards with strict I/O & pricing schemas
  ❌ Custodial middlemen and high fees              ✅ Zero custody: direct on-chain settlement on Stellar
 ```
 
-**Stellar Bazaar x402** is the **intelligent discovery and catalog layer** that connects AI agents and developers with paid HTTP APIs and MCP tools, settling instant, low-cost micropayments via the open **x402 protocol on the Stellar network**.
+**Stellar Bazaar x402** is the **global discovery and payment routing layer** that enables autonomous AI agents and developers worldwide to discover, negotiate, and pay for HTTP APIs and MCP tools on demand, settling instant, low-cost micropayments via the open **x402 standard on the Stellar blockchain**.
 
 ---
 
-## 💡 Why Stellar + x402?
+## 💡 Why Stellar + x402 for the Global Agent Economy?
 
-1. **Sub-second Speed & Negligible Fees:** Transactions settle in 3–5 seconds with near-zero network fees ($0.00001), ideal for high-frequency agent tool calls.
-2. **W3C Standard HTTP 402:** Clean, standardized `HTTP 402 Payment Required` challenges with SEP-41 asset and amount specifications.
-3. **Native Model Context Protocol (MCP):** Connects out of the box with Claude Desktop, Cursor IDE, Windsurf, LangChain, and CrewAI.
-4. **Spanish-First with Global English Parity:** Metadata, category taxonomies, and documentation natively crafted in Spanish with exact English dual support (`es` / `en`).
+1. **Sub-second Global Settlement & Micro-fees:** Settle transactions in 3–5 seconds worldwide with near-zero network fees ($0.00001), unlocking viable high-frequency micro-transactions for autonomous agent workflows.
+2. **Open Standard HTTP 402:** Clean, standardized `HTTP 402 Payment Required` protocol flow with SEP-41 multi-asset specification (`USDC`, `XLM`, `EURC`).
+3. **Native Model Context Protocol (MCP):** Zero-friction tool discovery and consumption for global AI assistants (Claude Desktop, Cursor IDE, Windsurf) and orchestration frameworks (LangChain, CrewAI, AutoGen).
+4. **Global by Design with Native Multilingual Intelligence:** Universal machine-readable schemas and semantic discovery supporting international queries with cross-language intent matching.
 
 ---
 
@@ -48,18 +48,18 @@ Autonomous **AI Agents** (Claude, Cursor, LangChain, CrewAI, AutoGen) are revolu
 
 ```mermaid
 flowchart TD
-    subgraph Clients["1. Clients & Autonomous Agents"]
+    subgraph Clients["1. Global Clients & Autonomous AI Agents"]
         Claude["Claude Desktop / Cursor IDE"]
         LangChain["LangChain / CrewAI / AutoGen"]
-        WebUI["Web Browser / Next.js UI"]
+        WebUI["Global Web UI / Next.js"]
     end
 
-    subgraph Bazaar["2. Discovery Layer (Stellar Bazaar Core)"]
+    subgraph Bazaar["2. Global Discovery Engine (Stellar Bazaar Core)"]
         MCPServer["/api/mcp<br/>(Streamable HTTP MCP Server)"]
         RESTDiscovery["/api/discovery<br/>(resources / search / pilots)"]
-        Validator["validateServiceCard()<br/>(Conformance Engine)"]
-        DynamicRegistry["/api/publisher/ingest<br/>(Dynamic Ingest Engine)"]
-        PilotCatalog["6 Bilingual Pilot Fixtures<br/>(Policy, Web Intel, Video, etc.)"]
+        Validator["validateServiceCard()<br/>(11-Rule Conformance Engine)"]
+        DynamicRegistry["/api/publisher/ingest<br/>(Dynamic Provider Ingest)"]
+        PilotCatalog["6 Global Pilot Fixtures<br/>(Governance, Web Intel, Video, etc.)"]
     end
 
     subgraph x402Layer["3. Protocol & Resource Server"]
@@ -68,10 +68,10 @@ flowchart TD
     end
 
     subgraph Settlement["4. Blockchain Infrastructure"]
-        Testnet["Stellar Testnet Ledger<br/>(USDC / XLM / EURC SEP-41)"]
+        Testnet["Stellar Ledger<br/>(USDC / XLM / EURC SEP-41)"]
     end
 
-    subgraph Providers["5. Decoupled Standalone Microservices"]
+    subgraph Providers["5. Decoupled Global Microservices"]
         DeFiService["Stellar DeFi Quote Service<br/>(Port 3500)"]
         WebIntelService["Website Intelligence Service<br/>(Port 3501)"]
     end
@@ -99,10 +99,10 @@ sequenceDiagram
     participant Bazaar as Stellar Bazaar (MCP / REST)
     participant Provider as x402 Provider
     participant Facilitator as OpenZeppelin Facilitator
-    participant Stellar as Stellar Testnet Blockchain
+    participant Stellar as Stellar Blockchain
 
-    Note over Agent,Bazaar: Phase 1: Discovery & Policy Check
-    Agent->>Bazaar: POST /api/mcp (search_services: "swap risk")
+    Note over Agent,Bazaar: Phase 1: Global Discovery & Policy Evaluation
+    Agent->>Bazaar: POST /api/mcp (search_services: "swap risk quote")
     Bazaar-->>Agent: ServiceCard (Asset: USDC, Amount: 0.001, Scheme: exact)
     Agent->>Agent: Pre-flight Safety Check (Budget & network allowlist check)
 
@@ -130,7 +130,7 @@ sequenceDiagram
 
 ### 🟢 Completed & Verified Milestones
 
-1. **Verified On-Chain Testnet Settlement:**
+1. **Verified On-Chain Settlement on Stellar:**
    * **Transaction Hash:** [`d6154a4c60607bac76309462d109c85031f66710dfe22fe603cada4d41e78094`](https://stellar.expert/explorer/testnet/tx/d6154a4c60607bac76309462d109c85031f66710dfe22fe603cada4d41e78094)
    * **Confirmed Ledger:** `4202242`
    * **Amount:** `0.001 USDC` (`10000` stroops)
@@ -141,7 +141,7 @@ sequenceDiagram
    * Strongly typed SDK for agent discovery, pre-flight safety policy checks, and automated x402 payment handling in 3 lines of code.
 4. **Dynamic Provider Ingest API (`/api/publisher/ingest`):**
    * Deterministic registration with 11-rule conformance engine and strict injection prevention.
-5. **6 Structured Bilingual Pilot Bundles:**
+5. **6 Global Pilot Bundles:**
    * Agent Governance & Policy (`agent-policy-pilot`), Website Intelligence, Video Repurpose, Campaign Builder, Research Scout, and Design Brief.
 6. **Automated 5-in-1 E2E Test Suite (`scripts/test-e2e-ecosystem.mjs`):**
    * Complete end-to-end ecosystem validation with **zero fund risk**.
@@ -238,7 +238,7 @@ console.log("Stellar Receipt:", execution.payment.receiptUrl);
   Streamable MCP Server         Real On-Chain Evidence        Agent SDK & Safety Suite    Mainnet Deployment & Audit
 ```
 
-1. ✅ **Phase 1 (Discovery Core):** Bilingual catalog, deterministic lexical ranking, MCP streamable server, and ServiceCard validator.
+1. ✅ **Phase 1 (Discovery Core):** Global catalog, deterministic lexical ranking, MCP streamable server, and ServiceCard validator.
 2. ✅ **Phase 2 (Testnet Settlement):** HTTP 402 challenge, Ed25519 signature verification, and on-chain settlement via `@x402/stellar`.
 3. ✅ **Phase 3 (Agent SDK & Ingest):** `BazaarAgentClient`, safety hard-caps, `/api/publisher/ingest` auto-registry, and E2E harness.
 4. 🟡 **Phase 4 (Expansion & Production):** SEP-41 multi-asset support (`USDC`, `XLM`, `EURC`), cloud production deployment, and Mainnet readiness.

@@ -1,5 +1,5 @@
 # ✦ Stellar Bazaar x402
-### *Catálogo de Descubrimiento Inteligente y Micropagos Atómicos x402 para Agentes de IA en Stellar*
+### *Infraestructura Universal de Descubrimiento y Micropagos Atómicos x402 para la Economía Global de Agentes de IA en Stellar*
 
 <div align="center">
 
@@ -16,31 +16,31 @@
 
 ---
 
-## 🌟 Pitch Ejecutivo: La Nueva Economía Agente-a-Agente (A2A)
+## 🌟 Pitch Ejecutivo: La Economía Global Agente-a-Agente (A2A)
 
-Los **agentes de Inteligencia Artificial autónomos** (Claude, Cursor, LangChain, CrewAI, AutoGen) están revolucionando el software, pero enfrentan un **cuello de botella crítico**:
+Los **agentes de Inteligencia Artificial autónomos** (Claude, Cursor, LangChain, CrewAI, AutoGen) están transformando el software en una economía autónoma, pero enfrentan un **cuello de botella crítico de infraestructura**:
 
-> **El Dilema:** Los agentes no tienen tarjetas de crédito humanas, no pueden suscribirse a planes SaaS mensuales recurrentes de $50/mes para una sola consulta, y compartir API keys maestras representa un riesgo de seguridad inaceptable.
+> **El Problema:** Los agentes no tienen tarjetas de crédito humanas, no pueden suscribirse a planes SaaS mensuales recurrentes de $50/mes para una sola consulta, y compartir API keys maestras en los prompts representa un riesgo inaceptable de seguridad.
 
 ```
-       [ EL PROBLEMA ACTUAL ]                          [ LA SOLUCIÓN STELLAR BAZAAR x402 ]
- ❌ Paywalls con suscripción humana mensual        ✅ Micropagos atómicos por llamada (ej. 0.001 USDC)
- ❌ Fuga de API keys maestras en prompts           ✅ Cero llaves compartidas; pago directo por llamada
- ❌ Directorios cerrados o perfiles humanos        ✅ Catálogo legible por máquinas (MCP + REST)
- ❌ Falta de acuerdos de nivel de servicio        ✅ ServiceCards con esquemas I/O y precios deterministas
- ❌ Custodia de fondos y comisiones abusivas       ✅ Cero custodia de fondos: liquidación directa en Stellar
+       [ LA WEB HUMANA TRADICIONAL ]                   [ INFRAESTRUCTURA GLOBAL STELLAR BAZAAR x402 ]
+ ❌ Paywalls con suscripción mensual humana        ✅ Micropagos atómicos por llamada (ej. 0.001 USDC)
+ ❌ Fuga de API keys maestras en prompts           ✅ Cero llaves compartidas; pago criptográfico directo por llamada
+ ❌ Directorios cerrados orientados a humanos      ✅ Catálogo legible por máquinas global (Streamable MCP + REST)
+ ❌ Acuerdos de servicio ambiguos                  ✅ ServiceCards deterministas con esquemas estrictos de I/O y precio
+ ❌ Intermediarios con custodia y comisiones altas ✅ Cero custodia: liquidación directa on-chain en Stellar
 ```
 
-**Stellar Bazaar x402** es la capa de **descubrimiento y catálogo inteligente** que conecta a compradores y agentes de IA con APIs HTTP y herramientas MCP de pago, liquidando micropagos instantáneos y de bajo costo a través del protocolo abierto **x402 sobre la red Stellar**.
+**Stellar Bazaar x402** es la **capa global de descubrimiento y enrutamiento de pagos** que permite a compradores y agentes de IA de todo el mundo descubrir, negociar y pagar por APIs HTTP y herramientas MCP bajo demanda, liquidando micropagos instantáneos a través del estándar abierto **x402 sobre la red Stellar**.
 
 ---
 
-## 💡 ¿Por Qué Stellar + x402?
+## 💡 ¿Por Qué Stellar + x402 para la Economía Global de Agentes?
 
-1. **Velocidad y Comisiones Ultra-bajas:** Transacciones liquidadas en 3-5 segundos con comisiones de red despreciables ($0.00001), ideales para llamadas de alta frecuencia de agentes.
-2. **Estándar Abierto x402 v2:** Devuelve `HTTP 402 Payment Required` estándar del W3C con especificación de activo SEP-41 y monto.
-3. **Model Context Protocol (MCP) Nativo:** Compatible directamente con asistentes como Claude Desktop, Cursor IDE y frameworks como LangChain y CrewAI.
-4. **Enfoque Spanish-First con Paridad Global:** Metadatos, categorías y documentación diseñados prioritariamente en español con paridad exacta en inglés (`es` / `en`).
+1. **Velocidad de Liquidación Global & Comisiones Despreciables:** Liquidación en 3-5 segundos a nivel mundial con comisiones de red despreciables ($0.00001), habilitando microtransacciones de alta frecuencia para agentes.
+2. **Estándar Abierto HTTP 402:** Protocolo estandarizado `HTTP 402 Payment Required` con soporte multiactivo SEP-41 (`USDC`, `XLM`, `EURC`).
+3. **Model Context Protocol (MCP) Nativo:** Conexión sin fricción para asistentes de IA globales (Claude Desktop, Cursor IDE, Windsurf) y frameworks (LangChain, CrewAI, AutoGen).
+4. **Global por Diseño con Inteligencia Multilingüe Nativa:** Esquemas universales legibles por máquinas con coincidencia de intención entre múltiples idiomas.
 
 ---
 
@@ -48,18 +48,18 @@ Los **agentes de Inteligencia Artificial autónomos** (Claude, Cursor, LangChain
 
 ```mermaid
 flowchart TD
-    subgraph Clients["1. Clientes y Agentes Autónomos"]
+    subgraph Clients["1. Clientes y Agentes Autónomos Globales"]
         Claude["Claude Desktop / Cursor IDE"]
         LangChain["LangChain / CrewAI / AutoGen"]
-        WebUI["Navegador Web / Frontend"]
+        WebUI["Global Web UI / Next.js"]
     end
 
-    subgraph Bazaar["2. Capa de Descubrimiento (Stellar Bazaar Core)"]
+    subgraph Bazaar["2. Motor de Descubrimiento Global (Stellar Bazaar Core)"]
         MCPServer["/api/mcp<br/>(Servidor MCP Streamable HTTP)"]
         RESTDiscovery["/api/discovery<br/>(resources / search / pilots)"]
-        Validator["validateServiceCard()<br/>(Motor de Conformidad)"]
-        DynamicRegistry["/api/publisher/ingest<br/>(Auto-Registro Dinámico)"]
-        PilotCatalog["6 Catálogos Piloto Bilingües<br/>(Gobernanza, Web Intel, Video, etc.)"]
+        Validator["validateServiceCard()<br/>(Motor de Conformidad de 11 Reglas)"]
+        DynamicRegistry["/api/publisher/ingest<br/>(Ingesta Dinámica de Proveedores)"]
+        PilotCatalog["6 Catálogos Piloto Globales<br/>(Gobernanza, Web Intel, Video, etc.)"]
     end
 
     subgraph x402Layer["3. Protocolo x402 & Resource Server"]
@@ -68,7 +68,7 @@ flowchart TD
     end
 
     subgraph Settlement["4. Infraestructura Blockchain"]
-        Testnet["Stellar Testnet Ledger<br/>(Contratos USDC / XLM / EURC SEP-41)"]
+        Testnet["Stellar Ledger<br/>(Contratos USDC / XLM / EURC SEP-41)"]
     end
 
     subgraph Providers["5. Microservicios Proveedores Desacoplados"]
@@ -99,10 +99,10 @@ sequenceDiagram
     participant Bazaar as Stellar Bazaar (MCP / REST)
     participant Provider as Proveedor x402
     participant Facilitator as Facilitador OpenZeppelin
-    participant Stellar as Stellar Testnet Blockchain
+    participant Stellar as Stellar Blockchain
 
-    Note over Agent,Bazaar: Fase 1: Descubrimiento & Verificación de Política
-    Agent->>Bazaar: POST /api/mcp (search_services: "riesgo swap")
+    Note over Agent,Bazaar: Fase 1: Descubrimiento Global & Verificación de Política
+    Agent->>Bazaar: POST /api/mcp (search_services: "swap risk quote")
     Bazaar-->>Agent: ServiceCard (Asset: USDC, Amount: 0.001, Scheme: exact)
     Agent->>Agent: Pre-flight Safety Check (Valida presupuesto & allowlist)
 
@@ -130,7 +130,7 @@ sequenceDiagram
 
 ### 🟢 Hitos Completados y Verificados
 
-1. **Liquidación On-Chain en Stellar Testnet Verificada:**
+1. **Liquidación On-Chain en Stellar Verificada:**
    * **Hash de Transacción:** [`d6154a4c60607bac76309462d109c85031f66710dfe22fe603cada4d41e78094`](https://stellar.expert/explorer/testnet/tx/d6154a4c60607bac76309462d109c85031f66710dfe22fe603cada4d41e78094)
    * **Ledger Confirmado:** `4202242`
    * **Monto:** `0.001 USDC` (`10000` stroops)
@@ -141,7 +141,7 @@ sequenceDiagram
    * SDK fuertemente tipado para interactuar, evaluar políticas de gasto y auto-liquidar pagos x402 en 3 líneas de código.
 4. **Auto-Registro de Proveedores (`/api/publisher/ingest`):**
    * Registro dinámico con verificación determinista de 11 reglas de conformidad.
-5. **6 Pilotos Bilingües Estructurados:**
+5. **6 Pilotos Globales Estructurados:**
    * Gobernanza de Agentes (`agent-policy-pilot`), Inteligencia Web, Reutilización de Video, Creador de Campañas, Explorador de Investigación y Brief de Diseño.
 6. **Arnés de Pruebas Automatizado 5-en-1 (`scripts/test-e2e-ecosystem.mjs`):**
    * Validación integral de punta a punta con **cero riesgo de fondos**.
@@ -174,6 +174,9 @@ Abre `http://localhost:3000` en tu navegador.
 # Validar tipos TypeScript estrictos (0 errores)
 npm run typecheck
 
+# Compilar build de producción
+npm run build
+
 # Ejecutar el arnés E2E del ecosistema (REST + MCP + x402)
 npm run test:e2e:ecosystem
 
@@ -202,7 +205,7 @@ const client = new BazaarAgentClient({
 });
 
 // 2. Descubrir el servicio deseado vía MCP
-const [serviceCard] = await client.searchServicesMCP("riesgo swap");
+const [serviceCard] = await client.searchServicesMCP("swap risk");
 
 // 3. Ejecutar con auto-liquidación x402
 const execution = await client.executeService(serviceCard, {
@@ -235,7 +238,7 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
   Servidor MCP Streamable       Evidencia On-Chain Real       SDK & Quickstarts Agentes     Mainnet & Auditoría
 ```
 
-1. ✅ **Fase 1 (Discovery Core):** Catálogo bilingüe, ranking determinista, servidor MCP y validador de ServiceCards.
+1. ✅ **Fase 1 (Discovery Core):** Catálogo global, ranking determinista, servidor MCP y validador de ServiceCards.
 2. ✅ **Fase 2 (Liquidación Testnet):** Reto HTTP 402, firmas Ed25519 y liquidación on-chain con `@x402/stellar`.
 3. ✅ **Fase 3 (SDK & Ingesta):** `BazaarAgentClient`, suite de seguridad, auto-registro `/api/publisher/ingest` y arnés E2E.
 4. 🟡 **Fase 4 (Expansión & Producción):** Soporte multiactivo SEP-41 (`USDC`, `XLM`, `EURC`), despliegue global y preparación para Mainnet tras auditoría externa.
@@ -244,6 +247,7 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
 
 ## 📖 Documentación Relacionada
 
+* [**Versión en Inglés (`README.md`)**](README.md)
 * [**Guía de Integración para Agentes (`AGENT_QUICKSTART.md`)**](docs/AGENT_QUICKSTART.md)
 * [**Guía de Reproducción Testnet (`DEMO_TESTNET.md`)**](docs/DEMO_TESTNET.md)
 * [**Especificación del Contrato de Discovery (`DISCOVERY_CONTRACT.md`)**](docs/DISCOVERY_CONTRACT.md)
