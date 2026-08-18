@@ -6,6 +6,10 @@
 [![English Version](https://img.shields.io/badge/Language-English-blue?style=for-the-badge)](README.md)
 [![Versión en Español](https://img.shields.io/badge/Idioma-Espa%C3%B1ol-orange?style=for-the-badge)](README.es.md)
 
+<br/><br/>
+
+<img src="public/cover.jpg" alt="Stellar Bazaar x402 Banner" width="100%" />
+
 </div>
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
