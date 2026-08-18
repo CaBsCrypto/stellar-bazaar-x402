@@ -30,9 +30,10 @@ No uses prefijos `NEXT_PUBLIC_` para secretos.
 - Esquema: `exact`
 - Activo SEP-41 USDC: `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`
 - Importe: `10000` atomic = `0.001 USDC`
-- Transacción: `9dfb7e3045e40d59fb51c8eb2ec6fe60dc15560e48888933103c5652eced937f`
-- Ledger: `4129217`
-- Timestamp: `2026-08-14T00:31:11Z`
+- Transacción (Inner Soroban): `43f3ea344b5ba0f4e0de88237f91c765adc90c110827282320bd3b7aa2013602`
+- Transacción (Outer Fee-Bump): `4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f`
+- Ledger: `4212660`
+- Timestamp: `2026-08-18T20:36:25Z`
 - Delta confirmado: payer `-0.0010000 USDC`; seller `+0.0010000 USDC`
 
 ## Validación sin crear otro pago

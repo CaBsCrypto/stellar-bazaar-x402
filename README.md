@@ -135,10 +135,14 @@ sequenceDiagram
 ### 🟢 Completed & Verified Milestones
 
 1. **Verified On-Chain Settlement on Stellar:**
-   * **Transaction Hash:** [`d6154a4c60607bac76309462d109c85031f66710dfe22fe603cada4d41e78094`](https://stellar.expert/explorer/testnet/tx/d6154a4c60607bac76309462d109c85031f66710dfe22fe603cada4d41e78094)
-   * **Confirmed Ledger:** `4202242`
+   * **Outer (Fee-Bump) Tx Hash:** [`4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f`](https://horizon-testnet.stellar.org/transactions/4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f)
+   * **Inner Soroban Transfer Tx Hash (Stellar Expert):** [`43f3ea344b5ba0f4e0de88237f91c765adc90c110827282320bd3b7aa2013602`](https://stellar.expert/explorer/testnet/tx/43f3ea344b5ba0f4e0de88237f91c765adc90c110827282320bd3b7aa2013602)
+   * **Confirmed Ledger:** `4212660` (Timestamp: `2026-08-18T20:36:25Z`)
+   * **Payer Account:** [`GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4`](https://stellar.expert/explorer/testnet/account/GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4)
+   * **Recipient Account:** [`GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ`](https://stellar.expert/explorer/testnet/account/GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ)
    * **Amount:** `0.001 USDC` (`10000` stroops)
    * **SEP-41 Contract:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`
+   * **Facilitator Sponsorship:** OpenZeppelin Fee-Bump relayer (`GA6THKUY...`)
 2. **Streamable HTTP MCP Server (`/api/mcp`):**
    * 5 standard RFC tools: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`.
 3. **Official Agent SDK (`lib/bazaar-agent-client.ts`):**

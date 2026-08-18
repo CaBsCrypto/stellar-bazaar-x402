@@ -135,10 +135,14 @@ sequenceDiagram
 ### 🟢 Hitos Completados y Verificados
 
 1. **Liquidación On-Chain en Stellar Verificada:**
-   * **Hash de Transacción:** [`d6154a4c60607bac76309462d109c85031f66710dfe22fe603cada4d41e78094`](https://stellar.expert/explorer/testnet/tx/d6154a4c60607bac76309462d109c85031f66710dfe22fe603cada4d41e78094)
-   * **Ledger Confirmado:** `4202242`
+   * **Hash Tx Exterior (Fee-Bump):** [`4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f`](https://horizon-testnet.stellar.org/transactions/4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f)
+   * **Hash Tx Interna Soroban (Stellar Expert):** [`43f3ea344b5ba0f4e0de88237f91c765adc90c110827282320bd3b7aa2013602`](https://stellar.expert/explorer/testnet/tx/43f3ea344b5ba0f4e0de88237f91c765adc90c110827282320bd3b7aa2013602)
+   * **Ledger Confirmado:** `4212660` (Timestamp: `2026-08-18T20:36:25Z`)
+   * **Cuenta Pagadora (Payer):** [`GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4`](https://stellar.expert/explorer/testnet/account/GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4)
+   * **Cuenta Receptora (Vendedor):** [`GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ`](https://stellar.expert/explorer/testnet/account/GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ)
    * **Monto:** `0.001 USDC` (`10000` stroops)
    * **Contrato SEP-41:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`
+   * **Gas Patrocinado:** Relayer Fee-Bump de OpenZeppelin (`GA6THKUY...`)
 2. **Servidor MCP Streamable HTTP (`/api/mcp`):**
    * 5 herramientas estándar: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`.
 3. **SDK Oficial para Agentes (`lib/bazaar-agent-client.ts`):**
