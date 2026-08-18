@@ -22,7 +22,7 @@
 
 ---
 
-## 🌟 Executive Pitch: The Global Agent-to-Agent (A2A) Economy
+## 🌟 Why It Matters: The Global Agent-to-Agent (A2A) Economy
 
 Autonomous **AI Agents** (Claude, Cursor, LangChain, CrewAI, AutoGen) are rapidly transforming software into an autonomous economy, but they face a **fundamental infrastructure bottleneck**:
 

@@ -22,7 +22,7 @@
 
 ---
 
-## 🌟 Pitch Ejecutivo: La Economía Global Agente-a-Agente (A2A)
+## 🌟 Por Qué Importa: La Economía Global Agente-a-Agente (A2A)
 
 Los **agentes de Inteligencia Artificial autónomos** (Claude, Cursor, LangChain, CrewAI, AutoGen) están transformando el software en una economía autónoma, pero enfrentan un **cuello de botella crítico de infraestructura**:
 
