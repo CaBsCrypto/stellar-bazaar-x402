@@ -1,2 +1,54 @@
-import {NextRequest,NextResponse} from "next/server";import {services} from "@/lib/catalog";import {filterServices,rankServices} from "@/lib/discovery";import {toServiceCard} from "@/lib/service-card";
-export function GET(req:NextRequest){const p=req.nextUrl.searchParams,q=p.get("query")?.trim();if(!q)return NextResponse.json({ok:false,error:{code:"INVALID_QUERY",message:"query es obligatorio",retryable:false,stage:"discover"}},{status:400});const base=filterServices(services,{kind:p.get("kind")??undefined,scheme:p.get("scheme")??undefined,asset:p.get("asset")??undefined});return NextResponse.json({ok:true,query:q,ranking:{version:"lexical-v1",method:"exact token weights: name 5, tag 3, kind 2, description 1",ai:false},results:rankServices(base,q).map(r=>({resource:toServiceCard(r.service),score:r.score,reasons:r.reasons})),nextCursor:null,partialResults:false})}
+import { NextRequest, NextResponse } from "next/server";
+import { services } from "@/lib/catalog";
+import { filterServices, rankServices } from "@/lib/discovery";
+import { toServiceCard, toPaidService } from "@/lib/service-card";
+import { getAllDynamicServiceCards } from "@/lib/dynamic-registry";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+export function GET(req: NextRequest) {
+  const p = req.nextUrl.searchParams;
+  const q = p.get("query")?.trim();
+
+  if (!q) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: {
+          code: "INVALID_QUERY",
+          message: "query es obligatorio",
+          retryable: false,
+          stage: "discover",
+        },
+      },
+      { status: 400 },
+    );
+  }
+
+  const dynamicServices = getAllDynamicServiceCards().map((d) => toPaidService(d.card));
+  const combined = [...services, ...dynamicServices];
+
+  const base = filterServices(combined, {
+    kind: p.get("kind") ?? undefined,
+    scheme: p.get("scheme") ?? undefined,
+    asset: p.get("asset") ?? undefined,
+  });
+
+  return NextResponse.json({
+    ok: true,
+    query: q,
+    ranking: {
+      version: "lexical-v1",
+      method: "exact token weights: name 5, tag 3, asset 3, kind 2, description 1",
+      ai: false,
+    },
+    results: rankServices(base, q).map((r) => ({
+      resource: toServiceCard(r.service),
+      score: r.score,
+      reasons: r.reasons,
+    })),
+    nextCursor: null,
+    partialResults: false,
+  });
+}

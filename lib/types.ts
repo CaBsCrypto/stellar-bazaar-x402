@@ -1,5 +1,6 @@
 export type ServiceKind = "http" | "mcp";
 export type PaymentScheme = "exact" | "upto";
+export type SupportedSep41Asset = "USDC" | "XLM" | "EURC";
 
 export interface PaidService {
   id: string;
@@ -11,7 +12,7 @@ export interface PaidService {
   routeTemplate: string;
   provider: string;
   network: "stellar:testnet";
-  payment: { scheme: PaymentScheme; asset: "USDC"; amount: string };
+  payment: { scheme: PaymentScheme; asset: SupportedSep41Asset | string; amount: string };
   latency: string;
   input: string[];
   output: string[];
