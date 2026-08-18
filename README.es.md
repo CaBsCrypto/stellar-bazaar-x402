@@ -17,6 +17,8 @@
 [![x402: v2 Compatible](https://img.shields.io/badge/x402-v2%20Standard-8A2BE2.svg)](https://x402.org)
 [![MCP: Streamable HTTP](https://img.shields.io/badge/MCP-Streamable%20HTTP-10B981.svg)](docs/AGENT_QUICKSTART.md)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict%200%20Errors-3178C6.svg)](tsconfig.json)
+[![Live: Vercel](https://img.shields.io/badge/Live-Vercel%20Production-000000.svg)](https://stellar-bazaar-x402.vercel.app)
+[![Settlements: 3 On-Chain](https://img.shields.io/badge/Settlements-3%20Verified%20On--Chain-22C55E.svg)](https://stellar.expert/explorer/testnet)
 
 ---
 
@@ -75,9 +77,9 @@ flowchart TD
         Testnet["Stellar Ledger<br/>(Contratos USDC / XLM / EURC SEP-41)"]
     end
 
-    subgraph Providers["5. Microservicios Proveedores Desacoplados"]
-        DeFiService["Stellar DeFi Quote Service<br/>(Port 3500)"]
-        WebIntelService["Website Intelligence Service<br/>(Port 3501)"]
+    subgraph Providers["5. Microservicios Proveedores Desacoplados (contract-only)"]
+        DeFiService["Stellar DeFi Quote Service<br/>(contrato externo, no desplegado)"]
+        WebIntelService["Website Intelligence Service<br/>(contrato externo, no desplegado)"]
     end
 
     Clients --> MCPServer
@@ -132,38 +134,36 @@ sequenceDiagram
 
 ## 💎 Estado Actual del Proyecto & Evidencia en Vivo
 
-### 🟢 Hitos Completados y Verificados
+### 🟢 Liquidaciones On-Chain Verificadas (Stellar Testnet)
 
-1. **Liquidación On-Chain en Stellar Verificada:**
-   * **Hash Tx Exterior (Fee-Bump):** [`4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f`](https://horizon-testnet.stellar.org/transactions/4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f)
-   * **Hash Tx Interna Soroban (Stellar Expert):** [`43f3ea344b5ba0f4e0de88237f91c765adc90c110827282320bd3b7aa2013602`](https://stellar.expert/explorer/testnet/tx/43f3ea344b5ba0f4e0de88237f91c765adc90c110827282320bd3b7aa2013602)
-   * **Ledger Confirmado:** `4212660` (Timestamp: `2026-08-18T20:36:25Z`)
-   * **Cuenta Pagadora (Payer):** [`GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4`](https://stellar.expert/explorer/testnet/account/GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4)
-   * **Cuenta Receptora (Vendedor):** [`GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ`](https://stellar.expert/explorer/testnet/account/GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ)
-   * **Monto:** `0.001 USDC` (`10000` stroops)
-   * **Contrato SEP-41:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`
-   * **Gas Patrocinado:** Relayer Fee-Bump de OpenZeppelin (`GA6THKUY...`)
-2. **Segunda Liquidación On-Chain Verificada (2026-08-18):**
-   * **Hash Tx Interna Soroban:** [`4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11`](https://stellar.expert/explorer/testnet/tx/4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11)
-   * **Mismas partes/importe:** payer `GC3CK5A4...VDL4` → recipient `GDVR2KDK5...RMCQ`, `0.001 USDC` exact; delta seller `+0.0010000 USDC` verificado en Horizon.
-   * **Tercera (agente autónomo):** [`5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2`](https://stellar.expert/explorer/testnet/tx/5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2) — el card `swap-risk-quote` ahora apunta al endpoint pagado x402.
-3. **Despliegue en Producción (Vercel):**
+| # | Cuándo | Método | Tx Interna (Soroban) | Ledger | Delta Seller |
+|---|--------|--------|----------------------|--------|--------------|
+| 1 | 2026-08-18 20:36Z | `x402:test-client` | [`43f3ea34…013602`](https://stellar.expert/explorer/testnet/tx/43f3ea344b5ba0f4e0de88237f91c765adc90c110827282320bd3b7aa2013602) | `4212660` | `+0.0010000 USDC` |
+| 2 | 2026-08-18 | `x402:test-client` | [`4d6b26ca…86ae11`](https://stellar.expert/explorer/testnet/tx/4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11) | `4214612` | `+0.0010000 USDC` |
+| 3 | 2026-08-18 | `agent:quickstart` | [`5ff5f2d3…a89c2`](https://stellar.expert/explorer/testnet/tx/5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2) | `4214711` | `+0.0010000 USDC` |
+
+Todas: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), contrato SEP-41 `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`, payer [`GC3CK5A4…VDL4`](https://stellar.expert/explorer/testnet/account/GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4) → recipient [`GDVR2KDK5…RMCQ`](https://stellar.expert/explorer/testnet/account/GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ). La primera incluye además su [Tx Fee-Bump exterior](https://horizon-testnet.stellar.org/transactions/4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f) con patrocinio de OpenZeppelin (`GA6THKUY...`).
+
+### ✅ Hitos Completados y Verificados
+
+1. **Despliegue en Producción (Vercel):**
    * Live en `https://stellar-bazaar-x402.vercel.app` con key de facilitador server-only regenerada (2026-08-18) y dirección del seller en Production + Preview.
-4. **Servidor MCP Streamable HTTP (`/api/mcp`):**
+   * Smoke post-deploy: landing/publish/MCP/discovery/reference → 200; x402 sin pago → 402 + `PAYMENT-REQUIRED` v2; suites ecosystem/MCP/agent/publisher/workflow re-ejecutadas contra la URL pública.
+2. **Servidor MCP Streamable HTTP (`/api/mcp`, v0.3.0):**
    * 7 herramientas estándar: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, y de solo lectura `list_workflow_bundles` / `get_workflow_bundle` (fixtures de composición, `execution:false`).
    * `search_services` con paginación por cursor opaco (`limit` 1–50, `nextCursor`, `partialResults`) y envelopes de error deterministas (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`).
-5. **SDK Oficial para Agentes (`lib/bazaar-agent-client.ts`):**
+3. **SDK Oficial para Agentes (`lib/bazaar-agent-client.ts`):**
    * SDK fuertemente tipado para interactuar, evaluar políticas de gasto y auto-liquidar pagos x402 en 3 líneas de código.
-6. **Auto-Registro de Proveedores (`/api/publisher/ingest`):**
+4. **Auto-Registro de Proveedores (`/api/publisher/ingest`):**
    * Registro dinámico con verificación determinista de 11 reglas de conformidad.
-7. **Contrato de Proveedor Externo y Validación E2E:**
+5. **Contrato de Proveedor Externo y Validación E2E:**
    * Registro transparente para repositorios independientes de cotización y endpoints MCP de solo lectura. Ver [evidencia externa E2E](docs/EXTERNAL_PROVIDER_E2E.md) y [capacidades MCP](docs/MCP_DISCOVERY.md).
-8. **6 Pilotos Globales Estructurados:**
+6. **6 Pilotos Globales Estructurados:**
    * Gobernanza de Agentes (`agent-policy-pilot`), Inteligencia Web, Reutilización de Video, Creador de Campañas, Explorador de Investigación y Brief de Diseño.
-9. **Workflow Bundles — Schema y Fixtures (solo lectura):**
+7. **Workflow Bundles — Schema y Fixtures (solo lectura):**
    * `bazaar.workflow-bundle/v1` con 15 reglas de conformance deterministas (ciclos, gates, artifacts, precio) y 2 bundles fixture. Ver [WORKFLOW_BUNDLES_FUTURE.md](docs/WORKFLOW_BUNDLES_FUTURE.md).
-10. **Arnés de Pruebas Automatizado 5-en-1 (`scripts/test-e2e-ecosystem.mjs`):**
-   * Validación integral de punta a punta con **cero riesgo de fondos**.
+8. **Baterías de Pruebas Automatizadas (cero riesgo de fondos):**
+   * Ecosistema 5-en-1, onboarding MCP (paginación + corpus hostil), workflow bundles (13 casos negativos), seguridad de agentes, ingesta de publishers, external provider CI/mock y suites de contrato público.
 
 ---
 
@@ -198,8 +198,14 @@ npm run typecheck
 # Compilar build de producción
 npm run build
 
-# Ejecutar el arnés E2E del ecosistema (REST + MCP + x402)
+# Ejecutar el arnés E2E del ecosistema (REST + MCP + x402, cero riesgo de fondos)
 npm run test:e2e:ecosystem
+
+# Ejecutar la suite de onboarding MCP (paginación por cursor + corpus hostil)
+npm run test:mcp:onboarding
+
+# Ejecutar la suite de conformance de workflow bundles (13 casos negativos)
+npm run test:workflow:bundle
 
 # Ejecutar la suite de seguridad y hard-caps de agentes
 npm run test:agent:safety
@@ -207,7 +213,13 @@ npm run test:agent:safety
 # Ejecutar el test de ingesta y auto-registro de proveedores
 npm run test:publisher:ingest
 
-# Ejecutar la simulación del comprador autónomo
+# Ejecutar la validación del contrato de proveedor externo (mock + CI)
+npm run test:e2e:external
+
+# Ejecutar el smoke de protocolo x402 (challenge, capabilities, no transaccional)
+npm run test:x402:protocol
+
+# Ejecutar la simulación del comprador autónomo (liquidación REAL de 0.001 USDC testnet)
 npm run agent:quickstart
 ```
 
@@ -256,13 +268,13 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
 ```
  [ FASE 1: COMPLETADA ]        [ FASE 2: COMPLETADA ]        [ FASE 3: COMPLETADA ]       [ FASE 4: EN CURSO ]
   Discovery UI & REST API   --> Liquidación Testnet x402 --> Ingesta de Proveedores  --> Soporte Multiactivo
-  Servidor MCP Streamable       Evidencia On-Chain Real       SDK & Quickstarts Agentes     Mainnet & Auditoría
+  Servidor MCP Streamable       Evidencia On-Chain Real       SDK & Quickstarts Agentes     Ejecución Workflows & Mainnet
 ```
 
 1. ✅ **Fase 1 (Discovery Core):** Catálogo global, ranking determinista, servidor MCP y validador de ServiceCards.
 2. ✅ **Fase 2 (Liquidación Testnet):** Reto HTTP 402, firmas Ed25519 y liquidación on-chain con `@x402/stellar`.
 3. ✅ **Fase 3 (SDK & Ingesta):** `BazaarAgentClient`, suite de seguridad, auto-registro `/api/publisher/ingest` y arnés E2E.
-4. 🟡 **Fase 4 (Expansión & Producción):** Soporte multiactivo SEP-41 (`USDC`, `XLM`, `EURC`), despliegue global y preparación para Mainnet tras auditoría externa.
+4. 🟡 **Fase 4 (Expansión & Producción):** Producción Vercel live ✅, paginación por cursor MCP ✅, schema de workflow bundles ✅. Pendiente: ejecución multiactivo SEP-41 (`XLM`, `EURC`), ejecución de bundles con gates, red de proveedores externos y preparación para Mainnet tras auditoría externa.
 
 ---
 
@@ -274,6 +286,10 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
 * [**Especificación del Contrato de Discovery (`DISCOVERY_CONTRACT.md`)**](docs/DISCOVERY_CONTRACT.md)
 * [**Biblia del Proyecto & Arquitectura (`PROJECT_BIBLE.md`)**](docs/PROJECT_BIBLE.md)
 * [**Onboarding de Agentes MCP (`MCP_AGENT_ONBOARDING.md`)**](docs/MCP_AGENT_ONBOARDING.md)
+* [**Descubrimiento y Capacidades MCP (`MCP_DISCOVERY.md`)**](docs/MCP_DISCOVERY.md)
+* [**Paginación MCP & Backlog P1 (`MCP_DISCOVERY_BACKLOG.md`)**](docs/MCP_DISCOVERY_BACKLOG.md)
+* [**Workflow Bundles Futuro (`WORKFLOW_BUNDLES_FUTURE.md`)**](docs/WORKFLOW_BUNDLES_FUTURE.md)
+* [**Evidencia E2E Proveedor Externo (`EXTERNAL_PROVIDER_E2E.md`)**](docs/EXTERNAL_PROVIDER_E2E.md)
 
 ---
 
