@@ -12,7 +12,10 @@
     "x402:test-client": "node scripts/test-x402-client.mjs",
     "x402:fetch-facilitator-key": "node scripts/fetch-testnet-facilitator-key.mjs",
     "test:x402:protocol": "node scripts/test-x402-protocol.mjs",
-    "test:mcp:onboarding": "node scripts/test-mcp-onboarding.mjs"
+    "test:mcp:onboarding": "node scripts/test-mcp-onboarding.mjs",
+    "test:e2e:ecosystem": "node scripts/test-e2e-ecosystem.mjs",
+    "test:agent:safety": "node scripts/test-agent-autonomous-flow.mjs",
+    "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.30.0",
