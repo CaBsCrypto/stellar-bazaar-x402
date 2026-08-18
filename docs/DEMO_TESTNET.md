@@ -36,6 +36,21 @@ No uses prefijos `NEXT_PUBLIC_` para secretos.
 - Timestamp: `2026-08-18T20:36:25Z`
 - Delta confirmado: payer `-0.0010000 USDC`; seller `+0.0010000 USDC`
 
+## Evidencia exacta — segunda validación (2026-08-18)
+
+- Transacción (Inner Soroban): `4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11`
+- Mismas partes, asset e importe: payer `GC3CK5A...VDL4` → seller `GDVR2KDK5...RMCQ`, `10000` atomic USDC Testnet
+- Delta confirmado en Horizon tras el pago: seller `+0.0010000 USDC` (saldo pasó de `0.0040000` a `0.0050000`)
+- Validada por `npm run x402:test-client` contra el dev server local con la facilitator key regenerada
+
+## Evidencia exacta — tercera validación, agente autónomo (2026-08-18)
+
+- Transacción (Inner Soroban): `5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2`
+- Ledger: `4214711`
+- Mismas partes, asset e importe: payer `GC3CK5A...VDL4` → seller `GDVR2KDK5...RMCQ`, `10000` atomic USDC Testnet
+- Delta confirmado en Horizon tras el pago: seller `+0.0010000 USDC` (saldo pasó de `0.0050000` a `0.0060000`)
+- Validada por `npm run agent:quickstart` tras apuntar el card `swap-risk-quote` al endpoint pagado `/api/x402/swap-risk`
+
 ## Validación sin crear otro pago
 
 Ejecuta `npm run test:x402:protocol` contra el servidor configurado. Comprueba 402, header requerido y rechazo de firma manipulada. `npm run typecheck` y `npm run build` no crean transacciones.

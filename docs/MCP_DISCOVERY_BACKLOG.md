@@ -1,6 +1,13 @@
 # MCP discovery backlog — separate branch
 
-Target branch: `feat/mcp-discovery-readonly`, after the Testnet payment branch is reviewed. This is an issue-quality backlog, not an active runtime claim or mock MCP configuration.
+Target branch: `feat/mcp-discovery-readonly`. This is an issue-quality backlog, not an active runtime claim or mock MCP configuration.
+
+## Implemented (2026-08-18, branch `chore/evidence-deploy-housekeeping`)
+
+- `search_services`: opaque cursor pagination (`limit` 1–50, `cursor`, `nextCursor`, `partialResults`) with deterministic `INVALID_CURSOR` envelope for malformed cursors.
+- `list_services`: now returns `partialResults: false` and `nextCursor: null` for shape consistency.
+- Deterministic error envelope across tools: `{ code, message, retryable, stage, field? }` (e.g. `RESOURCE_NOT_FOUND`, `INVALID_CURSOR`).
+- Hostile-corpus coverage in `scripts/test-mcp-onboarding.mjs`: route traversal, internal HTTP URL, pubnet, negative amount, secret-prefixed destination — all rejected by conformance rules.
 
 ## P0 — real read-only Streamable MCP endpoint
 

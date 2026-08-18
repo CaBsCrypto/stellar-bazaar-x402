@@ -18,7 +18,7 @@ export function GET() {
   return Response.json({
     ok: true,
     name: "stellar-bazaar-discovery",
-    version: "0.2.0",
+    version: "0.3.0",
     protocol: "MCP",
     transport: "streamable-http",
     mode: "read-only",
@@ -28,6 +28,8 @@ export function GET() {
       "list_services",
       "search_services",
       "get_service",
+      "list_workflow_bundles",
+      "get_workflow_bundle",
       "validate_service_card",
     ],
     paidCall: false,

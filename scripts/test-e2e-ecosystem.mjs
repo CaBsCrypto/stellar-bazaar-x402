@@ -69,6 +69,8 @@ assert.deepEqual(toolNames, [
   "list_services",
   "search_services",
   "get_service",
+  "list_workflow_bundles",
+  "get_workflow_bundle",
   "validate_service_card"
 ]);
 console.log(`  ✓ MCP tools validated: [${toolNames.join(", ")}]`);

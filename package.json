@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "license": "Apache-2.0",
+  "type": "module",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -19,6 +20,7 @@
     "test:e2e:external": "node scripts/test-external-provider-e2e.mjs",
     "test:e2e:external:testnet": "node scripts/e2e-external-provider-testnet.mjs",
     "test:contract:external:public": "node scripts/test-public-quote-contract.mjs",
+    "test:workflow:bundle": "node scripts/test-workflow-bundle.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {

@@ -29,7 +29,7 @@ sequenceDiagram
   UI->>C: Filter mock resources
   C-->>UI: Ranked fixture results
   U->>UI: Open service and start demo
-  UI-->>U: Quote mock (0.025 USDC)
+  UI-->>U: Quote mock (0.001 USDC)
   U->>UI: Authorize mock
   UI-->>U: Settle mock
   UI-->>U: Fixture call result

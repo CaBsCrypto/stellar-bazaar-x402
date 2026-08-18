@@ -13,7 +13,7 @@
     "network": "stellar:testnet",
     "scheme": "exact",
     "asset": "USDC",
-    "amount": "0.025"
+    "amount": "0.001"
   },
   "discovery": { "version": "draft-0", "tags": ["defi", "risk"] },
   "status": "mock"

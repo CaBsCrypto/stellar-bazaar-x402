@@ -1,6 +1,14 @@
 # Paquetes de capacidades / Workflow Bundles (future spec)
 
-Status: design backlog only. This document does not describe an active orchestration or payment feature.
+Status: **schema + read-only fixtures implemented (2026-08-18)**. No runner, execution or payment exists.
+
+## Estado implementado / Implemented state
+
+- JSON Schema TypeScript `bazaar.workflow-bundle/v1` en `lib/workflow-bundle.ts` con 15 reglas de conformance deterministas: version, id estable, services únicos/conocidos, stages secuenciales 0..n-1, detección de ciclos en handoff, approval gates con efecto, artifacts válidos, handoff artifact, precio por proveedor con asset/network/scheme/monto válidos y estados reconocidos.
+- Dos fixtures read-only en `lib/workflow-bundles.ts`: `brand-identity-bundle` (3 etapas con approval gate en la etapa 1) y `campaign-launch-bundle` (2 etapas).
+- Superficie MCP read-only: `list_workflow_bundles` y `get_workflow_bundle` (conformance incluida, `execution:false`).
+- Suite `npm run test:workflow:bundle`: 2 fixtures conformantes + 13 casos negativos (ciclo, capacidad fantasma, servicio desconocido, duplicados, órdenes no secuenciales, assets mixtos, scheme inválido, monto con precisión excesiva, media type malformado, pubnet, estado desconocido, approval gate sin efecto, versión antigua) + envelope `BUNDLE_NOT_FOUND`.
+- Límites respetados: sin runner, sin fetch de URLs arbitrarias, sin firma, sin wallet, sin escrow, sin pago multi-servicio; metadata de proveedores no confiable.
 
 ## Propósito / Purpose
 
