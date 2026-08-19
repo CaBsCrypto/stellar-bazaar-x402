@@ -31,8 +31,8 @@ and the scripts listed below.
 | `EXTERNAL_QUOTE_BASE_URL` | External quote service base; HTTPS or loopback (`lib/external-provider.ts:14-16`) | Operator | Optional | Optional |
 | `RUN_EXTERNAL_X402_TESTNET` | Must be `"1"` to run `test:e2e:external:testnet`; script exits otherwise (`scripts/e2e-external-provider-testnet.mjs:1`) | Operator | `0` | `0` |
 | `BAZAAR_PROVIDER_SECRET` | Shared secret for `X-Bazaar-Provider-Key` / `providerKey`; dev-open when absent, prod fail-closed 503 (`lib/service-ingest.ts:50-60`, `app/api/publisher/ingest/route.ts:20-30`) | Operator | Optional (`openssl rand -hex 32`) | **Required** |
-| `UPSTASH_REDIS_REST_URL` | Upstash Redis URL for registry persistence (`lib/dynamic-registry.ts:18-20`) | Operator (Upstash) | Optional | When provisioned |
-| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis token | Operator (Upstash) | Optional | When provisioned |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis URL for registry persistence (`lib/dynamic-registry.ts:18-20`) | Operator (Upstash) | Recommended | **Required (prod)** |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis token | Operator (Upstash) | Recommended | **Required (prod)** |
 | `KV_REST_API_URL` | **Legacy** alias for `UPSTASH_REDIS_REST_URL` (`lib/dynamic-registry.ts:18`) | Vercel KV | Optional | Optional |
 | `KV_REST_API_TOKEN` | **Legacy** alias for `UPSTASH_REDIS_REST_TOKEN` (`lib/dynamic-registry.ts:19`) | Vercel KV | Optional | Optional |
 | `BASE_URL` | Target base for ecosystem / ingest / agent suites (default `http://127.0.0.1:3000`) | Script-only | Optional | Optional |
@@ -57,10 +57,11 @@ and the scripts listed below.
   `.env.x402.local`).
 - Generate `BAZAAR_PROVIDER_SECRET` with `openssl rand -hex 32` and keep it
   out of git (`.env*` is gitignored, `.env.example` excepted).
-- Registry persistence via `UPSTASH_REDIS_REST_URL`/`TOKEN` is **currently
-  PENDING** — without them the registry falls back to an in-memory `Map`
-  (`lib/dynamic-registry.ts:22-34`), so registered cards do not survive a
-  redeploy. `storageMode()` reports `"memory"` vs `"upstash"`.
+- Registry persistence via `UPSTASH_REDIS_REST_URL`/`TOKEN` is **LIVE since
+  2026-08-19** (free tier, provisioned via Upstash console). Without them the
+  registry falls back to an in-memory `Map` (`lib/dynamic-registry.ts:22-34`),
+  so registered cards do not survive a redeploy. `storageMode()` reports
+  `"memory"` vs `"upstash"`; verify `"upstash"` in register responses.
 
 ## Demo-pay wiring (local only)
 

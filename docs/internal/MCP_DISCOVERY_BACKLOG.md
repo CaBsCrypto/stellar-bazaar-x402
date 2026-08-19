@@ -15,16 +15,15 @@ Target branch: `feat/mcp-discovery-readonly`. This is an issue-quality backlog, 
 ## Implemented (2026-08-18, branch `feat/product-onboarding-mcp`)
 
 - **Provider registry via MCP (server v0.4.0, 11 tools):** `register_service`, `update_service`, `delete_service`, `list_my_services` with shared-secret auth (`providerKey` tool argument, sha256 hash stored, never raw). Deterministic registry envelopes `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `RESOURCE_NOT_FOUND`, `STORAGE_ERROR`.
-- **Dynamic cards visible in MCP read tools:** `list_services`, `search_services` and `get_service` now merge provider-registered cards (registry writes target Upstash Redis; **provisioning pending** — in-memory fallback until `UPSTASH_REDIS_REST_*`/`KV_REST_API_*` envs exist, cards do not survive redeploys).
+- **Dynamic cards visible in MCP read tools:** `list_services`, `search_services` and `get_service` now merge provider-registered cards (registry writes target Upstash Redis, **provisioned 2026-08-19**; legacy `KV_REST_API_*` env names also supported by `lib/dynamic-registry.ts`).
 - **Zod shape schema** (`lib/service-card-schema.ts`): closes shape gaps (id slug, name, tags, input[]), feeding `failedRules` per-field.
 - **HTTP parity:** `POST/PUT/DELETE/GET /api/publisher/ingest` with `X-Bazaar-Provider-Key`, 401/409/404/503 envelopes, `revision` tracking.
 - **Human UI:** `/publish` now registers for real (success panel, `failedRules`, own-card delete).
 
-## Pending — Upstash Redis persistence (no code needed)
+## Completed — Upstash Redis persistence (2026-08-19)
 
-- Provision a Redis database: Vercel marketplace (`vercel.com/marketplace/upstash`, plan **Free**) or Upstash console (`upstash.com`, free tier 500K commands/mo).
-- Add `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (or legacy `KV_REST_API_URL` / `KV_REST_API_TOKEN`) to Vercel Production + Preview, then redeploy. `lib/dynamic-registry.ts` reads `process.env.UPSTASH_REDIS_REST_URL ?? KV_REST_API_URL` and `UPSTASH_REDIS_REST_TOKEN ?? KV_REST_API_TOKEN` and constructs `new Redis({ url, token })` manually (no `Redis.fromEnv()`).
-- Verifies: registry survives redeploys and is consistent across serverless instances.
+- Provisioned via Upstash console (free tier, 500K commands/mo), envs `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` set on Vercel Production + Preview and in `.env.local`.
+- Verified: registry survives a production redeploy and is consistent across serverless instances (`storage: "upstash"` in register responses).
 
 ## Completed — P0 items delivered (2026-08-18)
 
