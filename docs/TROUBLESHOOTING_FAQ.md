@@ -41,10 +41,11 @@ unset (dev-open), and enforces a `timingSafeEqual` comparison when set
 wrong/missing `X-Bazaar-Provider-Key` → 401 `UNAUTHORIZED`.
 
 **Q: My registered card vanished after a redeploy**
-Registry persistence (Upstash Redis) is **pending provisioning**; without
-`UPSTASH_REDIS_REST_URL`/`TOKEN` the registry is an in-memory `Map`
-(`lib/dynamic-registry.ts:22-34`) and cards die with the process. Check
-`storage` in ingest responses — `"memory"` means it won't survive redeploys.
+Registry persistence (Upstash Redis) is **live since 2026-08-19** — cards
+survive redeploys and are consistent across serverless instances (verified in
+production). If a card disappears, check `storage` in ingest responses: it must
+be `"upstash"`; `"memory"` means the `UPSTASH_REDIS_REST_URL`/`TOKEN` envs are
+missing in that environment (dev fallback, `lib/dynamic-registry.ts:22-34`).
 
 **Q: The demo payer fails with a port mismatch (3210 vs 3000)**
 `x402:setup-wallets` writes `X402_RESOURCE_BASE_URL=http://127.0.0.1:3210`

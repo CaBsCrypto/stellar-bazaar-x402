@@ -29,4 +29,4 @@ All tool errors use the serialized envelope `{ code, message, retryable, stage, 
 
 ## Minimal client exchange
 
-Send JSON-RPC 2.0 `initialize`, then `tools/list` or `tools/call` to `/api/mcp` with `Accept: application/json, text/event-stream`. Stateless requests do not require a session ID. Registering a service persists it to the registry (Upstash Redis when `UPSTASH_REDIS_REST_*` envs are set — **provisioning pending 2026-08-18**, in-memory fallback until then); later requests observe it through the read tools.
+Send JSON-RPC 2.0 `initialize`, then `tools/list` or `tools/call` to `/api/mcp` with `Accept: application/json, text/event-stream`. Stateless requests do not require a session ID. Registering a service persists it to the registry (Upstash Redis, provisioned 2026-08-19); later requests observe it through the read tools.

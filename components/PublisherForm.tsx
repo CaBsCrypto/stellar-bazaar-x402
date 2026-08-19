@@ -122,7 +122,7 @@ export function PublisherForm() {
   return (
     <div className="publisher-grid">
       <form className="publisher-form" onSubmit={handleSubmit}>
-        <div className="draft-flag">REGISTRO EN EL BAZAAR · VALIDADO E INDEXADO · PERSISTENCIA EN MEMORIA (UPSTASH PENDIENTE)</div>
+        <div className="draft-flag">REGISTRO EN EL BAZAAR · VALIDADO E INDEXADO · PERSISTIDO EN UPSTASH REDIS</div>
         <label>
           Nombre
           <input value={name} onChange={(e) => setName(e.target.value)} />
