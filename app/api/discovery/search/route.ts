@@ -7,7 +7,7 @@ import { getAllDynamicServiceCards } from "@/lib/dynamic-registry";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export function GET(req: NextRequest) {
+export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams;
   const q = p.get("query")?.trim();
 
@@ -26,7 +26,7 @@ export function GET(req: NextRequest) {
     );
   }
 
-  const dynamicServices = getAllDynamicServiceCards().map((d) => toPaidService(d.card));
+  const dynamicServices = (await getAllDynamicServiceCards()).map((d) => toPaidService(d.card));
   const combined = [...services, ...dynamicServices];
 
   const base = filterServices(combined, {

@@ -41,6 +41,13 @@ assert.equal(mcpHealthRes.status, 200, "MCP health should return 200");
 const mcpHealth = await mcpHealthRes.json();
 assert.equal(mcpHealth.mode, "read-only");
 assert.equal(mcpHealth.paidCall, false);
+assert.equal(mcpHealth.version, "0.4.0");
+assert.deepEqual(mcpHealth.writes, [
+  "register_service",
+  "update_service",
+  "delete_service",
+  "list_my_services",
+]);
 
 async function mcpRpc(id, method, params) {
   const res = await fetch(`${BASE_URL}/api/mcp`, {
@@ -71,7 +78,11 @@ assert.deepEqual(toolNames, [
   "get_service",
   "list_workflow_bundles",
   "get_workflow_bundle",
-  "validate_service_card"
+  "validate_service_card",
+  "register_service",
+  "update_service",
+  "delete_service",
+  "list_my_services"
 ]);
 console.log(`  ✓ MCP tools validated: [${toolNames.join(", ")}]`);
 

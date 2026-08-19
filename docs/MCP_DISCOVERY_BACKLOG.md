@@ -9,6 +9,14 @@ Target branch: `feat/mcp-discovery-readonly`. This is an issue-quality backlog, 
 - Deterministic error envelope across tools: `{ code, message, retryable, stage, field? }` (e.g. `RESOURCE_NOT_FOUND`, `INVALID_CURSOR`).
 - Hostile-corpus coverage in `scripts/test-mcp-onboarding.mjs`: route traversal, internal HTTP URL, pubnet, negative amount, secret-prefixed destination — all rejected by conformance rules.
 
+## Implemented (2026-08-18, branch `feat/product-onboarding-mcp`)
+
+- **Provider registry via MCP (server v0.4.0, 11 tools):** `register_service`, `update_service`, `delete_service`, `list_my_services` with shared-secret auth (`providerKey` tool argument, sha256 hash stored, never raw). Deterministic registry envelopes `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `RESOURCE_NOT_FOUND`, `STORAGE_ERROR`.
+- **Dynamic cards visible in MCP read tools:** `list_services`, `search_services` and `get_service` now merge provider-registered cards (registry writes persist to Upstash Redis in production).
+- **Zod shape schema** (`lib/service-card-schema.ts`): closes shape gaps (id slug, name, tags, input[]), feeding `failedRules` per-field.
+- **HTTP parity:** `POST/PUT/DELETE/GET /api/publisher/ingest` with `X-Bazaar-Provider-Key`, 401/409/404/503 envelopes, `revision` tracking.
+- **Human UI:** `/publish` now registers for real (success panel, `failedRules`, own-card delete).
+
 ## P0 — real read-only Streamable MCP endpoint
 
 - `search_services`: deterministic filters, cursor pagination, partial-result signaling, and explainable ranking evidence.
@@ -27,7 +35,7 @@ Target branch: `feat/mcp-discovery-readonly`. This is an issue-quality backlog, 
 
 ## Later developer adoption kit
 
-On a different branch, prepare a provider quickstart, three sample service cards, pilot intake template, 75-second demo script, and an accurate claim matrix. No external posting or marketing before explicit authorization and verified Testnet evidence.
+On a different branch, prepare a provider quickstart, three sample service cards, pilot intake template, 75-second demo script, and an accurate claim matrix. No external posting or marketing before explicit authorization and verified Testnet evidence. The provider quickstart now has a live foundation in `docs/PROVIDER_ONBOARDING.md` (register/update/delete/list via HTTP and MCP).
 
 The later landing/catalogue mockup must be fully bilingual: Spanish-first with complete English equivalents for every service category and user-facing label. Service cards should support localized `title`, `description`, `tags`, and `category` values for `es` and `en`, plus UI locale selection. Machine-stable IDs and metadata remain unchanged; protocol enum values are never translated.
 
