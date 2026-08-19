@@ -149,13 +149,16 @@ Todas: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), contrat
 1. **Despliegue en Producción (Vercel):**
    * Live en `https://stellar-bazaar-x402.vercel.app` con key de facilitador server-only regenerada (2026-08-18) y dirección del seller en Production + Preview.
    * Smoke post-deploy: landing/publish/MCP/discovery/reference → 200; x402 sin pago → 402 + `PAYMENT-REQUIRED` v2; suites ecosystem/MCP/agent/publisher/workflow re-ejecutadas contra la URL pública.
-2. **Servidor MCP Streamable HTTP (`/api/mcp`, v0.3.0):**
-   * 7 herramientas estándar: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, y de solo lectura `list_workflow_bundles` / `get_workflow_bundle` (fixtures de composición, `execution:false`).
-   * `search_services` con paginación por cursor opaco (`limit` 1–50, `nextCursor`, `partialResults`) y envelopes de error deterministas (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`).
+2. **Servidor MCP Streamable HTTP (`/api/mcp`, v0.4.0):**
+   * 11 herramientas: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, `list_workflow_bundles`, `get_workflow_bundle`, más escrituras de registro `register_service`, `update_service`, `delete_service`, `list_my_services` (auth por secret compartido vía `providerKey`).
+   * `search_services` con paginación por cursor opaco (`limit` 1–50, `nextCursor`, `partialResults`) y envelopes de error deterministas (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`, `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `STORAGE_ERROR`).
+   * Cards registrados por providers visibles en `list_services`/`search_services`/`get_service` y persistidos en Upstash Redis en producción.
 3. **SDK Oficial para Agentes (`lib/bazaar-agent-client.ts`):**
    * SDK fuertemente tipado para interactuar, evaluar políticas de gasto y auto-liquidar pagos x402 en 3 líneas de código.
 4. **Auto-Registro de Proveedores (`/api/publisher/ingest`):**
-   * Registro dinámico con verificación determinista de 11 reglas de conformidad.
+   * Registro dinámico con verificación determinista de 11 reglas de conformidad y validación completa de forma (zod).
+   * Ciclo de vida completo: `POST` (crear, 409 `CARD_EXISTS` en duplicados), `PUT`/`DELETE` `/api/publisher/ingest/{id}` (actualizar/eliminar, con `revision`), `GET` (listar tus cards). Auth con `X-Bazaar-Provider-Key` (secret compartido; dev-open sin `BAZAAR_PROVIDER_SECRET`, prod fail-closed 503).
+   * Persistencia en Upstash Redis (`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) con fallback en memoria para dev. Flujo humano en `/publish`. Ver [PROVIDER_ONBOARDING.md](docs/PROVIDER_ONBOARDING.md).
 5. **Contrato de Proveedor Externo y Validación E2E:**
    * Registro transparente para repositorios independientes de cotización y endpoints MCP de solo lectura. Ver [evidencia externa E2E](docs/EXTERNAL_PROVIDER_E2E.md) y [capacidades MCP](docs/MCP_DISCOVERY.md).
 6. **6 Pilotos Globales Estructurados:**
@@ -201,7 +204,7 @@ npm run build
 # Ejecutar el arnés E2E del ecosistema (REST + MCP + x402, cero riesgo de fondos)
 npm run test:e2e:ecosystem
 
-# Ejecutar la suite de onboarding MCP (paginación por cursor + corpus hostil)
+# Ejecutar la suite de onboarding MCP (11 tools, paginación, ciclo de vida vía MCP)
 npm run test:mcp:onboarding
 
 # Ejecutar la suite de conformance de workflow bundles (13 casos negativos)
@@ -210,7 +213,7 @@ npm run test:workflow:bundle
 # Ejecutar la suite de seguridad y hard-caps de agentes
 npm run test:agent:safety
 
-# Ejecutar el test de ingesta y auto-registro de proveedores
+# Ejecutar la suite de onboarding de providers (ciclo de vida, auth, forma, persistencia)
 npm run test:publisher:ingest
 
 # Ejecutar la validación del contrato de proveedor externo (mock + CI)
