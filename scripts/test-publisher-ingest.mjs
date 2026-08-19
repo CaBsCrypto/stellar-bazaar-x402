@@ -250,6 +250,15 @@ assert.ok(foundInSearch, `La ServiceCard registrada '${persistCard.id}' debe ser
 assert.ok(foundInSearch.score > 0);
 console.log(`  ✓ Búsqueda de '${searchQuery}' indexó la tarjeta con score: ${foundInSearch.score}`);
 
+const persistCleanup = await fetch(`${INGEST_URL}/${persistCard.id}`, {
+  method: "DELETE",
+  headers: providerKey ? { "X-Bazaar-Provider-Key": providerKey } : {},
+});
+assert.equal(persistCleanup.status, 200);
+const persistCleanupData = await persistCleanup.json();
+assert.equal(persistCleanupData.status, "deleted-dynamic");
+console.log(`  ✓ Cleanup: ServiceCard '${persistCard.id}' eliminada (no contamina catálogo ni benchmark)`);
+
 console.log("\n===============================================================");
 console.log("✅ TODAS LAS PRUEBAS DE INGESTA Y CONFORMANCE DE PROVIDERS PASARON (100% PASS)");
 console.log("===============================================================\n");
