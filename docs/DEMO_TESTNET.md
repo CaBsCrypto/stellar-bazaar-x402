@@ -51,6 +51,15 @@ No uses prefijos `NEXT_PUBLIC_` para secretos.
 - Delta confirmado en Horizon tras el pago: seller `+0.0010000 USDC` (saldo pasó de `0.0050000` a `0.0060000`)
 - Validada por `npm run agent:quickstart` tras apuntar el card `swap-risk-quote` al endpoint pagado `/api/x402/swap-risk`
 
+## Evidencia exacta — cuarta validación, agente autónomo (2026-08-19)
+
+- Transacción (Inner Soroban): `235d6ffdfd36b27a831668b868014536d47e32128d950c89fd07ed415587cb49`
+- Ledger: `4216913`
+- Timestamp: `2026-08-19T02:31:33Z`
+- Mismas partes, asset e importe: payer `GC3CK5A...VDL4` → seller `GDVR2KDK5...RMCQ`, `10000` atomic USDC Testnet
+- Verificada en Horizon (successful: true) tras ejecutar `npm run agent:quickstart` (journey D.8 de `GETTING_STARTED.md`)
+- Evidencia capturada como parte del ciclo de testing de la documentación de uso
+
 ## Validación sin crear otro pago
 
 Ejecuta `npm run test:x402:protocol` contra el servidor configurado. Comprueba 402, header requerido y rechazo de firma manipulada. `npm run typecheck` y `npm run build` no crean transacciones.

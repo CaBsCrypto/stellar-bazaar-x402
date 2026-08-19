@@ -34,7 +34,7 @@ sequenceDiagram
   S-->>B: HTTP 200 + PAYMENT-RESPONSE + quote determinista
 ```
 
-Flujo verificado en Testnet: 3 settlements confirmados (evidencia en README, ledgers `4212660`/`4214612`/`4214711`). El Bazaar no firma ni custodia fondos: la firma ocurre server-only en el cliente del comprador; verify/settle los ejecuta el facilitador alojado.
+Flujo verificado en Testnet: 4 settlements confirmados (evidencia en README, ledgers `4212660`/`4214612`/`4214711`/`4216913`). El Bazaar no firma ni custodia fondos: la firma ocurre server-only en el cliente del comprador; verify/settle los ejecuta el facilitador alojado.
 
 ## Trust boundaries
 

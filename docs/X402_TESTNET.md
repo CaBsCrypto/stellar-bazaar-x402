@@ -1,6 +1,6 @@
 # x402 v2 exact — Stellar Testnet
 
-El flujo x402 está **merged y desplegado**: `GET /api/x402/swap-risk` exige un pago `exact` de `0.001 USDC` en Stellar Testnet y devuelve el quote solo tras settlement. Evidencia actual: 3 settlements verificados en README (ledgers `4212660`, `4214612`, `4214711`, 2026-08-18). No es Mainnet, ni custodia, ni facilitador propio, ni garantía de disponibilidad.
+El flujo x402 está **merged y desplegado**: `GET /api/x402/swap-risk` exige un pago `exact` de `0.001 USDC` en Stellar Testnet y devuelve el quote solo tras settlement. Evidencia actual: 4 settlements verificados en README (ledgers `4212660`, `4214612`, `4214711`, `4216913`, 2026-08-18/19). No es Mainnet, ni custodia, ni facilitador propio, ni garantía de disponibilidad.
 
 ## Official components
 
@@ -27,7 +27,7 @@ The protected route binds payment requirements to `GET`, canonical query inputs,
 - Local/read-only quote: implemented and independently callable without payment.
 - Testnet validation: a standards-shaped `402` and `PAYMENT-REQUIRED` are implemented; malformed signatures are rejected deterministically.
 - First Testnet settlement: one exact 0.001 USDC payment settled successfully after the local resource server was granted outbound access to the hosted facilitator. Transaction `9dfb7e3045e40d59fb51c8eb2ec6fe60dc15560e48888933103c5652eced937f`, ledger `4129217`; payer delta `-0.0010000 USDC`, seller delta `+0.0010000 USDC`.
-- **Superseded** por la evidencia del 2026-08-18 en [DEMO_TESTNET.md](DEMO_TESTNET.md) (3 settlements, ledgers `4212660`/`4214612`/`4214711`); README lo cuenta como la 4ª transacción histórica en su tabla de evidencia.
+- **Superseded** por la evidencia del 2026-08-18/19 en [DEMO_TESTNET.md](DEMO_TESTNET.md) (4 settlements, ledgers `4212660`/`4214612`/`4214711`/`4216913`); README lo cuenta como la 5ª transacción histórica en su tabla de evidencia.
 - Service-card fields and provider descriptions are untrusted metadata. Bazaar validates their shape; it does not certify safety, reputation, purchases, popularity, or financial suitability.
 
 ## Vercel
