@@ -14,6 +14,8 @@
     "x402:fetch-facilitator-key": "node scripts/fetch-testnet-facilitator-key.mjs",
     "test:x402:protocol": "node scripts/test-x402-protocol.mjs",
     "test:mcp:onboarding": "node scripts/test-mcp-onboarding.mjs",
+    "test:agent:policy:evals": "node scripts/test-agent-policy-evals.mjs",
+    "benchmark:ranking": "node scripts/benchmark-ranking.mjs",
     "test:e2e:ecosystem": "node scripts/test-e2e-ecosystem.mjs",
     "test:agent:safety": "node scripts/test-agent-autonomous-flow.mjs",
     "test:publisher:ingest": "node scripts/test-publisher-ingest.mjs",

@@ -208,6 +208,12 @@ npm run test:e2e:ecosystem
 # Ejecutar la suite de onboarding MCP (11 tools, paginación, ciclo de vida vía MCP)
 npm run test:mcp:onboarding
 
+# Ejecutar el corpus de evaluación de políticas de agente (12 escenarios: metadata hostil, traversal, fidelity de estados, sin fugas de secretos)
+npm run test:agent:policy:evals
+
+# Ejecutar el benchmark de ranking reproducible (golden set, gates NDCG@3 / MRR / Recall@3)
+npm run benchmark:ranking
+
 # Ejecutar la suite de conformance de workflow bundles (13 casos negativos)
 npm run test:workflow:bundle
 

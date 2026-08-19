@@ -97,12 +97,12 @@ export function validateServiceCard(card: ServiceCard): ValidationOutcome[] {
     "URL inválida: se requiere HTTPS (localhost permitido para desarrollo).",
   );
 
-  const unsafe = /\.\.|[\r\n#]|@/.test(card.routeTemplate);
+  const unsafe = /\/\/|\\|%2e%2e|[\x00-\x1f\x7f]|\s|\.\.|@|#/i;
   rule(
     "route.template",
-    card.routeTemplate.startsWith("/") && !unsafe,
+    card.routeTemplate.startsWith("/") && !unsafe.test(card.routeTemplate),
     "Route template relativo y sin patrones peligrosos.",
-    "routeTemplate debe comenzar con / y no contener .., @, # o saltos de línea.",
+    "routeTemplate debe comenzar con / y no contener .., //, \\, %2e%2e, @, #, espacios ni caracteres de control.",
   );
 
   const params = [...card.routeTemplate.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
