@@ -106,7 +106,7 @@ export const pilotCapabilityCard = {
   locales: ["es", "en"],
   transport: { httpDiscovery: true, mcpStreamableHttp: true },
   operations: { discover: true, inspect: true, validate: true, execute: false, pay: false, sign: false, custody: false },
-  serviceStatusValues: ["active-local", "fixture-only", "provider-unverified", "payment-not-active"],
+  serviceStatusValues: ["active-local", "fixture-only", "provider-unverified", "testnet-validated", "not-active", "payment-not-active"],
   policy: { metadataUntrusted: true, arbitraryUrlsRejected: true, providerEndpointRequiredForExecution: true }
 } as const;
 

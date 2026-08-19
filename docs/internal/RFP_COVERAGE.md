@@ -10,9 +10,9 @@ Leyenda: **POC** significa evidencia simulada/local; nunca producción.
 | Bazaar Stellar-native de servicios pagos | Catálogo HTTP/MCP y narrativa | Índice real versionado | Demo + fixtures + API transcripts |
 | `GET /discovery/resources` filtros | Modelo y filtros UI/locales | Endpoint durable/cursor | Contract tests y OpenAPI |
 | `GET /discovery/search` NL/cursor/partial | Search mock; diseño de respuesta | Retrieval + cursor + degradación | Golden set, NDCG/Recall/MRR |
-| Ranking evaluado | Fórmula y plan | Benchmark reproducible | Dataset/version/report |
+| Ranking evaluado | Fórmula y plan | **Benchmark reproducible HECHO (2026-08-19)** `npm run benchmark:ranking`: golden set 8 queries, NDCG@3/MRR/Recall@3 con gates, snapshot del corpus | Dataset/version/report |
 | Catalogación desde PaymentPayload extension | Contrato y outcomes documentados | Ingest/validation real | Positive/negative fixtures |
-| Integridad y routeTemplate | Reglas propuestas | Validator hardened | Fuzz/property/SSRF tests |
+| Integridad y routeTemplate | Reglas propuestas | **Validator hardened HECHO (2026-08-19)**: `route.template` rechaza `//`, `\`, `%2e%2e`, control chars, espacios; corpus adversarial de 12 probes en `test:agent:policy:evals` | Fuzz/property/SSRF tests (restante) |
 | EXTENSION-RESPONSES | Outcomes/códigos definidos | Interop upstream | Conformance vectors |
 | Spec upkeep/upstream | Versionado y roadmap | PRs/discusión upstream | Links/commits; no claim previo |
 | Helpers seller/buyer | Interfaces planeadas | Packages Apache-2.0 | Typed examples/tests |
