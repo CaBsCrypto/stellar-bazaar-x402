@@ -1,3 +1,6 @@
+> **INTERNAL** — historical/aspirational document. Not user-facing; see docs/MCP_DISCOVERY.md and docs/PROVIDER_ONBOARDING.md for current guides.
+> **INTERNO** — documento histórico/aspiracional. No dirigido a usuarios; ver docs/MCP_DISCOVERY.md y docs/PROVIDER_ONBOARDING.md para las guías actuales.
+
 # External provider E2E backlog and status
 
 Branch: `feat/external-provider-e2e`. The CI/mock profile and Bazaar's external contract/discovery surfaces are implemented without changing the standalone Quote repository. The real external Testnet profile remains blocked because the provider has no deployment and publicly declares payments/MCP transport unavailable.
@@ -27,7 +30,7 @@ Bazaar connects to the standalone Stellar DeFi Quote Service exclusively through
 
 ### Manual Testnet — explicitly gated
 
-- Script name proposal: `scripts/e2e-external-provider-testnet.mjs`.
+- Implemented script: `scripts/e2e-external-provider-testnet.mjs`, wired as `npm run test:e2e:external:testnet` in `package.json`.
 - Require `RUN_EXTERNAL_X402_TESTNET=1` plus ignored local env; fail closed otherwise.
 - Preflight network, exact asset, amount, destination, balances and facilitator support.
 - Cap payment count/amount, print only public addresses and receipt fields, never seeds/API keys/auth payloads.

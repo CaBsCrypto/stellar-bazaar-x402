@@ -1,10 +1,13 @@
+> **INTERNAL** — historical/aspirational document. Not user-facing; see docs/MCP_DISCOVERY.md and docs/PROVIDER_ONBOARDING.md for current guides.
+> **INTERNO** — documento histórico/aspiracional. No dirigido a usuarios; ver docs/MCP_DISCOVERY.md y docs/PROVIDER_ONBOARDING.md para las guías actuales.
+
 # Paquetes de capacidades / Workflow Bundles (future spec)
 
 Status: **schema + read-only fixtures implemented (2026-08-18)**. No runner, execution or payment exists.
 
 ## Estado implementado / Implemented state
 
-- JSON Schema TypeScript `bazaar.workflow-bundle/v1` en `lib/workflow-bundle.ts` con 15 reglas de conformance deterministas: version, id estable, services únicos/conocidos, stages secuenciales 0..n-1, detección de ciclos en handoff, approval gates con efecto, artifacts válidos, handoff artifact, precio por proveedor con asset/network/scheme/monto válidos y estados reconocidos.
+- JSON Schema TypeScript `bazaar.workflow-bundle/v1` en `lib/workflow-bundle.ts` con 20 reglas deterministas (19 activas para fixtures ready/draft) de conformance: version, id estable, services únicos/conocidos, stages secuenciales 0..n-1, detección de ciclos en handoff, approval gates con efecto, artifacts válidos, handoff artifact, precio por proveedor con asset/network/scheme/monto válidos y estados reconocidos.
 - Dos fixtures read-only en `lib/workflow-bundles.ts`: `brand-identity-bundle` (3 etapas con approval gate en la etapa 1) y `campaign-launch-bundle` (2 etapas).
 - Superficie MCP read-only: `list_workflow_bundles` y `get_workflow_bundle` (conformance incluida, `execution:false`).
 - Suite `npm run test:workflow:bundle`: 2 fixtures conformantes + 13 casos negativos (ciclo, capacidad fantasma, servicio desconocido, duplicados, órdenes no secuenciales, assets mixtos, scheme inválido, monto con precisión excesiva, media type malformado, pubnet, estado desconocido, approval gate sin efecto, versión antigua) + envelope `BUNDLE_NOT_FOUND`.
@@ -48,10 +51,15 @@ El precio agregado mostraría cada precio declarado por el proveedor y el total 
 - Provider metadata remains untrusted data. A bundle does not certify quality, safety, reputation, or completion.
 - Any future execution must be isolated behind explicit buyer policy, consent, deterministic errors, idempotency/replay controls, and receipt reconciliation.
 
-## Ruta futura / Future path
+## Ruta futura / Future path — actualizado 2026-08-18
 
-1. Define JSON Schema and conformance outcomes for bundles and handoff artifacts.
-2. Add read-only catalogue/search representation and fixture-only examples.
-3. Build local tests for missing stages, cycles, incompatible assets/networks, malformed artifacts, stale versions, and approval-gate bypass.
+Los pasos 1–3 ya están implementados y verificados por `scripts/test-workflow-bundle.mjs` (`npm run test:workflow:bundle`):
+
+1. ✅ Definido el JSON Schema `bazaar.workflow-bundle/v1` y los conformance outcomes para bundles y handoff artifacts (`lib/workflow-bundle.ts`, 20 reglas).
+2. ✅ Representación read-only de catálogo/búsqueda con ejemplos fixture (`lib/workflow-bundles.ts`, herramientas MCP `list_workflow_bundles` / `get_workflow_bundle`).
+3. ✅ Pruebas locales para etapas faltantes, ciclos, assets/redes incompatibles, artifacts malformados, versiones antiguas y bypass de approval gate (13 casos negativos).
+
+Pendiente:
+
 4. Validate one provider-owned, non-paid local composition.
 5. Only after security and x402 conformance review, consider a separately scoped manual Testnet execution experiment.

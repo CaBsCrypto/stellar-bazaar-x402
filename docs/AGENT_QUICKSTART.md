@@ -6,15 +6,18 @@ Guía completa para integrar agentes de IA autónomos con **Stellar Bazaar x402*
 
 ## 1. Conexión Rápida al Servidor MCP (Streamable HTTP)
 
-El servidor MCP de Stellar Bazaar expone 5 herramientas estándar bajo la especificación RFC JSON-RPC 2.0 / `2025-11-25`:
+El servidor MCP de Stellar Bazaar expone 11 herramientas estándar bajo la especificación RFC JSON-RPC 2.0 / `2025-11-25`:
 
 * **Endpoint MCP:** `http://localhost:3000/api/mcp` (o tu URL pública de Vercel)
-* **Herramientas Disponibles:**
+* **Herramientas Disponibles — lectura (7):**
   * `get_bazaar_capabilities`: Consulta transporte, esquemas soportados y políticas de no-custodia.
   * `list_services`: Lista los servicios disponibles y pilotos.
   * `search_services`: Búsqueda determinista por lenguaje natural y tags.
   * `get_service`: Inspecciona los metadatos completos y esquemas I/O de una Service Card por ID.
   * `validate_service_card`: Valida la conformidad estricta de una Service Card.
+  * `list_workflow_bundles`: Lista los workflow bundles read-only (composiciones de capacidades).
+  * `get_workflow_bundle`: Inspecciona un bundle y su conformance determinista.
+* **Escrituras de registro (4):** `register_service`, `update_service`, `delete_service` y `list_my_services`. Todas requieren el argumento `providerKey` (secreto compartido; ver [PROVIDER_ONBOARDING.md](PROVIDER_ONBOARDING.md)).
 
 ---
 

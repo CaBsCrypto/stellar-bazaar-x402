@@ -164,7 +164,7 @@ Todas: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), contrat
 6. **6 Pilotos Globales Estructurados:**
    * Gobernanza de Agentes (`agent-policy-pilot`), Inteligencia Web, Reutilización de Video, Creador de Campañas, Explorador de Investigación y Brief de Diseño.
 7. **Workflow Bundles — Schema y Fixtures (solo lectura):**
-   * `bazaar.workflow-bundle/v1` con 15 reglas de conformance deterministas (ciclos, gates, artifacts, precio) y 2 bundles fixture. Ver [WORKFLOW_BUNDLES_FUTURE.md](docs/WORKFLOW_BUNDLES_FUTURE.md).
+   * `bazaar.workflow-bundle/v1` con 20 reglas deterministas (19 activas para fixtures ready/draft) (ciclos, gates, artifacts, precio) y 2 bundles fixture. Ver [WORKFLOW_BUNDLES_FUTURE.md](docs/internal/WORKFLOW_BUNDLES_FUTURE.md).
 8. **Baterías de Pruebas Automatizadas (cero riesgo de fondos):**
    * Ecosistema 5-en-1, onboarding MCP (paginación + corpus hostil), workflow bundles (13 casos negativos), seguridad de agentes, ingesta de publishers, external provider CI/mock y suites de contrato público.
 
@@ -174,7 +174,7 @@ Todas: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), contrat
 
 ### 1. Instalación y Ejecución Local
 
-Requisitos: Node.js 20+ y npm.
+Requisitos: Node.js 22.18+ y npm.
 
 ```bash
 # Clonar el repositorio
@@ -221,6 +221,12 @@ npm run test:e2e:external
 
 # Ejecutar el smoke de protocolo x402 (challenge, capabilities, no transaccional)
 npm run test:x402:protocol
+
+# Ejecutar la suite del contrato público del proveedor (offline, sin fondos)
+npm run test:contract:external:public
+
+# Ejecutar el E2E real del proveedor externo en testnet (requiere RUN_EXTERNAL_X402_TESTNET=1 + EXTERNAL_QUOTE_BASE_URL)
+npm run test:e2e:external:testnet
 
 # Ejecutar la simulación del comprador autónomo (liquidación REAL de 0.001 USDC testnet)
 npm run agent:quickstart
@@ -284,15 +290,23 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
 ## 📖 Documentación Relacionada
 
 * [**Versión en Inglés (`README.md`)**](README.md)
+* [**Guía de Inicio (`GETTING_STARTED.md`)**](docs/GETTING_STARTED.md)
 * [**Guía de Integración para Agentes (`AGENT_QUICKSTART.md`)**](docs/AGENT_QUICKSTART.md)
 * [**Guía de Reproducción Testnet (`DEMO_TESTNET.md`)**](docs/DEMO_TESTNET.md)
-* [**Especificación del Contrato de Discovery (`DISCOVERY_CONTRACT.md`)**](docs/DISCOVERY_CONTRACT.md)
-* [**Biblia del Proyecto & Arquitectura (`PROJECT_BIBLE.md`)**](docs/PROJECT_BIBLE.md)
+* [**Referencia de Variables de Entorno (`ENVIRONMENT_VARIABLES.md`)**](docs/ENVIRONMENT_VARIABLES.md)
+* [**Referencia de la API HTTP (`HTTP_API_REFERENCE.md`)**](docs/HTTP_API_REFERENCE.md)
+* [**Configuración de Cliente MCP (`MCP_CLIENT_SETUP.md`)**](docs/MCP_CLIENT_SETUP.md)
+* [**Reglas de Conformidad (`CONFORMANCE_RULES.md`)**](docs/CONFORMANCE_RULES.md)
+* [**FAQ de Solución de Problemas (`TROUBLESHOOTING_FAQ.md`)**](docs/TROUBLESHOOTING_FAQ.md)
 * [**Onboarding de Agentes MCP (`MCP_AGENT_ONBOARDING.md`)**](docs/MCP_AGENT_ONBOARDING.md)
 * [**Descubrimiento y Capacidades MCP (`MCP_DISCOVERY.md`)**](docs/MCP_DISCOVERY.md)
-* [**Paginación MCP & Backlog P1 (`MCP_DISCOVERY_BACKLOG.md`)**](docs/MCP_DISCOVERY_BACKLOG.md)
-* [**Workflow Bundles Futuro (`WORKFLOW_BUNDLES_FUTURE.md`)**](docs/WORKFLOW_BUNDLES_FUTURE.md)
 * [**Evidencia E2E Proveedor Externo (`EXTERNAL_PROVIDER_E2E.md`)**](docs/EXTERNAL_PROVIDER_E2E.md)
+* [**Especificación del Contrato de Discovery (`DISCOVERY_CONTRACT.md`)**](docs/internal/DISCOVERY_CONTRACT.md)
+* [**Biblia del Proyecto & Arquitectura (`PROJECT_BIBLE.md`)**](docs/internal/PROJECT_BIBLE.md)
+* [**Paginación MCP & Backlog P1 (`MCP_DISCOVERY_BACKLOG.md`)**](docs/internal/MCP_DISCOVERY_BACKLOG.md)
+* [**Workflow Bundles Futuro (`WORKFLOW_BUNDLES_FUTURE.md`)**](docs/internal/WORKFLOW_BUNDLES_FUTURE.md)
+
+> Los documentos internos & históricos (propuestas, backlogs, security/QA) viven en [`docs/internal/`](docs/internal/).
 
 ---
 

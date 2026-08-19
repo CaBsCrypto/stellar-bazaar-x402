@@ -1,3 +1,6 @@
+> **INTERNAL** — historical/aspirational document. Not user-facing; see README.md for current guides.
+> **INTERNO** — documento histórico/aspiracional. No dirigido a usuarios; ver README.md para las guías actuales.
+
 # Project Bible — Stellar Bazaar x402
 
 ## 1. Tesis de producto

@@ -4,7 +4,7 @@ import { PublisherForm } from "@/components/PublisherForm";
 export default function Publish() {
   return (
     <main>
-      <div className="mock-banner">PUBLISHER KIT · REGISTRO REAL · INDEXACIÓN Y PERSISTENCIA CON LLAVE DE PROVEEDOR</div>
+      <div className="mock-banner">PUBLISHER KIT · REGISTRO REAL · AUTH VÍA BAZAAR_PROVIDER_SECRET · PERSISTENCIA EN MEMORIA HASTA PROVISIONAR UPSTASH</div>
       <nav className="nav shell">
         <Link href="/" className="brand">
           <span>✦</span> Stellar Bazaar <sup>x402</sup>
@@ -42,7 +42,7 @@ export default function Publish() {
             <span className="kicker">PUBLISHER KIT · EN VIVO</span>
             <h2>Diseña, valida y registra tu service card.</h2>
           </div>
-          <p>Tras el alta, tu servicio es descubrible por REST y MCP y queda persistido entre deploys.</p>
+          <p>Tras el alta, tu servicio es descubrible por REST y MCP. La persistencia entre deploys requiere Upstash Redis (provisión pendiente — hoy las cards viven en memoria y se pierden al redeployar).</p>
         </div>
         <PublisherForm />
       </section>

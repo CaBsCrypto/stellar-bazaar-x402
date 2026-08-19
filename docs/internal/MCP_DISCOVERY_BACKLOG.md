@@ -1,3 +1,6 @@
+> **INTERNAL** — historical/aspirational document. Not user-facing; see docs/MCP_DISCOVERY.md and docs/PROVIDER_ONBOARDING.md for current guides.
+> **INTERNO** — documento histórico/aspiracional. No dirigido a usuarios; ver docs/MCP_DISCOVERY.md y docs/PROVIDER_ONBOARDING.md para las guías actuales.
+
 # MCP discovery backlog — separate branch
 
 Target branch: `feat/mcp-discovery-readonly`. This is an issue-quality backlog, not an active runtime claim or mock MCP configuration.
@@ -20,17 +23,12 @@ Target branch: `feat/mcp-discovery-readonly`. This is an issue-quality backlog, 
 ## Pending — Upstash Redis persistence (no code needed)
 
 - Provision a Redis database: Vercel marketplace (`vercel.com/marketplace/upstash`, plan **Free**) or Upstash console (`upstash.com`, free tier 500K commands/mo).
-- Add `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (or legacy `KV_REST_API_URL` / `KV_REST_API_TOKEN`) to Vercel Production + Preview, then redeploy. `lib/dynamic-registry.ts` picks them up automatically via `Redis.fromEnv()`.
+- Add `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` (or legacy `KV_REST_API_URL` / `KV_REST_API_TOKEN`) to Vercel Production + Preview, then redeploy. `lib/dynamic-registry.ts` reads `process.env.UPSTASH_REDIS_REST_URL ?? KV_REST_API_URL` and `UPSTASH_REDIS_REST_TOKEN ?? KV_REST_API_TOKEN` and constructs `new Redis({ url, token })` manually (no `Redis.fromEnv()`).
 - Verifies: registry survives redeploys and is consistent across serverless instances.
 
-## P0 — real read-only Streamable MCP endpoint
+## Completed — P0 items delivered (2026-08-18)
 
-- `search_services`: deterministic filters, cursor pagination, partial-result signaling, and explainable ranking evidence.
-- `get_service`, `list_services`, and `validate_service_card` over the canonical HTTP discovery model.
-- `get_bazaar_capabilities` plus a capability card that distinguishes implemented, experimental, and unavailable behavior.
-- One deterministic error envelope: stable code, human-readable message, retryability, and field/rule details.
-- Treat every catalog field, URL, route template, price, policy declaration, and provider statement as untrusted data. Validate shape and route safety; never certify the provider.
-- Agent onboarding docs for transport, versions, pagination, examples, limits, and truthful paid-call status. Paid-call tooling remains unavailable until separately proven.
+The real read-only Streamable MCP endpoint is live at `POST /api/mcp`: `search_services` (deterministic filters, cursor pagination, partial-result signaling, explainable ranking evidence), `get_service`/`list_services`/`validate_service_card` over the canonical HTTP discovery model, `get_bazaar_capabilities` with a capability card (`bazaar.capabilities/v1`), one deterministic error envelope (`{ code, message, retryable, stage, field? }`), untrusted-metadata handling, and agent onboarding docs. Paid-call tooling remains unavailable until separately proven. See [MCP_DISCOVERY.md](MCP_DISCOVERY.md).
 
 ## P1 — agent policy and evaluation
 

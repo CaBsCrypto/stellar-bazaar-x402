@@ -53,8 +53,10 @@ export function TestnetPaymentDemo() {
       <span>EVIDENCIA TESTNET · EXACT · SIN MAINNET</span>
       <h3 id="testnet-payment-title">Recibo x402 verificado</h3>
       <p>
-        Evidencia pública de una única liquidación local validada. No implica producción,
-        auditoría, custodia ni disponibilidad pública del flujo de pago.
+        Evidencia pública de 3 liquidaciones Testnet verificadas on-chain: 0.001 USDC cada una
+        (ledgers 4212660 · 4214612 · 4214711, activo SEP-41{" "}
+        <code>CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA</code>). No implica
+        producción, auditoría ni custodia.
       </p>
 
       <dl className="receipt-grid">

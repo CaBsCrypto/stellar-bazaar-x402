@@ -2,7 +2,7 @@
 
 Bazaar exposes a real, stateless Streamable HTTP MCP endpoint at `POST /api/mcp`, implemented with `@modelcontextprotocol/sdk@1.30.0`. `GET /api/mcp` returns a public health/capability summary.
 
-Capability version: `bazaar.mcp-capabilities/v1`. Server version: `0.4.0`.
+Capability version: `bazaar.capabilities/v1`. Server version: `0.4.0`.
 
 ## Tools (11)
 
