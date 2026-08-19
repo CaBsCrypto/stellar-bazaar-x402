@@ -1,3 +1,6 @@
+> **INTERNAL** — historical/aspirational document. Not user-facing; see README.md for current guides.
+> **INTERNO** — documento histórico/aspiracional. No dirigido a usuarios; ver README.md para las guías actuales.
+
 # Next.js security upgrade evidence
 
 Branch: `feat/next-security-upgrade`, isolated from `origin/main`.

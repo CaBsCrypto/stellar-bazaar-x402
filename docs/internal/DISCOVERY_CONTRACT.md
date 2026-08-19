@@ -1,3 +1,6 @@
+> **INTERNAL** — historical/aspirational document. Not user-facing; see docs/MCP_DISCOVERY.md for current guides.
+> **INTERNO** — documento histórico/aspiracional. No dirigido a usuarios; ver docs/MCP_DISCOVERY.md para las guías actuales.
+
 # Discovery contract — working draft, not an upstream specification
 
 > **Status note (2026-08-18, `feat/product-onboarding-mcp`):** the live registry implements a subset of this draft. Implemented today: `POST/PUT/DELETE/GET /api/publisher/ingest` with `accepted`-equivalent `indexed-dynamic`/`updated-dynamic`/`deleted-dynamic`, `rejected`-equivalent `VALIDATION_FAILED` (shape + 11 conformance rules), `CARD_EXISTS` (duplicate), `UNAUTHORIZED` and `RESOURCE_NOT_FOUND`. **Not yet implemented:** `accepted_with_warnings`, `quarantined`, and the PaymentPayload-extension ingest flow — future work.

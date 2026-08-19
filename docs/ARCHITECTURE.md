@@ -18,23 +18,23 @@ flowchart LR
 
 El Bazaar no firma ni custodia fondos. El facilitator es un límite separado; `@x402/stellar` conserva la responsabilidad protocolaria de verify/settle.
 
-## Flujo demostrado en el POC
+## Flujo x402 implementado (Testnet)
 
 ```mermaid
 sequenceDiagram
-  participant U as Reviewer
-  participant UI as Local POC
-  participant C as Static fixture catalogue
-  U->>UI: Search "riesgo swap"
-  UI->>C: Filter mock resources
-  C-->>UI: Ranked fixture results
-  U->>UI: Open service and start demo
-  UI-->>U: Quote mock (0.001 USDC)
-  U->>UI: Authorize mock
-  UI-->>U: Settle mock
-  UI-->>U: Fixture call result
-  Note over UI,C: No network, wallet, signature or settlement occurs
+  participant B as Buyer / agent (server-only)
+  participant S as Resource server (Bazaar)
+  participant F as Facilitador alojado (OpenZeppelin, Testnet)
+  B->>S: GET /api/x402/swap-risk (sin firma)
+  S-->>B: HTTP 402 + PAYMENT-REQUIRED (x402 v2 exact)
+  B->>B: Firma auth entry Ed25519 con @x402/stellar (server-only)
+  B->>S: Reintento con PAYMENT-SIGNATURE
+  S->>F: verify / settle (@x402/stellar)
+  F-->>S: Settlement confirmado en ledger
+  S-->>B: HTTP 200 + PAYMENT-RESPONSE + quote determinista
 ```
+
+Flujo verificado en Testnet: 3 settlements confirmados (evidencia en README, ledgers `4212660`/`4214612`/`4214711`). El Bazaar no firma ni custodia fondos: la firma ocurre server-only en el cliente del comprador; verify/settle los ejecuta el facilitador alojado.
 
 ## Trust boundaries
 
@@ -49,7 +49,7 @@ flowchart TB
     IDX["Offchain index"]
     R["Retrieval + ranking"]
   end
-  subgraph Payment["Payment boundary — later"]
+  subgraph Payment["Payment boundary — IMPLEMENTED (Testnet)"]
     SDK["@x402/stellar"]
     FAC["Non-custodial facilitator"]
     NET["Stellar network"]

@@ -1,6 +1,6 @@
-# x402 v2 exact — Stellar Testnet POC
+# x402 v2 exact — Stellar Testnet
 
-Branch-only work. No Mainnet, custody, facilitator implementation, or browser-held keys.
+El flujo x402 está **merged y desplegado**: `GET /api/x402/swap-risk` exige un pago `exact` de `0.001 USDC` en Stellar Testnet y devuelve el quote solo tras settlement. Evidencia actual: 3 settlements verificados en README (ledgers `4212660`, `4214612`, `4214711`, 2026-08-18). No es Mainnet, ni custodia, ni facilitador propio, ni garantía de disponibilidad.
 
 ## Official components
 
@@ -20,16 +20,18 @@ Branch-only work. No Mainnet, custody, facilitator implementation, or browser-he
 
 The protected route binds payment requirements to `GET`, canonical query inputs, route, exact USDC contract/amount, pinned seller destination, and a 60-second maximum timeout. Facilitator/SDK handle Soroban auth verification, expiry, replay protection and settlement. Errors are structured and logs are redacted.
 
-## Evidence status (2026-08-13)
+## Evidencia
+
+### Historical (2026-08-13) — superseded
 
 - Local/read-only quote: implemented and independently callable without payment.
 - Testnet validation: a standards-shaped `402` and `PAYMENT-REQUIRED` are implemented; malformed signatures are rejected deterministically.
-- Testnet settlement evidence: one exact 0.001 USDC payment settled successfully after the local resource server was granted outbound access to the hosted facilitator. Transaction `9dfb7e3045e40d59fb51c8eb2ec6fe60dc15560e48888933103c5652eced937f`, ledger `4129217`; payer delta `-0.0010000 USDC`, seller delta `+0.0010000 USDC`.
-- Public payment: **not deployed or generally available**. The evidence above validates this branch locally on Testnet only; it is not a Mainnet, production-readiness, audit, or public-payment claim.
+- First Testnet settlement: one exact 0.001 USDC payment settled successfully after the local resource server was granted outbound access to the hosted facilitator. Transaction `9dfb7e3045e40d59fb51c8eb2ec6fe60dc15560e48888933103c5652eced937f`, ledger `4129217`; payer delta `-0.0010000 USDC`, seller delta `+0.0010000 USDC`.
+- **Superseded** por la evidencia del 2026-08-18 en [DEMO_TESTNET.md](DEMO_TESTNET.md) (3 settlements, ledgers `4212660`/`4214612`/`4214711`); README lo cuenta como la 4ª transacción histórica en su tabla de evidencia.
 - Service-card fields and provider descriptions are untrusted metadata. Bazaar validates their shape; it does not certify safety, reputation, purchases, popularity, or financial suitability.
 
 ## Vercel
 
-The existing Vercel project uses server-only `STELLAR_X402_FACILITATOR_API_KEY` and `STELLAR_X402_FACILITATOR_URL` for facilitator access in Preview and Production. A deployed paid route additionally needs the public seller address. Never deploy `X402_PAYER_SECRET` or `X402_SELLER_SECRET`.
+The deployed Vercel project uses server-only `STELLAR_X402_FACILITATOR_API_KEY` and `STELLAR_X402_FACILITATOR_URL` for facilitator access in Preview and Production. The paid route reads the public seller address from `X402_SELLER_ADDRESS` (verificado en `lib/x402-config.ts`).
 
-The production site remains the read-only/local-MVP preview until this branch is reviewed and separately authorized for merge and deployment.
+**Never deploy payer secrets.** `X402_PAYER_SECRET` (seed del payer) no debe desplegarse jamás; el servidor solo la usa el cliente/demo local. `X402_SELLER_SECRET` es una variable fantasma — el servidor no la lee; solo existe dentro del gitignored `.env.x402.local` generado por `scripts/setup-testnet-wallets.mjs`. En Vercel se configura únicamente la dirección pública `X402_SELLER_ADDRESS` junto con las dos variables de facilitator.
