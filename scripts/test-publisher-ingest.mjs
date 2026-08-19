@@ -177,9 +177,7 @@ assert.equal(putMissingRes.status, 404, "PUT de id inexistente debe responder HT
 assert.equal(putMissingRes.data.error.code, "RESOURCE_NOT_FOUND");
 console.log("  ✓ PUT de id inexistente rechazado con HTTP 404 RESOURCE_NOT_FOUND");
 
-const mismatchRouteId = `route-id-${timestamp}`;
-const mismatchCardId = `card-id-${timestamp}`;
-const putMismatchRes = await request("PUT", `/api/publisher/ingest/${mismatchRouteId}`, createCard({ id: mismatchCardId }));
+const putMismatchRes = await request("PUT", `/api/publisher/ingest/${validCardId}`, createCard({ id: `other-id-${timestamp}` }));
 assert.equal(putMismatchRes.status, 400, "PUT con id de ruta != id de card debe responder 400");
 console.log("  ✓ PUT con id de ruta inconsistente rechazado con HTTP 400");
 

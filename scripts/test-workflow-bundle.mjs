@@ -157,7 +157,7 @@ console.log(
     {
       ok: true,
       fixtures: workflowBundles.map((b) => b.id),
-      conformanceRules: 15,
+      conformanceRules: 20,
       negativeCases: 13,
       mcpSurface: ["list_workflow_bundles", "get_workflow_bundle"],
       execution: false,

@@ -113,7 +113,7 @@ const workflows: Workflow[] = [
 const timeline = [
   ["AHORA / NOW", "Vitrina transparente", "Transparent showcase", "Fixtures y estados visibles; ninguna tarjeta prueba uso, pago o reputación.", "Fixtures and visible states; no card proves use, payment, or reputation."],
   ["SIGUIENTE / NEXT", "Schemas de handoff", "Handoff schemas", "Versionar stages, artifacts, approval gates y errores deterministas.", "Version stages, artifacts, approval gates, and deterministic errors."],
-  ["DESPUÉS / LATER", "Validación aislada", "Isolated validation", "Probar una composición local sin pago antes de considerar Testnet.", "Test one unpaid local composition before considering Testnet."]
+  ["DESPUÉS / LATER", "Validación aislada", "Isolated validation", "Probar una composición local sin pago antes de pagar en Testnet.", "Test one unpaid local composition before paying on Testnet."]
 ];
 
 export function WorkflowShowcase(){
