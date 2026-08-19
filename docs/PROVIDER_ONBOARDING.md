@@ -73,7 +73,8 @@ Write tools: `register_service` (409 `CARD_EXISTS` on duplicates), `update_servi
 
 ## Persistence
 
-- Production: Upstash Redis (`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) — survives redeploys.
+- Production (target): Upstash Redis (`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) — survives redeploys.
+- **Current status (2026-08-18): Upstash provisioning pending** (marketplace terms acceptance). Until `UPSTASH_REDIS_REST_*` envs exist, the registry runs on the in-memory fallback in every environment: cards are lost on redeploy/cold start. Persistence is restored as soon as the integration is provisioned — no code change needed.
 - Dev fallback: in-memory registry (lost on restart).
 
 ## Human UI

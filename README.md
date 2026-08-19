@@ -152,13 +152,13 @@ All settlements: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic
 2. **Streamable HTTP MCP Server (`/api/mcp`, v0.4.0):**
    * 11 standard RFC tools: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, `list_workflow_bundles`, `get_workflow_bundle`, plus provider registry writes `register_service`, `update_service`, `delete_service`, `list_my_services` (shared-secret auth via `providerKey`).
    * `search_services` supports opaque cursor pagination (`limit` 1–50, `nextCursor`, `partialResults`) and deterministic error envelopes (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`, `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `STORAGE_ERROR`).
-   * Provider-registered cards are visible in `list_services`/`search_services`/`get_service` and persist to Upstash Redis in production.
+   * Provider-registered cards are visible in `list_services`/`search_services`/`get_service` and persist across redeploys (Upstash Redis pending provisioning — in-memory fallback until then).
 3. **Official Agent SDK (`lib/bazaar-agent-client.ts`):**
    * Strongly typed SDK for agent discovery, pre-flight safety policy checks, and automated x402 payment handling in 3 lines of code.
 4. **Dynamic Provider Ingest API (`/api/publisher/ingest`):**
    * Deterministic registration with 11-rule conformance engine, full zod shape validation, and strict injection prevention.
    * Full lifecycle: `POST` (create, 409 `CARD_EXISTS` on duplicates), `PUT`/`DELETE` `/api/publisher/ingest/{id}` (update/remove, `revision` tracking), `GET` (list your cards). Auth via `X-Bazaar-Provider-Key` (shared secret; dev-open without `BAZAAR_PROVIDER_SECRET`, prod fail-closed 503).
-   * Persistence via Upstash Redis (`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) with in-memory dev fallback. Human flow at `/publish`. See [PROVIDER_ONBOARDING.md](docs/PROVIDER_ONBOARDING.md).
+   * Persistence via Upstash Redis (`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`) with in-memory fallback — **provisioning pending (2026-08-18)**; until then cards do not survive redeploys. Human flow at `/publish`. See [PROVIDER_ONBOARDING.md](docs/PROVIDER_ONBOARDING.md).
 5. **External Provider Contract & E2E Validation:**
    * Truthful contract-only record for independent quote repositories and read-only MCP discovery endpoints. See [external E2E evidence](docs/EXTERNAL_PROVIDER_E2E.md) and [MCP capabilities](docs/MCP_DISCOVERY.md).
 6. **6 Global Pilot Bundles:**
