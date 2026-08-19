@@ -60,6 +60,14 @@ No uses prefijos `NEXT_PUBLIC_` para secretos.
 - Verificada en Horizon (successful: true) tras ejecutar `npm run agent:quickstart` (journey D.8 de `GETTING_STARTED.md`)
 - Evidencia capturada como parte del ciclo de testing de la documentación de uso
 
+## Evidencia exacta — quinta validación, agente autónomo en vivo (2026-08-19)
+
+- Transacción (Inner Soroban): `c7fa7d18d036b19be969d37e393da8a8b8aa9f70dc8e111e4568d90dd903b625`
+- Ledger: `4220649`
+- Timestamp: `2026-08-19T07:43:24Z`
+- Mismas partes, asset e importe: payer `GC3CK5A...VDL4` → seller `GDVR2KDK5...RMCQ`, `10000` atomic USDC Testnet
+- Ejecución verificada en vivo del ciclo completo de agente autónomo (`agent:quickstart`) con recibo en Horizon y enlace en Stellar Expert: [Ver Tx en Stellar Expert](https://stellar.expert/explorer/testnet/tx/c7fa7d18d036b19be969d37e393da8a8b8aa9f70dc8e111e4568d90dd903b625)
+
 ## Validación sin crear otro pago
 
 Ejecuta `npm run test:x402:protocol` contra el servidor configurado. Comprueba 402, header requerido y rechazo de firma manipulada. `npm run typecheck` y `npm run build` no crean transacciones.

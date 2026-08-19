@@ -18,35 +18,35 @@
 [![MCP: Streamable HTTP](https://img.shields.io/badge/MCP-Streamable%20HTTP-10B981.svg)](docs/AGENT_QUICKSTART.md)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict%200%20Errors-3178C6.svg)](tsconfig.json)
 [![Live: Vercel](https://img.shields.io/badge/Live-Vercel%20Production-000000.svg)](https://stellar-bazaar-x402.vercel.app)
-[![Settlements: 4 On-Chain](https://img.shields.io/badge/Settlements-4%20Verified%20On--Chain-22C55E.svg)](https://stellar.expert/explorer/testnet)
+[![Liquidaciones: 5 On-Chain](https://img.shields.io/badge/Liquidaciones-5%20Verificadas%20On--Chain-22C55E.svg)](https://stellar.expert/explorer/testnet)
 
 ---
 
-## 🌟 Por Qué Importa: La Economía Global Agente-a-Agente (A2A)
+## 🌟 Por Qué Importa: La Economía Global Agente a Agente (A2A)
 
-Los **agentes de Inteligencia Artificial autónomos** (Claude, Cursor, LangChain, CrewAI, AutoGen) están transformando el software en una economía autónoma, pero enfrentan un **cuello de botella crítico de infraestructura**:
+Los **Agentes Autónomos de IA** (Claude, Cursor, LangChain, CrewAI, AutoGen) están transformando el software hacia una economía autónoma, pero se enfrentan a un **cuello de botella de infraestructura fundamental**:
 
-> **El Problema:** Los agentes no tienen tarjetas de crédito humanas, no pueden suscribirse a planes SaaS mensuales recurrentes de $50/mes para una sola consulta, y compartir API keys maestras en los prompts representa un riesgo inaceptable de seguridad.
+> **El Problema:** Los agentes de IA no pueden tener tarjetas de crédito humanas, no pueden comprometerse a suscripciones SaaS mensuales de $50 USD para tareas individuales, y pasar claves maestras de API dentro de prompts de LLMs crea vulnerabilidades inaceptables de seguridad.
 
 ```
-       [ LA WEB HUMANA TRADICIONAL ]                   [ INFRAESTRUCTURA GLOBAL STELLAR BAZAAR x402 ]
- ❌ Paywalls con suscripción mensual humana        ✅ Micropagos atómicos por llamada (ej. 0.001 USDC)
- ❌ Fuga de API keys maestras en prompts           ✅ Cero llaves compartidas; pago criptográfico directo por llamada
- ❌ Directorios cerrados orientados a humanos      ✅ Catálogo legible por máquinas global (Streamable MCP + REST)
- ❌ Acuerdos de servicio ambiguos                  ✅ ServiceCards deterministas con esquemas estrictos de I/O y precio
- ❌ Intermediarios con custodia y comisiones altas ✅ Cero custodia: liquidación directa on-chain en Stellar
+       [ WEB HUMANA TRADICIONAL ]                      [ INFRAESTRUCTURA GLOBAL STELLAR BAZAAR x402 ]
+ ❌ Muros de pago por suscripción mensual          ✅ Micropagos atómicos por solicitud (ej. 0.001 USDC)
+ ❌ Fuga de API keys maestras en prompts           ✅ Cero secretos compartidos; pago criptográfico por llamada
+ ❌ Directorios cerrados centrados en humanos      ✅ Catálogo machine-readable global (MCP Streamable + REST)
+ ❌ Acuerdos de servicio ambiguos                  ✅ ServiceCards deterministas con esquemas estrictos de I/O
+ ❌ Intermediarios custodiales y comisiones altas  ✅ Cero custodia: liquidación on-chain directa en Stellar
 ```
 
-**Stellar Bazaar x402** es la **capa global de descubrimiento y enrutamiento de pagos** que permite a compradores y agentes de IA de todo el mundo descubrir, negociar y pagar por APIs HTTP y herramientas MCP bajo demanda, liquidando micropagos instantáneos a través del estándar abierto **x402 sobre la red Stellar**.
+**Stellar Bazaar x402** es la **capa global de descubrimiento y enrutamiento de pagos** que permite a agentes de IA y desarrolladores de todo el mundo descubrir, negociar y pagar por APIs HTTP y herramientas MCP bajo demanda, liquidando micropagos instantáneos y de bajo costo mediante el estándar abierto **x402 sobre la blockchain de Stellar**.
 
 ---
 
 ## 💡 ¿Por Qué Stellar + x402 para la Economía Global de Agentes?
 
-1. **Velocidad de Liquidación Global & Comisiones Despreciables:** Liquidación en 3-5 segundos a nivel mundial con comisiones de red despreciables ($0.00001), habilitando microtransacciones de alta frecuencia para agentes.
-2. **Estándar Abierto HTTP 402:** Protocolo estandarizado `HTTP 402 Payment Required` con soporte multiactivo SEP-41 (`USDC`, `XLM`, `EURC`).
-3. **Model Context Protocol (MCP) Nativo:** Conexión sin fricción para asistentes de IA globales (Claude Desktop, Cursor IDE, Windsurf) y frameworks (LangChain, CrewAI, AutoGen).
-4. **Global por Diseño con Inteligencia Multilingüe Nativa:** Esquemas universales legibles por máquinas con coincidencia de intención entre múltiples idiomas.
+1. **Liquidación Global Sub-Segundo & Micro-comisiones:** Transacciones liquidadas en 3–5 segundos con comisiones de red de sub-céntimo ($0.00001), habilitando micro-transacciones viables para flujos agénticos de alta frecuencia.
+2. **Estándar Abierto HTTP 402:** Protocolo limpio y estandarizado `HTTP 402 Payment Required` con soporte multi-activo SEP-41 (`USDC`, `XLM`, `EURC`).
+3. **Model Context Protocol (MCP) Nativo:** Descubrimiento y consumo de herramientas sin fricción para asistentes de IA (Claude Desktop, Cursor IDE, Windsurf) y frameworks (LangChain, CrewAI, AutoGen).
+4. **Global por Diseño con Inteligencia Multilingüe Nativa:** Esquemas universales para máquinas y búsqueda semántica con coincidencia de intención cross-idioma.
 
 ---
 
@@ -54,30 +54,30 @@ Los **agentes de Inteligencia Artificial autónomos** (Claude, Cursor, LangChain
 
 ```mermaid
 flowchart TD
-    subgraph Clients["1. Clientes y Agentes Autónomos Globales"]
+    subgraph Clients["1. Clientes Globales & Agentes Autónomos de IA"]
         Claude["Claude Desktop / Cursor IDE"]
         LangChain["LangChain / CrewAI / AutoGen"]
-        WebUI["Global Web UI / Next.js"]
+        WebUI["Web UI Global / Next.js"]
     end
 
     subgraph Bazaar["2. Motor de Descubrimiento Global (Stellar Bazaar Core)"]
         MCPServer["/api/mcp<br/>(Servidor MCP Streamable HTTP)"]
         RESTDiscovery["/api/discovery<br/>(resources / search / pilots)"]
         Validator["validateServiceCard()<br/>(Motor de Conformidad de 11 Reglas)"]
-        DynamicRegistry["/api/publisher/ingest<br/>(Ingesta Dinámica de Proveedores)"]
-        PilotCatalog["6 Catálogos Piloto Globales<br/>(Gobernanza, Web Intel, Video, etc.)"]
+        DynamicRegistry["/api/publisher/ingest<br/>(Ingesta Dinámica de Providers)"]
+        PilotCatalog["6 Pilotos Globales Estructurados<br/>(Gobernanza, Web Intel, Video, etc.)"]
     end
 
-    subgraph x402Layer["3. Protocolo x402 & Resource Server"]
+    subgraph x402Layer["3. Capa de Protocolo & Servidor de Recursos"]
         Challenge402["Desafío HTTP 402<br/>(PAYMENT-REQUIRED v2)"]
-        FacilitatorGate["Facilitator Verification Gate<br/>(OpenZeppelin Hosted)"]
+        FacilitatorGate["Verificación de Facilitador<br/>(OpenZeppelin Hosted)"]
     end
 
     subgraph Settlement["4. Infraestructura Blockchain"]
-        Testnet["Stellar Ledger<br/>(Contratos USDC / XLM / EURC SEP-41)"]
+        Testnet["Ledger de Stellar<br/>(USDC / XLM / EURC SEP-41)"]
     end
 
-    subgraph Providers["5. Microservicios Proveedores Desacoplados (contract-only)"]
+    subgraph Providers["5. Microservicios Globales Desacoplados (solo contrato)"]
         DeFiService["Stellar DeFi Quote Service<br/>(contrato externo, no desplegado)"]
         WebIntelService["Website Intelligence Service<br/>(contrato externo, no desplegado)"]
     end
@@ -101,32 +101,32 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     autonumber
-    actor Agent as Agente Autónomo (Payer)
+    actor Agent as Agente Autónomo (Comprador)
     participant Bazaar as Stellar Bazaar (MCP / REST)
     participant Provider as Proveedor x402
     participant Facilitator as Facilitador OpenZeppelin
-    participant Stellar as Stellar Blockchain
+    participant Stellar as Blockchain de Stellar
 
-    Note over Agent,Bazaar: Fase 1: Descubrimiento Global & Verificación de Política
+    Note over Agent,Bazaar: Fase 1: Descubrimiento Global & Evaluación de Política
     Agent->>Bazaar: POST /api/mcp (search_services: "swap risk quote")
-    Bazaar-->>Agent: ServiceCard (Asset: USDC, Amount: 0.001, Scheme: exact)
-    Agent->>Agent: Pre-flight Safety Check (Valida presupuesto & allowlist)
+    Bazaar-->>Agent: ServiceCard (Activo: USDC, Monto: 0.001, Esquema: exact)
+    Agent->>Agent: Chequeo de Seguridad Previo (Presupuesto y red permitida)
 
-    Note over Agent,Provider: Fase 2: Reto x402
+    Note over Agent,Provider: Fase 2: Desafío x402
     Agent->>Provider: GET /api/x402/swap-risk?pair=XLM/USDC&amount=2500&side=buy
     Provider-->>Agent: HTTP 402 Payment Required + Header PAYMENT-REQUIRED
 
-    Note over Agent,Stellar: Fase 3: Firma & Liquidación
+    Note over Agent,Stellar: Fase 3: Firma & Liquidación On-Chain
     Agent->>Agent: Firma autorización Ed25519 con wallet local
     Agent->>Provider: GET (con Header PAYMENT-SIGNATURE)
     Provider->>Facilitator: verify(signature, requirements)
     Facilitator-->>Provider: { isValid: true }
     Provider->>Facilitator: settle(signature, requirements)
     Facilitator->>Stellar: Transacción de Pago USDC
-    Stellar-->>Facilitator: Confirmado en Ledger on-chain
+    Stellar-->>Facilitator: Confirmado en Ledger On-Chain
     Facilitator-->>Provider: { success: true, txHash: "d6154a4c..." }
 
-    Note over Provider,Agent: Fase 4: Entrega de Resultado
+    Note over Provider,Agent: Fase 4: Entrega de Negocio
     Provider-->>Agent: HTTP 200 OK + Header PAYMENT-RESPONSE + Resultado de Negocio
 ```
 
@@ -142,24 +142,23 @@ sequenceDiagram
 | 2 | 2026-08-18 | `x402:test-client` | [`4d6b26ca…86ae11`](https://stellar.expert/explorer/testnet/tx/4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11) | `4214612` | `+0.0010000 USDC` |
 | 3 | 2026-08-18 | `agent:quickstart` | [`5ff5f2d3…a89c2`](https://stellar.expert/explorer/testnet/tx/5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2) | `4214711` | `+0.0010000 USDC` |
 | 4 | 2026-08-19 02:31Z | `agent:quickstart` | [`235d6ffd…87cb49`](https://stellar.expert/explorer/testnet/tx/235d6ffdfd36b27a831668b868014536d47e32128d950c89fd07ed415587cb49) | `4216913` | `+0.0010000 USDC` |
+| 5 | 2026-08-19 07:43Z | `agent:quickstart` | [`c7fa7d18…03b625`](https://stellar.expert/explorer/testnet/tx/c7fa7d18d036b19be969d37e393da8a8b8aa9f70dc8e111e4568d90dd903b625) | `4220649` | `+0.0010000 USDC` |
 
 Todas: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), contrato SEP-41 `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`, payer [`GC3CK5A4…VDL4`](https://stellar.expert/explorer/testnet/account/GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4) → recipient [`GDVR2KDK5…RMCQ`](https://stellar.expert/explorer/testnet/account/GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ). La primera incluye además su [Tx Fee-Bump exterior](https://horizon-testnet.stellar.org/transactions/4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f) con patrocinio de OpenZeppelin (`GA6THKUY...`).
 
 ### ✅ Hitos Completados y Verificados
 
 1. **Despliegue en Producción (Vercel):**
-   * Live en `https://stellar-bazaar-x402.vercel.app` con key de facilitador server-only regenerada (2026-08-18) y dirección del seller en Production + Preview.
-   * Smoke post-deploy: landing/publish/MCP/discovery/reference → 200; x402 sin pago → 402 + `PAYMENT-REQUIRED` v2; suites ecosystem/MCP/agent/publisher/workflow re-ejecutadas contra la URL pública.
+   * Live en `https://stellar-bazaar-x402.vercel.app` con key de facilitador server-only y persistencia en Upstash Redis en Production + Preview.
+   * Hub de Desarrolladores interactivo (`/docs`) con snippets en 1 clic para Claude Desktop MCP, TypeScript SDK, Python LangChain/CrewAI y cURL.
 2. **Servidor MCP Streamable HTTP (`/api/mcp`, v0.4.0):**
    * 11 herramientas: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, `list_workflow_bundles`, `get_workflow_bundle`, más escrituras de registro `register_service`, `update_service`, `delete_service`, `list_my_services` (auth por secret compartido vía `providerKey`).
    * `search_services` con paginación por cursor opaco (`limit` 1–50, `nextCursor`, `partialResults`) y envelopes de error deterministas (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`, `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `STORAGE_ERROR`).
-   * Cards registrados por providers visibles en `list_services`/`search_services`/`get_service` y persistidos entre redeploys vía Upstash Redis (provisionado 2026-08-19; verificado tras un redeploy de producción).
-3. **SDK Oficial para Agentes (`lib/bazaar-agent-client.ts`):**
-   * SDK fuertemente tipado para interactuar, evaluar políticas de gasto y auto-liquidar pagos x402 en 3 líneas de código.
-4. **Auto-Registro de Proveedores (`/api/publisher/ingest`):**
-   * Registro dinámico con verificación determinista de 11 reglas de conformidad y validación completa de forma (zod).
-   * Ciclo de vida completo: `POST` (crear, 409 `CARD_EXISTS` en duplicados), `PUT`/`DELETE` `/api/publisher/ingest/{id}` (actualizar/eliminar, con `revision`), `GET` (listar tus cards). Auth con `X-Bazaar-Provider-Key` (secret compartido; dev-open sin `BAZAAR_PROVIDER_SECRET`, prod fail-closed 503).
-   * Persistencia Upstash Redis (`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`, free tier) con fallback en memoria para dev — **provisionado 2026-08-19**, los cards sobreviven redeploys (verificado). Flujo humano en `/publish`. Ver [PROVIDER_ONBOARDING.md](docs/PROVIDER_ONBOARDING.md).
+   * Cards registrados por providers visibles en `list_services`/`search_services`/`get_service` y persistidos entre redeploys vía Upstash Redis (provisionado 2026-08-19; verificado tras redeploys de producción).
+3. **SDK Oficial para Agentes & Kit Python (`lib/bazaar-agent-client.ts` & `docs/LANGCHAIN_CREWAI.md`):**
+   * SDK fuertemente tipado y herramienta de Python para LangChain/CrewAI para evaluar políticas y auto-liquidar pagos x402.
+4. **Auto-Registro de Proveedores & Plantilla de Inicio Rápido (`/api/publisher/ingest` & `docs/FAST_PROVIDER_START.md`):**
+   * Registro dinámico con verificación determinista de 11 reglas de conformidad y plantilla ejecutable en `examples/fast-provider-template/`. Persistencia Upstash Redis con fallback dev. Flujo visual en `/publish`. Ver [PROVIDER_ONBOARDING.md](docs/PROVIDER_ONBOARDING.md).
 5. **Contrato de Proveedor Externo y Validación E2E:**
    * Registro transparente para repositorios independientes de cotización y endpoints MCP de solo lectura. Ver [evidencia externa E2E](docs/EXTERNAL_PROVIDER_E2E.md) y [capacidades MCP](docs/MCP_DISCOVERY.md).
 6. **6 Pilotos Globales Estructurados:**

@@ -18,7 +18,7 @@
 [![MCP: Streamable HTTP](https://img.shields.io/badge/MCP-Streamable%20HTTP-10B981.svg)](docs/AGENT_QUICKSTART.md)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict%200%20Errors-3178C6.svg)](tsconfig.json)
 [![Live: Vercel](https://img.shields.io/badge/Live-Vercel%20Production-000000.svg)](https://stellar-bazaar-x402.vercel.app)
-[![Settlements: 4 On-Chain](https://img.shields.io/badge/Settlements-4%20Verified%20On--Chain-22C55E.svg)](https://stellar.expert/explorer/testnet)
+[![Settlements: 5 On-Chain](https://img.shields.io/badge/Settlements-5%20Verified%20On--Chain-22C55E.svg)](https://stellar.expert/explorer/testnet)
 
 ---
 
@@ -142,24 +142,23 @@ sequenceDiagram
 | 2 | 2026-08-18 | `x402:test-client` | [`4d6b26ca…86ae11`](https://stellar.expert/explorer/testnet/tx/4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11) | `4214612` | `+0.0010000 USDC` |
 | 3 | 2026-08-18 | `agent:quickstart` | [`5ff5f2d3…a89c2`](https://stellar.expert/explorer/testnet/tx/5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2) | `4214711` | `+0.0010000 USDC` |
 | 4 | 2026-08-19 02:31Z | `agent:quickstart` | [`235d6ffd…87cb49`](https://stellar.expert/explorer/testnet/tx/235d6ffdfd36b27a831668b868014536d47e32128d950c89fd07ed415587cb49) | `4216913` | `+0.0010000 USDC` |
+| 5 | 2026-08-19 07:43Z | `agent:quickstart` | [`c7fa7d18…03b625`](https://stellar.expert/explorer/testnet/tx/c7fa7d18d036b19be969d37e393da8a8b8aa9f70dc8e111e4568d90dd903b625) | `4220649` | `+0.0010000 USDC` |
 
 All settlements: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), SEP-41 contract `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`, payer [`GC3CK5A4…VDL4`](https://stellar.expert/explorer/testnet/account/GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4) → recipient [`GDVR2KDK5…RMCQ`](https://stellar.expert/explorer/testnet/account/GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ). First settlement additionally recorded its [Outer Fee-Bump tx](https://horizon-testnet.stellar.org/transactions/4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f) with OpenZeppelin sponsorship (`GA6THKUY...`).
 
 ### ✅ Completed & Verified Milestones
 
 1. **Production Deployment (Vercel):**
-   * Live at `https://stellar-bazaar-x402.vercel.app` with server-only facilitator key (regenerated 2026-08-18) and seller address in Production + Preview.
-   * Post-deploy smoke: landing/publish/MCP/discovery/reference → 200; unpaid x402 → 402 + `PAYMENT-REQUIRED` v2; ecosystem/MCP/agent/publisher/workflow suites re-run against the public URL.
+   * Live at `https://stellar-bazaar-x402.vercel.app` with server-only facilitator key and Upstash Redis persistence in Production + Preview.
+   * Interactive Developer Hub (`/docs`) with 1-click code snippets for Claude Desktop MCP, TypeScript SDK, Python LangChain/CrewAI, and cURL.
 2. **Streamable HTTP MCP Server (`/api/mcp`, v0.4.0):**
    * 11 standard RFC tools: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, `list_workflow_bundles`, `get_workflow_bundle`, plus provider registry writes `register_service`, `update_service`, `delete_service`, `list_my_services` (shared-secret auth via `providerKey`).
    * `search_services` supports opaque cursor pagination (`limit` 1–50, `nextCursor`, `partialResults`) and deterministic error envelopes (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`, `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `STORAGE_ERROR`).
-   * Provider-registered cards are visible in `list_services`/`search_services`/`get_service` and persist across redeploys via Upstash Redis (provisioned 2026-08-19; verified across a production redeploy).
-3. **Official Agent SDK (`lib/bazaar-agent-client.ts`):**
-   * Strongly typed SDK for agent discovery, pre-flight safety policy checks, and automated x402 payment handling in 3 lines of code.
-4. **Dynamic Provider Ingest API (`/api/publisher/ingest`):**
-   * Deterministic registration with 11-rule conformance engine, full zod shape validation, and strict injection prevention.
-   * Full lifecycle: `POST` (create, 409 `CARD_EXISTS` on duplicates), `PUT`/`DELETE` `/api/publisher/ingest/{id}` (update/remove, `revision` tracking), `GET` (list your cards). Auth via `X-Bazaar-Provider-Key` (shared secret; dev-open without `BAZAAR_PROVIDER_SECRET`, prod fail-closed 503).
-   * Persistence via Upstash Redis (`UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN`, free tier) with in-memory dev fallback — **provisioned 2026-08-19**, cards survive redeploys (verified). Human flow at `/publish`. See [PROVIDER_ONBOARDING.md](docs/PROVIDER_ONBOARDING.md).
+   * Provider-registered cards are visible in `list_services`/`search_services`/`get_service` and persist across redeploys via Upstash Redis (provisioned 2026-08-19; verified across production redeploys).
+3. **Official Agent SDK & Python Kit (`lib/bazaar-agent-client.ts` & `docs/LANGCHAIN_CREWAI.md`):**
+   * Strongly typed SDK and LangChain/CrewAI Python tool for agent discovery, pre-flight safety policy checks, and automated x402 payment handling.
+4. **Dynamic Provider Ingest API & Fast Starter (`/api/publisher/ingest` & `docs/FAST_PROVIDER_START.md`):**
+   * Deterministic registration with 11-rule conformance engine, full zod shape validation, and ready-to-run template in `examples/fast-provider-template/`.
 5. **External Provider Contract & E2E Validation:**
    * Truthful contract-only record for independent quote repositories and read-only MCP discovery endpoints. See [external E2E evidence](docs/EXTERNAL_PROVIDER_E2E.md) and [MCP capabilities](docs/MCP_DISCOVERY.md).
 6. **6 Global Pilot Bundles:**
