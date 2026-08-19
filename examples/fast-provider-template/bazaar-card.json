@@ -1,0 +1,32 @@
+﻿{
+  "version": "bazaar.service-card/v0",
+  "id": "fast-weather-oracle",
+  "name": "Fast Weather Oracle",
+  "description": "Deterministic weather conditions and climate risk score for global cities via x402 payment.",
+  "kind": "http",
+  "url": "http://127.0.0.1:4020",
+  "routeTemplate": "/v1/weather/{city}",
+  "input": [
+    {
+      "name": "city",
+      "type": "string",
+      "required": true
+    }
+  ],
+  "network": "stellar:testnet",
+  "payment": {
+    "scheme": "exact",
+    "asset": "USDC",
+    "amount": "0.001",
+    "destination": "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ"
+  },
+  "provider": {
+    "name": "Fast Weather Provider"
+  },
+  "tags": [
+    "weather",
+    "oracle",
+    "climate-risk",
+    "fast-start"
+  ]
+}

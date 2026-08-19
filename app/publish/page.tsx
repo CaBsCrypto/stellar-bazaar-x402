@@ -12,6 +12,7 @@ export default function Publish() {
         <div className="nav-links">
           <Link href="/#catalogo">Catálogo</Link>
           <a href="#formulario">Registrar servicio</a>
+          <Link href="/docs">Docs</Link>
           <a href="https://github.com/CaBsCrypto/stellar-bazaar-x402">GitHub ↗</a>
         </div>
         <span className="network-pill">
