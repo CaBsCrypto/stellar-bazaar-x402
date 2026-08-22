@@ -27,6 +27,9 @@
     "test:contract:external:public": "node scripts/test-public-quote-contract.mjs",
     "test:workflow:bundle": "node scripts/test-workflow-bundle.mjs",
     "test:providers:verified": "node scripts/test-verified-providers.mjs",
+    "test:x402:website-intelligence": "node scripts/test-website-intelligence-x402.mjs",
+    "test:x402:website-intelligence:buyer": "node scripts/test-website-intelligence-buyer.mjs",
+    "x402:website-intelligence:inspect": "node scripts/inspect-website-intelligence-402.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {
