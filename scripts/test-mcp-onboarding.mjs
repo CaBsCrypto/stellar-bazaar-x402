@@ -138,6 +138,16 @@ assert.deepEqual(swapFlowText.paymentFlow.stages.map((stage) => stage.id), [
 ]);
 assert.equal(swapFlowText.paymentFlow.boundaries.custody, false);
 assert.equal(swapFlowText.paymentFlow.boundaries.signsForBuyer, false);
+assert.equal(swapFlowText.paymentFlow.receipt.network, "stellar:testnet");
+assert.equal(swapFlowText.paymentFlow.receipt.assetSymbol, "USDC");
+assert.equal(swapFlowText.paymentFlow.receipt.atomicAmount, "10000");
+assert.equal(swapFlowText.paymentFlow.receipt.payToDisplay, "GDVR2KDK5…W6RMCQ");
+assert.equal(swapFlowText.paymentFlow.receipt.serviceCardVersion, "bazaar.service-card/v0");
+assert.equal(swapFlowText.paymentFlow.receipt.serviceCardHash.status, "not-recorded");
+assert.equal(swapFlowText.paymentFlow.receipt.requestHash.status, "not-recorded");
+assert.equal(swapFlowText.paymentFlow.receipt.resultHash.status, "not-recorded");
+assert.equal(swapFlowText.paymentFlow.receipt.settlement.ledger, 4212660);
+assert.equal(swapFlowText.paymentFlow.receipt.reconciliationStatus, "partial-evidence");
 
 const pilotFlow = await rpc(10, "tools/call", {
   name: "get_service",
@@ -146,6 +156,8 @@ const pilotFlow = await rpc(10, "tools/call", {
 const pilotFlowText = JSON.parse(pilotFlow.result.content[0].text);
 assert.equal(pilotFlowText.paymentFlow.paymentMode, "inactive");
 assert.equal(pilotFlowText.paymentFlow.stages.find((stage) => stage.id === "settle").status, "inactive");
+assert.equal(pilotFlowText.paymentFlow.receipt.settlement.status, "inactive");
+assert.equal(pilotFlowText.paymentFlow.receipt.reconciliationStatus, "not-started");
 
 console.log(JSON.stringify({
   ok: true,

@@ -97,6 +97,27 @@ export function PaymentFlowVisualizer() {
         </button>
       </div>
 
+      <section className="payment-flow-viz__receipt" aria-labelledby="receipt-readiness-title">
+        <div className="payment-flow-viz__receipt-head">
+          <div><span className="kicker">NORMALIZED RECEIPT · READ-ONLY</span><h2 id="receipt-readiness-title">Receipt y estado de reconciliación</h2><p lang="en">Receipt and reconciliation status</p></div>
+          <strong>{flow.receipt.reconciliationStatus}</strong>
+        </div>
+        <div className="payment-flow-viz__receipt-grid">
+          <div><span>Network / Red</span><strong>{flow.receipt.network}</strong></div>
+          <div><span>Asset / Atomic amount</span><strong>{flow.receipt.assetSymbol} · {flow.receipt.atomicAmount ?? "pending"}</strong><small>{flow.receipt.friendlyAmount}</small></div>
+          <div><span>payTo (abbreviated)</span><strong>{flow.receipt.payToDisplay}</strong></div>
+          <div><span>Card ID / Version</span><strong>{flow.receipt.serviceCardId}</strong><small>{flow.receipt.serviceCardVersion}</small></div>
+          <div><span>Card hash</span><strong>{flow.receipt.serviceCardHash.value ?? flow.receipt.serviceCardHash.status}</strong></div>
+          <div><span>Request hash status</span><strong>{flow.receipt.requestHash.value ?? flow.receipt.requestHash.status}</strong></div>
+          <div><span>Result hash status</span><strong>{flow.receipt.resultHash.value ?? flow.receipt.resultHash.status}</strong></div>
+          <div><span>Settlement</span><strong>{flow.receipt.settlement.status}</strong><small>{flow.receipt.settlement.ledger ? `Ledger ${flow.receipt.settlement.ledger}` : "No transaction / Sin transacción"}</small></div>
+          <div><span>Delivery / Entrega</span><strong>{flow.receipt.deliveryStatus}</strong></div>
+          <div><span>Reconciliation / Reconciliación</span><strong>{flow.receipt.reconciliationStatus}</strong></div>
+        </div>
+        {flow.receipt.settlement.transactionUrl ? <a className="receipt-link" href={flow.receipt.settlement.transactionUrl} target="_blank" rel="noreferrer">Tx {flow.receipt.settlement.transactionHash?.slice(0, 10)}…{flow.receipt.settlement.transactionHash?.slice(-6)} ↗</a> : <p className="payment-flow-viz__receipt-empty">Settlement pendiente/inactivo · Pending/inactive settlement</p>}
+        <p className="payment-flow-viz__receipt-boundary">STELLAR TESTNET · NON-CUSTODIAL / NO CUSTODIAL · READ-ONLY · NO SIGNING · NO PAYMENT. “not-recorded” no equivale a reconciliado; “not-recorded” does not mean reconciled.</p>
+      </section>
+
       <div className="payment-flow-viz__boundaries">
         <article>
           <span>BUYER / AGENT</span>
