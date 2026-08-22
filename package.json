@@ -22,6 +22,7 @@
     "test:security:invariants": "node scripts/test-security-invariants.mjs",
     "security:scan": "node scripts/scan-secrets-redacted.mjs",
     "test:publisher:ingest": "node scripts/test-publisher-ingest.mjs",
+    "test:provider:self-listing": "node scripts/test-provider-self-listing.mjs",
     "test:e2e:external": "node scripts/test-external-provider-e2e.mjs",
     "test:e2e:external:testnet": "node scripts/e2e-external-provider-testnet.mjs",
     "test:contract:external:public": "node scripts/test-public-quote-contract.mjs",

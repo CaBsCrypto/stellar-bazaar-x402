@@ -114,7 +114,13 @@ Disabled with `405 PROVIDER_OWNERSHIP_NOT_IMPLEMENTED` until per-provider creden
 
 Disabled with `405 PROVIDER_OWNERSHIP_NOT_IMPLEMENTED` for the same fail-closed ownership boundary.
 
-## 14. Discovery (read-only, no auth)
+## 14. Guarded provider self-listing
+
+`POST /api/provider-self-listing` accepts `{card, controlProof:{method,domain}}` only when `BAZAAR_ENABLE_SELF_LISTING_INTAKE=true`. It validates conformance and exact hostname control, then returns `202` with a DNS TXT or HTTPS `.well-known` challenge. Default is `503 INTAKE_DISABLED`. Body limit: 32 KiB. A successful response is still `publiclyActive:false`.
+
+`GET /api/provider-self-listing/{id}` returns sanitized lifecycle status. `GET /api/provider-self-listing` is `405 QUEUE_NOT_PUBLIC`. Proof evaluation, review, staging and activation have no public routes. See [PROVIDER_SELF_LISTING.md](PROVIDER_SELF_LISTING.md).
+
+## 15. Discovery (read-only, no auth)
 
 - `GET /api/discovery/resources` — indexed catalog (static + dynamic). `200` → `{results, count, cursor: null, indexStatus: "local-mvp"}`. Filters: `kind`, `scheme`, `asset`, `network`, `maxPrice` (`app/api/discovery/resources/route.ts:10-28`).
 - `GET /api/discovery/search?query=...` — lexical ranking (`app/api/discovery/search/route.ts`). `400 INVALID_QUERY` without `query`. `200` → `{ok, query, ranking: {version: "lexical-v1", method, ai: false}, results: [{resource, score, reasons}], nextCursor: null, partialResults: false}`.

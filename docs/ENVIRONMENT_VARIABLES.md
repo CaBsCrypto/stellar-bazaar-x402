@@ -31,6 +31,7 @@ and the scripts listed below.
 | `RUN_EXTERNAL_X402_TESTNET` | Must be `"1"` to run `test:e2e:external:testnet`; script exits otherwise (`scripts/e2e-external-provider-testnet.mjs:1`) | Operator | `0` | `0` |
 | `BAZAAR_ENABLE_REGISTRY_MUTATIONS` | Explicit kill switch for append-only HTTP registration; default/off unless exactly `true` | Operator | `false` | `false` until reviewed |
 | `BAZAAR_PROVIDER_SECRET` | Server-to-server operator credential for `X-Bazaar-Provider-Key`; never an MCP/browser/provider-ownership credential | Operator | Unset | Required only when enabling registration |
+| `BAZAAR_ENABLE_SELF_LISTING_INTAKE` | Enables the bounded, ephemeral provider draft/manual-review queue; never activates public indexing | Operator | `false` by default | Keep `false` until durable review controls exist |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis URL for registry persistence (`lib/dynamic-registry.ts:18-20`) | Operator (Upstash) | Recommended | **Required (prod)** |
 | `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis token | Operator (Upstash) | Recommended | **Required (prod)** |
 | `KV_REST_API_URL` | **Legacy** alias for `UPSTASH_REDIS_REST_URL` (`lib/dynamic-registry.ts:18`) | Vercel KV | Optional | Optional |
