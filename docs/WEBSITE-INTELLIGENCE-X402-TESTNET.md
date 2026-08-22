@@ -36,3 +36,9 @@ The future manual profile uses two distinct Testnet-only development identities:
 - [ ] Human explicitly approves execution after seeing the above evidence.
 
 Mainnet, custody, generic URL proxying and production claims are out of scope.
+
+## Provider handoff required
+
+The independent provider must publish `bazaar.payment-service-card/v1` metadata matching `expectedWebsiteIntelligenceCard()` and expose `POST https://website-intelligence-provider.vercel.app/v1/audits`. Its genuine 402 must contain exactly one compatible requirement with `extra.method=POST`, `extra.providerId=website-intelligence-pilot`, the pinned `extra.providerUrl`, and the canonical input hash. The provider must not deliver an audit before successful settlement and strict ledger reconciliation, and must enforce durable replay protection.
+
+`npm run x402:website-intelligence:inspect` is inspection-only: it sends the fixture input, parses the 402 and refuses to run when settlement is enabled. It never loads or signs with the payer seed. The future signing/execution harness remains gated until provider QA supplies the payment-enabled card, 402 fixture, receipt evidence adapter and replay behavior.
