@@ -1,1 +1,50 @@
-import{NextResponse}from"next/server";export function GET(){return NextResponse.json({openapi:"3.1.0",info:{title:"Stellar Bazaar Discovery API",version:"0.3.0",description:"Stellar Bazaar HTTP surface: discovery, MCP Streamable HTTP, provider registry writes and x402 Testnet payment routes."},servers:[{url:"/"}],paths:{"/api/capabilities":{get:{summary:"Versioned capability card (bazaar.capabilities/v1)",responses:{"200":{description:"Capabilities"}}}},"/api/mcp":{get:{summary:"MCP health summary and implemented tools (server v0.4.0, 11 tools)",responses:{"200":{description:"MCP capability summary"}}},post:{summary:"MCP Streamable HTTP JSON-RPC endpoint (initialize, tools/list, tools/call)",responses:{"200":{description:"MCP response"}}},delete:{summary:"Method not allowed; MCP accepts GET and POST",responses:{"405":{description:"Method Not Allowed"}}}},"/api/openapi":{get:{summary:"This OpenAPI 3.1 document",responses:{"200":{description:"OpenAPI document"}}}},"/api/publish":{post:{summary:"Register a provider-owned service card (alias of POST /api/publisher/ingest)",responses:{"201":{description:"Card registered"},400:{description:"MALFORMED_JSON or VALIDATION_FAILED"},401:{description:"UNAUTHORIZED"},409:{description:"CARD_EXISTS"},503:{description:"SERVICE_NOT_CONFIGURED (production)"}}}},"/api/x402/swap-risk":{get:{summary:"Paid deterministic swap-risk quote; requires an x402 exact Stellar Testnet payment",responses:{"200":{description:"Quote result plus PAYMENT-RESPONSE"},400:{description:"INVALID_QUOTE_INPUT"},402:{description:"PAYMENT-REQUIRED or payment rejection"},502:{description:"VERIFY/SETTLEMENT transport error"},503:{description:"X402_SERVER_NOT_CONFIGURED"}}}},"/api/x402/demo-pay":{post:{summary:"Local-only demo payer (X402_ENABLE_LOCAL_PAYER=true); signs and pays /api/x402/swap-risk",responses:{"200":{description:"Paid fetch outcome"},400:{description:"LOCAL_PAYER_TARGET_REJECTED"},402:{description:"TESTNET_PAYMENT_FAILED"},403:{description:"LOCAL_PAYER_DISABLED"},503:{description:"PAYER_SECRET_MISSING"}}}},"/api/conformance/service-card":{post:{summary:"Validate a Service Card's shape conformance (never provider certification)",responses:{"200":{description:"Card conforms"},400:{description:"MALFORMED_JSON"},422:{description:"INVALID_SERVICE_CARD or failed outcomes"}}}},"/api/reference/swap-risk":{get:{summary:"In-process reference quote without payment",responses:{"200":{description:"Reference quote"},400:{description:"Invalid parameters"}}}},"/api/publisher/ingest":{get:{summary:"List service cards registered with the provider key (X-Bazaar-Provider-Key header)",responses:{"200":{description:"Registered cards"},401:{description:"UNAUTHORIZED"},503:{description:"SERVICE_NOT_CONFIGURED (production)"}}},post:{summary:"Register a provider-owned service card (X-Bazaar-Provider-Key header)",responses:{"201":{description:"Card registered"},400:{description:"MALFORMED_JSON or VALIDATION_FAILED"},401:{description:"UNAUTHORIZED"},409:{description:"CARD_EXISTS"},500:{description:"Storage error"},503:{description:"SERVICE_NOT_CONFIGURED (production)"}}}},"/api/publisher/ingest/{id}":{put:{summary:"Replace a service card by id; bumps revision (X-Bazaar-Provider-Key header)",responses:{"200":{description:"Card updated"},400:{description:"MALFORMED_JSON or VALIDATION_FAILED"},401:{description:"UNAUTHORIZED"},404:{description:"RESOURCE_NOT_FOUND"},500:{description:"Storage error"}}},delete:{summary:"Remove a service card by id (X-Bazaar-Provider-Key header)",responses:{"200":{description:"Card deleted"},401:{description:"UNAUTHORIZED"},404:{description:"RESOURCE_NOT_FOUND"},500:{description:"Storage error"}}}},"/api/discovery/pilots":{get:{summary:"Onboarding fixture cards (not indexed, not available services)",responses:{"200":{description:"Pilot cards"}}}},"/api/discovery/search":{get:{summary:"Deterministic lexical-v1 search over static and provider-registered cards",responses:{"200":{description:"Ranked results"},400:{description:"INVALID_QUERY"}}}},"/api/discovery/resources":{get:{summary:"Indexed service cards with optional filters",responses:{"200":{description:"Service cards"}}}},"/api/discovery/external-providers/stellar-defi-quote-service":{get:{summary:"Public external provider contract record (availability or payment not implied)",responses:{"200":{description:"External quote contract"},503:{description:"EXTERNAL_PROVIDER_CONFIG_INVALID"}}}}}})}
+import { NextResponse } from "next/server";
+
+export function GET() {
+  return NextResponse.json({
+    openapi: "3.1.0",
+    info: {
+      title: "Stellar Bazaar Discovery API",
+      version: "0.5.0",
+      description: "Read-only discovery/MCP, deterministic conformance, append-only gated ingest, and x402 Stellar Testnet reference routes.",
+    },
+    servers: [{ url: "/" }],
+    paths: {
+      "/api/mcp": {
+        get: { summary: "MCP read-only health summary (7 tools, writes: [])", responses: { "200": { description: "Capability summary" } } },
+        post: { summary: "MCP Streamable HTTP: initialize, tools/list, tools/call", responses: { "200": { description: "MCP response" } } },
+      },
+      "/api/discovery/resources": {
+        get: { summary: "Filter indexed service cards", responses: { "200": { description: "Service cards" } } },
+      },
+      "/api/discovery/search": {
+        get: { summary: "Deterministic lexical-v1 ranking", responses: { "200": { description: "Ranked results" }, "400": { description: "INVALID_QUERY" } } },
+      },
+      "/api/conformance/service-card": {
+        post: { summary: "Validate shape/conformance; never provider certification", responses: { "200": { description: "Conformant" }, "422": { description: "Invalid card" } } },
+      },
+      "/api/publisher/ingest": {
+        post: {
+          summary: "Append-only operator registration; disabled by default and requires durable Redis",
+          responses: {
+            "201": { description: "Card created atomically" },
+            "401": { description: "UNAUTHORIZED" },
+            "409": { description: "CARD_EXISTS" },
+            "503": { description: "SERVICE_NOT_CONFIGURED" },
+          },
+        },
+        get: { summary: "Disabled until per-provider ownership exists", responses: { "405": { description: "PROVIDER_OWNERSHIP_NOT_IMPLEMENTED" } } },
+      },
+      "/api/publisher/ingest/{id}": {
+        put: { summary: "Disabled until per-provider ownership exists", responses: { "405": { description: "PROVIDER_OWNERSHIP_NOT_IMPLEMENTED" } } },
+        delete: { summary: "Disabled until per-provider ownership exists", responses: { "405": { description: "PROVIDER_OWNERSHIP_NOT_IMPLEMENTED" } } },
+      },
+      "/api/reference/swap-risk": {
+        get: { summary: "Free in-process deterministic reference quote", responses: { "200": { description: "Quote" }, "400": { description: "Invalid input" } } },
+      },
+      "/api/x402/swap-risk": {
+        get: { summary: "x402 exact Stellar Testnet reference route", responses: { "200": { description: "Quote plus PAYMENT-RESPONSE" }, "402": { description: "PAYMENT-REQUIRED or rejection" } } },
+      },
+    },
+  });
+}

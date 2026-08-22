@@ -6,8 +6,8 @@ import { toServiceCard, toPaidService } from "./service-card";
 import { pilotCapabilityCard, pilotCards } from "./pilot-cards";
 import { workflowBundles } from "./workflow-bundles";
 import { validateWorkflowBundle, WORKFLOW_BUNDLE_VERSION } from "./workflow-bundle";
-import { getAllDynamicServiceCards } from "./dynamic-registry";
-import { createService, deleteService, err, listMyServices, ok, updateService } from "./service-ingest";
+import { readDynamicServiceCards } from "./dynamic-registry";
+import { err, ok } from "./service-ingest";
 
 const result = ok;
 
@@ -44,23 +44,24 @@ const decodeCursor = (raw: string): number | null => {
 export function createOnboardingMcpServer() {
   const server = new McpServer({
     name: "stellar-bazaar-discovery",
-    version: "0.4.0",
+    version: "0.5.0",
   });
 
   server.registerTool(
     "get_bazaar_capabilities",
     {
       description:
-        "Capability and policy card: read-only discovery plus registry writes (register/update/delete service cards).",
+        "Capability and policy card for read-only service discovery and validation.",
       inputSchema: {},
     },
     async () =>
       result({
         ...pilotCapabilityCard,
-        writes: ["register_service", "update_service", "delete_service", "list_my_services"],
+        writes: [],
         registry: {
-          persistence: "upstash-redis-or-memory",
-          providerAuth: "shared-secret",
+          discovery: "read-only",
+          mutationViaMcp: false,
+          providerMetadataTrusted: false,
         },
       }),
   );
@@ -73,7 +74,8 @@ export function createOnboardingMcpServer() {
       inputSchema: { includePilots: z.boolean().optional() },
     },
     async ({ includePilots }) => {
-      const dynamicServices = (await getAllDynamicServiceCards()).map((d) => toPaidService(d.card));
+      const registry = await readDynamicServiceCards();
+      const dynamicServices = registry.entries.map((d) => toPaidService(d.card));
       return result({
         services: [...services, ...dynamicServices].map((service) => ({
           ...toServiceCard(service),
@@ -83,7 +85,8 @@ export function createOnboardingMcpServer() {
           },
         })),
         pilots: includePilots ? pilotCards : [],
-        partialResults: false,
+        partialResults: !registry.available,
+        dynamicRegistry: registry.available ? "available" : "unavailable",
         nextCursor: null,
       });
     },
@@ -101,7 +104,8 @@ export function createOnboardingMcpServer() {
       },
     },
     async ({ query, limit, cursor }) => {
-      const dynamicServices = (await getAllDynamicServiceCards()).map((d) => toPaidService(d.card));
+      const registry = await readDynamicServiceCards();
+      const dynamicServices = registry.entries.map((d) => toPaidService(d.card));
       const ranked = rankServices([...services, ...dynamicServices], query);
       const pageSize = limit ?? ranked.length;
       const offset = cursor === undefined ? 0 : decodeCursor(cursor);
@@ -125,8 +129,9 @@ export function createOnboardingMcpServer() {
           score: entry.score,
           reasons: entry.reasons,
         })),
-        partialResults: hasMore,
+        partialResults: hasMore || !registry.available,
         nextCursor: hasMore ? encodeCursor(nextOffset) : null,
+        dynamicRegistry: registry.available ? "available" : "unavailable",
       });
     },
   );
@@ -138,13 +143,15 @@ export function createOnboardingMcpServer() {
       inputSchema: { id: z.string().min(1) },
     },
     async ({ id }) => {
-      const dynamicEntries = await getAllDynamicServiceCards();
-      const dynamic = dynamicEntries.find((entry) => entry.id === id);
+      const registry = await readDynamicServiceCards();
+      const dynamic = registry.entries.find((entry) => entry.id === id);
       if (dynamic) {
         return result({
           resource: toServiceCard(toPaidService(dynamic.card)),
           registry: {
-            provider: true,
+            source: "dynamic",
+            ownershipCertified: false,
+            metadataTrusted: false,
             hash: dynamic.hash,
             revision: dynamic.revision,
             registeredAt: dynamic.registeredAt,
@@ -163,7 +170,16 @@ export function createOnboardingMcpServer() {
         });
       }
       const pilot = pilotCards.find((item) => item.id === id);
-      return pilot ? result({ resource: pilot }) : notFound(id);
+      if (pilot) return result({ resource: pilot });
+      if (!registry.available) {
+        return errorEnvelope(
+          "REGISTRY_UNAVAILABLE",
+          "Dynamic registry unavailable; static and pilot resources were checked.",
+          "discover",
+          true,
+        );
+      }
+      return notFound(id);
     },
   );
 
@@ -247,104 +263,6 @@ export function createOnboardingMcpServer() {
           certification: false,
         });
       }
-    },
-  );
-
-  server.registerTool(
-    "register_service",
-    {
-      description:
-        "Register a provider-owned ServiceCard into the Bazaar registry (persisted). Duplicate id returns CARD_EXISTS.",
-      inputSchema: {
-        card: z.record(z.string(), z.unknown()),
-        providerKey: z.string().min(1).optional(),
-      },
-    },
-    async ({ card, providerKey }) => {
-      const created = await createService(card, providerKey);
-      if (!created.ok) return errorEnvelope(created.error.code, created.error.message, created.error.stage, created.error.retryable, created.error.field);
-      return result({
-        status: "indexed-dynamic",
-        id: created.entry.id,
-        card: created.entry.card,
-        hash: created.entry.hash,
-        revision: created.entry.revision,
-        registeredAt: created.entry.registeredAt,
-        outcomes: created.outcomes,
-      });
-    },
-  );
-
-  server.registerTool(
-    "update_service",
-    {
-      description:
-        "Replace a registered ServiceCard by id (same provider key required). Bumps revision; 404 if unknown.",
-      inputSchema: {
-        id: z.string().min(1),
-        card: z.record(z.string(), z.unknown()),
-        providerKey: z.string().min(1).optional(),
-      },
-    },
-    async ({ id, card, providerKey }) => {
-      const updated = await updateService(id, card, providerKey);
-      if (!updated.ok) return errorEnvelope(updated.error.code, updated.error.message, updated.error.stage, updated.error.retryable, updated.error.field);
-      return result({
-        status: "updated-dynamic",
-        id: updated.entry.id,
-        card: updated.entry.card,
-        hash: updated.entry.hash,
-        revision: updated.entry.revision,
-        registeredAt: updated.entry.registeredAt,
-        updatedAt: updated.entry.updatedAt,
-        outcomes: updated.outcomes,
-      });
-    },
-  );
-
-  server.registerTool(
-    "delete_service",
-    {
-      description:
-        "Remove a registered ServiceCard by id (same provider key required). 404 if unknown.",
-      inputSchema: {
-        id: z.string().min(1),
-        providerKey: z.string().min(1).optional(),
-      },
-    },
-    async ({ id, providerKey }) => {
-      const deleted = await deleteService(id, providerKey);
-      if (!deleted.ok) return errorEnvelope(deleted.error.code, deleted.error.message, deleted.error.stage, deleted.error.retryable, deleted.error.field);
-      return result({
-        status: "deleted-dynamic",
-        id: deleted.deleted.id,
-        deletedCard: deleted.deleted.card,
-        revision: deleted.deleted.revision,
-      });
-    },
-  );
-
-  server.registerTool(
-    "list_my_services",
-    {
-      description:
-        "List service cards registered with the same provider key (dev mode: all dynamic cards).",
-      inputSchema: { providerKey: z.string().min(1).optional() },
-    },
-    async ({ providerKey }) => {
-      const listed = await listMyServices(providerKey);
-      if (!listed.ok) return errorEnvelope(listed.error.code, listed.error.message, listed.error.stage, listed.error.retryable);
-      return result({
-        services: listed.entries.map((entry) => ({
-          id: entry.id,
-          hash: entry.hash,
-          revision: entry.revision,
-          registeredAt: entry.registeredAt,
-          updatedAt: entry.updatedAt,
-          card: entry.card,
-        })),
-        count: listed.entries.length,
-      });
     },
   );
 

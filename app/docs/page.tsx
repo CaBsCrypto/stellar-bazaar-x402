@@ -11,7 +11,7 @@ export default function DocsPage() {
   return (
     <main>
       <div className="mock-banner">
-        DEVELOPER HUB · UNIVERSAL MACHINE-READABLE INTEGRATION · MCP STREAMABLE HTTP & x402 ATOMIC PAYMENTS
+        DEVELOPER HUB · MCP STREAMABLE HTTP READ-ONLY · x402 TESTNET EVIDENCE
       </div>
 
       <nav className="nav shell">
@@ -40,8 +40,8 @@ export default function DocsPage() {
           <em>En menos de 3 minutos.</em>
         </h1>
         <p>
-          Conecta agentes autónomos (Claude, Cursor, LangChain, CrewAI) para descubrir y pagar por herramientas en tiempo real,
-          o monetiza tus propios microservicios con pagos atómicos en USDC sobre la blockchain de Stellar.
+          Conecta agentes para descubrir e inspeccionar servicios mediante MCP read-only. La ejecución pagada exige un
+          cliente externo con política y conciliación de recibo; Bazaar no firma ni custodia.
         </p>
       </header>
 
@@ -66,13 +66,13 @@ export default function DocsPage() {
           </div>
           <div className="docs-card">
             <h3>Cursor IDE & Windsurf</h3>
-            <p>Agrega el endpoint MCP a tus configuraciones de herramientas para dar a tu IDE capacidades de pago en vivo.</p>
+            <p>Agrega el endpoint MCP para discovery y validación read-only; no expone tools de pago o escritura.</p>
             <code>Protocol: MCP v1.30</code>
           </div>
           <div className="docs-card">
             <h3>LangChain, CrewAI & AutoGen</h3>
-            <p>Crea Custom Tools en Python o TypeScript con firma criptográfica Ed25519 y cero custodia.</p>
-            <code>Python / TypeScript SDK</code>
+            <p>Crea clients de discovery/política en Python o TypeScript sin introducir seeds en prompts o tools.</p>
+            <code>Read-only discovery SDK</code>
           </div>
         </div>
       </section>
@@ -95,8 +95,8 @@ export default function DocsPage() {
           </div>
           <div className="docs-card">
             <h3>3. Publica en el Bazaar</h3>
-            <p>Usa el formulario visual en <code>/publish</code> o el endpoint de ingesta seguro <code>POST /api/publisher/ingest</code>.</p>
-            <code>Upstash Redis Persistence</code>
+            <p>Usa <code>/publish</code> para crear y validar un borrador sin secretos. El alta real es server-to-server y revisada.</p>
+            <code>Local Draft → Operator Review</code>
           </div>
         </div>
       </section>
@@ -137,8 +137,8 @@ export default function DocsPage() {
             </tr>
             <tr>
               <td><code>/api/publisher/ingest</code></td>
-              <td>POST / GET / PUT / DELETE</td>
-              <td>Gestión del ciclo de vida de ServiceCards de proveedores externos con persistencia Redis.</td>
+              <td>POST (gated)</td>
+              <td>Alta append-only deshabilitada por defecto; GET/PUT/DELETE fallan cerrados hasta existir ownership por provider.</td>
             </tr>
             <tr>
               <td><code>/api/openapi</code></td>

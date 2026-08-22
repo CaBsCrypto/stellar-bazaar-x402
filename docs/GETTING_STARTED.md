@@ -3,7 +3,7 @@
 > Nota en español: esta guía técnica está en inglés. Para la descripción general del proyecto en español, consulta [README.es.md](../README.es.md).
 
 A single ordered journey from a clean machine to a live testnet settlement on
-**Stellar Bazaar x402** (Next.js 16 app + MCP server v0.4.0 with 11 tools).
+**Stellar Bazaar x402** (Next.js 16 app + read-only MCP server v0.5.0 with 7 tools).
 
 ---
 
@@ -77,16 +77,16 @@ All script names are from `package.json` (`scripts` block, lines 7-24).
 
 | # | Command | What it verifies | Notes |
 |---|---------|------------------|-------|
-| 1 | `npm run test:e2e:ecosystem` | REST discovery, pilots, search, MCP health + 11 tools, reference endpoint, unpaid 402 + tamper rejection | `BASE_URL` env overrides target; default `http://127.0.0.1:3000` (`scripts/test-e2e-ecosystem.mjs:4`) |
+| 1 | `npm run test:e2e:ecosystem` | REST discovery, pilots, search, MCP health + 7 read-only tools, reference endpoint, unpaid 402 + tamper rejection | `BASE_URL` env overrides target; default `http://127.0.0.1:3000` (`scripts/test-e2e-ecosystem.mjs:4`) |
 | 2 | `npm run test:mcp:onboarding` | MCP pagination, hostile corpus, full register/update/delete lifecycle | `MCP_BASE_URL` + optional `BAZAAR_PROVIDER_SECRET` (`scripts/test-mcp-onboarding.mjs:3,10`) |
 | 3 | `npm run test:agent:policy:evals` | 12-scenario eval corpus: tool-list stability, deterministic search, unknown ID, malformed cards, hostile metadata as data, 12 route-template traversal probes, pilot exclusion, status fidelity vs declared enums, bilingual completeness, oversized/invalid args, no secret leaks | `MCP_BASE_URL` + optional `BAZAAR_PROVIDER_SECRET` (`scripts/test-agent-policy-evals.mjs:3,11`) |
 | 4 | `npm run benchmark:ranking` | Reproducible ranking benchmark over a golden set (8 queries): NDCG@3, MRR, Recall@3 with gates ≥0.80/0.90/0.90; corpus snapshot in output | `MCP_BASE_URL` (`scripts/benchmark-ranking.mjs:3`) |
 | 5 | `npm run test:workflow:bundle` | 20 conformance rules, 13 negative cases, MCP bundle tools | `MCP_BASE_URL` (`scripts/test-workflow-bundle.mjs:105`) |
 | 6 | `npm run test:publisher:ingest` | Ingest lifecycle, zod shape, 11 conformance rules, auth, persistence | `BASE_URL` + optional `BAZAAR_PROVIDER_SECRET` (`scripts/test-publisher-ingest.mjs:3,8`) |
-| 7 | `npm run test:agent:safety` | Agent policy hard-caps (budget, network, traversal) before signing | Auto-loads `.env.local` or `.env.x402.local`; `X402_PAYER_SECRET` needed (`scripts/test-agent-autonomous-flow.mjs:6-17`) |
+| 7 | `npm run test:agent:safety` | Read-only policy hard-caps (budget, network, asset, traversal) | No payer secret or payment |
 | 8 | `npm run test:e2e:external` | External provider contract + mock facilitator E2E | Self-contained local mock servers; no secrets needed (`scripts/test-external-provider-e2e.mjs`) |
 | 9 | `npm run test:x402:protocol` | Unpaid 402 challenge + tamper rejection (non-transactional smoke) | Needs **server-side** `STELLAR_X402_FACILITATOR_API_KEY` + `X402_SELLER_ADDRESS`, else the route returns `503 X402_SERVER_NOT_CONFIGURED` and the 402 assertion fails (`lib/x402-config.ts:19-24`, `app/api/x402/swap-risk/route.ts:52-61`) |
-| 10 | `npm run agent:quickstart` | Real autonomous buy with on-chain settlement (0.001 USDC testnet) | Needs `X402_PAYER_SECRET` + the server-side x402 envs; prints a `stellar.expert` receipt URL (`examples/agent-autonomous-buyer.mjs:25-31,78-81`) |
+| 10 | `npm run agent:quickstart` | Read-only discovery + policy preflight | No payer secret; stops before payment |
 
 ## E. Register a card and consume it
 
