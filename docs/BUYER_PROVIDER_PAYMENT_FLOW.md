@@ -34,6 +34,10 @@ No new write or paid-call tool is exposed. Existing read-only tools carry the vi
 
 The stable stage schema is `bazaar.payment-flow/v1`. Protocol enums and machine IDs are not translated; human-facing titles and explanations are Spanish/English.
 
+## Receipt readiness panel
+
+The viewer and `get_service` show a normalized read-only projection: Testnet network, asset and atomic amount, abbreviated `payTo`, card ID/version/hash status, request/result hash status, transaction reference, delivery status and reconciliation status. The historical reference receipt is deliberately `partial-evidence` because its card, request and result hashes were not recorded; the UI displays `not-recorded` instead of fabricating them. Pilot receipts remain `inactive` / `not-started`.
+
 ## Validation
 
 ```bash

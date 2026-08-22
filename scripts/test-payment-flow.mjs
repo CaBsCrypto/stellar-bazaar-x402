@@ -18,10 +18,12 @@ for (const marker of [
   'payment: false',
   'settlement: false',
   'providerInvocation: false',
+  'receiptVersion: "bazaar.normalized-receipt/v1"',
+  'reconciliationStatus: isReference ? "partial-evidence" : "not-started"',
 ]) assert.ok(contract.includes(marker), `contract marker missing: ${marker}`);
 
 const ui = (await readFile(new URL("../components/PaymentFlowVisualizer.tsx", import.meta.url), "utf8")).toLowerCase();
-for (const marker of ["no wallet", "no signing", "no payment", "no provider call", "historical evidence", "inactivo"]) {
+for (const marker of ["no wallet", "no signing", "no payment", "no provider call", "historical evidence", "inactivo", "asset / atomic amount", "payto (abbreviated)", "card hash", "request hash status", "result hash status", "reconciliation / reconciliación"]) {
   assert.ok(ui.includes(marker), `truthful UI marker missing: ${marker}`);
 }
 
@@ -30,7 +32,7 @@ if (baseUrl) {
   const response = await fetch(`${baseUrl}/payment-flow`);
   assert.equal(response.status, 200);
   const html = (await response.text()).toLowerCase();
-  for (const marker of ["no wallet", "no signing", "no payment", "descubrir", "reconciliar recibo"]) {
+  for (const marker of ["no wallet", "no signing", "no payment", "descubrir", "reconciliar recibo", "normalized receipt", "partial-evidence", "stellar:testnet", "10000", "gdvr2kdk5…w6rmcq"]) {
     assert.ok(html.includes(marker), `rendered marker missing: ${marker}`);
   }
 }
