@@ -57,7 +57,7 @@ const pilots = await rpc(3, "tools/call", {
   arguments: { includePilots: true },
 });
 assert.match(pilots.result.content[0].text, /video-repurpose-pilot/);
-assert.match(pilots.result.content[0].text, /pilot-not-indexed/);
+assert.match(pilots.result.content[0].text, /pilot-indexed/);
 assert.equal(JSON.parse(pilots.result.content[0].text).partialResults, false);
 
 const missing = await rpc(4, "tools/call", {
@@ -277,7 +277,7 @@ console.log(
       mode: "read-only",
       tools: listed.result.tools.length,
       writes: health.writes,
-      pilots: 5,
+      pilots: 6,
       paidCall: false,
       pagination: { partialResults: true, cursorRoundTrip: true, overlap: false },
       errorEnvelope: { code: true, message: true, retryable: true, stage: true },

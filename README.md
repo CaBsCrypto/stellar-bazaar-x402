@@ -65,7 +65,7 @@ flowchart TD
         RESTDiscovery["/api/discovery<br/>(resources / search / pilots)"]
         Validator["validateServiceCard()<br/>(11-Rule Conformance Engine)"]
         DynamicRegistry["/api/publisher/ingest<br/>(Dynamic Provider Ingest)"]
-        PilotCatalog["6 Global Pilot Fixtures<br/>(Governance, Web Intel, Video, etc.)"]
+        PilotCatalog["6 HTTPS-Verified External Pilots<br/>(fixture/discovery-only; payment inactive)"]
     end
 
     subgraph x402Layer["3. Protocol & Resource Server"]
@@ -161,8 +161,9 @@ All settlements: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic
    * Deterministic registration with 11-rule conformance engine, full zod shape validation, and ready-to-run template in `examples/fast-provider-template/`.
 5. **External Provider Contract & E2E Validation:**
    * Truthful contract-only record for independent quote repositories and read-only MCP discovery endpoints. See [external E2E evidence](docs/EXTERNAL_PROVIDER_E2E.md) and [MCP capabilities](docs/MCP_DISCOVERY.md).
-6. **6 Global Pilot Bundles:**
-   * Agent Governance & Policy (`agent-policy-pilot`), Website Intelligence, Video Repurpose, Campaign Builder, Research Scout, and Design Brief.
+6. **6 HTTPS-Verified External Pilots:**
+   * Website Intelligence, Campaign Creator, Research Scout, Video Repurpose, Design Brief, and Brand Identity Studio.
+   * Every bilingual card links its public repository and deployment, pins the validated source commit, and states `fixture-live` or `discovery-only`. Payments are inactive and no price is invented. See the [point-in-time HTTPS QA report](docs/VERIFIED_PROVIDER_QA.md) and [catalog inclusion plan](docs/PROVIDER_CATALOG_PLAN.md).
 7. **Workflow Bundle Schema & Fixtures (read-only):**
    * `bazaar.workflow-bundle/v1` with 20 deterministic rules (19 active for ready/draft fixtures) (cycles, gates, artifacts, price) and 2 fixture bundles. See [WORKFLOW_BUNDLES_FUTURE.md](docs/internal/WORKFLOW_BUNDLES_FUTURE.md).
 8. **Automated E2E Test Batteries (zero fund risk):**

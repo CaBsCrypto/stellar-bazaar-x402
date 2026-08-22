@@ -65,7 +65,7 @@ flowchart TD
         RESTDiscovery["/api/discovery<br/>(resources / search / pilots)"]
         Validator["validateServiceCard()<br/>(Motor de Conformidad de 11 Reglas)"]
         DynamicRegistry["/api/publisher/ingest<br/>(Ingesta Dinámica de Providers)"]
-        PilotCatalog["6 Pilotos Globales Estructurados<br/>(Gobernanza, Web Intel, Video, etc.)"]
+        PilotCatalog["6 Pilotos Externos Verificados por HTTPS<br/>(fixture/discovery-only; pago inactivo)"]
     end
 
     subgraph x402Layer["3. Capa de Protocolo & Servidor de Recursos"]
@@ -161,8 +161,9 @@ Todas: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), contrat
    * Registro dinámico con verificación determinista de 11 reglas de conformidad y plantilla ejecutable en `examples/fast-provider-template/`. Persistencia Upstash Redis con fallback dev. Flujo visual en `/publish`. Ver [PROVIDER_ONBOARDING.md](docs/PROVIDER_ONBOARDING.md).
 5. **Contrato de Proveedor Externo y Validación E2E:**
    * Registro transparente para repositorios independientes de cotización y endpoints MCP de solo lectura. Ver [evidencia externa E2E](docs/EXTERNAL_PROVIDER_E2E.md) y [capacidades MCP](docs/MCP_DISCOVERY.md).
-6. **6 Pilotos Globales Estructurados:**
-   * Gobernanza de Agentes (`agent-policy-pilot`), Inteligencia Web, Reutilización de Video, Creador de Campañas, Explorador de Investigación y Brief de Diseño.
+6. **6 Pilotos Externos Verificados por HTTPS:**
+   * Inteligencia Web, Creador de Campañas, Explorador de Investigación, Reutilización de Video, Brief de Diseño y Estudio de Identidad de Marca.
+   * Cada card bilingüe enlaza su repositorio y deployment públicos, fija el commit validado y declara `fixture-live` o `discovery-only`. Los pagos están inactivos y no se inventa precio. Consulta el [informe QA HTTPS puntual](docs/VERIFIED_PROVIDER_QA.md) y el [plan de inclusión](docs/PROVIDER_CATALOG_PLAN.md).
 7. **Workflow Bundles — Schema y Fixtures (solo lectura):**
    * `bazaar.workflow-bundle/v1` con 20 reglas deterministas (19 activas para fixtures ready/draft) (ciclos, gates, artifacts, precio) y 2 bundles fixture. Ver [WORKFLOW_BUNDLES_FUTURE.md](docs/internal/WORKFLOW_BUNDLES_FUTURE.md).
 8. **Baterías de Pruebas Automatizadas (cero riesgo de fondos):**
