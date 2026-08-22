@@ -42,6 +42,9 @@ export function inspectWebsiteIntelligence402(header: string | null, card: Websi
   let decoded;
   try { decoded = decodePaymentRequiredHeader(header); } catch { throw new Error("PAYMENT_REQUIRED_HEADER_MALFORMED"); }
   if (decoded.x402Version !== 2) throw new Error("X402_VERSION_MISMATCH");
+  if (decoded.accepts.some((item) => item.network.startsWith("eip155:") || item.network.toLowerCase().includes("base"))) {
+    throw new Error("EVM_NETWORK_FORBIDDEN_STELLAR_TESTNET_ONLY");
+  }
   const candidates = decoded.accepts.filter((item) =>
     item.scheme === card.payment.scheme && item.network === card.payment.network && item.asset === card.payment.asset &&
     item.amount === card.payment.atomicAmount && item.payTo === card.payment.payTo,

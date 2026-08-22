@@ -10,6 +10,8 @@ const requirement = { scheme: "exact", network: "stellar:testnet", payTo: seller
 const headerFor = (accepts) => encodePaymentRequiredHeader({ x402Version: 2, resource: { url: card.endpoint.url, description: "Website Intelligence", mimeType: "application/json" }, accepts });
 assert.equal(inspectWebsiteIntelligence402(headerFor([requirement]), card, input).amount, "10000");
 for (const [field, value] of [["network", "stellar:pubnet"], ["scheme", "upto"], ["asset", "WRONG"], ["amount", "9999"], ["payTo", `G${"B".repeat(55)}`]]) assert.throws(() => inspectWebsiteIntelligence402(headerFor([{ ...requirement, [field]: value }]), card, input), /NOT_EXACTLY_ONE_MATCH/);
+assert.throws(() => inspectWebsiteIntelligence402(headerFor([{ ...requirement, network: "eip155:84532" }]), card, input), /EVM_NETWORK_FORBIDDEN/);
+assert.throws(() => inspectWebsiteIntelligence402(headerFor([requirement, { ...requirement, network: "eip155:84532" }]), card, input), /EVM_NETWORK_FORBIDDEN/);
 assert.throws(() => inspectWebsiteIntelligence402(null, card, input), /HEADER_MISSING/);
 assert.throws(() => inspectWebsiteIntelligence402("bad", card, input), /HEADER_MALFORMED/);
 assert.throws(() => inspectWebsiteIntelligence402(headerFor([{ ...requirement, maxTimeoutSeconds: 61 }]), card, input), /TIMEOUT/);
@@ -18,4 +20,4 @@ assert.throws(() => inspectWebsiteIntelligence402(headerFor([requirement, requir
 const fakeFetch = async () => new Response("", { status: 402, headers: { "payment-required": headerFor([requirement]) } });
 assert.equal((await inspectWebsiteIntelligenceChallenge(card.endpoint.url, input, card, fakeFetch)).payTo, seller);
 await assert.rejects(() => inspectWebsiteIntelligenceChallenge("https://evil.example", input, card, fakeFetch), /UNTRUSTED_PROVIDER_URL/);
-console.log(JSON.stringify({ ok: true, cases: 13, signed: false, settled: false, secretsRequired: false }));
+console.log(JSON.stringify({ ok: true, cases: 15, stellarTestnetOnly: true, baseSepoliaRejected: true, signed: false, settled: false, secretsRequired: false }));

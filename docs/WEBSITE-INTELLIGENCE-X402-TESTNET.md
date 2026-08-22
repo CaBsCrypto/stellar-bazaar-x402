@@ -2,6 +2,8 @@
 
 Status: **contracts and offline tests only**. Execution is disabled. No wallet was generated, funded, or used; no payment was attempted in this branch.
 
+> Critical interoperability gate: the current provider implementation reportedly targets Base Sepolia and is therefore incompatible. PR #15 must remain draft until the provider migrates to `@x402/stellar` and emits only `stellar:testnet` exact requirements. Bazaar rejects `eip155:*`, Base/EVM alternatives, mixed Stellar+EVM offers, Pubnet and any non-pinned asset.
+
 ## Contract
 
 The planned resource is `POST /api/x402/providers/website-intelligence`. Bazaar binds the canonical `{url, language}` body, HTTP method, local resource route, and pinned upstream provider URL into a SHA-256 digest. Payment requirements are fixed to x402 v2 `exact`, `stellar:testnet`, Testnet USDC, `10000` atomic units (0.001 USDC), a separately configured seller address, and a 60-second timeout.
@@ -40,5 +42,7 @@ Mainnet, custody, generic URL proxying and production claims are out of scope.
 ## Provider handoff required
 
 The independent provider must publish `bazaar.payment-service-card/v1` metadata matching `expectedWebsiteIntelligenceCard()` and expose `POST https://website-intelligence-provider.vercel.app/v1/audits`. Its genuine 402 must contain exactly one compatible requirement with `extra.method=POST`, `extra.providerId=website-intelligence-pilot`, the pinned `extra.providerUrl`, and the canonical input hash. The provider must not deliver an audit before successful settlement and strict ledger reconciliation, and must enforce durable replay protection.
+
+The provider handoff must also identify `@x402/stellar` as its scheme implementation. An EVM/Base payload cannot be translated or accepted by this harness; the provider must correct its native payment implementation first.
 
 `npm run x402:website-intelligence:inspect` is inspection-only: it sends the fixture input, parses the 402 and refuses to run when settlement is enabled. It never loads or signs with the payer seed. The future signing/execution harness remains gated until provider QA supplies the payment-enabled card, 402 fixture, receipt evidence adapter and replay behavior.
