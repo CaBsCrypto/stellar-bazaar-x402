@@ -24,8 +24,10 @@ assert.equal(pilotsData.ok, true);
 const pilotIds = pilotsData.results.map((p) => p.id);
 assert.ok(pilotIds.includes("website-intelligence-pilot"), "website-intelligence-pilot missing");
 assert.ok(pilotIds.includes("video-repurpose-pilot"), "video-repurpose-pilot missing");
-assert.ok(pilotIds.includes("agent-policy-pilot"), "agent-policy-pilot missing");
-console.log(`  ✓ Pilot fixtures verified (${pilotsData.count} pilots, including agent-policy-pilot)`);
+assert.ok(pilotIds.includes("brand-identity-studio-pilot"), "brand-identity-studio-pilot missing");
+assert.equal(pilotsData.indexStatus, "pilot-indexed-https-qa");
+assert.equal(pilotsData.paymentActive, false);
+console.log(`  ✓ HTTPS-verified pilot cards verified (${pilotsData.count} pilots, payment inactive)`);
 
 const searchRes = await fetch(`${BASE_URL}/api/discovery/search?query=riesgo%20swap`);
 assert.equal(searchRes.status, 200, "search endpoint should return 200");
@@ -77,14 +79,14 @@ assert.deepEqual(toolNames, [
 ]);
 console.log(`  ✓ MCP tools validated: [${toolNames.join(", ")}]`);
 
-// Inspect a pilot via MCP
+// Inspect a verified pilot via MCP
 const mcpPilotRpc = await mcpRpc(3, "tools/call", {
   name: "get_service",
-  arguments: { id: "agent-policy-pilot" }
+  arguments: { id: "brand-identity-studio-pilot" }
 });
 assert.equal(mcpPilotRpc.result.isError, undefined);
-assert.match(mcpPilotRpc.result.content[0].text, /agent-governance/);
-console.log("  ✓ MCP tool call get_service('agent-policy-pilot') succeeded");
+assert.match(mcpPilotRpc.result.content[0].text, /discovery-only/);
+console.log("  ✓ MCP tool call get_service('brand-identity-studio-pilot') succeeded");
 
 // Validate card via MCP tool
 const validateRpc = await mcpRpc(4, "tools/call", {

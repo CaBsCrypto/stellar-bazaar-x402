@@ -26,6 +26,7 @@
     "test:e2e:external:testnet": "node scripts/e2e-external-provider-testnet.mjs",
     "test:contract:external:public": "node scripts/test-public-quote-contract.mjs",
     "test:workflow:bundle": "node scripts/test-workflow-bundle.mjs",
+    "test:providers:verified": "node scripts/test-verified-providers.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {

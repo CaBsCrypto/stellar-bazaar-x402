@@ -15,6 +15,14 @@ const readTools = [
   "get_workflow_bundle",
   "validate_service_card",
 ];
+const pilotIds = [
+  "website-intelligence-pilot",
+  "campaign-creator-pilot",
+  "research-scout-pilot",
+  "video-repurpose-pilot",
+  "design-brief-pilot",
+  "brand-identity-studio-pilot",
+];
 
 async function rpc(id, method, params) {
   const response = await fetch(url, {
@@ -55,7 +63,17 @@ assert.deepEqual(capabilityText.writes, []);
 assert.equal(capabilityText.registry.mutationViaMcp, false);
 assert.equal(capabilityText.registry.providerMetadataTrusted, false);
 
-const firstPage = await rpc(4, "tools/call", {
+const pilots = await rpc(4, "tools/call", {
+  name: "list_services",
+  arguments: { includePilots: true },
+});
+const pilotText = JSON.parse(pilots.result.content[0].text);
+assert.deepEqual(pilotText.pilots.map((card) => card.id), pilotIds);
+assert.ok(pilotText.pilots.every((card) => card.indexing.status === "pilot-indexed"));
+assert.ok(pilotText.pilots.every((card) => card.payment.status === "not-active"));
+assert.equal(pilotText.partialResults, false);
+
+const firstPage = await rpc(5, "tools/call", {
   name: "search_services",
   arguments: { query: "riesgo", limit: 1 },
 });
@@ -63,7 +81,7 @@ const firstText = JSON.parse(firstPage.result.content[0].text);
 assert.equal(firstText.partialResults, true);
 assert.ok(firstText.nextCursor);
 
-const secondPage = await rpc(5, "tools/call", {
+const secondPage = await rpc(6, "tools/call", {
   name: "search_services",
   arguments: { query: "riesgo", limit: 1, cursor: firstText.nextCursor },
 });
@@ -71,7 +89,7 @@ const secondText = JSON.parse(secondPage.result.content[0].text);
 assert.ok(secondText.results.length >= 1);
 assert.ok(!secondText.results.some((result) => result.resource.id === firstText.results[0].resource.id));
 
-const hostile = await rpc(6, "tools/call", {
+const hostile = await rpc(7, "tools/call", {
   name: "validate_service_card",
   arguments: {
     card: {
@@ -99,7 +117,7 @@ const hostileText = JSON.parse(hostile.result.content[0].text);
 assert.equal(hostileText.valid, false);
 assert.ok(hostileText.outcomes.some((outcome) => outcome.rule === "route.template" && outcome.status === "fail"));
 
-const unknownWrite = await rpc(7, "tools/call", {
+const unknownWrite = await rpc(8, "tools/call", {
   name: "register_service",
   arguments: { card: {} },
 });
@@ -111,6 +129,8 @@ console.log(JSON.stringify({
   tools: readTools.length,
   writes: 0,
   mutationToolRejected: true,
+  pilots: pilotIds.length,
+  pilotPayment: "not-active",
   pagination: true,
   hostileMetadataRejected: true,
 }, null, 2));
