@@ -4,6 +4,7 @@ import { ExactStellarScheme } from "@x402/stellar/exact/client";
 import { x402Client } from "@x402/core/client";
 import { wrapFetchWithPayment } from "@x402/fetch";
 import { requireLocalResourceBaseUrl } from "@/lib/x402-config";
+import { assertActiveTestnetPayerSecret } from "@/lib/testnet-payer-safety";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export async function POST() {
     );
   }
   try {
+    assertActiveTestnetPayerSecret(secret);
     const signer = createEd25519Signer(secret, "stellar:testnet");
     const client = new x402Client().register("stellar:testnet", new ExactStellarScheme(signer));
     const paidFetch = wrapFetchWithPayment(fetch, client);
@@ -36,10 +38,12 @@ export async function POST() {
   } catch (error) {
     const code = error instanceof Error && error.message === "X402_LOCAL_BASE_URL_REQUIRED"
       ? "LOCAL_PAYER_TARGET_REJECTED"
-      : "TESTNET_PAYMENT_FAILED";
+      : error instanceof Error && error.message === "RETIRED_TESTNET_PAYER_IDENTITY"
+        ? "RETIRED_TESTNET_PAYER_IDENTITY"
+        : "TESTNET_PAYMENT_FAILED";
     return NextResponse.json(
-      { ok: false, error: { code, message: "Pago Testnet no completado; revisa configuración server-only y destino loopback.", retryable: code === "TESTNET_PAYMENT_FAILED" } },
-      { status: code === "LOCAL_PAYER_TARGET_REJECTED" ? 400 : 402 },
+      { ok: false, error: { code, message: "Pago Testnet no completado; usa una identidad activa y configuración server-only.", retryable: code === "TESTNET_PAYMENT_FAILED" } },
+      { status: code === "LOCAL_PAYER_TARGET_REJECTED" ? 400 : code === "RETIRED_TESTNET_PAYER_IDENTITY" ? 403 : 402 },
     );
   }
 }

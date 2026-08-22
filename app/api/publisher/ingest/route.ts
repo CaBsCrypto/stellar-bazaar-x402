@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createService, listMyServices, providerSecretConfigured } from "@/lib/service-ingest";
+import { createService, registryMutationConfigured } from "@/lib/service-ingest";
 import { storageMode } from "@/lib/dynamic-registry";
 
 export const runtime = "nodejs";
@@ -17,12 +17,12 @@ function errorResponse(error: { code: string; message: string; retryable: boolea
 }
 
 export async function POST(req: NextRequest) {
-  if (!providerSecretConfigured() && process.env.NODE_ENV === "production") {
+  if (!registryMutationConfigured()) {
     return errorResponse(
       {
         code: "SERVICE_NOT_CONFIGURED",
-        message: "BAZAAR_PROVIDER_SECRET no está configurado en este entorno.",
-        retryable: true,
+        message: "El registro requiere almacenamiento durable y credencial server-side; el borrador local sigue disponible en /publish.",
+        retryable: false,
         stage: "discover",
       },
       503,
@@ -75,36 +75,17 @@ export async function POST(req: NextRequest) {
   );
 }
 
-export async function GET(req: NextRequest) {
-  if (!providerSecretConfigured() && process.env.NODE_ENV === "production") {
-    return errorResponse(
-      {
-        code: "SERVICE_NOT_CONFIGURED",
-        message: "BAZAAR_PROVIDER_SECRET no está configurado en este entorno.",
-        retryable: true,
+export function GET() {
+  return NextResponse.json(
+    {
+      ok: false,
+      error: {
+        code: "PROVIDER_OWNERSHIP_NOT_IMPLEMENTED",
+        message: "El listado privado por provider está deshabilitado hasta disponer de credenciales por proveedor.",
+        retryable: false,
         stage: "discover",
       },
-      503,
-    );
-  }
-
-  const result = await listMyServices(providerKeyOf(req));
-  if (!result.ok) {
-    const status = result.error.code === "UNAUTHORIZED" ? 401 : 500;
-    return errorResponse(result.error, status);
-  }
-
-  return NextResponse.json({
-    ok: true,
-    services: result.entries.map((entry) => ({
-      id: entry.id,
-      hash: entry.hash,
-      revision: entry.revision,
-      registeredAt: entry.registeredAt,
-      updatedAt: entry.updatedAt,
-      card: entry.card,
-    })),
-    count: result.entries.length,
-    storage: storageMode(),
-  });
+    },
+    { status: 405, headers: { Allow: "POST" } },
+  );
 }

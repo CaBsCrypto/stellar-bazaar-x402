@@ -151,14 +151,14 @@ Todas: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), contrat
 1. **Despliegue en Producción (Vercel):**
    * Live en `https://stellar-bazaar-x402.vercel.app` con key de facilitador server-only y persistencia en Upstash Redis en Production + Preview.
    * Hub de Desarrolladores interactivo (`/docs`) con snippets en 1 clic para Claude Desktop MCP, TypeScript SDK, Python LangChain/CrewAI y cURL.
-2. **Servidor MCP Streamable HTTP (`/api/mcp`, v0.4.0):**
-   * 11 herramientas: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, `list_workflow_bundles`, `get_workflow_bundle`, más escrituras de registro `register_service`, `update_service`, `delete_service`, `list_my_services` (auth por secret compartido vía `providerKey`).
-   * `search_services` con paginación por cursor opaco (`limit` 1–50, `nextCursor`, `partialResults`) y envelopes de error deterministas (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`, `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `STORAGE_ERROR`).
+2. **Servidor MCP Streamable HTTP (`/api/mcp`, v0.5.0):**
+   * 7 herramientas de sólo lectura: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, `list_workflow_bundles`, `get_workflow_bundle`. MCP no anuncia escrituras, pagos, firma, ejecución ni custodia.
+   * `search_services` con paginación por cursor opaco (`limit` 1–50, `nextCursor`, `partialResults`) y envelopes deterministas (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`).
    * Cards registrados por providers visibles en `list_services`/`search_services`/`get_service` y persistidos entre redeploys vía Upstash Redis (provisionado 2026-08-19; verificado tras redeploys de producción).
 3. **SDK Oficial para Agentes & Kit Python (`lib/bazaar-agent-client.ts` & `docs/LANGCHAIN_CREWAI.md`):**
-   * SDK fuertemente tipado y herramienta de Python para LangChain/CrewAI para evaluar políticas y auto-liquidar pagos x402.
+   * SDK fuertemente tipado para discovery/políticas. La ejecución pagada dinámica falla de forma cerrada sin un verificador independiente que concilie red, asset, monto y destino.
 4. **Auto-Registro de Proveedores & Plantilla de Inicio Rápido (`/api/publisher/ingest` & `docs/FAST_PROVIDER_START.md`):**
-   * Registro dinámico con verificación determinista de 11 reglas de conformidad y plantilla ejecutable en `examples/fast-provider-template/`. Persistencia Upstash Redis con fallback dev. Flujo visual en `/publish`. Ver [PROVIDER_ONBOARDING.md](docs/PROVIDER_ONBOARDING.md).
+   * Borrador local y validación determinista en `/publish`. El alta real es append-only, server-to-server, deshabilitada por defecto y exige activación explícita, Redis durable y credencial de operador.
 5. **Contrato de Proveedor Externo y Validación E2E:**
    * Registro transparente para repositorios independientes de cotización y endpoints MCP de solo lectura. Ver [evidencia externa E2E](docs/EXTERNAL_PROVIDER_E2E.md) y [capacidades MCP](docs/MCP_DISCOVERY.md).
 6. **6 Pilotos Externos Verificados por HTTPS:**
@@ -205,7 +205,7 @@ npm run build
 # Ejecutar el arnés E2E del ecosistema (REST + MCP + x402, cero riesgo de fondos)
 npm run test:e2e:ecosystem
 
-# Ejecutar la suite de onboarding MCP (11 tools, paginación, ciclo de vida vía MCP)
+# Ejecutar onboarding MCP (7 tools read-only + rechazo de mutaciones)
 npm run test:mcp:onboarding
 
 # Ejecutar el corpus de evaluación de políticas de agente (12 escenarios: metadata hostil, traversal, fidelity de estados, sin fugas de secretos)
@@ -220,8 +220,11 @@ npm run test:workflow:bundle
 # Ejecutar la suite de seguridad y hard-caps de agentes
 npm run test:agent:safety
 
-# Ejecutar la suite de onboarding de providers (ciclo de vida, auth, forma, persistencia)
+# Verificar registro fail-closed y conformance disponible
 npm run test:publisher:ingest
+
+# Verificar hash profundo, payer retirado y conciliación de recibos
+npm run test:security:invariants
 
 # Ejecutar la validación del contrato de proveedor externo (mock + CI)
 npm run test:e2e:external
@@ -235,7 +238,7 @@ npm run test:contract:external:public
 # Ejecutar el E2E real del proveedor externo en testnet (requiere RUN_EXTERNAL_X402_TESTNET=1 + EXTERNAL_QUOTE_BASE_URL)
 npm run test:e2e:external:testnet
 
-# Ejecutar la simulación del comprador autónomo (liquidación REAL de 0.001 USDC testnet)
+# Ejecutar discovery/política read-only (sin pago)
 npm run agent:quickstart
 ```
 
@@ -246,24 +249,19 @@ npm run agent:quickstart
 ```typescript
 import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
 
-// 1. Inicializar cliente con clave de Testnet y límite de presupuesto
+// 1. Inicializar cliente read-only con límites de política
 const client = new BazaarAgentClient({
   baseUrl: "http://localhost:3000",
-  payerSecretKey: process.env.X402_PAYER_SECRET,
   maxPriceAllowedUsdc: 0.05,
+  allowedAssets: ["USDC"],
 });
 
 // 2. Descubrir el servicio deseado vía MCP
 const [serviceCard] = await client.searchServicesMCP("swap risk");
 
-// 3. Ejecutar con auto-liquidación x402
-const execution = await client.executeService(serviceCard, {
-  pair: "XLM/USDC",
-  amount: 2500,
-  side: "buy",
-});
-
-console.log("Resultado:", execution.data);
+// 3. Inspeccionar. Ejecutar/pagar exige payer server-only y receiptVerifier;
+// un tx hash por sí solo nunca se acepta como prueba de settlement.
+console.log("Service card:", serviceCard);
 console.log("Recibo Stellar:", execution.payment.receiptUrl);
 ```
 
@@ -274,7 +272,7 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
 * **Cero Custodia:** Bazaar jamás almacena, retiene ni custodia fondos de usuarios o agentes.
 * **Cero Firma de Llaves:** La firma y consentimiento residen 100% del lado del cliente/wallet (`server-only`).
 * **Sin Intermediación de Secretos:** Las ServiceCards no contienen API keys, tokens ni claves privadas (`S...`).
-* **Metadata No Confiable:** Toda entrada, descripción y plantilla de ruta se valida y sanitiza contra inyecciones SSRF y path traversal (`..`, `@`, `#`).
+* **Metadata No Confiable:** Las descripciones siguen siendo datos no confiables; URL y route template reciben checks deterministas de SSRF/traversal.
 * **Protección Anti-Bucle (Circuit Breakers):** Máximo de 1 reintento con pago por ciclo para prevenir bucles de cobro involuntarios.
 
 ---
@@ -282,15 +280,15 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
 ## 🗺️ Hoja de Ruta (Roadmap)
 
 ```
- [ FASE 1: COMPLETADA ]        [ FASE 2: COMPLETADA ]        [ FASE 3: COMPLETADA ]       [ FASE 4: EN CURSO ]
-  Discovery UI & REST API   --> Liquidación Testnet x402 --> Ingesta de Proveedores  --> Soporte Multiactivo
-  Servidor MCP Streamable       Evidencia On-Chain Real       SDK & Quickstarts Agentes     Ejecución Workflows & Mainnet
+ [ FASE 1: COMPLETADA ]        [ FASE 2: VALIDADA ]          [ FASE 3: SEGURIDAD ]        [ FASE 4: FUTURA ]
+  Discovery UI & REST API   --> Evidencia x402 Testnet   --> MCP read-only + SDK      --> Ownership + multiactivo
+  Servidor MCP Streamable       Prueba on-chain histórica    Registro fail-closed         Mainnet sólo tras auditoría
 ```
 
 1. ✅ **Fase 1 (Discovery Core):** Catálogo global, ranking determinista, servidor MCP y validador de ServiceCards.
 2. ✅ **Fase 2 (Liquidación Testnet):** Reto HTTP 402, firmas Ed25519 y liquidación on-chain con `@x402/stellar`.
-3. ✅ **Fase 3 (SDK & Ingesta):** `BazaarAgentClient`, suite de seguridad, auto-registro `/api/publisher/ingest` y arnés E2E.
-4. 🟡 **Fase 4 (Expansión & Producción):** Producción Vercel live ✅, paginación por cursor MCP ✅, schema de workflow bundles ✅. Pendiente: ejecución multiactivo SEP-41 (`XLM`, `EURC`), ejecución de bundles con gates, red de proveedores externos y preparación para Mainnet tras auditoría externa.
+3. 🟡 **Fase 3 (Remediación de seguridad):** MCP read-only, gate de conciliación, hashes profundos, payer retirado y registro append-only deshabilitado por defecto.
+4. ⚪ **Fase 4 (Futura):** ownership por provider, lifecycle revisado, multiactivo SEP-41 y Mainnet sólo tras auditoría externa.
 
 ---
 

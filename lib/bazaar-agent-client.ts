@@ -3,14 +3,30 @@ import { ExactStellarScheme } from "@x402/stellar/exact/client";
 import { x402Client } from "@x402/core/client";
 import { wrapFetchWithPayment } from "@x402/fetch";
 import { decodePaymentResponseHeader } from "@x402/core/http";
+import type { SettleResponse } from "@x402/core/types";
 import type { ServiceCard } from "./types.ts";
 import { validateServiceCard } from "./discovery.ts";
+import { assertActiveTestnetPayerSecret } from "./testnet-payer-safety.ts";
+
+export interface SettlementReceiptContext {
+  receipt: SettleResponse;
+  card: ServiceCard;
+  requestUrl: string;
+  expected: {
+    network: string;
+    asset: string;
+    amount: string;
+    destination: string;
+  };
+}
 
 export interface BazaarClientOptions {
   baseUrl: string;
   payerSecretKey?: string;
   maxPriceAllowedUsdc?: number;
   allowedNetworks?: string[];
+  allowedAssets?: string[];
+  receiptVerifier?: (context: SettlementReceiptContext) => boolean | Promise<boolean>;
 }
 
 export interface BazaarAgentExecutionResult<T = unknown> {
@@ -20,11 +36,14 @@ export interface BazaarAgentExecutionResult<T = unknown> {
   serviceCard: ServiceCard;
   payment: {
     settled: boolean;
+    receiptVerified: boolean;
     transactionHash?: string;
     payer?: string;
     recipient?: string;
     network: string;
     amount?: string;
+    declaredAmount: string;
+    asset: string;
     receiptUrl?: string;
   };
 }
@@ -34,6 +53,8 @@ export class BazaarAgentClient {
   private payerSecretKey?: string;
   private maxPriceAllowedUsdc: number;
   private allowedNetworks: string[];
+  private allowedAssets: string[];
+  private receiptVerifier?: BazaarClientOptions["receiptVerifier"];
   private paidFetch: typeof fetch;
 
   constructor(options: BazaarClientOptions) {
@@ -41,8 +62,11 @@ export class BazaarAgentClient {
     this.payerSecretKey = options.payerSecretKey?.trim();
     this.maxPriceAllowedUsdc = options.maxPriceAllowedUsdc ?? 1.0;
     this.allowedNetworks = options.allowedNetworks ?? ["stellar:testnet"];
+    this.allowedAssets = options.allowedAssets ?? ["USDC"];
+    this.receiptVerifier = options.receiptVerifier;
 
     if (this.payerSecretKey) {
+      assertActiveTestnetPayerSecret(this.payerSecretKey);
       const signer = createEd25519Signer(this.payerSecretKey, "stellar:testnet");
       const client = new x402Client().register("stellar:testnet", new ExactStellarScheme(signer));
       this.paidFetch = wrapFetchWithPayment(fetch, client);
@@ -92,6 +116,10 @@ export class BazaarAgentClient {
       return { allowed: false, reason: `Network ${card.network} is not permitted by agent policy.` };
     }
 
+    if (!this.allowedAssets.includes(card.payment.asset)) {
+      return { allowed: false, reason: `Asset ${card.payment.asset} is not permitted by agent policy.` };
+    }
+
     const priceUsdc = Number(card.payment.amount);
     if (isNaN(priceUsdc) || priceUsdc > this.maxPriceAllowedUsdc) {
       return {
@@ -111,6 +139,14 @@ export class BazaarAgentClient {
     if (!policyCheck.allowed) {
       throw new Error(`AGENT_POLICY_VIOLATION: ${policyCheck.reason}`);
     }
+    if (!this.payerSecretKey) {
+      throw new Error("PAYER_SECRET_REQUIRED: paid execution requires a server-only Testnet payer.");
+    }
+    if (!this.receiptVerifier) {
+      throw new Error(
+        "RECEIPT_RECONCILIATION_REQUIRED: paid dynamic execution is disabled until a verifier checks network, asset, amount and destination against the ServiceCard.",
+      );
+    }
 
     let resolvedRoute = card.routeTemplate;
     for (const [key, value] of Object.entries(params)) {
@@ -125,28 +161,37 @@ export class BazaarAgentClient {
     const status = response.status;
     const body = (await response.json()) as Record<string, unknown>;
 
-    let txHash: string | undefined;
-    let payer: string | undefined;
-    let recipient: string | undefined;
-    let amount: string | undefined;
-
     const paymentResponseHeader = response.headers.get("payment-response");
-    if (paymentResponseHeader) {
-      try {
-        const decoded = decodePaymentResponseHeader(paymentResponseHeader);
-        txHash = decoded.transaction;
-        payer = decoded.payer;
-      } catch {
-        // Fallback to body payment object if present
-      }
+    if (!paymentResponseHeader) {
+      throw new Error("PAYMENT_RECEIPT_MISSING: provider response has no PAYMENT-RESPONSE header.");
     }
 
-    if (body.payment && typeof body.payment === "object") {
-      const p = body.payment as Record<string, string>;
-      txHash = txHash ?? p.transaction;
-      payer = payer ?? p.payer;
-      recipient = p.recipient;
-      amount = p.amount;
+    let receipt: SettleResponse;
+    try {
+      receipt = decodePaymentResponseHeader(paymentResponseHeader);
+    } catch {
+      throw new Error("PAYMENT_RECEIPT_MALFORMED: PAYMENT-RESPONSE could not be decoded.");
+    }
+    if (!response.ok || !receipt.success || !receipt.transaction) {
+      throw new Error("PAYMENT_NOT_SETTLED: provider did not return a successful settlement receipt.");
+    }
+    if (receipt.network !== card.network) {
+      throw new Error("PAYMENT_RECEIPT_MISMATCH: receipt network differs from the ServiceCard.");
+    }
+
+    const receiptVerified = await this.receiptVerifier({
+      receipt,
+      card,
+      requestUrl: targetUrl,
+      expected: {
+        network: card.network,
+        asset: card.payment.asset,
+        amount: card.payment.amount,
+        destination: card.payment.destination,
+      },
+    });
+    if (!receiptVerified) {
+      throw new Error("PAYMENT_RECEIPT_MISMATCH: receipt does not reconcile with the ServiceCard.");
     }
 
     return {
@@ -155,13 +200,16 @@ export class BazaarAgentClient {
       status,
       serviceCard: card,
       payment: {
-        settled: !!txHash,
-        transactionHash: txHash,
-        payer,
-        recipient: recipient ?? card.payment.destination,
-        network: card.network,
-        amount: amount ?? card.payment.amount,
-        receiptUrl: txHash ? `https://stellar.expert/explorer/testnet/tx/${txHash}` : undefined,
+        settled: true,
+        receiptVerified: true,
+        transactionHash: receipt.transaction,
+        payer: receipt.payer,
+        recipient: card.payment.destination,
+        network: receipt.network,
+        amount: receipt.amount,
+        declaredAmount: card.payment.amount,
+        asset: card.payment.asset,
+        receiptUrl: `https://stellar.expert/explorer/testnet/tx/${receipt.transaction}`,
       },
     };
   }

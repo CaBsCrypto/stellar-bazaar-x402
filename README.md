@@ -151,14 +151,14 @@ All settlements: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic
 1. **Production Deployment (Vercel):**
    * Live at `https://stellar-bazaar-x402.vercel.app` with server-only facilitator key and Upstash Redis persistence in Production + Preview.
    * Interactive Developer Hub (`/docs`) with 1-click code snippets for Claude Desktop MCP, TypeScript SDK, Python LangChain/CrewAI, and cURL.
-2. **Streamable HTTP MCP Server (`/api/mcp`, v0.4.0):**
-   * 11 standard RFC tools: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, `list_workflow_bundles`, `get_workflow_bundle`, plus provider registry writes `register_service`, `update_service`, `delete_service`, `list_my_services` (shared-secret auth via `providerKey`).
-   * `search_services` supports opaque cursor pagination (`limit` 1–50, `nextCursor`, `partialResults`) and deterministic error envelopes (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`, `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `STORAGE_ERROR`).
+2. **Streamable HTTP MCP Server (`/api/mcp`, v0.5.0):**
+   * 7 read-only tools: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, `list_workflow_bundles`, `get_workflow_bundle`. MCP advertises no registry writes, payment, signing, execution, or custody.
+   * `search_services` supports opaque cursor pagination (`limit` 1–50, `nextCursor`, `partialResults`) and deterministic error envelopes (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`).
    * Provider-registered cards are visible in `list_services`/`search_services`/`get_service` and persist across redeploys via Upstash Redis (provisioned 2026-08-19; verified across production redeploys).
 3. **Official Agent SDK & Python Kit (`lib/bazaar-agent-client.ts` & `docs/LANGCHAIN_CREWAI.md`):**
-   * Strongly typed SDK and LangChain/CrewAI Python tool for agent discovery, pre-flight safety policy checks, and automated x402 payment handling.
+   * Strongly typed discovery/policy SDK. Dynamic paid execution is fail-closed unless the host injects an independent verifier that reconciles receipt network, asset, amount and destination with the selected card.
 4. **Dynamic Provider Ingest API & Fast Starter (`/api/publisher/ingest` & `docs/FAST_PROVIDER_START.md`):**
-   * Deterministic registration with 11-rule conformance engine, full zod shape validation, and ready-to-run template in `examples/fast-provider-template/`.
+   * Local manifest drafting and deterministic conformance remain public. Registry writes are append-only, server-to-server, disabled by default, and require explicit enablement, durable Redis and an operator credential.
 5. **External Provider Contract & E2E Validation:**
    * Truthful contract-only record for independent quote repositories and read-only MCP discovery endpoints. See [external E2E evidence](docs/EXTERNAL_PROVIDER_E2E.md) and [MCP capabilities](docs/MCP_DISCOVERY.md).
 6. **6 HTTPS-Verified External Pilots:**
@@ -205,7 +205,7 @@ npm run build
 # Run ecosystem E2E test suite (REST + MCP + x402, zero fund risk)
 npm run test:e2e:ecosystem
 
-# Run MCP onboarding suite (11 tools, pagination, lifecycle via MCP)
+# Run MCP onboarding suite (7 read-only tools + mutation rejection)
 npm run test:mcp:onboarding
 
 # Run agent policy eval corpus (12 scenarios: hostile metadata, traversal, status fidelity, no secret leaks)
@@ -217,8 +217,11 @@ npm run benchmark:ranking
 # Run workflow bundle conformance suite (13 negative cases)
 npm run test:workflow:bundle
 
-# Run provider onboarding suite (lifecycle, auth, shape, persistence)
+# Verify registry fail-closed behavior and conformance availability
 npm run test:publisher:ingest
+
+# Run deep-hash, retired-payer and receipt-reconciliation invariants
+npm run test:security:invariants
 
 # Run autonomous agent safety & budget hard-caps suite
 npm run test:agent:safety
@@ -235,7 +238,7 @@ npm run test:contract:external:public
 # Run real external provider testnet E2E (requires RUN_EXTERNAL_X402_TESTNET=1 + EXTERNAL_QUOTE_BASE_URL)
 npm run test:e2e:external:testnet
 
-# Run autonomous agent buyer flow demo (REAL 0.001 USDC testnet settlement)
+# Run read-only agent discovery/policy demo (no payment)
 npm run agent:quickstart
 ```
 
@@ -246,24 +249,19 @@ npm run agent:quickstart
 ```typescript
 import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
 
-// 1. Initialize client with testnet secret and hard-cap safety limit
+// 1. Initialize read-only client with policy limits
 const client = new BazaarAgentClient({
   baseUrl: "http://localhost:3000",
-  payerSecretKey: process.env.X402_PAYER_SECRET,
   maxPriceAllowedUsdc: 0.05,
+  allowedAssets: ["USDC"],
 });
 
 // 2. Discover target service via MCP tool call
 const [serviceCard] = await client.searchServicesMCP("swap risk");
 
-// 3. Execute with automatic x402 settlement
-const execution = await client.executeService(serviceCard, {
-  pair: "XLM/USDC",
-  amount: 2500,
-  side: "buy",
-});
-
-console.log("Result:", execution.data);
+// 3. Inspect only. Paid execution requires a server-only payer plus an
+// independent receiptVerifier; a transaction hash alone is never enough.
+console.log("Selected card:", serviceCard);
 console.log("Stellar Receipt:", execution.payment.receiptUrl);
 ```
 
@@ -274,7 +272,7 @@ console.log("Stellar Receipt:", execution.payment.receiptUrl);
 * **Non-Custodial:** Stellar Bazaar never holds, custodies, or escrows user or agent funds.
 * **Client-Side Signing Only:** Private keys (`S...`) reside exclusively on local client runtime environments (`server-only`).
 * **Zero Secret Leakage:** ServiceCards never contain API keys or secrets.
-* **Untrusted Metadata Defense:** All descriptions, inputs, and route templates are strictly validated and sanitized against SSRF and traversal attacks (`..`, `@`, `#`).
+* **Untrusted Metadata Defense:** Descriptions remain untrusted data; URL/route fields receive deterministic SSRF and traversal checks.
 * **Loop Protection Circuit Breakers:** Strict 1-retry payment limit per HTTP request to prevent infinite payment loops.
 
 ---
@@ -282,15 +280,15 @@ console.log("Stellar Receipt:", execution.payment.receiptUrl);
 ## 🗺️ Roadmap
 
 ```
- [ PHASE 1: COMPLETED ]        [ PHASE 2: COMPLETED ]        [ PHASE 3: COMPLETED ]       [ PHASE 4: IN PROGRESS ]
-  Discovery UI & REST API   --> Testnet x402 Settlement  --> Dynamic Provider Ingest --> Multi-Asset Support (XLM/EURC)
-  Streamable MCP Server         Real On-Chain Evidence        Agent SDK & Safety Suite    Workflow Execution & Mainnet
+ [ PHASE 1: COMPLETED ]        [ PHASE 2: VALIDATED ]        [ PHASE 3: SECURITY ]        [ PHASE 4: FUTURE ]
+  Discovery UI & REST API   --> Testnet x402 Evidence    --> Read-only MCP + SDK      --> Provider ownership + multi-asset
+  Streamable MCP Server         Historical on-chain proof     Fail-closed registry       Mainnet only after audit
 ```
 
 1. ✅ **Phase 1 (Discovery Core):** Global catalog, deterministic lexical ranking, MCP streamable server, and ServiceCard validator.
 2. ✅ **Phase 2 (Testnet Settlement):** HTTP 402 challenge, Ed25519 signature verification, and on-chain settlement via `@x402/stellar`.
-3. ✅ **Phase 3 (Agent SDK & Ingest):** `BazaarAgentClient`, safety hard-caps, `/api/publisher/ingest` auto-registry, and E2E harness.
-4. 🟡 **Phase 4 (Expansion & Production):** Vercel production live ✅, MCP cursor pagination ✅, workflow bundle schema ✅. Remaining: SEP-41 multi-asset execution (`XLM`, `EURC`), gated workflow bundle execution, external provider network, Mainnet readiness after external audit.
+3. 🟡 **Phase 3 (Security remediation):** read-only MCP, receipt reconciliation gate, canonical deep hashes, retired Testnet payer, and append-only registry disabled by default.
+4. ⚪ **Phase 4 (Future):** per-provider ownership, reviewed registry lifecycle, SEP-41 multi-asset work and Mainnet readiness only after external audit.
 
 ---
 

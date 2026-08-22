@@ -1,29 +1,16 @@
 import assert from "node:assert/strict";
-import { readFileSync, existsSync } from "node:fs";
 import { BazaarAgentClient } from "../lib/bazaar-agent-client.ts";
 
-// Load local environment
-const envFile = existsSync(".env.local") ? ".env.local" : ".env.x402.local";
-if (existsSync(envFile)) {
-  for (const line of readFileSync(envFile, "utf8").split(/\r?\n/)) {
-    const i = line.indexOf("=");
-    if (i > 0 && !line.startsWith("#") && !process.env[line.slice(0, i)]) {
-      process.env[line.slice(0, i)] = line.slice(i + 1);
-    }
-  }
-}
-
 const BASE_URL = process.env.BASE_URL ?? "http://127.0.0.1:3000";
-const PAYER_SECRET = process.env.X402_PAYER_SECRET;
 
 console.log(`\n🛡️  [AGENT SAFETY & AUTONOMOUS SUITE] Running against ${BASE_URL}...\n`);
 
 // 1. Initialize client
 const agent = new BazaarAgentClient({
   baseUrl: BASE_URL,
-  payerSecretKey: PAYER_SECRET,
   maxPriceAllowedUsdc: 0.05,
   allowedNetworks: ["stellar:testnet"],
+  allowedAssets: ["USDC"],
 });
 
 // Test Case 1: Autonomous Discovery via MCP
@@ -61,6 +48,15 @@ const policyNetwork = agent.validatePaymentPolicy(wrongNetworkCard);
 assert.equal(policyNetwork.allowed, false);
 assert.match(policyNetwork.reason, /stellar:testnet/);
 console.log("  ✓ Unsupported network rejected before signing");
+
+const wrongAssetCard = {
+  ...target,
+  payment: { ...target.payment, asset: "EURC" },
+};
+const policyAsset = agent.validatePaymentPolicy(wrongAssetCard);
+assert.equal(policyAsset.allowed, false);
+assert.match(policyAsset.reason, /Asset EURC/);
+console.log("  ✓ Unsupported asset rejected before signing");
 
 // Test Case 5: Safety Policy - Malformed Route Traversal Trap
 console.log("▶ [TC-05] Testing Malformed Route Traversal Rejection...");

@@ -4,7 +4,7 @@ import { PublisherForm } from "@/components/PublisherForm";
 export default function Publish() {
   return (
     <main>
-      <div className="mock-banner">PUBLISHER KIT · REGISTRO REAL · AUTH VÍA BAZAAR_PROVIDER_SECRET · PERSISTENCIA EN UPSTASH REDIS</div>
+      <div className="mock-banner">PUBLISHER KIT · BORRADOR LOCAL / LOCAL DRAFT · SIN SECRETOS EN EL NAVEGADOR</div>
       <nav className="nav shell">
         <Link href="/" className="brand">
           <span>✦</span> Stellar Bazaar <sup>x402</sup>
@@ -16,7 +16,7 @@ export default function Publish() {
           <a href="https://github.com/CaBsCrypto/stellar-bazaar-x402">GitHub ↗</a>
         </div>
         <span className="network-pill">
-          <i /> Registro en vivo
+          <i /> Draft local
         </span>
       </nav>
       <header className="publish-hero shell">
@@ -27,8 +27,8 @@ export default function Publish() {
           <em>Tú defines el precio.</em>
         </h1>
         <p>
-          Registra una service card con metadata interoperable, pasa las reglas deterministas y entra en el
-          catálogo de discovery x402 para agentes autónomos.
+          Prepara una service card con metadata interoperable y comprueba reglas deterministas antes de
+          solicitar una revisión de alta. Prepare and validate locally before operator review.
         </p>
         <div className="provider-promise">
           <span>Tu destino</span>
@@ -40,10 +40,10 @@ export default function Publish() {
       <section className="shell publish-section" id="formulario">
         <div className="section-heading">
           <div>
-            <span className="kicker">PUBLISHER KIT · EN VIVO</span>
-            <h2>Diseña, valida y registra tu service card.</h2>
+            <span className="kicker">PUBLISHER KIT · LOCAL / READ-ONLY</span>
+            <h2>Diseña y valida tu service card.</h2>
           </div>
-          <p>Tras el alta, tu servicio es descubrible por REST y MCP y persiste en Upstash Redis (sobrevive redeploys; verificado en producción).</p>
+          <p>Genera un manifest sin entregar credenciales al navegador. El registro real requiere revisión y un canal server-to-server durable.</p>
         </div>
         <PublisherForm />
       </section>

@@ -1,5 +1,6 @@
-if(process.env.RUN_EXTERNAL_X402_TESTNET!=="1")throw new Error("Manual Testnet E2E disabled. Set RUN_EXTERNAL_X402_TESTNET=1 only after provider publishes x402.");
+import{assertActiveTestnetPayerSecret}from"../lib/testnet-payer-safety.ts";if(process.env.RUN_EXTERNAL_X402_TESTNET!=="1")throw new Error("Manual Testnet E2E disabled. Set RUN_EXTERNAL_X402_TESTNET=1 only after provider publishes x402.");
 for(const name of["EXTERNAL_QUOTE_BASE_URL","X402_PAYER_SECRET","STELLAR_X402_FACILITATOR_API_KEY"])if(!process.env[name])throw new Error(`Missing ${name} in ignored local environment.`);
+assertActiveTestnetPayerSecret(process.env.X402_PAYER_SECRET);
 const base=new URL(process.env.EXTERNAL_QUOTE_BASE_URL);if(base.protocol!=="https:")throw new Error("External Testnet provider must use HTTPS.");
 const manifest=await fetch(new URL("/bazaar-listing.json",base));if(!manifest.ok)throw new Error("Provider manifest unavailable.");const card=await manifest.json();if(card.payment?.enabled!==true||card.payment?.network!=="stellar:testnet"||card.payment?.scheme!=="exact"||card.payment?.amount!=="10000")throw new Error("Provider does not publish the approved exact 0.001 USDC Testnet contract. No payment attempted.");
 throw new Error("Preflight passed but settlement runner is pending provider contract review; no payment attempted.");

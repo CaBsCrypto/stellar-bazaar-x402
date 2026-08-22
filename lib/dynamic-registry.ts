@@ -33,8 +33,20 @@ export function storageMode(): "upstash" | "memory" {
   return redis ? "upstash" : "memory";
 }
 
+function canonicalize(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value !== null && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .map(([key, nested]) => [key, canonicalize(nested)]),
+    );
+  }
+  return value;
+}
+
 export function computeCardHash(card: ServiceCard): string {
-  const serialized = JSON.stringify(card, Object.keys(card).sort());
+  const serialized = JSON.stringify(canonicalize(card));
   return createHash("sha256").update(serialized).digest("hex");
 }
 
@@ -59,62 +71,42 @@ export async function getDynamicServiceCard(id: string): Promise<DynamicEntry | 
 }
 
 export async function createDynamicServiceCard(card: ServiceCard, providerKeyHash: string): Promise<{ entry: DynamicEntry } | { exists: true }> {
-  const existing = await getDynamicServiceCard(card.id);
-  if (existing) return { exists: true };
-
   const now = new Date().toISOString();
   const entry = toEntry(card, providerKeyHash, now, now, 1);
 
   if (redis) {
-    await redis.set(CARD_KEY_PREFIX + card.id, entry);
-    await redis.sadd(INDEX_KEY, card.id);
+    const created = await redis.eval<string[], number>(
+      [
+        "if redis.call('EXISTS', KEYS[1]) == 1 then return 0 end",
+        "redis.call('SET', KEYS[1], ARGV[1])",
+        "redis.call('SADD', KEYS[2], ARGV[2])",
+        "return 1",
+      ].join("\n"),
+      [CARD_KEY_PREFIX + card.id, INDEX_KEY],
+      [JSON.stringify(entry), card.id],
+    );
+    if (created !== 1) return { exists: true };
     return { entry };
   }
+  if (memoryRegistry.has(card.id)) return { exists: true };
   memoryRegistry.set(card.id, entry);
   return { entry };
 }
 
-export async function updateDynamicServiceCard(card: ServiceCard, providerKeyHash: string): Promise<{ entry: DynamicEntry } | { notFound: true } | { unauthorized: true }> {
-  const existing = await getDynamicServiceCard(card.id);
-  if (!existing) return { notFound: true };
-  if (existing.providerKeyHash !== providerKeyHash) return { unauthorized: true };
-
-  const now = new Date().toISOString();
-  const entry = toEntry(card, providerKeyHash, existing.registeredAt, now, existing.revision + 1);
-
-  if (redis) {
-    await redis.set(CARD_KEY_PREFIX + card.id, entry);
-    return { entry };
+export async function readDynamicServiceCards(): Promise<{ entries: DynamicEntry[]; available: boolean }> {
+  try {
+    if (redis) {
+      const ids = await redis.smembers(INDEX_KEY);
+      if (ids.length === 0) return { entries: [], available: true };
+      const entries = await redis.mget<DynamicEntry[]>(...ids.map((id) => CARD_KEY_PREFIX + id));
+      return { entries: entries.filter((entry): entry is DynamicEntry => Boolean(entry)), available: true };
+    }
+    return { entries: Array.from(memoryRegistry.values()), available: true };
+  } catch {
+    return { entries: [], available: false };
   }
-  memoryRegistry.set(card.id, entry);
-  return { entry };
-}
-
-export async function deleteDynamicServiceCard(id: string, providerKeyHash: string): Promise<{ deleted: DynamicEntry } | { notFound: true } | { unauthorized: true }> {
-  const existing = await getDynamicServiceCard(id);
-  if (!existing) return { notFound: true };
-  if (existing.providerKeyHash !== providerKeyHash) return { unauthorized: true };
-
-  if (redis) {
-    await redis.del(CARD_KEY_PREFIX + id);
-    await redis.srem(INDEX_KEY, id);
-    return { deleted: existing };
-  }
-  memoryRegistry.delete(id);
-  return { deleted: existing };
 }
 
 export async function getAllDynamicServiceCards(): Promise<DynamicEntry[]> {
-  if (redis) {
-    const ids = await redis.smembers(INDEX_KEY);
-    if (ids.length === 0) return [];
-    const entries = await redis.mget<DynamicEntry[]>(...ids.map((id) => CARD_KEY_PREFIX + id));
-    return entries.filter((entry): entry is DynamicEntry => Boolean(entry));
-  }
-  return Array.from(memoryRegistry.values());
-}
-
-export async function listDynamicServiceCardsByProvider(providerKeyHash: string): Promise<DynamicEntry[]> {
-  const all = await getAllDynamicServiceCards();
-  return all.filter((entry) => entry.providerKeyHash === providerKeyHash);
+  return (await readDynamicServiceCards()).entries;
 }
