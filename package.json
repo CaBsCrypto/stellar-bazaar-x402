@@ -16,6 +16,7 @@
     "test:x402:protocol": "node scripts/test-x402-protocol.mjs",
     "test:mcp:onboarding": "node scripts/test-mcp-onboarding.mjs",
     "test:payment-flow": "node scripts/test-payment-flow.mjs",
+    "test:e2e:readiness-gate": "node scripts/test-e2e-readiness-gate.mjs",
     "test:agent:policy:evals": "node scripts/test-agent-policy-evals.mjs",
     "benchmark:ranking": "node scripts/benchmark-ranking.mjs",
     "test:e2e:ecosystem": "node scripts/test-e2e-ecosystem.mjs",
