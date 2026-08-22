@@ -44,3 +44,5 @@ npm run build
 ```
 
 These tests use no secrets or network payment flow.
+
+Before enabling any real Testnet action, apply the stricter [E2E Testnet readiness gate](E2E_TESTNET_READINESS_GATE.md). This visualization branch is explicitly `NO-GO` for a new settlement.
