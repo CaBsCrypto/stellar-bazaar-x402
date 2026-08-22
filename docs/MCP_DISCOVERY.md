@@ -14,6 +14,8 @@
 
 The health response declares `mode: "read-only"` and `writes: []`. The server does not expose registration, update, delete, paid-call, signing, wallet, settlement, custody, arbitrary URL invocation, or provider-result delivery tools.
 
+`get_bazaar_capabilities` also publishes the side-effect-free `bazaar.payment-flow/v1` visualization capability. `get_service` returns its seven-state snapshot for static and verified-pilot cards. This is explanatory metadata—not payment authorization, signing, settlement or provider invocation. See [BUYER_PROVIDER_PAYMENT_FLOW.md](BUYER_PROVIDER_PAYMENT_FLOW.md).
+
 Search is deterministic `lexical-v1`, not an AI/reputation/safety inference. Provider metadata is untrusted data. Dynamic cards, when present, report `ownershipCertified: false` and `metadataTrusted: false`.
 
 ## Errors and transport

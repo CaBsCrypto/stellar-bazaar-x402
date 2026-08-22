@@ -7,6 +7,7 @@ import "./testnet.css";
 import "./workflow-showcase.css";
 import "./onboarding.css";
 import "./verified-providers.css";
+import "./payment-flow.css";
 
 export const metadata: Metadata = {
   title: "Stellar Bazaar x402 — Discovery POC",

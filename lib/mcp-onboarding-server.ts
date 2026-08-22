@@ -8,6 +8,7 @@ import { workflowBundles } from "./workflow-bundles";
 import { validateWorkflowBundle, WORKFLOW_BUNDLE_VERSION } from "./workflow-bundle";
 import { readDynamicServiceCards } from "./dynamic-registry";
 import { err, ok } from "./service-ingest";
+import { getPaymentFlow, paymentFlowCapability } from "./payment-flow";
 
 const result = ok;
 
@@ -63,6 +64,7 @@ export function createOnboardingMcpServer() {
           mutationViaMcp: false,
           providerMetadataTrusted: false,
         },
+        paymentFlow: paymentFlowCapability,
       }),
   );
 
@@ -167,10 +169,11 @@ export function createOnboardingMcpServer() {
             execution: id === "swap-risk-quote" ? "active-local" : "fixture-only",
             payment: id === "swap-risk-quote" ? "testnet-validated" : "not-active",
           },
+          paymentFlow: getPaymentFlow(id),
         });
       }
       const pilot = pilotCards.find((item) => item.id === id);
-      if (pilot) return result({ resource: pilot });
+      if (pilot) return result({ resource: pilot, paymentFlow: getPaymentFlow(id) });
       if (!registry.available) {
         return errorEnvelope(
           "REGISTRY_UNAVAILABLE",
