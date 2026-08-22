@@ -11,7 +11,7 @@ All 14 live endpoints, read from `app/api/*/route.ts`. Base URL is
 
 **MCP errors** are returned as JSON-RPC results with `isError: true` and the envelope serialized in `content[0].text`.
 
-**Provider auth header**: `X-Bazaar-Provider-Key` for registry writes (`app/api/publisher/ingest/route.ts:8`).
+**Operator auth header**: `X-Bazaar-Provider-Key` only for explicitly enabled append-only HTTP registration. It is not provider ownership.
 
 ---
 
@@ -21,7 +21,7 @@ Static capability card. `200` → `{ok, capabilities}` (bazaar.capabilities/v1, 
 
 ## 2. `POST /api/mcp` — MCP Streamable HTTP (JSON-RPC 2.0)
 
-`app/api/mcp/route.ts`. Headers required: `Content-Type: application/json` and `Accept: application/json, text/event-stream` (SDK returns `406` otherwise). Methods: `initialize`, `tools/list`, `tools/call` (11 tools; see [MCP_CLIENT_SETUP.md](MCP_CLIENT_SETUP.md)). Stateless — no session IDs. `DELETE` → `405` (`Allow: GET, POST`).
+`app/api/mcp/route.ts`. Headers required: `Content-Type: application/json` and `Accept: application/json, text/event-stream` (SDK returns `406` otherwise). Methods: `initialize`, `tools/list`, `tools/call` (7 read-only tools; see [MCP_CLIENT_SETUP.md](MCP_CLIENT_SETUP.md)). Stateless — no session IDs. `DELETE` → `405` (`Allow: GET, POST`).
 
 ```bash
 curl -N -X POST http://127.0.0.1:3000/api/mcp \
@@ -30,15 +30,15 @@ curl -N -X POST http://127.0.0.1:3000/api/mcp \
   -d '{"jsonrpc":"2.0","id":1,"method":"tools/list","params":{}}'
 ```
 
-Successful tool calls return `{jsonrpc, id, result: {content: [{type: "text", text}], structuredContent}}`; failing ones return the same shape with `result.isError: true` and the error envelope (`{code, message, retryable, stage, field?}`) inside `content[0].text` (`lib/mcp-onboarding-server.ts:14-31`). Known envelopes: `RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`, `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `STORAGE_ERROR`.
+Successful tool calls return `{jsonrpc, id, result: {content: [{type: "text", text}], structuredContent}}`; failing ones return the same shape with `result.isError: true` and the error envelope (`{code, message, retryable, stage, field?}`) inside `content[0].text`. Known envelopes: `RESOURCE_NOT_FOUND`, `REGISTRY_UNAVAILABLE`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`.
 
 ## 3. `GET /api/mcp` — MCP health
 
-`200` → `{ok, name: "stellar-bazaar-discovery", version: "0.4.0", protocol: "MCP", transport: "streamable-http", mode: "read-only", endpoint: "/api/mcp", tools: [11], writes: [4], paidCall: false, signing: false, custody: false}`.
+`200` → `{ok, name: "stellar-bazaar-discovery", version: "0.5.0", protocol: "MCP", transport: "streamable-http", mode: "read-only", endpoint: "/api/mcp", tools: [7], writes: [], paidCall: false, signing: false, custody: false}`.
 
 ## 4. `GET /api/openapi`
 
-OpenAPI 3.1.0 document (`info.version: "0.3.0"`) describing the HTTP surface: capabilities, mcp, openapi, publish, x402/swap-risk, x402/demo-pay and more.
+OpenAPI 3.1.0 document (`info.version: "0.5.0"`) describing the remediated HTTP surface.
 
 ## 5. `POST /api/publish`
 
@@ -93,26 +93,26 @@ Free (no payment) in-process reference quote (`app/api/reference/swap-risk/route
 
 ## 10. `POST /api/publisher/ingest`
 
-Register a ServiceCard (`app/api/publisher/ingest/route.ts:19-76`). Body: full ServiceCard (see [CONFORMANCE_RULES.md](CONFORMANCE_RULES.md)). Auth: `X-Bazaar-Provider-Key` (required when `BAZAAR_PROVIDER_SECRET` set, `lib/service-ingest.ts:54-60`; dev-open when absent). Production without secret → `503 SERVICE_NOT_CONFIGURED` (retryable). Success → `201 {ok, valid, status: "indexed-dynamic", id, card, resource, hash, revision, registeredAt, storage, outcomes}`. Errors: `400 MALFORMED_JSON` / `VALIDATION_FAILED` (with `failedRules`), `401 UNAUTHORIZED`, `409 CARD_EXISTS` (field `id`), `500`.
+Append-only operator registration. Body: full ServiceCard. Requires `BAZAAR_ENABLE_REGISTRY_MUTATIONS=true`, durable Upstash, `BAZAAR_PROVIDER_SECRET`, and matching `X-Bazaar-Provider-Key`; otherwise it fails closed. Creation is atomic and duplicate IDs return `409 CARD_EXISTS`. Metadata remains untrusted and ownership is not certified.
 
 ```bash
 curl -X POST http://127.0.0.1:3000/api/publisher/ingest \
   -H "Content-Type: application/json" \
-  -H "X-Bazaar-Provider-Key: <secret-if-configured>" \
+  -H "X-Bazaar-Provider-Key: <server-operator-secret>" \
   -d @card.json    # a conformant ServiceCard (see CONFORMANCE_RULES.md)
 ```
 
 ## 11. `GET /api/publisher/ingest`
 
-List cards registered with your provider key (`route.ts:78-109`). `200` → `{ok, services: [{id, hash, revision, registeredAt, updatedAt, card}], count, storage}`. `401 UNAUTHORIZED`; `503 SERVICE_NOT_CONFIGURED` in production without secret.
+Disabled with `405 PROVIDER_OWNERSHIP_NOT_IMPLEMENTED`. The shared operator credential is not treated as provider identity.
 
 ## 12. `PUT /api/publisher/ingest/{id}`
 
-Replace a registered card (`app/api/publisher/ingest/[id]/route.ts:18-62`). Body card `id` must equal the route `id`, else `400 VALIDATION_FAILED`. Bumps `revision`. `200` → `{ok, valid, status: "updated-dynamic", id, card, resource, hash, revision, registeredAt, updatedAt, outcomes}`. `401 UNAUTHORIZED` (wrong/no key), `404 RESOURCE_NOT_FOUND`, `400 VALIDATION_FAILED` / `MALFORMED_JSON`.
+Disabled with `405 PROVIDER_OWNERSHIP_NOT_IMPLEMENTED` until per-provider credentials and transactional lifecycle semantics exist.
 
 ## 13. `DELETE /api/publisher/ingest/{id}`
 
-Remove a registered card (`[id]/route.ts:64-84`). `200` → `{ok, status: "deleted-dynamic", id, deletedCard, revision}`. `401 UNAUTHORIZED`, `404 RESOURCE_NOT_FOUND`.
+Disabled with `405 PROVIDER_OWNERSHIP_NOT_IMPLEMENTED` for the same fail-closed ownership boundary.
 
 ## 14. Discovery (read-only, no auth)
 
@@ -125,14 +125,13 @@ Remove a registered card (`[id]/route.ts:64-84`). `200` → `{ok, status: "delet
 
 | Code | Meaning |
 |---|---|
-| `200` | Success (health, discovery, quotes, update/delete/list) |
+| `200` | Success (health, discovery, conformance, quotes) |
 | `201` | Card registered (`/api/publisher/ingest`, `/api/publish`) |
 | `400` | `MALFORMED_JSON`, `VALIDATION_FAILED`, `INVALID_QUERY`, `INVALID_QUOTE_INPUT`, `LOCAL_PAYER_TARGET_REJECTED` |
 | `401` | `UNAUTHORIZED` — missing/wrong `X-Bazaar-Provider-Key` (secret configured) |
 | `402` | Payment challenge (`PAYMENT-REQUIRED`) or rejection (`MALFORMED_PAYMENT_SIGNATURE`, `PAYMENT_REQUIREMENTS_MISMATCH`, facilitator reasons) |
 | `403` | `LOCAL_PAYER_DISABLED` (`X402_ENABLE_LOCAL_PAYER` not `true`) |
-| `404` | `RESOURCE_NOT_FOUND` (PUT/DELETE on unknown id) |
-| `405` | Method not allowed (`DELETE /api/mcp`) |
+| `405` | Method disabled/not allowed, including registry ownership operations and `DELETE /api/mcp` |
 | `406` | Missing `Accept: text/event-stream` on `POST /api/mcp` |
 | `409` | `CARD_EXISTS` (duplicate id) |
 | `422` | Conformance failure (`valid: false`, `INVALID_SERVICE_CARD`, `schema.shape`) |

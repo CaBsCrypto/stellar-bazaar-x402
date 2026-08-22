@@ -49,7 +49,7 @@ from langchain.tools import tool
 from stellar_sdk import Keypair
 
 BAZAAR_URL = os.getenv("BAZAAR_BASE_URL", "https://stellar-bazaar-x402.vercel.app")
-PAYER_SECRET = os.getenv("X402_PAYER_SECRET")  # e.g., "SB7XIJQ7FWXCHBK4BJEXQ..."
+PAYER_SECRET = os.getenv("X402_PAYER_SECRET")  # ignored server-side env only
 
 @tool
 def execute_stellar_bazaar_service(path_with_query: str) -> dict:

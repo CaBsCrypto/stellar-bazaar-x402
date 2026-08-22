@@ -14,7 +14,7 @@ Target branch: `feat/mcp-discovery-readonly`. This is an issue-quality backlog, 
 
 ## Implemented (2026-08-18, branch `feat/product-onboarding-mcp`)
 
-- **Provider registry via MCP (server v0.4.0, 11 tools):** `register_service`, `update_service`, `delete_service`, `list_my_services` with shared-secret auth (`providerKey` tool argument, sha256 hash stored, never raw). Deterministic registry envelopes `UNAUTHORIZED`, `CARD_EXISTS`, `VALIDATION_FAILED`, `RESOURCE_NOT_FOUND`, `STORAGE_ERROR`.
+- **Security remediation:** MCP v0.5.0 exposes 7 read-only tools and no provider key arguments. Provider mutation tools remain backlog-only until per-provider ownership and atomic lifecycle semantics are implemented.
 - **Dynamic cards visible in MCP read tools:** `list_services`, `search_services` and `get_service` now merge provider-registered cards (registry writes target Upstash Redis, **provisioned 2026-08-19**; legacy `KV_REST_API_*` env names also supported by `lib/dynamic-registry.ts`).
 - **Zod shape schema** (`lib/service-card-schema.ts`): closes shape gaps (id slug, name, tags, input[]), feeding `failedRules` per-field.
 - **HTTP parity:** `POST/PUT/DELETE/GET /api/publisher/ingest` with `X-Bazaar-Provider-Key`, 401/409/404/503 envelopes, `revision` tracking.

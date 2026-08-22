@@ -32,20 +32,17 @@ The server lacks `STELLAR_X402_FACILITATOR_API_KEY` or `X402_SELLER_ADDRESS`
 **Q: 503 `SERVICE_NOT_CONFIGURED` on `/api/publisher/ingest` in production**
 Production fails closed when `BAZAAR_PROVIDER_SECRET` is unset
 (`app/api/publisher/ingest/route.ts:20-30`). Set it with `openssl rand -hex 32`
-and add it to Vercel. Locally it's optional (dev-open mode).
+and add it only to the server environment. There is no dev-open mode.
 
-**Q: Why is auth open locally but 401 in production?**
-`authorizeProviderKey()` accepts any key when `BAZAAR_PROVIDER_SECRET` is
-unset (dev-open), and enforces a `timingSafeEqual` comparison when set
-(`lib/service-ingest.ts:54-60`). Deployments are fail-closed: no secret → 503;
-wrong/missing `X-Bazaar-Provider-Key` → 401 `UNAUTHORIZED`.
+**Q: Why is registration disabled locally?**
+There is no open mode. POST requires `BAZAAR_ENABLE_REGISTRY_MUTATIONS=true`,
+durable Upstash configuration and `BAZAAR_PROVIDER_SECRET`; otherwise it
+returns 503. A wrong/missing `X-Bazaar-Provider-Key` returns 401.
 
 **Q: My registered card vanished after a redeploy**
-Registry persistence (Upstash Redis) is **live since 2026-08-19** — cards
-survive redeploys and are consistent across serverless instances (verified in
-production). If a card disappears, check `storage` in ingest responses: it must
-be `"upstash"`; `"memory"` means the `UPSTASH_REDIS_REST_URL`/`TOKEN` envs are
-missing in that environment (dev fallback, `lib/dynamic-registry.ts:22-34`).
+Public registry mutation is disabled by default. When an operator explicitly
+enables append-only registration, `storage` must be `"upstash"`; memory mode
+never accepts the HTTP mutation. Update/delete remain disabled.
 
 **Q: The demo payer fails with a port mismatch (3210 vs 3000)**
 `x402:setup-wallets` writes `X402_RESOURCE_BASE_URL=http://127.0.0.1:3210`

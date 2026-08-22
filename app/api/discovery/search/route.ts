@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { services } from "@/lib/catalog";
 import { filterServices, rankServices } from "@/lib/discovery";
 import { toServiceCard, toPaidService } from "@/lib/service-card";
-import { getAllDynamicServiceCards } from "@/lib/dynamic-registry";
+import { readDynamicServiceCards } from "@/lib/dynamic-registry";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +26,8 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const dynamicServices = (await getAllDynamicServiceCards()).map((d) => toPaidService(d.card));
+  const registry = await readDynamicServiceCards();
+  const dynamicServices = registry.entries.map((d) => toPaidService(d.card));
   const combined = [...services, ...dynamicServices];
 
   const base = filterServices(combined, {
@@ -49,6 +50,7 @@ export async function GET(req: NextRequest) {
       reasons: r.reasons,
     })),
     nextCursor: null,
-    partialResults: false,
+    partialResults: !registry.available,
+    dynamicRegistry: registry.available ? "available" : "unavailable",
   });
 }

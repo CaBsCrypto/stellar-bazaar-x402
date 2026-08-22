@@ -5,8 +5,8 @@
 The 11 deterministic conformance rules that every ServiceCard must pass before
 it can be registered (`lib/discovery.ts:76-139`). A card is valid only when no
 outcome is `fail` (`warnings` are advisory; see rule 11). These rules run on
-`POST /api/conformance/service-card`, `POST /api/publisher/ingest`, and the
-MCP `validate_service_card` / `register_service` tools.
+`POST /api/conformance/service-card`, gated `POST /api/publisher/ingest`, and
+MCP `validate_service_card`. MCP is read-only.
 
 ## The 11 rules
 
@@ -52,7 +52,7 @@ Passes all 11 rules (checked against the engine above):
 
 `destination` is the repo's real seller account (`.env.local`,
 `README.md` evidence). To register: `POST /api/publisher/ingest` with this
-body (id must be unique) or `register_service` via MCP.
+body (id must be unique). Registration is not exposed through MCP.
 
 **Dry-run without persisting** — `POST /api/conformance/service-card` returns
 `{ok, valid, outcomes, certification: false}` and never writes anything
