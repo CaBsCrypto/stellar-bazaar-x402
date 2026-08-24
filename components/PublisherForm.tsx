@@ -17,6 +17,10 @@ export function PublisherForm() {
   const [amount, setAmount] = useState("0.01");
   const [dest, setDest] = useState(destination);
   const [copied, setCopied] = useState(false);
+  const [proofMethod, setProofMethod] = useState<"dns-txt" | "http-well-known">("dns-txt");
+  const [proofDomain, setProofDomain] = useState("api.example.com");
+  const [submitting, setSubmitting] = useState(false);
+  const [intake, setIntake] = useState<{ ok: boolean; status: number; body: any } | null>(null);
 
   const card = useMemo<ServiceCard>(
     () => ({
@@ -46,6 +50,23 @@ export function PublisherForm() {
   async function copyManifest() {
     await navigator.clipboard?.writeText(JSON.stringify(card, null, 2));
     setCopied(true);
+  }
+
+  async function requestReview() {
+    setSubmitting(true);
+    setIntake(null);
+    try {
+      const response = await fetch("/api/provider-self-listing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ card, controlProof: { method: proofMethod, domain: proofDomain } }),
+      });
+      setIntake({ ok: response.ok, status: response.status, body: await response.json() });
+    } catch {
+      setIntake({ ok: false, status: 0, body: { error: { code: "NETWORK_ERROR", message: "No se pudo contactar la cola local. / Local queue unavailable." } } });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -101,9 +122,36 @@ export function PublisherForm() {
         <button type="button" className="submit-button" disabled={failures > 0} onClick={copyManifest}>
           {copied ? "Manifest copiado / Copied" : "Copiar manifest / Copy manifest"}
         </button>
+        <fieldset>
+          <legend>Prueba de control / Control proof</legend>
+          <p className="form-help">El challenge demuestra control del mismo hostname de la tarjeta; no certifica seguridad ni reputación. / The challenge only demonstrates control of the exact card hostname.</p>
+          <div className="field-row">
+            <label>
+              Método / Method
+              <select value={proofMethod} onChange={(event) => setProofMethod(event.target.value as typeof proofMethod)}>
+                <option value="dns-txt">DNS TXT</option>
+                <option value="http-well-known">HTTP .well-known</option>
+              </select>
+            </label>
+            <label>
+              Dominio exacto / Exact domain
+              <input value={proofDomain} onChange={(event) => setProofDomain(event.target.value)} />
+            </label>
+          </div>
+          <button type="button" className="submit-button" disabled={failures > 0 || submitting} onClick={requestReview}>
+            {submitting ? "Enviando… / Submitting…" : "Solicitar revisión manual / Request manual review"}
+          </button>
+        </fieldset>
+        {intake && (
+          <div className={`validation-summary ${intake.ok ? "ready" : "has-fails"}`} role="status" aria-live="polite">
+            <strong>{intake.ok ? "Borrador en cola; todavía no público / Draft queued; not public" : `${intake.body?.error?.code ?? "ERROR"} (${intake.status || "offline"})`}</strong>
+            <span>{intake.ok ? `Estado: ${intake.body.submission.status}. Challenge: ${intake.body.submission.control.expectedRecord}` : intake.body?.error?.message}</span>
+            <span>La activación automática no existe. / There is no automatic activation.</span>
+          </div>
+        )}
         <p className="form-help">
           El alta real es append-only, revisada por el operador y sólo server-to-server. Bazaar no recibe fondos ni entrega resultados.
-          Registration is append-only, operator-reviewed and server-to-server only. Bazaar never handles funds or provider results.
+          La cola es temporal, requiere prueba de control y revisión humana; jamás activa una tarjeta automáticamente. The queue is temporary and requires control proof plus human review; it never activates a card automatically.
         </p>
       </div>
 
