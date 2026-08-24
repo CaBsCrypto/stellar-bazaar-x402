@@ -62,6 +62,9 @@ const capabilityText = JSON.parse(capabilities.result.content[0].text);
 assert.deepEqual(capabilityText.writes, []);
 assert.equal(capabilityText.registry.mutationViaMcp, false);
 assert.equal(capabilityText.registry.providerMetadataTrusted, false);
+assert.equal(capabilityText.paymentFlow.version, "bazaar.payment-flow/v1");
+assert.equal(capabilityText.paymentFlow.mode, "read-only-visualization");
+assert.ok(Object.values(capabilityText.paymentFlow.sideEffects).every((value) => value === false));
 
 const pilots = await rpc(4, "tools/call", {
   name: "list_services",
@@ -123,6 +126,39 @@ const unknownWrite = await rpc(8, "tools/call", {
 });
 assert.equal(unknownWrite.result.isError, true);
 
+const swapFlow = await rpc(9, "tools/call", {
+  name: "get_service",
+  arguments: { id: "swap-risk-quote" },
+});
+const swapFlowText = JSON.parse(swapFlow.result.content[0].text);
+assert.equal(swapFlowText.paymentFlow.currentRun, "visualization-only");
+assert.equal(swapFlowText.paymentFlow.paymentMode, "historical-testnet-evidence");
+assert.deepEqual(swapFlowText.paymentFlow.stages.map((stage) => stage.id), [
+  "discover", "quote", "challenge-402", "buyer-policy", "settle", "delivery", "receipt",
+]);
+assert.equal(swapFlowText.paymentFlow.boundaries.custody, false);
+assert.equal(swapFlowText.paymentFlow.boundaries.signsForBuyer, false);
+assert.equal(swapFlowText.paymentFlow.receipt.network, "stellar:testnet");
+assert.equal(swapFlowText.paymentFlow.receipt.assetSymbol, "USDC");
+assert.equal(swapFlowText.paymentFlow.receipt.atomicAmount, "10000");
+assert.equal(swapFlowText.paymentFlow.receipt.payToDisplay, "GDVR2KDK5…W6RMCQ");
+assert.equal(swapFlowText.paymentFlow.receipt.serviceCardVersion, "bazaar.service-card/v0");
+assert.equal(swapFlowText.paymentFlow.receipt.serviceCardHash.status, "not-recorded");
+assert.equal(swapFlowText.paymentFlow.receipt.requestHash.status, "not-recorded");
+assert.equal(swapFlowText.paymentFlow.receipt.resultHash.status, "not-recorded");
+assert.equal(swapFlowText.paymentFlow.receipt.settlement.ledger, 4212660);
+assert.equal(swapFlowText.paymentFlow.receipt.reconciliationStatus, "partial-evidence");
+
+const pilotFlow = await rpc(10, "tools/call", {
+  name: "get_service",
+  arguments: { id: pilotIds[0] },
+});
+const pilotFlowText = JSON.parse(pilotFlow.result.content[0].text);
+assert.equal(pilotFlowText.paymentFlow.paymentMode, "inactive");
+assert.equal(pilotFlowText.paymentFlow.stages.find((stage) => stage.id === "settle").status, "inactive");
+assert.equal(pilotFlowText.paymentFlow.receipt.settlement.status, "inactive");
+assert.equal(pilotFlowText.paymentFlow.receipt.reconciliationStatus, "not-started");
+
 console.log(JSON.stringify({
   ok: true,
   mode: "read-only",
@@ -133,4 +169,5 @@ console.log(JSON.stringify({
   pilotPayment: "not-active",
   pagination: true,
   hostileMetadataRejected: true,
+  paymentFlowVisualization: true,
 }, null, 2));

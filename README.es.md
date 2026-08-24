@@ -98,6 +98,8 @@ flowchart TD
 
 ## 🔄 Flujo de Interacción: Descubrir, Pagar y Ejecutar
 
+> **Visor interactivo del contrato:** `/payment-flow` visualiza descubrir → quote → 402 → política del buyer → liquidación → entrega → recibo sin firma, acceso a wallet, llamadas al proveedor ni pagos. Esta rama borrador permanece local/preview hasta su revisión. Consulta [el contrato de la máquina de estados](docs/BUYER_PROVIDER_PAYMENT_FLOW.md).
+
 ```mermaid
 sequenceDiagram
     autonumber

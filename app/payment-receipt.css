@@ -1,0 +1,24 @@
+.payment-flow-viz__receipt {
+  margin: 0 0 45px;
+  padding: 26px;
+  border: 1px solid #b9abff;
+  border-radius: 12px;
+  background: #f7f5ff;
+}
+.payment-flow-viz__receipt-head { display: flex; justify-content: space-between; gap: 24px; align-items: start; }
+.payment-flow-viz__receipt-head h2 { font: 500 29px Georgia; margin: 10px 0 4px; }
+.payment-flow-viz__receipt-head p { margin: 0; color: var(--muted); }
+.payment-flow-viz__receipt-head > strong { padding: 7px 9px; border-radius: 5px; background: #e7e1ff; color: #403279; font-size: 10px; }
+.payment-flow-viz__receipt-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin: 22px 0; }
+.payment-flow-viz__receipt-grid > div { padding: 12px; border: 1px solid #ddd7f4; border-radius: 7px; background: #fff; overflow-wrap: anywhere; }
+.payment-flow-viz__receipt-grid span,
+.payment-flow-viz__receipt-grid small { display: block; color: var(--muted); font-size: 9px; }
+.payment-flow-viz__receipt-grid strong { display: block; margin: 6px 0; font-size: 11px; }
+.payment-flow-viz__receipt-boundary { margin: 18px 0 0; padding-top: 14px; border-top: 1px solid #ddd7f4; color: #584b7d; font-size: 10px; font-weight: 750; letter-spacing: .04em; }
+.payment-flow-viz__receipt-empty { font-size: 11px; color: var(--muted); }
+@media (max-width: 900px) { .payment-flow-viz__receipt-grid { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) {
+  .payment-flow-viz__receipt-grid { grid-template-columns: 1fr; }
+  .payment-flow-viz__receipt-head { display: block; }
+  .payment-flow-viz__receipt-head > strong { display: inline-block; margin-top: 12px; }
+}
