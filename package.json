@@ -31,6 +31,7 @@
     "test:workflow:bundle": "node scripts/test-workflow-bundle.mjs",
     "test:service-order-promise": "node scripts/test-service-order-promise.mjs",
     "test:providers:verified": "node scripts/test-verified-providers.mjs",
+    "test:escrow:design": "node scripts/test-escrow-design.mjs",
     "test:delivery:boundaries": "node scripts/test-delivery-boundaries.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
