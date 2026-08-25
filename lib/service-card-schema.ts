@@ -1,6 +1,23 @@
 import * as z from "zod/v4";
 import type { ServiceCard } from "./types.ts";
 
+const deliverySchema = z.object({
+  mode: z.enum(["sync", "async"]),
+  estimatedDurationMs: z.number().int().positive(),
+  result: z.object({
+    schemaVersion: z.string().min(1),
+    contentType: z.string().min(1),
+    terminalStatuses: z.array(z.string().min(1)).min(1),
+    hash: z.object({ algorithm: z.literal("sha256"), required: z.literal(true), scope: z.literal("canonical-result") }),
+  }),
+  status: z.object({ required: z.boolean(), urlTemplate: z.string().min(1).optional(), pollAfterMs: z.number().int().positive().optional() })
+    .superRefine((value, ctx) => { if (value.required && !value.urlTemplate) ctx.addIssue({ code: "custom", message: "status.urlTemplate es obligatorio cuando status.required=true." }); }),
+  callback: z.object({ supported: z.boolean(), required: z.literal(false), authentication: z.enum(["none", "provider-signed"]) }),
+  retention: z.object({ resultTtlHours: z.number().nonnegative(), durable: z.boolean() }),
+  idempotency: z.object({ required: z.boolean(), key: z.literal("Idempotency-Key"), replay: z.enum(["return-original", "reject-conflict"]) }),
+  retry: z.object({ retryable: z.boolean(), maxAttempts: z.number().int().min(0), failureSemantics: z.enum(["terminal-error", "retry-later"]) }),
+});
+
 const slug = z
   .string()
   .min(1)
@@ -54,6 +71,7 @@ const serviceCardSchema = z.object({
     name: z.string().min(1, "provider.name es obligatorio."),
   }),
   tags: z.array(z.string().min(1)),
+  delivery: deliverySchema.optional(),
 });
 
 export interface ShapeIssue {

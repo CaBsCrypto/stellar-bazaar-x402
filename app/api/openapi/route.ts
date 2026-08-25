@@ -39,6 +39,13 @@ export function GET() {
         put: { summary: "Disabled until per-provider ownership exists", responses: { "405": { description: "PROVIDER_OWNERSHIP_NOT_IMPLEMENTED" } } },
         delete: { summary: "Disabled until per-provider ownership exists", responses: { "405": { description: "PROVIDER_OWNERSHIP_NOT_IMPLEMENTED" } } },
       },
+      "/api/provider-self-listing": {
+        post: { summary: "Submit a conformant draft to a guarded control-proof/manual-review queue; disabled by default and never auto-indexes", responses: { "202": { description: "Challenge issued; not public" }, "422": { description: "Invalid card or domain claim" }, "503": { description: "Intake disabled or queue full" } } },
+        get: { summary: "Review queue is never public", responses: { "405": { description: "QUEUE_NOT_PUBLIC" } } },
+      },
+      "/api/provider-self-listing/{id}": {
+        get: { summary: "Read sanitized submission lifecycle status", responses: { "200": { description: "Status only" }, "404": { description: "Unknown submission" } } },
+      },
       "/api/reference/swap-risk": {
         get: { summary: "Free in-process deterministic reference quote", responses: { "200": { description: "Quote" }, "400": { description: "Invalid input" } } },
       },

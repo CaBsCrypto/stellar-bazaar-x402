@@ -1,4 +1,5 @@
 import type { PaidService, ServiceCard } from "./types.ts";
+import { syncDeliveryContract } from "./delivery-contract.ts";
 
 export function toServiceCard(s: PaidService): ServiceCard {
   return {
@@ -17,6 +18,7 @@ export function toServiceCard(s: PaidService): ServiceCard {
     },
     provider: { name: s.provider },
     tags: s.tags,
+    delivery: syncDeliveryContract(),
   };
 }
 

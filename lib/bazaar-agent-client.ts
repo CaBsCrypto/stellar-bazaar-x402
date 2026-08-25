@@ -7,6 +7,8 @@ import type { SettleResponse } from "@x402/core/types";
 import type { ServiceCard } from "./types.ts";
 import { validateServiceCard } from "./discovery.ts";
 import { assertActiveTestnetPayerSecret } from "./testnet-payer-safety.ts";
+import { deriveProviderDelivery, type ProviderDelivery } from "./delivery-boundaries.ts";
+import { hasMatchingProviderResultHash } from "./delivery-result.ts";
 
 export interface SettlementReceiptContext {
   receipt: SettleResponse;
@@ -46,6 +48,8 @@ export interface BazaarAgentExecutionResult<T = unknown> {
     asset: string;
     receiptUrl?: string;
   };
+  /** Provider delivery is distinct from a verified settlement receipt. */
+  delivery: ProviderDelivery;
 }
 
 export class BazaarAgentClient {
@@ -194,9 +198,11 @@ export class BazaarAgentClient {
       throw new Error("PAYMENT_RECEIPT_MISMATCH: receipt does not reconcile with the ServiceCard.");
     }
 
+    const delivery = deriveProviderDelivery(status, body, hasMatchingProviderResultHash(body));
+
     return {
       ok: response.ok,
-      data: (body.result ?? body.data ?? body) as T,
+      data: (delivery.resultAvailable ? body.result ?? body.data ?? body : body) as T,
       status,
       serviceCard: card,
       payment: {
@@ -211,6 +217,7 @@ export class BazaarAgentClient {
         asset: card.payment.asset,
         receiptUrl: `https://stellar.expert/explorer/testnet/tx/${receipt.transaction}`,
       },
+      delivery,
     };
   }
 }
