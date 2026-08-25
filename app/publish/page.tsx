@@ -28,7 +28,7 @@ export default function Publish() {
         </h1>
         <p>
           Prepara una service card con metadata interoperable y comprueba reglas deterministas antes de
-          solicitar una revisión de alta. Prepare and validate locally before operator review.
+          solicitar una revisión manual con prueba de control del endpoint. Prepare and validate locally before endpoint-control proof and operator review.
         </p>
         <div className="provider-promise">
           <span>Tu destino</span>
@@ -43,7 +43,7 @@ export default function Publish() {
             <span className="kicker">PUBLISHER KIT · LOCAL / READ-ONLY</span>
             <h2>Diseña y valida tu service card.</h2>
           </div>
-          <p>Genera un manifest sin entregar credenciales al navegador. El registro real requiere revisión y un canal server-to-server durable.</p>
+          <p>Genera un manifest sin credenciales. La cola opcional es efímera y fail-closed: prueba de control → revisión manual → staging no público. Nunca activa automáticamente.</p>
         </div>
         <PublisherForm />
       </section>

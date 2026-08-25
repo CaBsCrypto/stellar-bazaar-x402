@@ -20,6 +20,7 @@ import {
   X402_USDC_CONTRACT,
   requireServerX402Config,
 } from "@/lib/x402-config";
+import { canonicalResultSha256 } from "@/lib/delivery-result";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -168,10 +169,11 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const result = calculateSwapRisk(pair, amount, side);
   return NextResponse.json(
     {
       ok: true,
-      result: calculateSwapRisk(pair, amount, side),
+      result,
       payment: {
         network: settled.network,
         transaction: settled.transaction,
@@ -180,6 +182,19 @@ export async function GET(req: NextRequest) {
         asset: X402_USDC_CONTRACT,
         recipient: seller,
         facilitator: "OpenZeppelin hosted Testnet",
+      },
+      delivery: {
+        model: "sync",
+        status: "result-returned",
+        evidence: "provider-response",
+        resultAvailable: true,
+        independentlyVerified: false,
+        resultHash: {
+          algorithm: "sha256",
+          scope: "canonical-result",
+          value: canonicalResultSha256(result),
+        },
+        message: "Provider returned this synchronous response after settlement; Bazaar does not independently verify result quality.",
       },
     },
     {
