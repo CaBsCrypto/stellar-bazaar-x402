@@ -6,10 +6,11 @@ The Bazaar registry is an optional **metadata provenance layer**. It is not a fa
 
 | Field | On-chain | Purpose |
 |---|---:|---|
-| `service_id` | `BytesN<32>` | Stable opaque identifier; do not derive it from a buyer brief. |
+| `service_id` | `BytesN<32>` | Contract-derived SHA-256 over domain + provider XDR + stable service key. |
 | `provider` | `Address` | Provider's public Stellar identity. |
+| `service_key` | `BytesN<32>` | Stable off-chain slug key; never a buyer brief or mutable card hash. |
 | `card_hash` | `BytesN<32>` | SHA-256 of canonical full ServiceCard JSON. |
-| `card_uri` | `String` | HTTPS pointer to off-chain metadata. |
+| `card_uri` | `Bytes` | Printable HTTPS pointer, bounded to 256 bytes and validated fail-closed. |
 | `revision`, `status`, `updated_ledger` | yes | Lifecycle/provenance data. |
 | ServiceCard JSON, briefs, result payloads, receipts, private keys | **no** | Remain off-chain. |
 
@@ -20,6 +21,8 @@ The Bazaar registry is an optional **metadata provenance layer**. It is not a fa
 3. Provider authentication controls draft creation/update/revocation. Curator authentication controls review/publication/suspension.
 4. `Revoked` is terminal. There is no delete operation; historical events remain auditable.
 5. No Testnet deploy or transaction is part of this scaffold.
+6. Contract errors are stable numeric values. Missing authorization is a Soroban host error, not a Bazaar contract error.
+7. Reads and writes bump explicit instance/persistent TTLs; this reduces accidental expiry but does not replace a future keeper policy.
 
 ## Testnet deployment gate (future)
 

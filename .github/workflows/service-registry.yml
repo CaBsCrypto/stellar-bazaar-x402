@@ -1,0 +1,46 @@
+name: Service Registry P0
+
+on:
+  pull_request:
+    paths:
+      - "contracts/service-registry/**"
+      - "lib/canonical-service-card.ts"
+      - "lib/service-registry-spec.ts"
+      - "scripts/test-service-registry-spec.mjs"
+      - ".github/workflows/service-registry.yml"
+  push:
+    branches: ["feat/service-registry-testnet"]
+
+permissions:
+  contents: read
+
+jobs:
+  registry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install JavaScript dependencies
+        run: npm ci
+      - name: Install pinned Rust toolchain
+        run: rustup toolchain install 1.96.0 --profile minimal --component rustfmt,clippy --target wasm32v1-none
+      - name: TypeScript registry vectors
+        run: npm run test:registry:spec
+      - name: Rust formatting
+        working-directory: contracts/service-registry
+        run: cargo +1.96.0 fmt --check
+      - name: Rust tests
+        working-directory: contracts/service-registry
+        run: cargo +1.96.0 test --locked
+      - name: Rust lint
+        working-directory: contracts/service-registry
+        run: cargo +1.96.0 clippy --locked --all-targets -- -D warnings
+      - name: Locked WASM build and digest
+        working-directory: contracts/service-registry
+        run: |
+          cargo +1.96.0 build --locked --release --target wasm32v1-none
+          sha256sum target/wasm32v1-none/release/bazaar_service_registry.wasm

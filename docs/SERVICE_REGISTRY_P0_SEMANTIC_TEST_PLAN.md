@@ -1,7 +1,7 @@
 # Service Registry V1 — P0 semantic test plan
 
-Status: plan only. No contract deployment, Testnet identity, key, payment, or
-network action is implied by this file.
+Status: P0 core implemented locally; the Testnet deployment gate remains
+closed. No deployment, identity, key, payment, or network action is implied.
 
 ## Test fixture contract
 
@@ -37,9 +37,9 @@ same vectors. Array order is significant.
 
 ## Candidate-to-Testnet gate
 
-All P0 rows must be implemented as Rust tests and pass with
-`cargo test --locked --offline`; `cargo fmt --check`, Clippy, a locked WASM
-build, WASM SHA-256/spec capture, TypeScript vector compatibility, Next
-typecheck/build, secret scan and independent auth/storage/event review must
-also pass. A committed `rust-toolchain.toml` is required so CI and the approved
-build environment use the same toolchain.
+The branch now implements the P0 core with typed errors, provider/curator auth,
+domain-separated identity, HTTPS URI policy, checked revision, terminal
+revocation and explicit TTL bumps. Shared TypeScript/Rust identity vectors and
+a pinned CI toolchain are included. Before Testnet, still require exact event
+snapshot assertions, expiry/keeper simulation, Stellar CLI spec capture,
+recorded WASM SHA-256 and independent auth/storage/event review.

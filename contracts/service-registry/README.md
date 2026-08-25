@@ -2,11 +2,13 @@
 
 This is a **Soroban contract scaffold**, not a deployed contract and not a payment mechanism.
 
-It anchors a service identifier, provider public address, canonical ServiceCard SHA-256 digest, HTTPS metadata pointer, revision and lifecycle state. It intentionally stores no ServiceCard JSON, buyer brief, personal data, API key, payment authorization, token balance, escrow or wallet secret.
+It derives and anchors a domain-separated service identifier, provider public address, canonical ServiceCard SHA-256 digest, HTTPS metadata pointer, revision and lifecycle state. It intentionally stores no ServiceCard JSON, buyer brief, personal data, API key, payment authorization, token balance, escrow or wallet secret.
 
 ## Compatibility boundary
 
-`lib/dynamic-registry.ts` computes the source-of-truth canonical deep SHA-256 digest. `lib/service-registry-spec.ts` converts its lowercase hex digest to the exact `BytesN<32>` accepted here. JSON is never re-canonicalized in Soroban.
+`lib/dynamic-registry.ts` computes the source-of-truth canonical deep SHA-256 digest. `lib/service-registry-spec.ts` converts its lowercase hex digest to the exact `BytesN<32>` accepted here. JSON is never re-canonicalized in Soroban. TypeScript and Rust consume the same identity vector from `test-vectors/service-id-v1.tsv`.
+
+`service_id` is not caller-selected. The contract derives it as SHA-256 over a fixed domain, the provider `ScVal` XDR and a 32-byte service key. The provider is therefore part of the identity. `card_uri` is ABI-encoded as UTF-8 `Bytes`, allowing the contract to enforce printable HTTPS syntax, bounded length and no userinfo, fragments or backslashes.
 
 This avoids a second JSON implementation in Rust. A future breaking change to ServiceCard canonicalization requires a new registry spec version or a migration, never a silent change.
 
@@ -22,6 +24,8 @@ provider revoke -> Revoked (terminal)
 - Curator alone performs review/publication/suspension transitions.
 - Provider can revoke from any non-terminal state.
 - Every mutation emits an event with service id, event kind, revision and hash/status.
+- Missing records and rejected operations return stable contract errors; authorization failures remain Soroban host errors.
+- Instance and persistent records use explicit, tested TTL bumps. A future keeper still remains an operational requirement.
 
 ## Local validation
 
@@ -58,4 +62,4 @@ resolved an incompatible `soroban-env-host 22.1.3` dependency on this Rust
 scaffold; the only build configuration addition is release overflow checking,
 required by Stellar CLI 27.
 
-No deployment command is included deliberately. Before a Testnet deployment, require an approved deployer identity, reproducible WASM build, contract test coverage, independent review, an initialized curator address, and a public migration/rollback plan.
+No deployment command is included deliberately. CI performs locked tests, lint and WASM compilation but never deploys. Before a Testnet deployment, require an approved deployer identity, a Stellar CLI spec-bearing build and recorded digest, independent review, an initialized curator address, a TTL keeper policy, and a public migration/rollback plan.

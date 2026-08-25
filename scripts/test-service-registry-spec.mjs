@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import {
   cardHashBytes,
   canTransition,
+  deriveRegistryServiceId,
   toRegistryAnchor,
 } from "../lib/service-registry-spec.ts";
 import { computeCanonicalServiceCardHash } from "../lib/canonical-service-card.ts";
+import { readFileSync } from "node:fs";
 
 const provider = "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ";
 const card = {
@@ -31,7 +33,7 @@ const reordered = {
 };
 
 const anchor = toRegistryAnchor({
-  serviceId: card.id,
+  serviceSlug: card.id,
   provider,
   card,
   revision: 1,
@@ -46,6 +48,13 @@ assert.equal(canTransition("provider", "published", "revoked"), true);
 assert.equal(canTransition("provider", "published", "draft"), false);
 assert.equal(canTransition("curator", "revoked", "published"), false);
 assert.throws(() => cardHashBytes("abc"), /CARD_HASH_INVALID/);
-assert.throws(() => toRegistryAnchor({ ...anchor, card, provider, revision: 0 }), /REVISION_INVALID/);
+assert.throws(() => toRegistryAnchor({ serviceSlug: card.id, card, provider, revision: 0, status: "draft", cardUri: anchor.cardUri }), /REVISION_INVALID/);
 
-console.log(JSON.stringify({ ok: true, canonicalHashCompatibility: true, sorobanBytes32: true, lifecycleRules: true }, null, 2));
+const [vectorProvider, serviceKeyHex, expectedServiceId] = readFileSync(
+  new URL("../contracts/service-registry/test-vectors/service-id-v1.tsv", import.meta.url),
+  "utf8",
+).trim().split("|");
+assert.equal(deriveRegistryServiceId(vectorProvider, serviceKeyHex), expectedServiceId);
+assert.throws(() => deriveRegistryServiceId(provider, "abc"), /SERVICE_KEY_INVALID/);
+
+console.log(JSON.stringify({ ok: true, canonicalHashCompatibility: true, sorobanBytes32: true, sharedServiceIdVector: true, lifecycleRules: true }, null, 2));
