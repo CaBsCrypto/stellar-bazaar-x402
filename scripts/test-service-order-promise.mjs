@@ -1,0 +1,7 @@
+import assert from "node:assert/strict";
+import { transitionOrder, validateBuyerBrief, validateServicePromise } from "../lib/service-order.ts";
+import { toPromiseSummary } from "../lib/promise-summary.ts";
+const brief = { version: "bazaar.service-order/v1", serviceId: "website-intelligence-pilot", objective: "Audit landing", inputs: { url: "https://example.com" }, successCriteria: ["return findings"], locale: "en", dataConsent: "provider-terms-accepted", idempotencyKey: "brief-001" };
+assert.deepEqual(validateBuyerBrief(brief), []); assert.deepEqual(validateBuyerBrief({ ...brief, dataConsent: "not-provided" }), ["brief.dataConsent"]); assert.equal(transitionOrder("draft", "accepted").ok, true); assert.equal(transitionOrder("delivered", "processing").ok, false);
+const promise = { deliveryMode: "async", estimatedDurationMs: 60000, outputKinds: ["result"], resultSchemaVersion: "1", retentionHours: 24, revision: { includedRevisions: 1, revisionWindowHours: 24, responseSlaHours: 8, scopeChangePolicy: "new-brief-required", refundPolicy: "provider-declared" } };
+assert.deepEqual(validateServicePromise(promise), []); const summary = toPromiseSummary("service", { es: "Servicio", en: "Service" }, promise); assert.equal(summary.delivery.en, "Async job · ~1 min"); assert.equal(summary.boundary, "provider-reported"); console.log("✓ service-order brief, transitions, revision policy and promise summary");
