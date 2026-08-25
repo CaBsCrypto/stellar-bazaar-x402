@@ -27,6 +27,7 @@
     "test:contract:external:public": "node scripts/test-public-quote-contract.mjs",
     "test:workflow:bundle": "node scripts/test-workflow-bundle.mjs",
     "test:providers:verified": "node scripts/test-verified-providers.mjs",
+    "test:escrow:design": "node scripts/test-escrow-design.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {
