@@ -2,6 +2,7 @@ import Link from "next/link";
 import {Catalog} from "@/components/Catalog";
 import {WorkflowShowcase} from "@/components/WorkflowShowcase";
 import {VerifiedProviderCatalog} from "@/components/VerifiedProviderCatalog";
+import {PromiseSummarySection} from "@/components/PromiseSummarySection";
 
 const buyerSteps=[
   ["01","Descubre","Busca APIs HTTP y tools MCP por intención y filtros."],
@@ -28,6 +29,8 @@ export default function Home(){return <main>
   <VerifiedProviderCatalog/>
 
   <WorkflowShowcase/>
+
+  <PromiseSummarySection/>
 
   <section className="journeys shell" id="flujos"><div className="section-heading"><div><span className="kicker">DOS CAMINOS, UN CATÁLOGO</span><h2>Cómo entra y sale valor.</h2></div><p>El paso de pago está activo en Testnet y verificado on-chain.</p></div><div className="journey-grid"><div className="journey"><div className="journey-title"><span>BUYER / AGENT</span><h3>De intención a resultado</h3></div>{buyerSteps.map(([n,title,copy],i)=><article key={n} className={i===2?"live-step":""}><b>{n}</b><div><strong>{title}</strong><p>{copy}</p></div>{i===2&&<em>EN VIVO · TESTNET</em>}</article>)}</div><div className="journey provider"><div className="journey-title"><span>PROVIDER</span><h3>De servicio a índice</h3></div>{providerSteps.map(([n,title,copy],i)=><article key={n} className={i===2?"live-step":""}><b>{n}</b><div><strong>{title}</strong><p>{copy}</p></div>{i===2&&<em>EN VIVO · TESTNET</em>}</article>)}</div></div></section>
 
