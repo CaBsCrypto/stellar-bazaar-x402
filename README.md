@@ -136,6 +136,13 @@ sequenceDiagram
 
 ## 💎 Project Status & Live On-Chain Evidence
 
+> **Current boundary:** production discovery is live and historical x402
+> settlement evidence is on Stellar Testnet. Bazaar has **no deployed Bazaar
+> smart contract, escrow, fee split, Mainnet payment flow, or public dispute
+> process**. The proposed listing, buyer-brief, visual-promise, Service Registry,
+> and limited-escrow model is documented as future work in
+> [Listing, purchase, and future escrow model](docs/LISTING_PURCHASE_ESCROW_FUTURE.md).
+
 ### 🟢 Verified On-Chain Settlements (Stellar Testnet)
 
 | # | When | Method | Inner Tx (Soroban) | Ledger | Seller Delta |
@@ -276,6 +283,7 @@ console.log("Stellar Receipt:", execution.payment.receiptUrl);
 * **Zero Secret Leakage:** ServiceCards never contain API keys or secrets.
 * **Untrusted Metadata Defense:** Descriptions remain untrusted data; URL/route fields receive deterministic SSRF and traversal checks.
 * **Loop Protection Circuit Breakers:** Strict 1-retry payment limit per HTTP request to prevent infinite payment loops.
+* **No Escrow Today:** Current x402 evidence is direct settlement. Any future escrow must be a separately audited, opt-in contract; it is not active in this deployment.
 
 ---
 
@@ -290,7 +298,7 @@ console.log("Stellar Receipt:", execution.payment.receiptUrl);
 1. ✅ **Phase 1 (Discovery Core):** Global catalog, deterministic lexical ranking, MCP streamable server, and ServiceCard validator.
 2. ✅ **Phase 2 (Testnet Settlement):** HTTP 402 challenge, Ed25519 signature verification, and on-chain settlement via `@x402/stellar`.
 3. 🟡 **Phase 3 (Security remediation):** read-only MCP, receipt reconciliation gate, canonical deep hashes, retired Testnet payer, and append-only registry disabled by default.
-4. ⚪ **Phase 4 (Future):** per-provider ownership, reviewed registry lifecycle, SEP-41 multi-asset work and Mainnet readiness only after external audit.
+4. ⚪ **Phase 4 (Future):** provider-owned Service Registry, visual service promises and buyer briefs, limited per-purchase escrow/release/refund rules, disclosed fee splits, SEP-41 multi-asset work, and Mainnet readiness only after independent external audit.
 
 ---
 
@@ -312,6 +320,7 @@ console.log("Stellar Receipt:", execution.payment.receiptUrl);
 * [**Project Architecture Bible (`docs/internal/PROJECT_BIBLE.md`)**](docs/internal/PROJECT_BIBLE.md)
 * [**MCP Pagination & P1 Backlog (`docs/internal/MCP_DISCOVERY_BACKLOG.md`)**](docs/internal/MCP_DISCOVERY_BACKLOG.md)
 * [**Workflow Bundles Future (`docs/internal/WORKFLOW_BUNDLES_FUTURE.md`)**](docs/internal/WORKFLOW_BUNDLES_FUTURE.md)
+* [**Listing, Purchase & Future Escrow Model (`docs/LISTING_PURCHASE_ESCROW_FUTURE.md`)**](docs/LISTING_PURCHASE_ESCROW_FUTURE.md)
 
 > Internal & historical docs (proposals, backlogs, security/QA) live under [`docs/internal/`](docs/internal/).
 

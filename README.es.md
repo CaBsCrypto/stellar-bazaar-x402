@@ -136,6 +136,13 @@ sequenceDiagram
 
 ## 💎 Estado Actual del Proyecto & Evidencia en Vivo
 
+> **Límite actual:** el discovery de producción está activo y existe evidencia
+> histórica de liquidación x402 en Stellar Testnet. Bazaar **no tiene un smart
+> contract propio desplegado, escrow, reparto de comisión, flujo de pagos Mainnet
+> ni proceso público de disputas**. El modelo propuesto de listado, brief del
+> comprador, promesa visual, Service Registry y escrow limitado está documentado
+> como trabajo futuro en [Modelo futuro de listado, compra y escrow](docs/LISTING_PURCHASE_ESCROW_FUTURE.md).
+
 ### 🟢 Liquidaciones On-Chain Verificadas (Stellar Testnet)
 
 | # | Cuándo | Método | Tx Interna (Soroban) | Ledger | Delta Seller |
@@ -276,6 +283,7 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
 * **Sin Intermediación de Secretos:** Las ServiceCards no contienen API keys, tokens ni claves privadas (`S...`).
 * **Metadata No Confiable:** Las descripciones siguen siendo datos no confiables; URL y route template reciben checks deterministas de SSRF/traversal.
 * **Protección Anti-Bucle (Circuit Breakers):** Máximo de 1 reintento con pago por ciclo para prevenir bucles de cobro involuntarios.
+* **Sin Escrow Hoy:** La evidencia x402 actual usa liquidación directa. Cualquier escrow futuro debe ser un contrato opt-in, separado y auditado; no está activo en este despliegue.
 
 ---
 
@@ -290,7 +298,7 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
 1. ✅ **Fase 1 (Discovery Core):** Catálogo global, ranking determinista, servidor MCP y validador de ServiceCards.
 2. ✅ **Fase 2 (Liquidación Testnet):** Reto HTTP 402, firmas Ed25519 y liquidación on-chain con `@x402/stellar`.
 3. 🟡 **Fase 3 (Remediación de seguridad):** MCP read-only, gate de conciliación, hashes profundos, payer retirado y registro append-only deshabilitado por defecto.
-4. ⚪ **Fase 4 (Futura):** ownership por provider, lifecycle revisado, multiactivo SEP-41 y Mainnet sólo tras auditoría externa.
+4. ⚪ **Fase 4 (Futura):** Service Registry controlado por proveedor, promesas visuales y briefs del comprador, reglas limitadas por compra para escrow/liberación/reembolso, splits de comisión transparentes, multiactivo SEP-41 y Mainnet sólo tras auditoría externa independiente.
 
 ---
 
@@ -312,6 +320,7 @@ console.log("Recibo Stellar:", execution.payment.receiptUrl);
 * [**Biblia del Proyecto & Arquitectura (`PROJECT_BIBLE.md`)**](docs/internal/PROJECT_BIBLE.md)
 * [**Paginación MCP & Backlog P1 (`MCP_DISCOVERY_BACKLOG.md`)**](docs/internal/MCP_DISCOVERY_BACKLOG.md)
 * [**Workflow Bundles Futuro (`WORKFLOW_BUNDLES_FUTURE.md`)**](docs/internal/WORKFLOW_BUNDLES_FUTURE.md)
+* [**Modelo de Listado, Compra & Escrow Futuro (`LISTING_PURCHASE_ESCROW_FUTURE.md`)**](docs/LISTING_PURCHASE_ESCROW_FUTURE.md)
 
 > Los documentos internos & históricos (propuestas, backlogs, security/QA) viven en [`docs/internal/`](docs/internal/).
 
