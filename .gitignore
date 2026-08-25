@@ -12,3 +12,4 @@ work/
 outputs/
 
 .vercel
+contracts/service-registry/target/

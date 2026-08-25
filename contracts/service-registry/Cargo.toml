@@ -7,8 +7,12 @@ publish = false
 [lib]
 crate-type = ["cdylib"]
 
+# Required by Stellar CLI 27 for deterministic contract WASM semantics.
+[profile.release]
+overflow-checks = true
+
 [dependencies]
-soroban-sdk = "22.0.0"
+soroban-sdk = "=21.7.7"
 
 [dev-dependencies]
-soroban-sdk = { version = "22.0.0", features = ["testutils"] }
+soroban-sdk = { version = "=21.7.7", features = ["testutils"] }
