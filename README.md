@@ -98,6 +98,8 @@ flowchart TD
 
 ## 🔄 Interaction Flow: Discover, Pay & Execute
 
+> **Interactive contract viewer:** `/payment-flow` visualizes discover → quote → 402 → buyer policy → settle → delivery → receipt without signing, wallet access, provider calls or payments. This draft branch is local/preview-only until reviewed. See [the state-machine contract](docs/BUYER_PROVIDER_PAYMENT_FLOW.md).
+
 ```mermaid
 sequenceDiagram
     autonumber

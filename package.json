@@ -15,6 +15,8 @@
     "x402:fetch-facilitator-key": "node scripts/fetch-testnet-facilitator-key.mjs",
     "test:x402:protocol": "node scripts/test-x402-protocol.mjs",
     "test:mcp:onboarding": "node scripts/test-mcp-onboarding.mjs",
+    "test:payment-flow": "node scripts/test-payment-flow.mjs",
+    "test:e2e:readiness-gate": "node scripts/test-e2e-readiness-gate.mjs",
     "test:agent:policy:evals": "node scripts/test-agent-policy-evals.mjs",
     "benchmark:ranking": "node scripts/benchmark-ranking.mjs",
     "test:e2e:ecosystem": "node scripts/test-e2e-ecosystem.mjs",
@@ -22,11 +24,14 @@
     "test:security:invariants": "node scripts/test-security-invariants.mjs",
     "security:scan": "node scripts/scan-secrets-redacted.mjs",
     "test:publisher:ingest": "node scripts/test-publisher-ingest.mjs",
+    "test:provider:self-listing": "node scripts/test-provider-self-listing.mjs",
     "test:e2e:external": "node scripts/test-external-provider-e2e.mjs",
     "test:e2e:external:testnet": "node scripts/e2e-external-provider-testnet.mjs",
     "test:contract:external:public": "node scripts/test-public-quote-contract.mjs",
     "test:workflow:bundle": "node scripts/test-workflow-bundle.mjs",
+    "test:service-order-promise": "node scripts/test-service-order-promise.mjs",
     "test:providers:verified": "node scripts/test-verified-providers.mjs",
+    "test:delivery:boundaries": "node scripts/test-delivery-boundaries.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {
