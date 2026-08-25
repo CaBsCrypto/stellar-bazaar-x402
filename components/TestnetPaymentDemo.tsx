@@ -26,6 +26,13 @@ type DemoResponse = {
       recipient?: string;
       amount?: string;
     };
+    delivery?: {
+      status?: string;
+      resultAvailable?: boolean;
+      resultHash?: { algorithm?: string; scope?: string; value?: string };
+      independentlyVerified?: boolean;
+      message?: string;
+    };
   };
   error?: { code?: string; message?: string };
 };
@@ -48,6 +55,7 @@ export function TestnetPaymentDemo() {
   }
 
   const liveReceipt = result?.body?.payment;
+  const delivery = result?.body?.delivery;
   return (
     <section className="testnet-box" aria-labelledby="testnet-payment-title">
       <span>EVIDENCIA TESTNET · EXACT · SIN MAINNET</span>
@@ -100,6 +108,9 @@ export function TestnetPaymentDemo() {
               <li>Pagador: {shortAddress(liveReceipt.payer)}</li>
               <li>Destino: {shortAddress(liveReceipt.recipient)}</li>
               <li>Monto atomic: {liveReceipt.amount ?? "—"}</li>
+              <li>Entrega: {delivery?.status ?? "no confirmada"}</li>
+              <li>Integridad del resultado: {delivery?.resultHash?.value ? "hash declarado por proveedor" : "sin hash"}</li>
+              <li>Calidad del resultado: {delivery?.independentlyVerified ? "verificada" : "no verificada por Bazaar"}</li>
             </ul>
           ) : (
             <p>{result.error?.message ?? "El pago local no se completó."}</p>

@@ -33,6 +33,8 @@ export interface ServiceCard {
   payment: { scheme: PaymentScheme; asset: string; amount: string; destination: string };
   provider: { name: string };
   tags: string[];
+  /** Optional for legacy v0 cards; required for a provider to be marked consumable. */
+  delivery?: import("./delivery-contract.ts").DeliveryContract;
 }
 
 export interface ValidationOutcome { rule: string; status: "pass" | "warning" | "fail"; reason: string }
