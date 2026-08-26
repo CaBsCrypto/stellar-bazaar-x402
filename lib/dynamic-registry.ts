@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
 import { Redis } from "@upstash/redis";
+import { computeCanonicalServiceCardHash } from "./canonical-service-card.ts";
 import type { ServiceCard } from "./types.ts";
 
 export interface DynamicEntry {
@@ -33,21 +33,8 @@ export function storageMode(): "upstash" | "memory" {
   return redis ? "upstash" : "memory";
 }
 
-function canonicalize(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonicalize);
-  if (value !== null && typeof value === "object") {
-    return Object.fromEntries(
-      Object.entries(value as Record<string, unknown>)
-        .sort(([left], [right]) => left.localeCompare(right))
-        .map(([key, nested]) => [key, canonicalize(nested)]),
-    );
-  }
-  return value;
-}
-
 export function computeCardHash(card: ServiceCard): string {
-  const serialized = JSON.stringify(canonicalize(card));
-  return createHash("sha256").update(serialized).digest("hex");
+  return computeCanonicalServiceCardHash(card);
 }
 
 function toEntry(card: ServiceCard, providerKeyHash: string, registeredAt: string, updatedAt: string, revision: number): DynamicEntry {

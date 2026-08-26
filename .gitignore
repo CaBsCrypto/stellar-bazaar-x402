@@ -12,3 +12,5 @@ work/
 outputs/
 
 .vercel
+contracts/service-registry/target/
+contracts/service-registry/test_snapshots/

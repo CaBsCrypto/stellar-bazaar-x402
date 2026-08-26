@@ -1,0 +1,18 @@
+[package]
+name = "bazaar-service-registry"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+# Required by Stellar CLI 27 for deterministic contract WASM semantics.
+[profile.release]
+overflow-checks = true
+
+[dependencies]
+soroban-sdk = "=21.7.7"
+
+[dev-dependencies]
+soroban-sdk = { version = "=21.7.7", features = ["testutils"] }
