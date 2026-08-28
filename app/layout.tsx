@@ -9,6 +9,8 @@ import "./onboarding.css";
 import "./verified-providers.css";
 import "./payment-flow.css";
 import "./payment-receipt.css";
+import "./buyer-execution.css";
+import "./buyer-execution-additions.css";
 
 export const metadata: Metadata = {
   title: "Stellar Bazaar x402 — Discovery POC",

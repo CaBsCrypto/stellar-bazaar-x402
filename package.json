@@ -33,6 +33,7 @@
     "test:providers:verified": "node scripts/test-verified-providers.mjs",
     "test:registry:spec": "node scripts/test-service-registry-spec.mjs",
     "test:delivery:boundaries": "node scripts/test-delivery-boundaries.mjs",
+    "test:buyer:execution": "node scripts/test-buyer-execution.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {
