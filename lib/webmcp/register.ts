@@ -9,10 +9,59 @@ import type { ServiceCard } from "../types";
  * Registers all Stellar Bazaar tools to the active ModelContext registry (native or polyfilled).
  */
 export function registerBazaarTools(registry: ModelContextRegistry): void {
-  // 1. Search Services Tool
+  // 1. List Services Tool (Full Catalog & Registry)
+  const listServicesTool: WebMCPToolDefinition<{ includePilots?: boolean }> = {
+    name: "bazaar_list_services",
+    description: "List all active AI agent services and tools available in Stellar Bazaar, with network, pricing, execution mode and category tags.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        includePilots: { type: "boolean", description: "Whether to include pilot/experimental cards" },
+      },
+    },
+    execute: async (input) => {
+      const allServices = services.map((s) => ({
+        id: s.id,
+        name: s.name,
+        eyebrow: s.eyebrow,
+        description: s.description,
+        kind: s.kind,
+        tags: s.tags,
+        network: s.network,
+        payment: {
+          scheme: s.payment.scheme,
+          asset: s.payment.asset,
+          amount: s.payment.amount,
+        },
+        routeTemplate: s.routeTemplate,
+        provider: s.provider,
+        latency: s.latency,
+      }));
+
+      // Broadcast visual event to UI so the page can respond to agent queries
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("webmcp-ui-action", {
+            detail: { action: "list_services", total: allServices.length },
+          })
+        );
+      }
+
+      return {
+        type: "json",
+        data: {
+          total: allServices.length,
+          services: allServices,
+          mode: "read-only-discovery",
+        },
+      };
+    },
+  };
+
+  // 2. Search Services Tool
   const searchServicesTool: WebMCPToolDefinition<{ query?: string; tag?: string; maxPrice?: number }> = {
     name: "bazaar_search_services",
-    description: "Search and rank available paid and free AI services in Stellar Bazaar by query keywords, category tag, or max budget.",
+    description: "Search, filter, and rank available AI services in Stellar Bazaar by query keywords, category tag, or max budget.",
     inputSchema: {
       type: "object",
       properties: {
@@ -30,6 +79,20 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
       }
       if (input.maxPrice !== undefined) {
         ranked = ranked.filter((r) => Number(r.service.payment.amount) <= input.maxPrice!);
+      }
+
+      // Broadcast visual filter event to the page UI
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("webmcp-ui-action", {
+            detail: {
+              action: "filter_services",
+              query: input.query || "",
+              tag: input.tag,
+              matchingIds: ranked.map((r) => r.service.id),
+            },
+          })
+        );
       }
 
       return {
@@ -54,7 +117,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
     },
   };
 
-  // 2. Get Service Details Tool
+  // 3. Get Service Details Tool
   const getServiceTool: WebMCPToolDefinition<{ serviceId: string }> = {
     name: "bazaar_get_service",
     description: "Get full technical details, input schema, pricing and payment requirements for a specific service ID.",
@@ -74,6 +137,16 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
           data: { error: `Service not found: ${input.serviceId}` },
         };
       }
+
+      // Highlight target service card in UI
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("webmcp-ui-action", {
+            detail: { action: "highlight_service", serviceId: input.serviceId },
+          })
+        );
+      }
+
       return {
         type: "json",
         data: service,
@@ -81,7 +154,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
     },
   };
 
-  // 3. List Workflow Bundles Tool
+  // 4. List Workflow Bundles Tool
   const listWorkflowBundlesTool: WebMCPToolDefinition = {
     name: "bazaar_list_workflow_bundles",
     description: "List all pre-composed autonomous multi-step workflow bundles available in the ecosystem.",
@@ -106,7 +179,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
     },
   };
 
-  // 4. Validate Service Card Tool
+  // 5. Validate Service Card Tool
   const validateServiceCardTool: WebMCPToolDefinition<{ serviceCard: ServiceCard }> = {
     name: "bazaar_validate_service_card",
     description: "Validate if a custom JSON service card meets Stellar Bazaar standards and schema invariants.",
@@ -129,7 +202,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
     },
   };
 
-  // 5. Get Payment Flow & x402 Audit Tool
+  // 6. Get Payment Flow & x402 Audit Tool
   const getPaymentFlowTool: WebMCPToolDefinition<{ serviceId: string }> = {
     name: "bazaar_get_payment_flow",
     description: "Inspect the end-to-end x402 micropayment pipeline, on-chain receipts, escrow terms, and settlement stages for a service.",
@@ -160,6 +233,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
   };
 
   // Register all tools
+  registry.registerTool(listServicesTool as WebMCPToolDefinition);
   registry.registerTool(searchServicesTool as WebMCPToolDefinition);
   registry.registerTool(getServiceTool as WebMCPToolDefinition);
   registry.registerTool(listWorkflowBundlesTool);

@@ -6,6 +6,7 @@ import { registerBazaarTools } from "@/lib/webmcp/register";
 import { ModelContextRegistry, WebMCPActivityLog, WebMCPToolDefinition } from "@/lib/webmcp/types";
 
 const PRESET_QUERIES: Record<string, string> = {
+  bazaar_list_services: '{\n  "includePilots": false\n}',
   bazaar_search_services: '{\n  "query": "finance",\n  "maxPrice": 1.0\n}',
   bazaar_get_service: '{\n  "serviceId": "risk-assessment-v0"\n}',
   bazaar_list_workflow_bundles: "{}",
