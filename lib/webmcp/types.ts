@@ -41,6 +41,17 @@ export interface ModelContextRegistry {
   provideContext?: (context: { tools?: WebMCPToolDefinition[] }) => void;
 }
 
+export interface WebMCPActivityLog {
+  id: string;
+  timestamp: string;
+  toolName: string;
+  input: Record<string, unknown>;
+  output?: unknown;
+  durationMs: number;
+  status: "success" | "error";
+  error?: string;
+}
+
 declare global {
   interface Navigator {
     modelContext?: ModelContextRegistry;
@@ -54,6 +65,8 @@ declare global {
       tools: Map<string, WebMCPToolDefinition>;
       executeTool: (name: string, input: Record<string, unknown>) => Promise<unknown>;
       listTools: () => Array<{ name: string; description: string; inputSchema?: WebMCPInputSchema }>;
+      getActivityLogs: () => WebMCPActivityLog[];
+      onActivityLog?: (log: WebMCPActivityLog) => void;
     };
   }
 }

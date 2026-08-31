@@ -1,4 +1,17 @@
-import { ModelContextRegistry, WebMCPToolDefinition } from "./types";
+import { ModelContextRegistry, WebMCPToolDefinition, WebMCPActivityLog } from "./types";
+
+const activityLogs: WebMCPActivityLog[] = [];
+
+export function recordWebMCPActivity(log: WebMCPActivityLog) {
+  activityLogs.unshift(log);
+  if (activityLogs.length > 50) {
+    activityLogs.pop();
+  }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("webmcp-activity", { detail: log }));
+    window.__WEBMCP_EMULATOR__?.onActivityLog?.(log);
+  }
+}
 
 class WebMCPPolyfill implements ModelContextRegistry {
   private tools = new Map<string, WebMCPToolDefinition>();
@@ -10,9 +23,49 @@ class WebMCPPolyfill implements ModelContextRegistry {
         executeTool: async (name: string, input: Record<string, unknown>) => {
           const tool = this.tools.get(name);
           if (!tool) {
+            const errLog: WebMCPActivityLog = {
+              id: "act_" + Math.random().toString(36).slice(2, 9),
+              timestamp: new Date().toISOString(),
+              toolName: name,
+              input,
+              durationMs: 0,
+              status: "error",
+              error: `Tool '${name}' not found.`,
+            };
+            recordWebMCPActivity(errLog);
             throw new Error(`[WebMCP Polyfill] Tool '${name}' not found.`);
           }
-          return await tool.execute(input);
+
+          const start = performance.now();
+          try {
+            const result = await tool.execute(input);
+            const durationMs = Math.round(performance.now() - start);
+            const log: WebMCPActivityLog = {
+              id: "act_" + Math.random().toString(36).slice(2, 9),
+              timestamp: new Date().toISOString(),
+              toolName: name,
+              input,
+              output: result,
+              durationMs,
+              status: "success",
+            };
+            recordWebMCPActivity(log);
+            return result;
+          } catch (err: unknown) {
+            const durationMs = Math.round(performance.now() - start);
+            const errorMessage = err instanceof Error ? err.message : String(err);
+            const log: WebMCPActivityLog = {
+              id: "act_" + Math.random().toString(36).slice(2, 9),
+              timestamp: new Date().toISOString(),
+              toolName: name,
+              input,
+              durationMs,
+              status: "error",
+              error: errorMessage,
+            };
+            recordWebMCPActivity(log);
+            throw err;
+          }
         },
         listTools: () => {
           return Array.from(this.tools.values()).map((t) => ({
@@ -21,6 +74,7 @@ class WebMCPPolyfill implements ModelContextRegistry {
             inputSchema: t.inputSchema,
           }));
         },
+        getActivityLogs: () => [...activityLogs],
       };
     }
   }
