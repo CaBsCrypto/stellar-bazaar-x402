@@ -13,12 +13,12 @@
 </div>
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![W3C WebMCP: 8 In--Browser Tools](https://img.shields.io/badge/W3C%20WebMCP-8%20In--Browser%20Tools-38BDF8.svg)](WEBMCP_SUBMISSION.md)
 [![Stellar: Testnet](https://img.shields.io/badge/Stellar-Testnet%20Verified-08B5E5.svg)](https://stellar.expert/explorer/testnet)
 [![x402: v2 Compatible](https://img.shields.io/badge/x402-v2%20Standard-8A2BE2.svg)](https://x402.org)
 [![MCP: Streamable HTTP](https://img.shields.io/badge/MCP-Streamable%20HTTP-10B981.svg)](docs/AGENT_QUICKSTART.md)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict%200%20Errors-3178C6.svg)](tsconfig.json)
-[![Live: Vercel](https://img.shields.io/badge/Live-Vercel%20Production-000000.svg)](https://stellar-bazaar-x402.vercel.app)
-[![Settlements: 5 On-Chain](https://img.shields.io/badge/Settlements-5%20Verified%20On--Chain-22C55E.svg)](https://stellar.expert/explorer/testnet)
+[![Policy Guard: Active](https://img.shields.io/badge/Agent%20Policy%20Guard-Active%20Safety-22C55E.svg)](WEBMCP_SUBMISSION.md)
 
 ---
 
@@ -57,11 +57,14 @@ flowchart TD
     subgraph Clients["1. Global Clients & Autonomous AI Agents"]
         Claude["Claude Desktop / Cursor IDE"]
         LangChain["LangChain / CrewAI / AutoGen"]
-        WebUI["Global Web UI / Next.js"]
+        WebAgents["ChatGPT in-browser / WebMCP Chrome Agents"]
+        WebUI["Global Web UI / 3:1 HUD Terminal"]
     end
 
     subgraph Bazaar["2. Global Discovery Engine (Stellar Bazaar Core)"]
+        WebMCPLayer["navigator.modelContext<br/>(8 W3C In-Browser Tools + Policy Guard)"]
         MCPServer["/api/mcp<br/>(Streamable HTTP MCP Server)"]
+        SpecManifest["/api/webmcp/spec<br/>(OpenAPI/WebMCP Spec Export)"]
         RESTDiscovery["/api/discovery<br/>(resources / search / pilots)"]
         Validator["validateServiceCard()<br/>(11-Rule Conformance Engine)"]
         DynamicRegistry["/api/publisher/ingest<br/>(Dynamic Provider Ingest)"]
@@ -82,9 +85,12 @@ flowchart TD
         WebIntelService["Website Intelligence Service<br/>(external contract, not deployed)"]
     end
 
+    Clients --> WebMCPLayer
     Clients --> MCPServer
+    Clients --> SpecManifest
     Clients --> RESTDiscovery
     RESTDiscovery --> Validator
+    WebMCPLayer --> Validator
     MCPServer --> PilotCatalog
     DynamicRegistry --> Validator
 

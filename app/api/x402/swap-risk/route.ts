@@ -21,6 +21,7 @@ import {
   requireServerX402Config,
 } from "@/lib/x402-config";
 import { canonicalResultSha256 } from "@/lib/delivery-result";
+import { paymentRequirementMismatches } from "@/lib/x402-requirements";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -103,17 +104,25 @@ export async function GET(req: NextRequest) {
   }
 
   const accepted = payload.accepted;
-  if (
-    accepted.scheme !== requirements.scheme ||
-    accepted.network !== requirements.network ||
-    accepted.payTo !== requirements.payTo ||
-    accepted.asset !== requirements.asset ||
-    accepted.amount !== requirements.amount ||
-    accepted.extra?.resourceUrl !== resourceUrl
-  ) {
+  if (!accepted || typeof accepted !== "object") {
+    return structured("MALFORMED_PAYMENT_SIGNATURE", "PAYMENT-SIGNATURE no contiene requirements aceptados.", 402);
+  }
+  const mismatches = paymentRequirementMismatches(accepted, {
+    scheme: requirements.scheme,
+    network: requirements.network,
+    payTo: requirements.payTo,
+    asset: requirements.asset,
+    amount: requirements.amount,
+    maxTimeoutSeconds: requirements.maxTimeoutSeconds,
+    resourceUrl,
+    method: "GET",
+    route: req.nextUrl.pathname,
+    inputHash: String(requirements.extra?.inputHash),
+  });
+  if (mismatches.length > 0) {
     return structured(
       "PAYMENT_REQUIREMENTS_MISMATCH",
-      "La firma no coincide con ruta, asset, monto o destinatario.",
+      `La firma no coincide con el contrato fijado (${mismatches.join(", ")}).`,
       402,
     );
   }

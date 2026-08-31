@@ -26,8 +26,9 @@ assert.ok(pilotIds.includes("website-intelligence-pilot"), "website-intelligence
 assert.ok(pilotIds.includes("video-repurpose-pilot"), "video-repurpose-pilot missing");
 assert.ok(pilotIds.includes("brand-identity-studio-pilot"), "brand-identity-studio-pilot missing");
 assert.equal(pilotsData.indexStatus, "pilot-indexed-https-qa");
-assert.equal(pilotsData.paymentActive, false);
-console.log(`  ✓ HTTPS-verified pilot cards verified (${pilotsData.count} pilots, payment inactive)`);
+assert.equal(pilotsData.paymentActive, true);
+assert.deepEqual(pilotsData.activePaymentIds, ["website-intelligence-pilot"]);
+console.log(`  ✓ HTTPS-verified pilot cards verified (${pilotsData.count} pilots, Website Intelligence x402 Testnet active)`);
 
 const searchRes = await fetch(`${BASE_URL}/api/discovery/search?query=riesgo%20swap`);
 assert.equal(searchRes.status, 200, "search endpoint should return 200");
