@@ -9,8 +9,32 @@ import { validateWorkflowBundle, WORKFLOW_BUNDLE_VERSION } from "./workflow-bund
 import { readDynamicServiceCards } from "./dynamic-registry";
 import { err, ok } from "./service-ingest";
 import { getPaymentFlow, paymentFlowCapability } from "./payment-flow";
+import type { PaidService } from "./types";
 
 const result = ok;
+
+const pilotSearchServices: PaidService[] = pilotCards.map((card) => ({
+  id: card.id,
+  name: `${card.title.es} ${card.title.en}`,
+  eyebrow: `${card.category.es} / ${card.category.en}`,
+  description: `${card.description.es} ${card.description.en}`,
+  kind: card.kind,
+  tags: [...card.tags.es, ...card.tags.en, card.category.es, card.category.en, card.categoryId],
+  routeTemplate: card.execution.path,
+  provider: "verified-pilot-card",
+  network: card.payment.network,
+  payment: {
+    scheme: card.payment.scheme,
+    asset: "USDC",
+    amount: card.payment.displayAmount?.split(" ")[0] ?? "0",
+  },
+  latency: card.execution.model === "sync" ? "provider-declared-sync" : "provider-declared-async",
+  input: card.input,
+  output: card.output,
+  accent: "blue",
+}));
+
+const pilotById = new Map(pilotCards.map((card) => [card.id, card]));
 
 const errorEnvelope = (
   code: string,
@@ -98,7 +122,7 @@ export function createOnboardingMcpServer() {
     "search_services",
     {
       description:
-        "Deterministic lexical search over current service cards; no AI/reputation inference. Supports opaque cursor pagination via limit/cursor.",
+        "Deterministic bilingual lexical search over current service cards and verified pilot cards; no AI/reputation inference. Supports opaque cursor pagination via limit/cursor.",
       inputSchema: {
         query: z.string().min(1),
         limit: z.number().int().min(1).max(PAGE_LIMIT_MAX).optional(),
@@ -108,7 +132,7 @@ export function createOnboardingMcpServer() {
     async ({ query, limit, cursor }) => {
       const registry = await readDynamicServiceCards();
       const dynamicServices = registry.entries.map((d) => toPaidService(d.card));
-      const ranked = rankServices([...services, ...dynamicServices], query);
+      const ranked = rankServices([...services, ...dynamicServices, ...pilotSearchServices], query);
       const pageSize = limit ?? ranked.length;
       const offset = cursor === undefined ? 0 : decodeCursor(cursor);
       if (offset === null) {
@@ -127,7 +151,7 @@ export function createOnboardingMcpServer() {
         query,
         ranking: { version: "lexical-v1", ai: false },
         results: page.map((entry) => ({
-          resource: toServiceCard(entry.service),
+          resource: pilotById.get(entry.service.id) ?? toServiceCard(entry.service),
           score: entry.score,
           reasons: entry.reasons,
         })),

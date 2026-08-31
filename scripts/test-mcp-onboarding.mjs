@@ -73,7 +73,11 @@ const pilots = await rpc(4, "tools/call", {
 const pilotText = JSON.parse(pilots.result.content[0].text);
 assert.deepEqual(pilotText.pilots.map((card) => card.id), pilotIds);
 assert.ok(pilotText.pilots.every((card) => card.indexing.status === "pilot-indexed"));
-assert.ok(pilotText.pilots.every((card) => card.payment.status === "not-active"));
+assert.deepEqual(
+  pilotText.pilots.filter((card) => card.payment.status === "active-testnet").map((card) => card.id),
+  ["website-intelligence-pilot"],
+);
+assert.ok(pilotText.pilots.filter((card) => card.id !== "website-intelligence-pilot").every((card) => card.payment.status === "not-active"));
 assert.equal(pilotText.partialResults, false);
 
 const firstPage = await rpc(5, "tools/call", {
@@ -91,6 +95,18 @@ const secondPage = await rpc(6, "tools/call", {
 const secondText = JSON.parse(secondPage.result.content[0].text);
 assert.ok(secondText.results.length >= 1);
 assert.ok(!secondText.results.some((result) => result.resource.id === firstText.results[0].resource.id));
+
+for (const query of ["website intelligence", "auditoría", "inteligencia"]) {
+  const pilotSearch = await rpc(61, "tools/call", {
+    name: "search_services",
+    arguments: { query },
+  });
+  const pilotSearchText = JSON.parse(pilotSearch.result.content[0].text);
+  assert.ok(
+    pilotSearchText.results.some((result) => result.resource.id === "website-intelligence-pilot"),
+    `Website Intelligence pilot must be discoverable for ${query}`,
+  );
+}
 
 const hostile = await rpc(7, "tools/call", {
   name: "validate_service_card",
