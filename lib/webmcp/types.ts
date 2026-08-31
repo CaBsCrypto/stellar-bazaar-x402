@@ -41,6 +41,14 @@ export interface ModelContextRegistry {
   provideContext?: (context: { tools?: WebMCPToolDefinition[] }) => void;
 }
 
+export interface AgentPolicyConfig {
+  enabled: boolean;
+  maxBudgetPerCall: number; // e.g. 0.5 USDC
+  allowedAssets: string[]; // e.g. ["USDC", "XLM"]
+  allowedNetworks: string[]; // e.g. ["stellar:testnet"]
+  requireProofOfDelivery: boolean;
+}
+
 export interface WebMCPActivityLog {
   id: string;
   timestamp: string;
@@ -50,6 +58,10 @@ export interface WebMCPActivityLog {
   durationMs: number;
   status: "success" | "error";
   error?: string;
+  policyCheck?: {
+    passed: boolean;
+    reason?: string;
+  };
 }
 
 declare global {

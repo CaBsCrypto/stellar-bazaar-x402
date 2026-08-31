@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { initWebMCP } from "@/lib/webmcp/polyfill";
 import { registerBazaarTools } from "@/lib/webmcp/register";
-import { ModelContextRegistry, WebMCPActivityLog, WebMCPToolDefinition } from "@/lib/webmcp/types";
+import { ModelContextRegistry, WebMCPActivityLog, WebMCPToolDefinition, AgentPolicyConfig } from "@/lib/webmcp/types";
+import { services } from "@/lib/catalog";
 
 const PRESET_QUERIES: Record<string, string> = {
   bazaar_list_services: '{\n  "includePilots": false\n}',
@@ -25,7 +26,7 @@ export function WebMCPProvider() {
   const [tools, setTools] = useState<WebMCPToolDefinition[]>([]);
   const [logs, setLogs] = useState<WebMCPActivityLog[]>([]);
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<"activity" | "tools" | "tester">("activity");
+  const [activeTab, setActiveTab] = useState<"activity" | "tools" | "tester" | "policy">("activity");
   const [selectedTool, setSelectedTool] = useState<string>("bazaar_search_services");
   const [testPayload, setTestPayload] = useState<string>(PRESET_QUERIES.bazaar_search_services);
   const [isExecuting, setIsExecuting] = useState<boolean>(false);
@@ -33,6 +34,15 @@ export function WebMCPProvider() {
   const [activityFilter, setActivityFilter] = useState<string>("");
   const logContainerRef = useRef<HTMLDivElement>(null);
   const registryRef = useRef<ModelContextRegistry | null>(null);
+
+  // Agent Policy Guard State
+  const [policyConfig, setPolicyConfig] = useState<AgentPolicyConfig>({
+    enabled: true,
+    maxBudgetPerCall: 0.10, // 0.10 USDC max per execution
+    allowedAssets: ["USDC", "XLM"],
+    allowedNetworks: ["stellar:testnet"],
+    requireProofOfDelivery: true,
+  });
 
   useEffect(() => {
     try {
@@ -74,6 +84,34 @@ export function WebMCPProvider() {
     }
   };
 
+  const evaluatePolicyGuard = (toolName: string, payload: Record<string, unknown>): { allowed: boolean; reason?: string } => {
+    if (!policyConfig.enabled) return { allowed: true };
+
+    // 1. Budget & Asset Check for execute / payment tools
+    if (toolName === "bazaar_execute_service" || toolName === "bazaar_publish_service") {
+      const serviceId = String(payload.serviceId || "");
+      const service = services.find((s) => s.id === serviceId);
+
+      if (service) {
+        const price = Number(service.payment.amount || 0);
+        if (price > policyConfig.maxBudgetPerCall) {
+          return {
+            allowed: false,
+            reason: `POLICY_VIOLATION: Service cost (${price} ${service.payment.asset}) exceeds max permitted budget (${policyConfig.maxBudgetPerCall} USDC).`,
+          };
+        }
+        if (!policyConfig.allowedAssets.includes(service.payment.asset)) {
+          return {
+            allowed: false,
+            reason: `POLICY_VIOLATION: Asset '${service.payment.asset}' is not in the allowed policy whitelist: [${policyConfig.allowedAssets.join(", ")}].`,
+          };
+        }
+      }
+    }
+
+    return { allowed: true };
+  };
+
   const handleExecuteTool = async () => {
     setIsExecuting(true);
     try {
@@ -81,6 +119,30 @@ export function WebMCPProvider() {
       if (testPayload.trim()) {
         parsed = JSON.parse(testPayload);
       }
+
+      // Check Policy Guard before execution
+      const policyEvaluation = evaluatePolicyGuard(selectedTool, parsed);
+      if (!policyEvaluation.allowed) {
+        setLogs((prev) => [
+          {
+            id: "act_blocked_" + Math.random().toString(36).slice(2, 9),
+            timestamp: new Date().toISOString(),
+            toolName: selectedTool,
+            input: parsed,
+            durationMs: 4,
+            status: "error",
+            error: policyEvaluation.reason,
+            policyCheck: {
+              passed: false,
+              reason: policyEvaluation.reason,
+            },
+          },
+          ...prev,
+        ]);
+        setActiveTab("activity");
+        return;
+      }
+
       if (window.__WEBMCP_EMULATOR__) {
         await window.__WEBMCP_EMULATOR__.executeTool(selectedTool, parsed);
       } else if (registryRef.current) {
@@ -96,6 +158,7 @@ export function WebMCPProvider() {
               output: res,
               durationMs: 12,
               status: "success",
+              policyCheck: { passed: true },
             },
             ...prev,
           ]);
@@ -300,7 +363,7 @@ export function WebMCPProvider() {
               padding: "0 8px",
             }}
           >
-            {(["activity", "tools", "tester"] as const).map((tab) => (
+            {(["activity", "tools", "tester", "policy"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -352,6 +415,19 @@ export function WebMCPProvider() {
                   </>
                 )}
                 {tab === "tester" && <span>▶ Agent Simulator</span>}
+                {tab === "policy" && (
+                  <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span>🛡️ Policy Guard</span>
+                    <span
+                      style={{
+                        width: "6px",
+                        height: "6px",
+                        borderRadius: "50%",
+                        backgroundColor: policyConfig.enabled ? "#10b981" : "#64748b",
+                      }}
+                    />
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -447,6 +523,20 @@ export function WebMCPProvider() {
                               }}
                             />
                             <strong style={{ color: "#38bdf8", fontSize: "12px" }}>{log.toolName}</strong>
+                            {log.policyCheck?.passed === false && (
+                              <span
+                                style={{
+                                  fontSize: "9px",
+                                  backgroundColor: "rgba(239, 68, 68, 0.2)",
+                                  color: "#f87171",
+                                  padding: "1px 5px",
+                                  borderRadius: "4px",
+                                  fontWeight: "bold",
+                                }}
+                              >
+                                🛡️ POLICY BLOCKED
+                              </span>
+                            )}
                           </div>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             <span style={{ color: "#64748b", fontSize: "10px" }}>{log.durationMs} ms</span>
@@ -531,8 +621,15 @@ export function WebMCPProvider() {
             {/* 2. TOOLS TAB */}
             {activeTab === "tools" && (
               <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "4px" }}>
-                  Herramientas W3C WebMCP registradas y expuestas al contexto del navegador:
+                <div style={{ fontSize: "11px", color: "#94a3b8", marginBottom: "4px", display: "flex", justifyContent: "space-between" }}>
+                  <span>Herramientas W3C WebMCP registradas ({tools.length}):</span>
+                  <a
+                    href="/api/webmcp/spec"
+                    target="_blank"
+                    style={{ color: "#38bdf8", textDecoration: "underline", fontSize: "10px" }}
+                  >
+                    ↗ Exportar /api/webmcp/spec (JSON)
+                  </a>
                 </div>
                 {tools.map((t) => (
                   <div
@@ -685,6 +782,137 @@ export function WebMCPProvider() {
                       lineHeight: "1.4",
                     }}
                   />
+                </div>
+              </div>
+            )}
+
+            {/* 4. POLICY GUARD TAB */}
+            {activeTab === "policy" && (
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", height: "100%" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <label style={{ color: "#f8fafc", fontSize: "12px", fontWeight: "bold" }}>
+                      🛡️ Agent Policy Guard
+                    </label>
+                    <button
+                      onClick={() => setPolicyConfig((p: AgentPolicyConfig) => ({ ...p, enabled: !p.enabled }))}
+                      style={{
+                        padding: "3px 8px",
+                        backgroundColor: policyConfig.enabled ? "#10b981" : "#475569",
+                        color: "#ffffff",
+                        border: "none",
+                        borderRadius: "4px",
+                        fontSize: "10px",
+                        fontWeight: "bold",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {policyConfig.enabled ? "HABILITADO" : "DESHABILITADO"}
+                    </button>
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", color: "#94a3b8", fontSize: "10px", marginBottom: "4px" }}>
+                      Presupuesto Máximo por Ejecución (USDC):
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0.001"
+                      value={policyConfig.maxBudgetPerCall}
+                      onChange={(e) =>
+                        setPolicyConfig((p: AgentPolicyConfig) => ({ ...p, maxBudgetPerCall: Number(e.target.value) || 0.01 }))
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "6px 10px",
+                        backgroundColor: "#0b1120",
+                        border: "1px solid #334155",
+                        borderRadius: "4px",
+                        color: "#38bdf8",
+                        fontSize: "11px",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: "block", color: "#94a3b8", fontSize: "10px", marginBottom: "4px" }}>
+                      Activos Stellar Permitidos (Whitelist):
+                    </label>
+                    <input
+                      type="text"
+                      value={policyConfig.allowedAssets.join(", ")}
+                      onChange={(e) =>
+                        setPolicyConfig((p: AgentPolicyConfig) => ({
+                          ...p,
+                          allowedAssets: e.target.value.split(",").map((s) => s.trim().toUpperCase()),
+                        }))
+                      }
+                      style={{
+                        width: "100%",
+                        padding: "6px 10px",
+                        backgroundColor: "#0b1120",
+                        border: "1px solid #334155",
+                        borderRadius: "4px",
+                        color: "#38bdf8",
+                        fontSize: "11px",
+                        fontFamily: "inherit",
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: "#080d1a",
+                    border: "1px solid #1e293b",
+                    borderRadius: "8px",
+                    padding: "12px",
+                    fontSize: "11px",
+                    color: "#94a3b8",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <div>
+                    <strong style={{ color: "#38bdf8", display: "block", marginBottom: "6px" }}>
+                      ¿Cómo protege al agente?
+                    </strong>
+                    <p style={{ margin: "0 0 6px 0", lineHeight: "1.4" }}>
+                      Si un agente de IA alucina o intenta ejecutar una herramienta que supere{" "}
+                      <strong style={{ color: "#f8fafc" }}>{policyConfig.maxBudgetPerCall} USDC</strong> o pague en un activo no permitido, la llamada se bloquea inmediatamente antes de tocar la wallet.
+                    </p>
+                    <p style={{ margin: 0, fontSize: "10px", color: "#64748b" }}>
+                      * Estado actual: {policyConfig.enabled ? "Protegiendo llamadas en tiempo real" : "Sin restricciones de gasto"}.
+                    </p>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setPolicyConfig({
+                        enabled: true,
+                        maxBudgetPerCall: 0.005, // Lower than 0.01 to test rejection
+                        allowedAssets: ["USDC"],
+                        allowedNetworks: ["stellar:testnet"],
+                        requireProofOfDelivery: true,
+                      });
+                      setActiveTab("tester");
+                    }}
+                    style={{
+                      padding: "8px",
+                      backgroundColor: "rgba(239, 68, 68, 0.15)",
+                      border: "1px solid rgba(239, 68, 68, 0.4)",
+                      borderRadius: "4px",
+                      color: "#f87171",
+                      fontSize: "10px",
+                      fontWeight: "bold",
+                      cursor: "pointer",
+                    }}
+                  >
+                    🚨 Configurar Límite Estricto (0.005 USDC) para Probar Rechazo
+                  </button>
                 </div>
               </div>
             )}
