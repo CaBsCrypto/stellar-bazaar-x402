@@ -1,11 +1,19 @@
 # Buyer Execution and Delivery v1
 
-This sprint closes the conceptual gap between discovering a service and receiving
-a usable result. The current implementation is deliberately local and
-non-transactional: it exercises two deterministic in-process fixtures behind a
-contract-shaped HTTP flow. It does not call an external provider or facilitator.
+This workspace now separates two evidence levels: one verified external
+Website Intelligence purchase on Stellar Testnet, and two deterministic local
+contract fixtures. Bazaar displays and exports the provider result but never
+stores a buyer seed, signs an authorization, or repeats a payment from the UI.
 
 ## Current demonstrable flows
+
+- **Website Intelligence:** `POST /api/buyer-execution/website-intelligence`
+  inspects the provider's live public 402 without signing or paying. `GET` returns
+  the redacted, reconciled delivery evidence from the already completed 0.001
+  USDC Testnet purchase: full structured report, canonical result hash,
+  transaction reference and ledger. The buyer UI can copy the result or download
+  the complete evidence envelope. Only `https://example.com` is accepted by this
+  fixture pilot.
 
 The versioned core is `bazaar.execution-request/v1` plus
 `bazaar.delivery-envelope/v1`. The envelope binds service, HTTP method, fixed
@@ -41,10 +49,10 @@ mismatch. All payment fields remain `not-performed`.
 The envelope says `evidence=local-fixture-only`, has no transaction hash or ledger,
 and never claims settlement or independently verified quality.
 
-## Future external Testnet acceptance gate
+## External Testnet acceptance gate
 
-The local contract can only be replaced by an external provider run after all of
-these are independently demonstrated:
+Website Intelligence has independently demonstrated these gates. They remain
+mandatory for every later provider:
 
 - public versioned Service Card and fixed HTTPS endpoint;
 - genuine x402 v2 402 challenge matching network, scheme, asset, amount and payTo;

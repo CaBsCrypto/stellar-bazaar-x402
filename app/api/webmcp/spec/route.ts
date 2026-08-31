@@ -114,7 +114,7 @@ export async function GET() {
       },
       {
         name: "bazaar_execute_service",
-        description: "Execute an AI service or API with real parameters, receiving a structured result and a cryptographic Proof of Delivery envelope.",
+        description: "Run an explicitly local reference fixture, or recover verified historical delivery evidence. Paid external calls require a buyer-controlled signer and are not initiated by this browser tool.",
         inputSchema: {
           type: "object",
           properties: {

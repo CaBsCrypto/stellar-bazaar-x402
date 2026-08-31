@@ -309,10 +309,10 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
     },
   };
 
-  // 8. Execute Service Tool (In-Browser Execution & Proof of Delivery)
+  // 8. Execute local references or recover verified delivery evidence.
   const executeServiceTool: WebMCPToolDefinition<{ serviceId: string; input: Record<string, unknown> }> = {
     name: "bazaar_execute_service",
-    description: "Execute an AI service or API with real parameters, receiving a structured result and a cryptographic Proof of Delivery envelope.",
+    description: "Run an explicitly local reference fixture, or recover verified historical delivery evidence. Paid external calls require a buyer-controlled signer and are never initiated by this browser tool.",
     inputSchema: {
       type: "object",
       properties: {
@@ -326,8 +326,15 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
       const executionTimestamp = new Date().toISOString();
       const inputStr = JSON.stringify(args.input || {});
       const requestId = "req_" + Math.random().toString(36).slice(2, 10);
+
+      if (args.serviceId === "website-intelligence-pilot") {
+        const response = await fetch("/api/buyer-execution/website-intelligence", { cache: "no-store" });
+        if (!response.ok) throw new Error("VERIFIED_DELIVERY_UNAVAILABLE");
+        const evidence = await response.json();
+        return { type: "json", data: { ...evidence, operation: "recover-historical-delivery", newPaymentPerformed: false } };
+      }
       
-      // Deterministic mock / local reference computation
+      // Deterministic local-reference computation. This is never payment proof.
       let executionResult: Record<string, unknown> = {};
       if (args.serviceId === "swap-risk-quote") {
         const pair = String(args.input?.pair || "XLM/USDC");
@@ -360,13 +367,8 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
       }
 
       const resultStr = JSON.stringify(executionResult);
-      // Generate a mock hash for delivery envelope
-      let hashVal = 0;
-      for (let i = 0; i < resultStr.length; i++) {
-        hashVal = ((hashVal << 5) - hashVal) + resultStr.charCodeAt(i);
-        hashVal |= 0;
-      }
-      const resultHash = "sha256_" + Math.abs(hashVal).toString(16).padStart(16, "0");
+      const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(resultStr));
+      const resultHash = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, "0")).join("");
 
       const deliveryEnvelope = {
         version: "bazaar.delivery-envelope/v1",
@@ -375,13 +377,14 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
         serviceName: service?.name || args.serviceId,
         executedAt: executionTimestamp,
         network: "stellar:testnet",
-        paymentStatus: service?.id === "swap-risk-quote" ? "exact_x402_testnet_settled" : "reference_free_tier",
+        evidence: "local-reference-only",
+        paymentStatus: "not-performed",
         cost: service?.payment.amount ? `${service.payment.amount} ${service.payment.asset}` : "0.00 XLM",
         result: executionResult,
         proofOfDelivery: {
           resultHash,
-          integrityStatus: "verified",
-          reconciliation: "matched",
+          integrityStatus: "self-consistent-local-result",
+          reconciliation: "local-bindings-only",
         },
       };
 

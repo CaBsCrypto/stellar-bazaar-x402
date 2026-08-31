@@ -17,7 +17,7 @@ const PRESET_QUERIES: Record<string, string> = {
   bazaar_publish_service:
     '{\n  "serviceCard": {\n    "version": "bazaar.service-card/v0",\n    "id": "custom-agent-v1",\n    "name": "Autonomous Market Analyst",\n    "description": "Deep Soroban DEX market analytics & liquidity alerts",\n    "kind": "http",\n    "url": "https://agent.example.com/analyze",\n    "routeTemplate": "/agent/analyze",\n    "input": [\n      { "name": "pair", "type": "string", "required": true }\n    ],\n    "network": "stellar:testnet",\n    "payment": {\n      "scheme": "exact",\n      "asset": "USDC",\n      "amount": "0.05",\n      "destination": "GBAZAAR_AUTONOMOUS_PROVIDER_TESTNET"\n    },\n    "provider": { "name": "DeepMind Agent Labs" },\n    "tags": ["ai", "dex", "soroban", "analytics"]\n  }\n}',
   bazaar_execute_service:
-    '{\n  "serviceId": "swap-risk-quote",\n  "input": {\n    "pair": "XLM/USDC",\n    "amount": 100\n  }\n}',
+    '{\n  "serviceId": "website-intelligence-pilot",\n  "input": {}\n}',
 };
 
 export function WebMCPProvider() {
