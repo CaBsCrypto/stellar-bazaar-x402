@@ -13,6 +13,8 @@ const PRESET_QUERIES: Record<string, string> = {
   bazaar_get_payment_flow: '{\n  "serviceId": "risk-assessment-v0"\n}',
   bazaar_validate_service_card:
     '{\n  "serviceCard": {\n    "version": "bazaar.service-card/v0",\n    "id": "demo-oracle-v0",\n    "name": "Live Price Oracle",\n    "description": "Real-time Soroban price feeds",\n    "kind": "http",\n    "url": "https://api.example.com/oracle",\n    "routeTemplate": "/oracle/price",\n    "input": [{ "name": "symbol", "type": "string", "required": true }],\n    "network": "stellar:testnet",\n    "payment": {\n      "scheme": "exact",\n      "asset": "USDC",\n      "amount": "0.01",\n      "destination": "GDEMO123"\n    },\n    "provider": { "name": "Oracle Labs" },\n    "tags": ["oracle", "defi"]\n  }\n}',
+  bazaar_publish_service:
+    '{\n  "serviceCard": {\n    "version": "bazaar.service-card/v0",\n    "id": "custom-agent-v1",\n    "name": "Autonomous Market Analyst",\n    "description": "Deep Soroban DEX market analytics & liquidity alerts",\n    "kind": "http",\n    "url": "https://agent.example.com/analyze",\n    "routeTemplate": "/agent/analyze",\n    "input": [\n      { "name": "pair", "type": "string", "required": true }\n    ],\n    "network": "stellar:testnet",\n    "payment": {\n      "scheme": "exact",\n      "asset": "USDC",\n      "amount": "0.05",\n      "destination": "GBAZAAR_AUTONOMOUS_PROVIDER_TESTNET"\n    },\n    "provider": { "name": "DeepMind Agent Labs" },\n    "tags": ["ai", "dex", "soroban", "analytics"]\n  }\n}',
 };
 
 export function WebMCPProvider() {

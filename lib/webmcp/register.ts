@@ -3,6 +3,7 @@ import { services } from "../catalog";
 import { rankServices, validateServiceCard } from "../discovery";
 import { workflowBundles } from "../workflow-bundles";
 import { getPaymentFlow, paymentFlowCapability } from "../payment-flow";
+import { createDynamicServiceCard } from "../dynamic-registry";
 import type { ServiceCard } from "../types";
 
 /**
@@ -232,6 +233,82 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
     },
   };
 
+  // 7. Publish / Upload Service Tool (Agent Provider Self-Listing)
+  const publishServiceTool: WebMCPToolDefinition<{ serviceCard: ServiceCard; providerKey?: string }> = {
+    name: "bazaar_publish_service",
+    description: "Publish and upload a new AI service or tool to the Stellar Bazaar marketplace registry directly from the agent.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        serviceCard: {
+          type: "object",
+          description: "The complete ServiceCard v0 specification object for the new service",
+        },
+        providerKey: {
+          type: "string",
+          description: "Optional provider authentication/signing key for ownership management",
+        },
+      },
+      required: ["serviceCard"],
+    },
+    execute: async (input) => {
+      // 1. Validate Service Card Invariants
+      const validation = validateServiceCard(input.serviceCard);
+      const hasErrors = validation.some((v) => v.status === "fail");
+
+      if (hasErrors) {
+        return {
+          type: "json",
+          isError: true,
+          data: {
+            error: "Service card validation failed. Please check invariants.",
+            validation,
+          },
+        };
+      }
+
+      // 2. Register into Dynamic Service Card Registry
+      const providerKeyHash = input.providerKey ? String(input.providerKey) : "anonymous_provider_" + Math.random().toString(36).slice(2, 8);
+      const creation = await createDynamicServiceCard(input.serviceCard, providerKeyHash);
+
+      if ("exists" in creation && creation.exists) {
+        return {
+          type: "json",
+          isError: true,
+          data: {
+            error: `Service ID '${input.serviceCard.id}' already exists in registry. Use a unique ID or update version.`,
+          },
+        };
+      }
+
+      // 3. Notify page UI about the new service
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("webmcp-ui-action", {
+            detail: {
+              action: "service_published",
+              serviceId: input.serviceCard.id,
+              serviceName: input.serviceCard.name,
+            },
+          })
+        );
+      }
+
+      return {
+        type: "json",
+        data: {
+          status: "published",
+          serviceId: input.serviceCard.id,
+          name: input.serviceCard.name,
+          hash: "entry" in creation ? creation.entry.hash : undefined,
+          registeredAt: "entry" in creation ? creation.entry.registeredAt : new Date().toISOString(),
+          paymentTerms: input.serviceCard.payment,
+          message: `✨ Service '${input.serviceCard.name}' successfully published to Stellar Bazaar!`,
+        },
+      };
+    },
+  };
+
   // Register all tools
   registry.registerTool(listServicesTool as WebMCPToolDefinition);
   registry.registerTool(searchServicesTool as WebMCPToolDefinition);
@@ -239,4 +316,5 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
   registry.registerTool(listWorkflowBundlesTool);
   registry.registerTool(validateServiceCardTool as unknown as WebMCPToolDefinition);
   registry.registerTool(getPaymentFlowTool as WebMCPToolDefinition);
+  registry.registerTool(publishServiceTool as unknown as WebMCPToolDefinition);
 }
