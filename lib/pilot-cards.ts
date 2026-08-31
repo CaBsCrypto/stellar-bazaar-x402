@@ -15,14 +15,18 @@ export type PilotCard = {
     path: string;
   };
   payment: {
-    status: "not-active";
+    status: "not-active" | "active-testnet";
     network: "stellar:testnet";
     scheme: "exact";
     priceProviderOwned: true;
+    atomicAmount?: "10000";
+    displayAmount?: "0.001 USDC";
+    evidence?: { status: "verified-testnet"; transaction: string; ledger: number; checkedAt: string };
+    blocker?: { es: string; en: string };
   };
   indexing: { status: "pilot-indexed"; source: "manual-https-qa" };
   links: { repository: string; deployment: string; health: string; serviceCard?: string };
-  qa: { status: "passed"; checkedAt: "2026-08-22"; sourceCommit: string };
+  qa: { status: "passed"; checkedAt: string; sourceCommit: string };
   input: string[];
   output: string[];
 };
@@ -40,8 +44,8 @@ export const pilotCards: PilotCard[] = [
     },
     tags: { es: ["piloto", "fixture", "auditoría web"], en: ["pilot", "fixture", "website audit"] },
     kind: "http",
-    execution: { model: "sync", status: "fixture-live", endpointVerified: true, method: "POST", path: "/v1/audits" },
-    payment: { status: "not-active", network: "stellar:testnet", scheme: "exact", priceProviderOwned: true },
+    execution: { model: "sync", status: "fixture-live", endpointVerified: true, method: "POST", path: "/v1/x402/audits" },
+    payment: { status: "active-testnet", network: "stellar:testnet", scheme: "exact", priceProviderOwned: true, atomicAmount: "10000", displayAmount: "0.001 USDC", evidence: { status: "verified-testnet", transaction: "bb47c3979c7a0031314685fea118687bcba26c4eddb3bb94ceccb980180514b0", ledger: 4424799, checkedAt: "2026-08-30" } },
     indexing: { status: "pilot-indexed", source: "manual-https-qa" },
     links: {
       repository: "https://github.com/CaBsCrypto/website-intelligence-provider",
@@ -49,7 +53,7 @@ export const pilotCards: PilotCard[] = [
       health: "https://website-intelligence-provider.vercel.app/health",
       serviceCard: "https://website-intelligence-provider.vercel.app/v1/service-card",
     },
-    qa: { status: "passed", checkedAt: "2026-08-22", sourceCommit: "7299d04cce7d7625416940cc0c595b1254e38672" },
+    qa: { status: "passed", checkedAt: "2026-08-30", sourceCommit: "dbcc7312c574a49cd7c6857116dc6c7685149f3f" },
     input: ["url", "language"],
     output: ["summary", "score", "findings", "network"],
   },
@@ -182,6 +186,6 @@ export const pilotCapabilityCard = {
   locales: ["es", "en"],
   transport: { httpDiscovery: true, mcpStreamableHttp: true },
   operations: { discover: true, inspect: true, validate: true, execute: false, pay: false, sign: false, custody: false },
-  serviceStatusValues: ["fixture-live", "discovery-only", "pilot-indexed", "not-active"],
+  serviceStatusValues: ["fixture-live", "discovery-only", "pilot-indexed", "not-active", "active-testnet"],
   policy: { metadataUntrusted: true, arbitraryUrlsRejected: true, providerEndpointRequiredForExecution: true },
 } as const;

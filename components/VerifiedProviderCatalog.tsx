@@ -13,7 +13,7 @@ export function VerifiedProviderCatalog() {
           <span className="kicker">QA HTTPS · 6 PILOTOS EXTERNOS / 6 EXTERNAL PILOTS</span>
           <h2>Servicios visibles, estados honestos.</h2>
         </div>
-        <p>Verified 2026-08-22 · payment inactive</p>
+        <p>Website Intelligence: x402 Testnet verified · others payment inactive</p>
       </div>
       <p className="verified-providers__intro">
         Proveedores independientes con deployment y repositorio públicos verificados. Las tarjetas son metadata no
@@ -26,12 +26,13 @@ export function VerifiedProviderCatalog() {
       <div className="verified-provider-grid">
         {pilotCards.map((card) => {
           const status = statusCopy[card.execution.status];
+          const paymentActive = card.payment.status === "active-testnet";
           return (
             <article className="verified-provider-card" key={card.id}>
               <div className="verified-provider-card__status">
                 <span>PILOT / PILOTO</span>
                 <span>FIXTURE</span>
-                <span>PAYMENT INACTIVE / PAGO INACTIVO</span>
+                <span>{paymentActive ? "X402 TESTNET ACTIVE / ACTIVO" : "PAYMENT INACTIVE / PAGO INACTIVO"}</span>
               </div>
               <p className="eyebrow">
                 {card.category.es} / {card.category.en}
@@ -40,6 +41,13 @@ export function VerifiedProviderCatalog() {
               <h4>{card.title.en}</h4>
               <p>{card.description.es}</p>
               <p lang="en">{card.description.en}</p>
+              {card.payment.blocker ? (
+                <p className="verified-provider-card__payment-blocker">
+                  <strong>Bloqueo de pago / Payment blocker:</strong> {card.payment.blocker.es}
+                  <span lang="en"> {card.payment.blocker.en}</span>
+                </p>
+              ) : null}
+              {paymentActive ? <p className="verified-provider-card__payment-blocker"><strong>Pago verificado / Verified payment:</strong> {card.payment.displayAmount} · exact · Stellar Testnet.<span lang="en"> Result and receipt reconciled; not Mainnet or an audit claim.</span></p> : null}
               <dl>
                 <div>
                   <dt>Estado / Status</dt>
@@ -59,17 +67,20 @@ export function VerifiedProviderCatalog() {
                 </div>
               </dl>
               <div className="verified-provider-card__links">
+                {paymentActive ? <a href="/buyer-execution#website-intelligence">Usar / Use →</a> : null}
                 <a href={card.links.deployment} target="_blank" rel="noreferrer">Deployment ↗</a>
                 <a href={card.links.repository} target="_blank" rel="noreferrer">Repositorio / Repository ↗</a>
+                {paymentActive && card.payment.evidence ? <a href={`https://stellar.expert/explorer/testnet/tx/${card.payment.evidence.transaction}`} target="_blank" rel="noreferrer">Evidencia / Evidence ↗</a> : null}
               </div>
             </article>
           );
         })}
       </div>
       <p className="verified-providers__note">
-        “HTTPS verificado” significa que el contrato público respondió durante QA; no significa x402 activo,
-        procesamiento externo, auditoría, SLA o recomendación. / “HTTPS verified” means the public contract responded
-        during QA; it does not mean active x402, external processing, audit, SLA, or endorsement.
+        “HTTPS verificado” significa que el contrato público respondió durante QA. Solo Website Intelligence declara
+        x402 Testnet activo y evidencia reconciliada; no implica Mainnet, auditoría, SLA o recomendación. / “HTTPS
+        verified” means the public contract responded during QA. Only Website Intelligence declares active x402 Testnet
+        and reconciled evidence; this does not imply Mainnet, an audit, SLA, or endorsement.
       </p>
     </section>
   );

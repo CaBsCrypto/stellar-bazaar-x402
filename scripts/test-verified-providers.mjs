@@ -17,7 +17,8 @@ const pilots = await pilotsResponse.json();
 assert.equal(pilots.ok, true);
 assert.equal(pilots.count, 6);
 assert.equal(pilots.indexStatus, "pilot-indexed-https-qa");
-assert.equal(pilots.paymentActive, false);
+assert.equal(pilots.paymentActive, true);
+assert.deepEqual(pilots.activePaymentIds, ["website-intelligence-pilot"]);
 assert.deepEqual(pilots.results.map((card) => card.id), expectedIds);
 
 for (const card of pilots.results) {
@@ -25,7 +26,7 @@ for (const card of pilots.results) {
   assert.equal(card.execution.endpointVerified, true);
   assert.match(card.links.repository, /^https:\/\/github\.com\/CaBsCrypto\//);
   assert.match(card.links.deployment, /^https:\/\/[a-z0-9-]+\.vercel\.app$/);
-  assert.equal(card.payment.status, "not-active");
+  assert.equal(card.payment.status, card.id === "website-intelligence-pilot" ? "active-testnet" : "not-active");
   assert.equal(card.indexing.status, "pilot-indexed");
   assert.equal(card.qa.status, "passed");
   assert.ok(card.title.es && card.title.en);
@@ -42,6 +43,7 @@ for (const card of pilots.results) {
 }
 assert.match(homepage, /PAYMENT INACTIVE/);
 assert.match(homepage, /PAGO INACTIVO/);
+assert.match(homepage, /X402 TESTNET ACTIVE/);
 
 async function rpc(id, method, params) {
   const response = await fetch(`${BASE_URL}/api/mcp`, {
@@ -88,6 +90,6 @@ console.log(JSON.stringify({
   landing: "bilingual-cards",
   discovery: "pilot-indexed-https-qa",
   mcp: "read-only-discovery",
-  payment: "not-active",
+  payment: "website-intelligence-active-testnet",
   liveHttpsChecks: VERIFY_HTTPS ? httpsResults.length : "skipped-by-default",
 }, null, 2));

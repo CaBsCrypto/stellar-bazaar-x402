@@ -67,6 +67,24 @@ and the scripts listed below.
   address and readiness flags, never the seed. The new
   payer is unfunded until a separately authorized official Testnet setup.
 
+### Reset both Testnet development wallets
+
+When either dedicated development account no longer exists on Horizon, renew the
+pair with the deliberately guarded command below:
+
+```sh
+npm run x402:reset-wallets -- --i-understand-testnet-wallet-reset
+```
+
+It generates fresh payer and seller keypairs, funds XLM for both accounts only
+through Stellar's official Testnet Friendbot, and creates Circle Testnet USDC
+trustlines. It preserves the facilitator URL/API key already held in the ignored
+`.env.x402.local`, replaces both wallet identities there with restrictive file
+permissions, and removes payer/seller seeds from `.env.local`. Output is limited
+to public addresses, transaction hashes, and readiness flags. It does not use a
+USDC faucet and cannot make a payment; the new USDC balances therefore remain
+zero until a separate, explicitly authorized funding step.
+
 ## Demo-pay wiring (local only)
 
 `POST /api/x402/demo-pay` works only when **all three** are in place

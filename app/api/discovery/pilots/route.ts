@@ -7,11 +7,12 @@ export function GET() {
     results: pilotCards,
     count: pilotCards.length,
     indexStatus: "pilot-indexed-https-qa",
-    verifiedAt: "2026-08-22",
-    paymentActive: false,
+    verifiedAt: "2026-08-30",
+    paymentActive: true,
+    activePaymentIds: pilotCards.filter((card) => card.payment.status === "active-testnet").map((card) => card.id),
     notice: {
-      es: "Pilotos externos con deployment HTTPS verificado. Siguen en modo fixture o discovery-only; no tienen pagos x402 activos.",
-      en: "External pilots with verified HTTPS deployments. They remain fixture or discovery-only; x402 payments are not active.",
+      es: "Pilotos externos con deployment HTTPS verificado. Website Intelligence tiene un flujo pagado x402 Testnet verificado; los demás pilotos mantienen pagos inactivos.",
+      en: "External pilots with verified HTTPS deployments. Website Intelligence has one verified x402 Testnet paid flow; all other pilots remain payment inactive.",
     },
   });
 }

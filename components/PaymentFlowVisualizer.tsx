@@ -128,8 +128,8 @@ export function PaymentFlowVisualizer() {
         <article>
           <span>PROVIDER + FACILITATOR</span>
           <h3>Desafía, liquida y entrega — cuando esté activo.</h3>
-          <p>El provider declara términos y entrega. El facilitator verifica/liquida. Las cards piloto mantienen pago inactivo.</p>
-          <p lang="en">The provider declares terms and delivers. The facilitator verifies/settles. Pilot cards keep payment inactive.</p>
+          <p>El provider declara términos y entrega. El facilitator verifica/liquida. Website Intelligence tiene evidencia x402 Testnet; los demás pilotos mantienen pago inactivo.</p>
+          <p lang="en">The provider declares terms and delivers. The facilitator verifies/settles. Website Intelligence has x402 Testnet evidence; other pilot cards keep payment inactive.</p>
         </article>
         <article>
           <span>STELLAR BAZAAR</span>
