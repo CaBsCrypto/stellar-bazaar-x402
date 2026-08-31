@@ -1,0 +1,59 @@
+export interface WebMCPToolProperty {
+  type: "string" | "number" | "boolean" | "object" | "array" | "integer";
+  description?: string;
+  enum?: string[];
+  items?: WebMCPToolProperty;
+  properties?: Record<string, WebMCPToolProperty>;
+  required?: string[];
+  default?: unknown;
+}
+
+export interface WebMCPInputSchema {
+  type: "object";
+  properties?: Record<string, WebMCPToolProperty>;
+  required?: string[];
+  additionalProperties?: boolean;
+}
+
+export interface WebMCPToolExecutionResult {
+  type?: "text" | "json" | "image";
+  text?: string;
+  data?: unknown;
+  isError?: boolean;
+  [key: string]: unknown;
+}
+
+export type WebMCPToolExecuteHandler<T = Record<string, unknown>> = (
+  input: T
+) => Promise<WebMCPToolExecutionResult | unknown> | WebMCPToolExecutionResult | unknown;
+
+export interface WebMCPToolDefinition<T = Record<string, unknown>> {
+  name: string;
+  description: string;
+  inputSchema?: WebMCPInputSchema;
+  execute: WebMCPToolExecuteHandler<T>;
+}
+
+export interface ModelContextRegistry {
+  registerTool: (tool: WebMCPToolDefinition) => void;
+  unregisterTool?: (name: string) => boolean;
+  getTools?: () => WebMCPToolDefinition[];
+  provideContext?: (context: { tools?: WebMCPToolDefinition[] }) => void;
+}
+
+declare global {
+  interface Navigator {
+    modelContext?: ModelContextRegistry;
+  }
+  interface Document {
+    modelContext?: ModelContextRegistry;
+  }
+  interface Window {
+    modelContext?: ModelContextRegistry;
+    __WEBMCP_EMULATOR__?: {
+      tools: Map<string, WebMCPToolDefinition>;
+      executeTool: (name: string, input: Record<string, unknown>) => Promise<unknown>;
+      listTools: () => Array<{ name: string; description: string; inputSchema?: WebMCPInputSchema }>;
+    };
+  }
+}

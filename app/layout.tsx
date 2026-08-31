@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { WebMCPProvider } from "@/components/WebMCPProvider";
 import "./globals.css";
 import "./reference.css";
 import "./product.css";
@@ -18,5 +19,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="es"><body>{children}</body></html>;
+  return (
+    <html lang="es">
+      <body>
+        {children}
+        <WebMCPProvider />
+      </body>
+    </html>
+  );
 }
