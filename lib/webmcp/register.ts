@@ -2,6 +2,7 @@ import { ModelContextRegistry, WebMCPToolDefinition } from "./types";
 import { services } from "../catalog";
 import { rankServices, validateServiceCard } from "../discovery";
 import { workflowBundles } from "../workflow-bundles";
+import { getPaymentFlow, paymentFlowCapability } from "../payment-flow";
 import type { ServiceCard } from "../types";
 
 /**
@@ -128,9 +129,40 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
     },
   };
 
+  // 5. Get Payment Flow & x402 Audit Tool
+  const getPaymentFlowTool: WebMCPToolDefinition<{ serviceId: string }> = {
+    name: "bazaar_get_payment_flow",
+    description: "Inspect the end-to-end x402 micropayment pipeline, on-chain receipts, escrow terms, and settlement stages for a service.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        serviceId: { type: "string", description: "The service ID to audit payment terms for" },
+      },
+      required: ["serviceId"],
+    },
+    execute: async (input) => {
+      const flow = getPaymentFlow(input.serviceId);
+      if (!flow) {
+        return {
+          type: "json",
+          isError: true,
+          data: { error: `Payment flow not found for serviceId: ${input.serviceId}` },
+        };
+      }
+      return {
+        type: "json",
+        data: {
+          capability: paymentFlowCapability,
+          flow,
+        },
+      };
+    },
+  };
+
   // Register all tools
   registry.registerTool(searchServicesTool as WebMCPToolDefinition);
   registry.registerTool(getServiceTool as WebMCPToolDefinition);
   registry.registerTool(listWorkflowBundlesTool);
   registry.registerTool(validateServiceCardTool as unknown as WebMCPToolDefinition);
+  registry.registerTool(getPaymentFlowTool as WebMCPToolDefinition);
 }

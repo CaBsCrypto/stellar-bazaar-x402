@@ -9,6 +9,7 @@ const PRESET_QUERIES: Record<string, string> = {
   bazaar_search_services: '{\n  "query": "finance",\n  "maxPrice": 1.0\n}',
   bazaar_get_service: '{\n  "serviceId": "risk-assessment-v0"\n}',
   bazaar_list_workflow_bundles: "{}",
+  bazaar_get_payment_flow: '{\n  "serviceId": "risk-assessment-v0"\n}',
   bazaar_validate_service_card:
     '{\n  "serviceCard": {\n    "version": "bazaar.service-card/v0",\n    "id": "demo-oracle-v0",\n    "name": "Live Price Oracle",\n    "description": "Real-time Soroban price feeds",\n    "kind": "http",\n    "url": "https://api.example.com/oracle",\n    "routeTemplate": "/oracle/price",\n    "input": [{ "name": "symbol", "type": "string", "required": true }],\n    "network": "stellar:testnet",\n    "payment": {\n      "scheme": "exact",\n      "asset": "USDC",\n      "amount": "0.01",\n      "destination": "GDEMO123"\n    },\n    "provider": { "name": "Oracle Labs" },\n    "tags": ["oracle", "defi"]\n  }\n}',
 };
