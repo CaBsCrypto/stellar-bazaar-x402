@@ -15,7 +15,7 @@ Stellar Bazaar supports both dimensions of the W3C WebMCP specification:
 * **Declarative HTML Forms (`toolname`, `tooldescription`, `toolparamdescription`)**:
   - Catalog search and filter forms are semantically annotated so AI agents can invoke actions declaratively through standard form submissions.
 
-### 2. The 7 Active WebMCP Tools
+### 2. The 8 Active WebMCP Tools
 1. `bazaar_list_services`: List all active AI agent services with network, pricing, execution mode and category tags.
 2. `bazaar_search_services`: Semantic search & deterministic ranking of paid/free AI services by query, tags, or max budget in USDC/XLM.
 3. `bazaar_get_service`: Technical specification, endpoint routes, input schemas, and price breakdowns.
@@ -23,14 +23,16 @@ Stellar Bazaar supports both dimensions of the W3C WebMCP specification:
 5. `bazaar_validate_service_card`: Validation of custom provider Service Cards against strict schema invariants.
 6. `bazaar_get_payment_flow`: Full inspection of the HTTP 402 payment challenge, escrow terms, and on-chain receipt verification on Stellar Testnet.
 7. `bazaar_publish_service`: Autonomous provider upload & self-listing of new AI services directly into the dynamic registry.
+8. `bazaar_execute_service`: In-browser execution with real parameters and cryptographic Proof of Delivery envelope (`bazaar.delivery-envelope/v1`).
 
 ---
 
-## 💻 Cyberpunk HUD Terminal (3:1 Widescreen) & Live UI Reactivity
+## 💻 Cyberpunk HUD Terminal (3:1 Widescreen), Live UI Reactivity & Policy Guard
 To provide transparency for both human users and AI judges, the UI includes:
 * **Live Feed (⚡):** Real-time activity log showing inputs, responses, and latency in milliseconds for every tool call.
-* **Tool Registry (🛠️):** Visual inspection of all exposed JSON Schemas.
+* **Tool Registry (🛠️):** Visual inspection of all exposed JSON Schemas with 1-click `/api/webmcp/spec` export.
 * **Agent Simulator (▶):** Interactive 2-column playground with pre-configured JSON presets to test live tool execution directly inside the browser.
+* **Agent Policy Guard (🛡️):** Real-time budget limit interceptor (e.g. max 0.10 USDC per call) and asset whitelist to prevent agent overruns.
 * **Reactive DOM Highlighting:** When an agent inspects a service or searches the marketplace, the UI displays a live toast indicator and glows on the target service card.
 
 ---
