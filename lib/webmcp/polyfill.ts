@@ -116,18 +116,50 @@ export function initWebMCP(): ModelContextRegistry {
     return new WebMCPPolyfill();
   }
 
+  // Always create emulator instance to back UI simulation and logging
+  const polyfill = new WebMCPPolyfill();
+
   if (navigator.modelContext && typeof navigator.modelContext.registerTool === "function") {
-    console.info("[WebMCP] Using native navigator.modelContext");
-    return navigator.modelContext;
+    console.info("[WebMCP] Using native navigator.modelContext with emulator instrumentation");
+    const nativeContext = navigator.modelContext;
+    return {
+      registerTool: (tool: WebMCPToolDefinition) => {
+        polyfill.registerTool(tool);
+        nativeContext.registerTool(tool);
+      },
+      unregisterTool: (name: string) => {
+        polyfill.unregisterTool(name);
+        return nativeContext.unregisterTool ? nativeContext.unregisterTool(name) : true;
+      },
+      getTools: () => polyfill.getTools(),
+      provideContext: (ctx) => {
+        polyfill.provideContext(ctx);
+        if (nativeContext.provideContext) nativeContext.provideContext(ctx);
+      },
+    };
   }
 
   if (document.modelContext && typeof document.modelContext.registerTool === "function") {
-    console.info("[WebMCP] Using native document.modelContext");
-    return document.modelContext;
+    console.info("[WebMCP] Using native document.modelContext with emulator instrumentation");
+    const docContext = document.modelContext;
+    return {
+      registerTool: (tool: WebMCPToolDefinition) => {
+        polyfill.registerTool(tool);
+        docContext.registerTool(tool);
+      },
+      unregisterTool: (name: string) => {
+        polyfill.unregisterTool(name);
+        return docContext.unregisterTool ? docContext.unregisterTool(name) : true;
+      },
+      getTools: () => polyfill.getTools(),
+      provideContext: (ctx) => {
+        polyfill.provideContext(ctx);
+        if (docContext.provideContext) docContext.provideContext(ctx);
+      },
+    };
   }
 
   if (!window.modelContext) {
-    const polyfill = new WebMCPPolyfill();
     window.modelContext = polyfill;
     try {
       Object.defineProperty(navigator, "modelContext", {

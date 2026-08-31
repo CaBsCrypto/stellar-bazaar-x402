@@ -26,6 +26,7 @@ export function WebMCPProvider() {
   const [copiedLogId, setCopiedLogId] = useState<string | null>(null);
   const [activityFilter, setActivityFilter] = useState<string>("");
   const logContainerRef = useRef<HTMLDivElement>(null);
+  const registryRef = useRef<ModelContextRegistry | null>(null);
 
   useEffect(() => {
     try {
@@ -36,6 +37,7 @@ export function WebMCPProvider() {
       setIsNative(nativeDetected);
 
       const registry: ModelContextRegistry = initWebMCP();
+      registryRef.current = registry;
       registerBazaarTools(registry);
 
       const toolList = registry.getTools?.() || [];
@@ -75,10 +77,41 @@ export function WebMCPProvider() {
       }
       if (window.__WEBMCP_EMULATOR__) {
         await window.__WEBMCP_EMULATOR__.executeTool(selectedTool, parsed);
+      } else if (registryRef.current) {
+        const tool = registryRef.current.getTools?.()?.find((t) => t.name === selectedTool);
+        if (tool) {
+          const res = await tool.execute(parsed);
+          setLogs((prev) => [
+            {
+              id: "act_" + Math.random().toString(36).slice(2, 9),
+              timestamp: new Date().toISOString(),
+              toolName: selectedTool,
+              input: parsed,
+              output: res,
+              durationMs: 12,
+              status: "success",
+            },
+            ...prev,
+          ]);
+        }
       }
       setActiveTab("activity");
     } catch (err) {
       console.error("Execution error:", err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setLogs((prev) => [
+        {
+          id: "act_" + Math.random().toString(36).slice(2, 9),
+          timestamp: new Date().toISOString(),
+          toolName: selectedTool,
+          input: {},
+          durationMs: 0,
+          status: "error",
+          error: errorMessage,
+        },
+        ...prev,
+      ]);
+      setActiveTab("activity");
     } finally {
       setIsExecuting(false);
     }
