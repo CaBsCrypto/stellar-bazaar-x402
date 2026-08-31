@@ -18,9 +18,33 @@ const providerSteps=[
 ];
 
 export default function Home(){return <main>
-  <div className="mock-banner">PAGOS x402 / STELLAR EN VIVO · TESTNET · 5 SETTLEMENTS ON-CHAIN DE 0.001 USDC (LEDGERS 4212660 · 4214612 · 4214711 · 4216913 · 4220649) · <Link href="/resources/swap-risk-quote">Swap Risk Quote</Link> · <Link href="/docs">Docs / Agent Kit ↗</Link></div>
+  <div className="mock-banner">
+    ⚡ <strong>W3C WebMCP AGENT-READY</strong> · 7 TOOLS IN-BROWSER · PAGOS x402 / STELLAR EN VIVO · TESTNET · 5 SETTLEMENTS ON-CHAIN DE 0.001 USDC · <Link href="/resources/swap-risk-quote">Swap Risk Quote</Link> · <Link href="/docs">Docs / Agent Kit ↗</Link>
+  </div>
   <nav className="nav shell"><Link href="/" className="brand"><span>✦</span> Stellar Bazaar <sup>x402</sup></Link><div className="nav-links"><a href="#producto">Qué es</a><a href="#catalogo">Catálogo</a><a href="#proveedores-verificados">Pilotos HTTPS</a><Link href="/buyer-execution">Usar un servicio</Link><Link href="/payment-flow">Modelo x402</Link><a href="#workflows">Workflows</a><Link href="/onboarding">Onboarding</Link><Link href="/publish">Publica tu servicio</Link><Link href="/docs">Docs</Link><a href="https://github.com/CaBsCrypto/stellar-bazaar-x402">GitHub ↗</a></div><span className="network-pill"><i/> Testnet en vivo</span></nav>
-  <header className="hero shell"><div className="hero-copy"><span className="kicker">DISCOVERY LAYER FOR PAID SERVICES ON STELLAR</span><h1>Encuentra el servicio.<br/><em>Entiende antes de pagar.</em></h1><p>Un catálogo Stellar-native de APIs HTTP y herramientas MCP pagadas. Discovery read-only, Publisher Kit local y evidencia x402 exact en Stellar Testnet.</p><div className="hero-actions"><Link className="primary" href="/resources/swap-risk-quote">Probar Swap Risk Quote →</Link><a className="ghost" href="#catalogo">Explorar catálogo</a></div><div className="trust-line"><span>Servicios, no perfiles</span><span>Metadata visible y no confiable</span><span>Sin custodia ni firma</span></div></div><div className="orbital" aria-label="Flujo conceptual de discovery"><div className="orbit orbit-one"><span>HTTP</span></div><div className="orbit orbit-two"><span>MCP</span></div><div className="core"><small>DISCOVER</small><strong>✦</strong><span>read-only</span></div><div className="floating quote">HOY<br/><b>REFERENCIA GRATIS ✓</b></div><div className="floating settle">EVIDENCIA<br/><b>TESTNET x402 ✓</b></div></div></header>
+  <header className="hero shell">
+    <div className="hero-copy">
+      <span className="kicker">W3C WEBMCP & STELLAR AGENTIC DISCOVERY LAYER</span>
+      <h1>Encuentra el servicio.<br/><em>Entiende antes de pagar.</em></h1>
+      <p>El primer catálogo de APIs y herramientas de IA nativo para agentes con <strong>W3C WebMCP</strong> y pagos autónomos <strong>x402 sobre Stellar Testnet</strong>.</p>
+      <div className="hero-actions">
+        <Link className="primary" href="/resources/swap-risk-quote">Probar Swap Risk Quote →</Link>
+        <a className="ghost" href="#catalogo">Explorar catálogo</a>
+      </div>
+      <div className="trust-line">
+        <span>🤖 7 Tools WebMCP</span>
+        <span>⚡ Pagos x402 USDC/XLM</span>
+        <span>🛡️ Sin custodia ni firma</span>
+      </div>
+    </div>
+    <div className="orbital" aria-label="Flujo conceptual de discovery">
+      <div className="orbit orbit-one"><span>WebMCP</span></div>
+      <div className="orbit orbit-two"><span>x402</span></div>
+      <div className="core"><small>AGENTIC</small><strong>✦</strong><span>WebMCP</span></div>
+      <div className="floating quote">W3C STANDARD<br/><b>7 TOOLS ACTIVAS ✓</b></div>
+      <div className="floating settle">EVIDENCIA<br/><b>STELLAR x402 ✓</b></div>
+    </div>
+  </header>
 
   <section className="definition shell" id="producto"><div><span className="kicker">UNA FRONTERA CLARA</span><h2>Bazaar indexa servicios pagados.</h2><p>Ayuda a buyers y agentes a encontrar rutas invocables, comparar metadata relevante y llegar al proveedor correcto.</p><Link href="/resources/swap-risk-quote" className="text-link">Ver un recurso funcionando →</Link></div><div className="definition-grid"><article className="yes"><span>SÍ ES</span><strong>Discovery + catálogo</strong><p>Service cards, búsqueda, filtros, contratos de entrada/salida y requisitos de pago declarados.</p></article><article className="no"><span>NO ES</span><strong>Wallet ni marketplace de perfiles</strong><p>No custodia, no firma, no escrow, no Passport y no contrata personas o agentes.</p></article></div></section>
 
