@@ -39,6 +39,7 @@
     "test:website-intelligence:readiness": "node scripts/test-website-intelligence-readiness.mjs",
     "x402:website-intelligence:preflight": "node scripts/website-intelligence-testnet-one-shot.mjs",
     "x402:website-intelligence:e2e-local": "node scripts/website-intelligence-testnet-one-shot.mjs",
+    "test:webmcp:suite": "node scripts/test-webmcp-suite.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {
