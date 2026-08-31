@@ -39,14 +39,16 @@ To provide transparency for both human users and AI judges, the UI includes:
 
 ## 🎬 3-Minute Video Demo Script (YouTube)
 
-* **0:00 - 0:40 (The Problem):**
-  > *"AI agents navigating the web today rely on brittle screen scraping or simulated clicks. Furthermore, there is no standardized way for agents to discover paid tools and pay for services programmatically."*
-* **0:40 - 1:30 (Discovery & WebMCP Terminal):**
-  > *"Enter Stellar Bazaar. When an agent opens this page, 7 W3C WebMCP tools are instantly registered. Let's open the 3:1 WebMCP Terminal to see `bazaar_list_services` and `bazaar_search_services` in action with live reactive highlighting."*
-* **1:30 - 2:20 (x402 Micropayments & Self-Publishing):**
-  > *"Next, the agent evaluates payment terms with `bazaar_get_payment_flow` for on-chain Stellar Testnet verification (USDC/XLM). Then, an AI agent can self-publish its own service to the marketplace with `bazaar_publish_service`."*
-* **2:20 - 3:00 (Impact & Conclusion):**
-  > *"By combining WebMCP with x402 open payment rails, Stellar Bazaar turns websites into transparent, monetizable infrastructure for autonomous agents."*
+* **0:00 - 0:30 (The Problem & The Vision):**
+  > *"AI agents navigating the web today rely on brittle screen scraping or simulated clicks, with no standard way to pay for paid APIs programmatically. Stellar Bazaar solves this by combining the W3C WebMCP standard with Stellar Testnet x402 micropayments."*
+* **0:30 - 1:15 (WebMCP 3:1 HUD Terminal & Live UI Reactivity):**
+  > *"When an agent visits the page, 8 native WebMCP tools are instantly registered in `navigator.modelContext`. Opening the 3:1 Terminal, we can see `bazaar_list_services` and `bazaar_search_services`. Notice how the page UI reacts in real time with smooth scrolling and cyan glowing highlights as the agent queries the catalog."*
+* **1:15 - 2:00 (Execution with Proof of Delivery & x402 Audit):**
+  > *"The agent audits the HTTP 402 payment challenge via `bazaar_get_payment_flow` on Stellar Testnet (USDC/XLM). Then, executing `bazaar_execute_service` delivers real computational output and a cryptographic Proof of Delivery envelope (`bazaar.delivery-envelope/v1`)."*
+* **2:00 - 2:40 (Agent Policy Guard & Self-Publishing):**
+  > *"Safety is paramount: with the built-in Agent Policy Guard, users can enforce strict budget limits (e.g. max 0.10 USDC per call). If an agent attempts an unauthorized call, it is immediately blocked. Finally, agents can self-publish new AI tools to the ecosystem with `bazaar_publish_service`."*
+* **2:40 - 3:00 (Conclusion & Spec Export):**
+  > *"With `/api/webmcp/spec` export for Claude and Cursor, Stellar Bazaar turns the open web into a transparent, monetizable infrastructure for the autonomous agent economy."*
 
 ---
 
