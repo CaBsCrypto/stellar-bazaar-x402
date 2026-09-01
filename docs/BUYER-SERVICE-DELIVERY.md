@@ -18,7 +18,7 @@ Bazaar descubre el servicio y muestra sus términos. El comprador prepara la ent
 
 ## Límite actual
 
-Una compra nueva todavía se ejecuta desde el cliente técnico controlado por el comprador, no desde el navegador. La vista tampoco recupera una entrega privada usando solo un `requestId`: el proveedor necesita un mecanismo durable y autorizado con un identificador opaco o credencial de recuperación buyer-owned. Nunca se debe usar un hash de transacción público como autorización para leer un resultado.
+Una compra nueva todavía se ejecuta desde el cliente técnico controlado por el comprador, no desde el navegador. La vista prepara una recuperación privada, pero no la ejecuta ni firma: genera una capability buyer-owned y envía al servidor de Bazaar únicamente su prueba SHA-256. Nunca se debe usar un hash de transacción público como autorización para leer un resultado.
 
 ## Gate para declarar “comprar y usar” reutilizable
 
@@ -31,6 +31,19 @@ Una compra nueva todavía se ejecuta desde el cliente técnico controlado por el
 
 Commission split y escrow no forman parte de este sprint. El split no resuelve la entrega; escrow solo se evaluará para trabajos diferidos después de cerrar este contrato.
 
+## Handoff y recuperación preparados localmente
+
+Al inspeccionar una compra nueva, el navegador genera:
+
+1. Un `requestId` aleatorio y una capability de recuperación de 256 bits.
+2. Un `recoveryProof = SHA-256(capability)` que sí puede viajar al proveedor.
+3. Un paquete público `bazaar.delivery-recovery-handoff/v1` para el cliente pagador. Incluye ficha, ruta, `inputHash`, idempotencia, `requestId` y proof; nunca incluye la capability.
+4. Una cápsula privada `bazaar.delivery-recovery-capsule/v1` que el comprador descarga explícitamente y guarda como una contraseña. Tras una entrega pagada, el cliente comprador añade a esa cápsula el `recoveryId` devuelto por el proveedor. Bazaar no la envía a su API, no usa `localStorage`, no la pone en URLs y no puede restaurarla.
+
+El `402` solo se considera preparado para recuperación cuando la extensión firmable del proveedor devuelve exactamente el mismo `requestId` y `recoveryProof`. Si falta o cambia cualquiera, el flujo falla cerrado antes de autorizar un pago.
+
+El endpoint durable del proveedor y su PR de recuperación deben desplegarse antes de declarar disponible esta recuperación en público. Esta rama solo integra y prueba el contrato con mocks; no ejecuta un pago ni afirma que la producción ya lo soporte.
+
 ## Implementación local en esta rama
 
-`bazaar.paid-delivery-envelope/v1` ya normaliza ficha, solicitud, settlement, resultado, recuperación y límites. El cliente técnico de Website Intelligence conserva ahora el resultado y el recibo dentro de ese sobre en vez de descartarlos. La suite local muta cada binding crítico y falla cerrado. La recuperación real sigue desactivada hasta que el proveedor implemente almacenamiento durable y una capability buyer-owned; el sobre declara por ahora `recovery.available=false`.
+`bazaar.paid-delivery-envelope/v1` ya normaliza ficha, solicitud, settlement, resultado, recuperación y límites. El cliente técnico de Website Intelligence conserva ahora el resultado y el recibo dentro de ese sobre en vez de descartarlos. La suite local muta cada binding crítico y falla cerrado. El proveedor durable está preparado en una PR separada, pero la recuperación pública sigue desactivada hasta que ambas ramas sean revisadas, fusionadas y desplegadas en el orden correcto.

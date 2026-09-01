@@ -8,6 +8,7 @@ import {
 } from "@/lib/website-intelligence-consumption";
 import { canonicalServiceCardHash } from "@/lib/website-intelligence-readiness";
 import { requestWebsiteIntelligencePaymentChallenge } from "@/lib/website-intelligence-one-shot";
+import { validateDeliveryRecoveryIntent } from "@/lib/delivery-recovery-handoff";
 
 export const dynamic = "force-dynamic";
 
@@ -22,12 +23,13 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const body = await request.json() as { url?: unknown; language?: unknown };
+    const body = await request.json() as { url?: unknown; language?: unknown; requestId?: unknown; recoveryProof?: unknown };
     const url = typeof body.url === "string" ? body.url : "";
     const language = body.language === "en" ? "en" : "es";
     if (url !== "https://example.com") {
       return NextResponse.json({ error: { code: "FIXTURE_URL_NOT_ALLOWED", message: "Este piloto público solo acepta https://example.com." } }, { status: 400, headers: noStore });
     }
+    const recoveryIntent = validateDeliveryRecoveryIntent({ requestId: body.requestId, proof: body.recoveryProof });
 
     const cardResponse = await fetch(WEBSITE_INTELLIGENCE_PUBLIC_CARD_URL, { cache: "no-store", redirect: "error", signal: AbortSignal.timeout(8_000) });
     if (!cardResponse.ok) throw new Error("PUBLIC_SERVICE_CARD_UNAVAILABLE");
@@ -46,6 +48,7 @@ export async function POST(request: Request) {
       expectedPayTo: String(card.payment.payTo),
       approvedCardHash,
       publicResourceUrl: WEBSITE_INTELLIGENCE_PUBLIC_ENDPOINT,
+      recoveryIntent,
     });
 
     return NextResponse.json({
@@ -55,6 +58,7 @@ export async function POST(request: Request) {
       signerEnabled: false,
       service: { id: card.id, version: card.version, endpoint: WEBSITE_INTELLIGENCE_PUBLIC_ENDPOINT },
       request: { url, language, inputHash: challenge.inputHash, idempotencyKey },
+      recovery: { requested: true, requestId: recoveryIntent.requestId, proofCommitted: true, tokenReceivedByBazaar: false, recoveryPath: "/v1/x402/audits/recover" },
       payment: {
         network: challenge.accepted.network,
         scheme: challenge.accepted.scheme,
@@ -70,6 +74,7 @@ export async function POST(request: Request) {
     }, { status: 402, headers: noStore });
   } catch (error) {
     const code = error instanceof Error ? error.message : "PAYMENT_INSPECTION_FAILED";
-    return NextResponse.json({ error: { code } }, { status: 502, headers: noStore });
+    const status = code.startsWith("INVALID_RECOVERY_") ? 400 : 502;
+    return NextResponse.json({ error: { code } }, { status, headers: noStore });
   }
 }
