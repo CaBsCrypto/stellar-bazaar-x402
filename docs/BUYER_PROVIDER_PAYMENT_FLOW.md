@@ -14,7 +14,7 @@
 | Delivery | Provider | Result only after its payment policy succeeds | No provider invocation |
 | Receipt | Buyer | Reconcile network, asset, amount, destination and transaction evidence | Describes required checks; does not certify settlement |
 
-The Swap Risk Quote card is labelled as **historical Stellar Testnet evidence**. Moving through the viewer does not replay that transaction. Website Intelligence now has one verified public x402 Testnet payment plus reconciled delivery evidence; the other external pilot cards remain payment inactive.
+The Swap Risk Quote card is labelled as **historical Stellar Testnet evidence**. Moving through the viewer does not replay that transaction. Website Intelligence now has two verified public x402 Testnet payments with reconciled delivery evidence, demonstrating repeatability; the other external pilot cards remain payment inactive.
 
 ## Non-custodial boundary
 
