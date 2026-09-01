@@ -15,13 +15,13 @@ export type PaidDeliveryEnvelopeV1 = {
   request: { requestId: string; method: "POST"; route: string; inputHashAlgorithm: "sha256-canonical-json-v1"; inputHash: string; idempotencyKey: string };
   payment: { status: "settled"; x402Version: 2; scheme: "exact"; network: "stellar:testnet"; asset: string; atomicAmount: string; payTo: string; transactionHash: string; ledger: number };
   delivery: { mode: "sync"; status: "result-returned"; schemaVersion: string; contentType: "application/json"; result: unknown; resultHash: { algorithm: "sha256"; scope: "canonical-result"; value: string } };
-  recovery: { available: boolean; recoveryId: string | null; providerOrigin: string; status: "not-requested" | "available" | "recovered" | "expired" };
+  recovery: { available: boolean; recoveryId: string | null; providerOrigin: string; expiresAt: string | null; status: "not-requested" | "available" | "recovered" | "expired" };
   reconciliation: { status: "matched" | "rejected"; checks: Record<string, boolean> };
   boundaries: { qualityCertifiedByBazaar: false; buyerSignerStoredByBazaar: false; recoveryCredentialStoredByBazaar: false };
 };
 
-export function createPaidDeliveryEnvelope(input: { policy: PaidDeliveryPolicy; transactionHash: string; ledger: number; result: unknown; resultHash: string }): PaidDeliveryEnvelopeV1 {
-  const requestId = canonicalInputHash({ serviceId: input.policy.serviceId, cardHash: input.policy.cardHash, inputHash: input.policy.inputHash, idempotencyKey: input.policy.idempotencyKey }).slice(0, 32);
+export function createPaidDeliveryEnvelope(input: { policy: PaidDeliveryPolicy; transactionHash: string; ledger: number; result: unknown; resultHash: string; recovery?: { requestId: string; recoveryId: string; expiresAt: string } }): PaidDeliveryEnvelopeV1 {
+  const requestId = input.recovery?.requestId ?? canonicalInputHash({ serviceId: input.policy.serviceId, cardHash: input.policy.cardHash, inputHash: input.policy.inputHash, idempotencyKey: input.policy.idempotencyKey }).slice(0, 32);
   const providerOrigin = new URL(input.policy.cardUrl).origin;
   const envelope: PaidDeliveryEnvelopeV1 = {
     version: PAID_DELIVERY_ENVELOPE_VERSION,
@@ -29,7 +29,9 @@ export function createPaidDeliveryEnvelope(input: { policy: PaidDeliveryPolicy; 
     request: { requestId, method: input.policy.method, route: input.policy.route, inputHashAlgorithm: "sha256-canonical-json-v1", inputHash: input.policy.inputHash, idempotencyKey: input.policy.idempotencyKey },
     payment: { status: "settled", x402Version: 2, scheme: input.policy.scheme, network: input.policy.network, asset: input.policy.asset, atomicAmount: input.policy.atomicAmount, payTo: input.policy.payTo, transactionHash: input.transactionHash, ledger: input.ledger },
     delivery: { mode: "sync", status: "result-returned", schemaVersion: "1.0", contentType: "application/json", result: input.result, resultHash: { algorithm: "sha256", scope: "canonical-result", value: input.resultHash } },
-    recovery: { available: false, recoveryId: null, providerOrigin, status: "not-requested" },
+    recovery: input.recovery
+      ? { available: true, recoveryId: input.recovery.recoveryId, providerOrigin, expiresAt: input.recovery.expiresAt, status: "available" }
+      : { available: false, recoveryId: null, providerOrigin, expiresAt: null, status: "not-requested" },
     reconciliation: { status: "rejected", checks: {} },
     boundaries: { qualityCertifiedByBazaar: false, buyerSignerStoredByBazaar: false, recoveryCredentialStoredByBazaar: false },
   };
@@ -51,7 +53,9 @@ export function reconcilePaidDeliveryEnvelope(value: unknown, policy: PaidDelive
     checks.delivery = envelope.delivery.mode === "sync" && envelope.delivery.status === "result-returned" && envelope.delivery.contentType === "application/json";
     checks.result = HEX_64.test(envelope.delivery.resultHash.value) && canonicalInputHash(envelope.delivery.result) === envelope.delivery.resultHash.value;
     checks.boundaries = envelope.boundaries.qualityCertifiedByBazaar === false && envelope.boundaries.buyerSignerStoredByBazaar === false && envelope.boundaries.recoveryCredentialStoredByBazaar === false;
-    checks.recovery = envelope.recovery.providerOrigin === new URL(policy.cardUrl).origin && envelope.recovery.available === false && envelope.recovery.recoveryId === null && envelope.recovery.status === "not-requested";
+    const recoveryNotRequested = envelope.recovery.available === false && envelope.recovery.recoveryId === null && envelope.recovery.expiresAt === null && envelope.recovery.status === "not-requested";
+    const recoveryAvailable = envelope.recovery.available === true && HEX_64.test(envelope.recovery.recoveryId ?? "") && envelope.recovery.status === "available" && typeof envelope.recovery.expiresAt === "string" && Number.isFinite(Date.parse(envelope.recovery.expiresAt));
+    checks.recovery = envelope.recovery.providerOrigin === new URL(policy.cardUrl).origin && (recoveryNotRequested || recoveryAvailable) && (!recoveryAvailable || /^[0-9a-f]{32}$/.test(envelope.request.requestId));
   } catch {
     checks.shape = false;
   }

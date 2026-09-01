@@ -110,6 +110,7 @@ export async function executeWebsiteIntelligenceOneShot(input: {
   acknowledgementOne: boolean;
   acknowledgementTwo: boolean;
   balanceAtomic: string;
+  recoveryIntent?: DeliveryRecoveryIntent;
   createPaidFetch: (beforePayment: () => void) => ProviderPreflightFetch;
 }) {
   const endpointUrl = new URL(input.endpoint);
@@ -118,7 +119,8 @@ export async function executeWebsiteIntelligenceOneShot(input: {
   if (!/^\d+$/.test(input.balanceAtomic) || BigInt(input.balanceAtomic) < BigInt(WEBSITE_INTELLIGENCE_ATOMIC_AMOUNT)) throw new Error("INSUFFICIENT_PREFLIGHT_BALANCE");
   let attempts = 0;
   const beforePayment = () => { attempts += 1; if (attempts > 1) throw new Error("ONE_PAYMENT_ATTEMPT_LIMIT_EXCEEDED"); };
-  const response = await input.createPaidFetch(beforePayment)(input.endpoint, { method: "POST", headers: { accept: "application/json", "content-type": "application/json", "idempotency-key": input.idempotencyKey, "x-bazaar-input-hash": input.expected.inputHash, "x-bazaar-input-hash-algorithm": WEBSITE_INTELLIGENCE_INPUT_HASH_ALGORITHM }, body: canonicalJSONStringify(input.requestBody), redirect: "error", signal: AbortSignal.timeout(10_000) });
+  const recoveryIntent = input.recoveryIntent ? validateDeliveryRecoveryIntent(input.recoveryIntent) : null;
+  const response = await input.createPaidFetch(beforePayment)(input.endpoint, { method: "POST", headers: { accept: "application/json", "content-type": "application/json", "idempotency-key": input.idempotencyKey, "x-bazaar-input-hash": input.expected.inputHash, "x-bazaar-input-hash-algorithm": WEBSITE_INTELLIGENCE_INPUT_HASH_ALGORITHM, ...(recoveryIntent ? { "x-bazaar-request-id": recoveryIntent.requestId, "x-bazaar-recovery-proof": recoveryIntent.proof } : {}) }, body: canonicalJSONStringify(input.requestBody), redirect: "error", signal: AbortSignal.timeout(10_000) });
   if (attempts !== 1) throw new Error("EXPECTED_EXACTLY_ONE_PAYMENT_ATTEMPT");
   if (!response.ok) throw new Error(`PAID_REQUEST_FAILED_${response.status}`);
   const encodedReceipt = response.headers.get("payment-response");
@@ -131,9 +133,17 @@ export async function executeWebsiteIntelligenceOneShot(input: {
   if (receipt.transactionHash !== settlement.transaction) throw new Error("RECEIPT_TRANSACTION_MISMATCH");
   const reconciliation = reconcileWebsiteIntelligenceSettlement(receipt, input.expected, body.result, body.resultHash);
   if (!reconciliation.reconciled) throw new Error("RECEIPT_OR_RESULT_RECONCILIATION_FAILED");
+  let recovery: { requestId: string; recoveryId: string; expiresAt: string } | undefined;
+  if (recoveryIntent) {
+    const delivered = body.recovery as Record<string, unknown> | undefined;
+    const expectedRecoveryId = canonicalInputHash({ requestId: recoveryIntent.requestId, proof: recoveryIntent.proof, inputHash: input.expected.inputHash, cardHash: input.expected.cardHash });
+    const expiry = typeof delivered?.expiresAt === "string" ? Date.parse(delivered.expiresAt) : NaN;
+    if (delivered?.available !== true || delivered.requestId !== recoveryIntent.requestId || delivered.recoveryId !== expectedRecoveryId || !Number.isFinite(expiry) || expiry <= Date.now()) throw new Error("INVALID_RECOVERY_DELIVERY_BINDING");
+    recovery = { requestId: recoveryIntent.requestId, recoveryId: expectedRecoveryId, expiresAt: delivered.expiresAt as string };
+  }
   const envelope = createPaidDeliveryEnvelope({
     policy: { serviceId: "website-intelligence", serviceVersion: "1.0.0", cardUrl: new URL("/v1/service-card", endpointUrl.origin).toString(), cardHash: input.expected.cardHash, method: "POST", route: input.expected.route, inputHash: input.expected.inputHash, idempotencyKey: input.idempotencyKey, scheme: "exact", network: "stellar:testnet", asset: input.expected.asset, atomicAmount: input.expected.amount, payTo: input.expected.payTo },
-    transactionHash: settlement.transaction, ledger: receipt.ledger, result: body.result, resultHash: reconciliation.resultHash,
+    transactionHash: settlement.transaction, ledger: receipt.ledger, result: body.result, resultHash: reconciliation.resultHash, recovery,
   });
   return { status: response.status, attempts, transactionHash: settlement.transaction, ledger: receipt.ledger, resultHash: reconciliation.resultHash, result: body.result, receipt, envelope, reconciled: true };
 }

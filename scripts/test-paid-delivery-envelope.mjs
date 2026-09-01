@@ -8,6 +8,8 @@ const envelope = createPaidDeliveryEnvelope({ policy, transactionHash: "c".repea
 assert.equal(envelope.reconciliation.status, "matched");
 assert.equal(reconcilePaidDeliveryEnvelope(envelope, policy).ok, true);
 assert.equal("credential" in envelope.recovery, false);
+const recoveryEnvelope = createPaidDeliveryEnvelope({ policy, transactionHash: "c".repeat(64), ledger: 123, result, resultHash: canonicalInputHash(result), recovery: { requestId: "f".repeat(32), recoveryId: "e".repeat(64), expiresAt: "2099-01-01T00:00:00.000Z" } });
+assert.equal(recoveryEnvelope.request.requestId, "f".repeat(32)); assert.equal(recoveryEnvelope.recovery.available, true); assert.equal(recoveryEnvelope.recovery.recoveryId, "e".repeat(64)); assert.equal(reconcilePaidDeliveryEnvelope(recoveryEnvelope, policy).ok, true);
 for (const mutate of [
   (x) => { x.service.cardHash = "d".repeat(64); }, (x) => { x.request.inputHash = "e".repeat(64); },
   (x) => { x.payment.network = "stellar:pubnet"; }, (x) => { x.payment.asset = "wrong"; },

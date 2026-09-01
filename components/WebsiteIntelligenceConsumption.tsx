@@ -1,14 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { createPrivateRecoveryCapsule, createPublicRecoveryHandoff } from "@/lib/delivery-recovery-handoff";
+import { createPrivateRecoveryCapsule, createPublicRecoveryHandoff, recoveryProofForToken } from "@/lib/delivery-recovery-handoff";
 
 type Json = Record<string, any>;
 
 function short(value: string) { return value.length > 16 ? `${value.slice(0, 8)}…${value.slice(-8)}` : value; }
 function randomHex(bytes: number) { return Array.from(crypto.getRandomValues(new Uint8Array(bytes)), value => value.toString(16).padStart(2, "0")).join(""); }
 function base64Url(bytes: Uint8Array) { return btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", ""); }
-async function sha256Hex(value: string) { return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))), byte => byte.toString(16).padStart(2, "0")).join(""); }
 function downloadJson(filename: string, value: unknown) { const link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], { type: "application/json" })); link.download = filename; link.click(); URL.revokeObjectURL(link.href); }
 
 export function WebsiteIntelligenceConsumption() {
@@ -26,7 +25,7 @@ export function WebsiteIntelligenceConsumption() {
       const requestId = randomHex(16);
       const tokenBytes = crypto.getRandomValues(new Uint8Array(32));
       const recoveryToken = base64Url(tokenBytes);
-      const recoveryProof = await sha256Hex(recoveryToken);
+      const recoveryProof = await recoveryProofForToken(recoveryToken);
       const response = await fetch("/api/buyer-execution/website-intelligence", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: "https://example.com", language: "es", requestId, recoveryProof }) });
       const data = await response.json(); setInspection(data);
       if (response.status === 402 && data.recovery?.proofCommitted === true) {

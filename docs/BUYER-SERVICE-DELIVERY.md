@@ -38,9 +38,11 @@ Al inspeccionar una compra nueva, el navegador genera:
 1. Un `requestId` aleatorio y una capability de recuperación de 256 bits.
 2. Un `recoveryProof = SHA-256(capability)` que sí puede viajar al proveedor.
 3. Un paquete público `bazaar.delivery-recovery-handoff/v1` para el cliente pagador. Incluye ficha, ruta, `inputHash`, idempotencia, `requestId` y proof; nunca incluye la capability.
-4. Una cápsula privada `bazaar.delivery-recovery-capsule/v1` que el comprador descarga explícitamente y guarda como una contraseña. Tras una entrega pagada, el cliente comprador añade a esa cápsula el `recoveryId` devuelto por el proveedor. Bazaar no la envía a su API, no usa `localStorage`, no la pone en URLs y no puede restaurarla.
+4. Una cápsula privada `bazaar.delivery-recovery-capsule/v1` que el comprador descarga explícitamente y guarda como una contraseña. Declara la versión del request del proveedor (`website-intelligence.delivery-recovery/v1`). Tras una entrega pagada, el cliente comprador combina esa cápsula con el `recoveryId` devuelto para construir `{version, recoveryId, requestId, recoveryToken}`. Bazaar no la envía a su API, no usa `localStorage`, no la pone en URLs y no puede restaurarla.
 
 El `402` solo se considera preparado para recuperación cuando la extensión firmable del proveedor devuelve exactamente el mismo `requestId` y `recoveryProof`. Si falta o cambia cualquiera, el flujo falla cerrado antes de autorizar un pago.
+
+El cliente de recuperación fija el origen HTTPS y la ruta del proveedor, rechaza redirects, aplica timeout y reconcilia nuevamente transacción, ledger, red, activo, monto, destino, input, ficha y hash del resultado. Este request no lleva firma de pago y no llama `/verify` ni `/settle`.
 
 El endpoint durable del proveedor y su PR de recuperación deben desplegarse antes de declarar disponible esta recuperación en público. Esta rama solo integra y prueba el contrato con mocks; no ejecuta un pago ni afirma que la producción ya lo soporte.
 

@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
-import { createPrivateRecoveryCapsule, createPublicRecoveryHandoff, validateDeliveryRecoveryIntent } from "../lib/delivery-recovery-handoff.ts";
+import { createPrivateRecoveryCapsule, createProviderRecoveryRequest, createPublicRecoveryHandoff, recoveryProofForToken, validateDeliveryRecoveryIntent, WEBSITE_INTELLIGENCE_RECOVERY_REQUEST_VERSION } from "../lib/delivery-recovery-handoff.ts";
 
 const requestId = "a".repeat(32);
 const proof = "b".repeat(64);
 const token = "C".repeat(43);
+const computedProof = await recoveryProofForToken(token);
+assert.equal(computedProof, "942014af03195c97fc8a6121a03e1660b89027a538325a101eba426dacd7e587");
+assert.notEqual(computedProof, proof, "proof is derived from the raw UTF-8 token, not accepted independently");
 assert.deepEqual(validateDeliveryRecoveryIntent({ requestId, proof }), { requestId, proof });
 for (const value of [null, {}, { requestId: "bad", proof }, { requestId, proof: "bad" }]) assert.throws(() => validateDeliveryRecoveryIntent(value), /INVALID_RECOVERY/);
 
@@ -15,5 +18,9 @@ assert.equal("recoveryToken" in publicPackage, false);
 assert.equal(capsule.recoveryToken, token);
 assert.equal(capsule.recoveryId, null);
 assert.equal(capsule.secret, true);
+assert.equal(capsule.providerRequestVersion, WEBSITE_INTELLIGENCE_RECOVERY_REQUEST_VERSION);
+const recoveryRequest = createProviderRecoveryRequest(capsule, "e".repeat(64));
+assert.deepEqual(recoveryRequest, { version: WEBSITE_INTELLIGENCE_RECOVERY_REQUEST_VERSION, recoveryId: "e".repeat(64), requestId, recoveryToken: token });
+assert.throws(() => createProviderRecoveryRequest(capsule, "bad"), /INVALID_RECOVERY_ID/);
 assert.throws(() => createPrivateRecoveryCapsule({ serviceId: "website-intelligence", providerOrigin: "https://provider.example", recoveryPath: "/recover", requestId, recoveryToken: "short" }), /INVALID_RECOVERY_TOKEN/);
 console.log(JSON.stringify({ ok: true, publicPackageContainsSecret: false, buyerOwnsRecoveryToken: true, persistence: "none" }, null, 2));

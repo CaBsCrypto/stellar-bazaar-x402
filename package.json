@@ -40,6 +40,7 @@
     "test:website-intelligence:consumption": "node scripts/test-website-intelligence-consumption.mjs",
     "test:paid-delivery-envelope": "node scripts/test-paid-delivery-envelope.mjs",
     "test:delivery-recovery-handoff": "node scripts/test-delivery-recovery-handoff.mjs",
+    "test:delivery-recovery-client": "node scripts/test-delivery-recovery-client.mjs",
     "x402:website-intelligence:preflight": "node scripts/website-intelligence-testnet-one-shot.mjs",
     "x402:website-intelligence:e2e-local": "node scripts/website-intelligence-testnet-one-shot.mjs",
     "test:webmcp:suite": "node scripts/test-webmcp-suite.mjs",
