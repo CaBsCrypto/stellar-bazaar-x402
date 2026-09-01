@@ -3,6 +3,7 @@ import {
   BAZAAR_FEE_BPS,
   FEE_SPLIT_POLICY_VERSION,
   FEE_SPLIT_RECEIPT_VERSION,
+  FEE_SPLIT_TESTNET_USDC_ASSET,
   calculateFeeSplit,
   hashFeeSplitPolicy,
   reconcileFeeSplitReceipt,
@@ -16,7 +17,7 @@ const policy = {
   status: "design-only",
   network: "stellar:testnet",
   scheme: "exact",
-  asset: "USDC:TESTNET:SAC",
+  asset: FEE_SPLIT_TESTNET_USDC_ASSET,
   grossAtomic: "10000",
   feeBps: BAZAAR_FEE_BPS,
   provider,
@@ -33,6 +34,10 @@ assert.deepEqual(calculateFeeSplit(policy), [
 assert.throws(() => calculateFeeSplit({ ...policy, grossAtomic: "10001" }), /exact-division/);
 assert.throws(() => calculateFeeSplit({ ...policy, treasury: provider }), /distinct-destinations/);
 assert.throws(() => calculateFeeSplit({ ...policy, feeBps: 200 }), /fixed-one-percent/);
+assert.throws(() => calculateFeeSplit({ ...policy, feeBps: 100.5 }), /fixed-one-percent/);
+assert.throws(() => calculateFeeSplit({ ...policy, feeBps: Number.NaN }), /fixed-one-percent/);
+assert.throws(() => calculateFeeSplit({ ...policy, version: "bazaar.fee-split-policy/altered" }), /policy-version/);
+assert.throws(() => calculateFeeSplit({ ...policy, asset: "" }), /pinned-asset/);
 assert.throws(() => calculateFeeSplit({ ...policy, provider: "not-an-account" }), /valid-provider/);
 
 const receipt = {
@@ -56,6 +61,8 @@ for (const altered of [
   { ...receipt, requestBinding: "e".repeat(64) },
   { ...receipt, atomic: false },
   { ...receipt, routerRetainedFunds: true },
+  { ...receipt, ledger: 123.5 },
+  { ...receipt, allocations: null },
   { ...receipt, allocations: [{ ...receipt.allocations[0], amountAtomic: "9899" }, receipt.allocations[1]] },
 ]) {
   assert.equal(reconcileFeeSplitReceipt(policy, altered).some(({ ok }) => !ok), true);

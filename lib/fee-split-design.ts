@@ -1,15 +1,17 @@
 import { createHash } from "node:crypto";
+import { StrKey } from "@stellar/stellar-sdk";
 
 export const FEE_SPLIT_POLICY_VERSION = "bazaar.fee-split-policy/v0" as const;
 export const FEE_SPLIT_RECEIPT_VERSION = "bazaar.fee-split-receipt/v0" as const;
 export const BAZAAR_FEE_BPS = 100;
+export const FEE_SPLIT_TESTNET_USDC_ASSET = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA" as const;
 
 export type FeeSplitPolicy = {
   version: typeof FEE_SPLIT_POLICY_VERSION;
   status: "design-only";
   network: "stellar:testnet";
   scheme: "exact";
-  asset: string;
+  asset: typeof FEE_SPLIT_TESTNET_USDC_ASSET;
   grossAtomic: string;
   feeBps: number;
   provider: string;
@@ -44,8 +46,11 @@ export type RuleOutcome = {
   reason: string;
 };
 
-const STELLAR_ACCOUNT = /^G[A-Z2-7]{55}$/;
 const HEX_64 = /^[a-f0-9]{64}$/i;
+
+function validStellarAccount(value: unknown): value is string {
+  return typeof value === "string" && StrKey.isValidEd25519PublicKey(value);
+}
 
 function positiveInteger(value: string): bigint | null {
   if (!/^[1-9]\d*$/.test(value)) return null;
@@ -76,8 +81,14 @@ export function hashFeeSplitPolicy(policy: FeeSplitPolicy): string {
 
 export function validateFeeSplitPolicy(policy: FeeSplitPolicy): RuleOutcome[] {
   const gross = positiveInteger(policy.grossAtomic);
-  const numerator = gross === null ? null : gross * BigInt(policy.feeBps);
+  const validFeeBps = Number.isSafeInteger(policy.feeBps) && policy.feeBps === BAZAAR_FEE_BPS;
+  const numerator = gross === null || !validFeeBps ? null : gross * BigInt(policy.feeBps);
   return [
+    {
+      rule: "policy-version",
+      ok: policy.version === FEE_SPLIT_POLICY_VERSION,
+      reason: "La versión de política debe estar soportada explícitamente.",
+    },
     {
       rule: "design-status",
       ok: policy.status === "design-only",
@@ -100,7 +111,7 @@ export function validateFeeSplitPolicy(policy: FeeSplitPolicy): RuleOutcome[] {
     },
     {
       rule: "fixed-one-percent",
-      ok: policy.feeBps === BAZAAR_FEE_BPS,
+      ok: validFeeBps,
       reason: "La versión v0 fija la comisión visible de Bazaar en 100 bps (1%).",
     },
     {
@@ -109,13 +120,18 @@ export function validateFeeSplitPolicy(policy: FeeSplitPolicy): RuleOutcome[] {
       reason: "El monto debe permitir el reparto exacto sin redondeo oculto.",
     },
     {
+      rule: "pinned-asset",
+      ok: policy.asset === FEE_SPLIT_TESTNET_USDC_ASSET,
+      reason: "La política v0 está fijada al contrato USDC de Stellar Testnet.",
+    },
+    {
       rule: "valid-provider",
-      ok: STELLAR_ACCOUNT.test(policy.provider),
+      ok: validStellarAccount(policy.provider),
       reason: "El destino del proveedor debe tener formato de cuenta Stellar pública.",
     },
     {
       rule: "valid-treasury",
-      ok: STELLAR_ACCOUNT.test(policy.treasury),
+      ok: validStellarAccount(policy.treasury),
       reason: "El destino de Bazaar debe tener formato de cuenta Stellar pública.",
     },
     {
@@ -155,21 +171,32 @@ export function reconcileFeeSplitReceipt(
   policy: FeeSplitPolicy,
   receipt: FeeSplitReceipt,
 ): RuleOutcome[] {
-  const expected = calculateFeeSplit(policy);
+  const policyOutcomes = validateFeeSplitPolicy(policy);
+  const policyValid = policyOutcomes.every(({ ok }) => ok);
+  const expected = policyValid ? calculateFeeSplit(policy) : [];
   const allocationKey = (allocation: SplitAllocation) =>
     `${allocation.role}:${allocation.destination}:${allocation.amountAtomic}`;
-  const actualKeys = [...receipt.allocations].map(allocationKey).sort();
+  const allocationShapeValid = Array.isArray(receipt.allocations) && receipt.allocations.every((allocation) =>
+    allocation !== null &&
+    typeof allocation === "object" &&
+    (allocation.role === "provider" || allocation.role === "bazaar") &&
+    validStellarAccount(allocation.destination) &&
+    positiveInteger(allocation.amountAtomic) !== null,
+  );
+  const actualKeys = allocationShapeValid ? [...receipt.allocations].map(allocationKey).sort() : [];
   const expectedKeys = [...expected].map(allocationKey).sort();
   return [
+    { rule: "policy-valid", ok: policyValid, reason: "La política reconciliada debe pasar todas las reglas v0." },
     { rule: "receipt-version", ok: receipt.version === FEE_SPLIT_RECEIPT_VERSION, reason: "Versión de recibo esperada." },
     { rule: "network", ok: receipt.network === policy.network, reason: "La red debe coincidir con la política." },
     { rule: "asset", ok: receipt.asset === policy.asset, reason: "El activo liquidado debe coincidir exactamente." },
-    { rule: "transaction", ok: HEX_64.test(receipt.transactionHash) && receipt.ledger > 0, reason: "Se requiere transacción y ledger verificables." },
+    { rule: "transaction", ok: HEX_64.test(receipt.transactionHash) && Number.isSafeInteger(receipt.ledger) && receipt.ledger > 0, reason: "Se requiere transacción y ledger verificables." },
     { rule: "policy", ok: receipt.policyHash === hashFeeSplitPolicy(policy), reason: "El recibo debe reconciliar la política canónica." },
     { rule: "request-binding", ok: receipt.requestBinding === policy.requestBinding, reason: "El recibo debe corresponder a la misma solicitud." },
     { rule: "service-card", ok: receipt.serviceCardHash === policy.serviceCardHash, reason: "El recibo debe corresponder a la misma Service Card." },
     { rule: "single-atomic-operation", ok: receipt.atomic === true, reason: "Ambas asignaciones deben ocurrir en una sola operación atómica." },
     { rule: "no-router-custody", ok: receipt.routerRetainedFunds === false, reason: "El router no puede conservar fondos." },
-    { rule: "exact-allocations", ok: actualKeys.length === 2 && JSON.stringify(actualKeys) === JSON.stringify(expectedKeys), reason: "Proveedor y Bazaar deben recibir exactamente el neto y la comisión esperados." },
+    { rule: "allocation-shape", ok: allocationShapeValid, reason: "Cada asignación debe declarar rol, cuenta Stellar y monto entero positivo." },
+    { rule: "exact-allocations", ok: policyValid && actualKeys.length === 2 && JSON.stringify(actualKeys) === JSON.stringify(expectedKeys), reason: "Proveedor y Bazaar deben recibir exactamente el neto y la comisión esperados." },
   ];
 }

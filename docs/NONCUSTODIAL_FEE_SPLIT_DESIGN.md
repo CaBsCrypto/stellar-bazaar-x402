@@ -54,7 +54,7 @@ No reimplementaremos `/verify` o `/settle`, ni afirmaremos compatibilidad upstre
 
 ## Invariantes de seguridad
 
-- Stellar Testnet y USDC fijados durante el POC; Mainnet queda bloqueado.
+- Stellar Testnet y el contrato SAC de USDC Testnet fijados durante el POC; símbolos libres o activos vacíos son rechazados. Mainnet queda bloqueado.
 - Comisión v0 fija en 100 bps; visible antes de autorizar.
 - Proveedor y tesorería son cuentas distintas y fijadas por la política.
 - Una transacción, exactamente dos asignaciones y suma exacta al bruto.
