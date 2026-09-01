@@ -23,10 +23,14 @@ Una compra nueva todavía se ejecuta desde el cliente técnico controlado por el
 ## Gate para declarar “comprar y usar” reutilizable
 
 - Sobre versionado con snapshot/hash de ficha, solicitud/input/idempotencia, recibo, resultado/hash y estado de recuperación.
-- Handoff exportable al cliente comprador y retorno por `requestId` + credencial de recuperación no secreta para Bazaar.
+- Handoff exportable al cliente comprador y retorno por `requestId` + capability de recuperación buyer-owned. Esa capability es secreta como una contraseña, aunque no sea una seed; Bazaar no debe persistirla, registrarla ni incluirla en una URL.
 - Reconciliación fail-closed de red, activo, monto, destino, método, ruta, input, recibo y resultado.
 - Reintento idempotente que no pueda cobrar dos veces.
 - Para async: estados `queued → processing → completed | failed | expired`, límites de intentos y recuperación durable.
 - Pruebas de timeout, proveedor caído, respuesta perdida, receipt mismatch, replay y artefacto manipulado.
 
 Commission split y escrow no forman parte de este sprint. El split no resuelve la entrega; escrow solo se evaluará para trabajos diferidos después de cerrar este contrato.
+
+## Implementación local en esta rama
+
+`bazaar.paid-delivery-envelope/v1` ya normaliza ficha, solicitud, settlement, resultado, recuperación y límites. El cliente técnico de Website Intelligence conserva ahora el resultado y el recibo dentro de ese sobre en vez de descartarlos. La suite local muta cada binding crítico y falla cerrado. La recuperación real sigue desactivada hasta que el proveedor implemente almacenamiento durable y una capability buyer-owned; el sobre declara por ahora `recovery.available=false`.

@@ -3,6 +3,7 @@ import { decodePaymentRequiredHeader, decodePaymentResponseHeader } from "@x402/
 import type { PaymentRequired, PaymentRequirements } from "@x402/core/types";
 import { canonicalInputHash, canonicalJSONStringify, WEBSITE_INTELLIGENCE_ATOMIC_AMOUNT, WEBSITE_INTELLIGENCE_BINDING_EXTENSION, WEBSITE_INTELLIGENCE_DISPLAY_AMOUNT, WEBSITE_INTELLIGENCE_INPUT_HASH_ALGORITHM, WEBSITE_INTELLIGENCE_LOCAL_BASE_URL, WEBSITE_INTELLIGENCE_READINESS_VERSION, WEBSITE_INTELLIGENCE_ROUTE, type SettlementEvidence, validateWebsiteIntelligenceReadiness, reconcileWebsiteIntelligenceSettlement } from "./website-intelligence-readiness.ts";
 import { X402_MAX_TIMEOUT_SECONDS, X402_NETWORK, X402_SCHEME, X402_USDC_CONTRACT } from "./x402-config.ts";
+import { createPaidDeliveryEnvelope } from "./paid-delivery-envelope.ts";
 
 export type BalancePreflight = { getBalance(address: string, asset: string): Promise<{ atomic: string; ledger: number }> };
 export type ReceiptLookup = { getReceipt(transactionHash: string): Promise<SettlementEvidence | null> };
@@ -122,7 +123,11 @@ export async function executeWebsiteIntelligenceOneShot(input: {
   if (receipt.transactionHash !== settlement.transaction) throw new Error("RECEIPT_TRANSACTION_MISMATCH");
   const reconciliation = reconcileWebsiteIntelligenceSettlement(receipt, input.expected, body.result, body.resultHash);
   if (!reconciliation.reconciled) throw new Error("RECEIPT_OR_RESULT_RECONCILIATION_FAILED");
-  return { status: response.status, attempts, transactionHash: settlement.transaction, ledger: receipt.ledger, resultHash: reconciliation.resultHash, reconciled: true };
+  const envelope = createPaidDeliveryEnvelope({
+    policy: { serviceId: "website-intelligence", serviceVersion: "1.0.0", cardUrl: new URL("/v1/service-card", endpointUrl.origin).toString(), cardHash: input.expected.cardHash, method: "POST", route: input.expected.route, inputHash: input.expected.inputHash, idempotencyKey: input.idempotencyKey, scheme: "exact", network: "stellar:testnet", asset: input.expected.asset, atomicAmount: input.expected.amount, payTo: input.expected.payTo },
+    transactionHash: settlement.transaction, ledger: receipt.ledger, result: body.result, resultHash: reconciliation.resultHash,
+  });
+  return { status: response.status, attempts, transactionHash: settlement.transaction, ledger: receipt.ledger, resultHash: reconciliation.resultHash, result: body.result, receipt, envelope, reconciled: true };
 }
 
 export async function prepareWebsiteIntelligenceOneShot(input: OneShotPreflightInput, balance?: BalancePreflight) {
