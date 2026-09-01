@@ -3,7 +3,7 @@ import { services } from "../catalog";
 import { rankServices, validateServiceCard } from "../discovery";
 import { workflowBundles } from "../workflow-bundles";
 import { getPaymentFlow, paymentFlowCapability } from "../payment-flow";
-import { createDynamicServiceCard } from "../dynamic-registry";
+import { pilotCards, pilotSearchServices } from "../pilot-cards";
 import type { ServiceCard } from "../types";
 
 /**
@@ -21,7 +21,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
       },
     },
     execute: async (input) => {
-      const allServices = services.map((s) => ({
+      const baseServices = services.map((s) => ({
         id: s.id,
         name: s.name,
         eyebrow: s.eyebrow,
@@ -38,6 +38,9 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
         provider: s.provider,
         latency: s.latency,
       }));
+      const allServices = input.includePilots
+        ? [...baseServices, ...pilotCards]
+        : baseServices;
 
       // Broadcast visual event to UI so the page can respond to agent queries
       if (typeof window !== "undefined") {
@@ -73,7 +76,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
     },
     execute: async (input) => {
       const searchParam = input.query || input.tag || "";
-      let ranked = rankServices(services, searchParam);
+      let ranked = rankServices([...services, ...pilotSearchServices], searchParam);
 
       if (input.tag) {
         ranked = ranked.filter((r) => r.service.tags.includes(input.tag!));
@@ -100,19 +103,24 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
         type: "json",
         data: {
           total: ranked.length,
-          services: ranked.map((r) => ({
-            id: r.service.id,
-            name: r.service.name,
-            description: r.service.description,
-            kind: r.service.kind,
-            amount: r.service.payment.amount,
-            asset: r.service.payment.asset,
-            tags: r.service.tags,
-            routeTemplate: r.service.routeTemplate,
-            provider: r.service.provider,
-            score: r.score,
-            reasons: r.reasons,
-          })),
+          services: ranked.map((r) => {
+            const pilot = pilotCards.find((card) => card.id === r.service.id);
+            return pilot
+              ? { resource: pilot, score: r.score, reasons: r.reasons }
+              : {
+                  id: r.service.id,
+                  name: r.service.name,
+                  description: r.service.description,
+                  kind: r.service.kind,
+                  amount: r.service.payment.amount,
+                  asset: r.service.payment.asset,
+                  tags: r.service.tags,
+                  routeTemplate: r.service.routeTemplate,
+                  provider: r.service.provider,
+                  score: r.score,
+                  reasons: r.reasons,
+                };
+          }),
         },
       };
     },
@@ -130,7 +138,8 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
       required: ["serviceId"],
     },
     execute: async (input) => {
-      const service = services.find((s) => s.id === input.serviceId);
+      const service = services.find((s) => s.id === input.serviceId)
+        ?? pilotCards.find((card) => card.id === input.serviceId);
       if (!service) {
         return {
           type: "json",
@@ -233,83 +242,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
     },
   };
 
-  // 7. Publish / Upload Service Tool (Agent Provider Self-Listing)
-  const publishServiceTool: WebMCPToolDefinition<{ serviceCard: ServiceCard; providerKey?: string }> = {
-    name: "bazaar_publish_service",
-    description: "Publish and upload a new AI service or tool to the Stellar Bazaar marketplace registry directly from the agent.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        serviceCard: {
-          type: "object",
-          description: "The complete ServiceCard v0 specification object for the new service",
-        },
-        providerKey: {
-          type: "string",
-          description: "Optional provider authentication/signing key for ownership management",
-        },
-      },
-      required: ["serviceCard"],
-    },
-    execute: async (input) => {
-      // 1. Validate Service Card Invariants
-      const validation = validateServiceCard(input.serviceCard);
-      const hasErrors = validation.some((v) => v.status === "fail");
-
-      if (hasErrors) {
-        return {
-          type: "json",
-          isError: true,
-          data: {
-            error: "Service card validation failed. Please check invariants.",
-            validation,
-          },
-        };
-      }
-
-      // 2. Register into Dynamic Service Card Registry
-      const providerKeyHash = input.providerKey ? String(input.providerKey) : "anonymous_provider_" + Math.random().toString(36).slice(2, 8);
-      const creation = await createDynamicServiceCard(input.serviceCard, providerKeyHash);
-
-      if ("exists" in creation && creation.exists) {
-        return {
-          type: "json",
-          isError: true,
-          data: {
-            error: `Service ID '${input.serviceCard.id}' already exists in registry. Use a unique ID or update version.`,
-          },
-        };
-      }
-
-      // 3. Notify page UI about the new service
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("webmcp-ui-action", {
-            detail: {
-              action: "service_published",
-              serviceId: input.serviceCard.id,
-              serviceName: input.serviceCard.name,
-            },
-          })
-        );
-      }
-
-      return {
-        type: "json",
-        data: {
-          status: "published",
-          serviceId: input.serviceCard.id,
-          name: input.serviceCard.name,
-          hash: "entry" in creation ? creation.entry.hash : undefined,
-          registeredAt: "entry" in creation ? creation.entry.registeredAt : new Date().toISOString(),
-          paymentTerms: input.serviceCard.payment,
-          message: `✨ Service '${input.serviceCard.name}' successfully published to Stellar Bazaar!`,
-        },
-      };
-    },
-  };
-
-  // 8. Execute local references or recover verified delivery evidence.
+  // 7. Execute local references or recover verified delivery evidence.
   const executeServiceTool: WebMCPToolDefinition<{ serviceId: string; input: Record<string, unknown> }> = {
     name: "bazaar_execute_service",
     description: "Run an explicitly local reference fixture, or recover verified historical delivery evidence. Paid external calls require a buyer-controlled signer and are never initiated by this browser tool.",
@@ -416,6 +349,5 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
   registry.registerTool(listWorkflowBundlesTool);
   registry.registerTool(validateServiceCardTool as unknown as WebMCPToolDefinition);
   registry.registerTool(getPaymentFlowTool as WebMCPToolDefinition);
-  registry.registerTool(publishServiceTool as unknown as WebMCPToolDefinition);
   registry.registerTool(executeServiceTool as unknown as WebMCPToolDefinition);
 }

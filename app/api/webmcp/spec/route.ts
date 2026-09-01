@@ -10,7 +10,7 @@ export async function GET() {
     specification: "W3C Web Machine Learning Community Group (Draft)",
     name: "stellar-bazaar-webmcp",
     title: "Stellar Bazaar x402 — Agentic Discovery & Micropayment WebMCP Protocol",
-    description: "Standard W3C in-browser and HTTP context specification for discovering, executing, and publishing AI services with Stellar Testnet x402 micropayments.",
+    description: "Read-only in-browser and HTTP context for discovering service cards, inspecting payment metadata, validating cards, and recovering explicitly bounded delivery evidence.",
     version: "1.0.0",
     network: "stellar:testnet",
     license: "Apache-2.0",
@@ -21,8 +21,8 @@ export async function GET() {
     },
     capabilities: {
       readOnlyDiscovery: true,
-      x402Payments: true,
-      dynamicRegistration: true,
+      x402Payments: false,
+      dynamicRegistration: false,
       proofOfDelivery: true,
       agentPolicyGuard: true,
       supportedAssets: ["USDC", "XLM", "EURC"],
@@ -92,24 +92,6 @@ export async function GET() {
             serviceId: { type: "string", description: "The service ID to audit payment terms for" },
           },
           required: ["serviceId"],
-        },
-      },
-      {
-        name: "bazaar_publish_service",
-        description: "Publish and upload a new AI service or tool to the Stellar Bazaar marketplace registry directly from the agent.",
-        inputSchema: {
-          type: "object",
-          properties: {
-            serviceCard: {
-              type: "object",
-              description: "The complete ServiceCard v0 specification object for the new service",
-            },
-            providerKey: {
-              type: "string",
-              description: "Optional provider authentication/signing key for ownership management",
-            },
-          },
-          required: ["serviceCard"],
         },
       },
       {
