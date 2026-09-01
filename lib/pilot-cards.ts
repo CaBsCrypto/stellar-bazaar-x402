@@ -1,3 +1,5 @@
+import type { PaidService } from "./types";
+
 export type PilotCard = {
   version: "bazaar.pilot-card/v1";
   id: string;
@@ -179,6 +181,31 @@ export const pilotCards: PilotCard[] = [
     output: ["strategy brief", "approval state", "demo visual artifacts"],
   },
 ];
+
+/**
+ * Canonical read-only search projection shared by HTTP MCP and browser WebMCP.
+ * The original pilot card remains the authoritative response payload.
+ */
+export const pilotSearchServices: PaidService[] = pilotCards.map((card) => ({
+  id: card.id,
+  name: `${card.title.es} ${card.title.en}`,
+  eyebrow: `${card.category.es} / ${card.category.en}`,
+  description: `${card.description.es} ${card.description.en}`,
+  kind: card.kind,
+  tags: [...card.tags.es, ...card.tags.en, card.category.es, card.category.en, card.categoryId],
+  routeTemplate: card.execution.path,
+  provider: "verified-pilot-card",
+  network: card.payment.network,
+  payment: {
+    scheme: card.payment.scheme,
+    asset: "USDC",
+    amount: card.payment.displayAmount?.split(" ")[0] ?? "0",
+  },
+  latency: card.execution.model === "sync" ? "provider-declared-sync" : "provider-declared-async",
+  input: card.input,
+  output: card.output,
+  accent: "blue",
+}));
 
 export const pilotCapabilityCard = {
   version: "bazaar.capabilities/v1",

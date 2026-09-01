@@ -6,7 +6,11 @@ const specRes = await fetch(`${base}/api/webmcp/spec`);
 assert.equal(specRes.status, 200);
 const spec = await specRes.json();
 assert.equal(spec.schemaVersion, "webmcp.specification/v1");
-assert.equal(spec.tools.length, 8);
+assert.equal(spec.tools.length, 7);
+assert.equal(spec.capabilities.readOnlyDiscovery, true);
+assert.equal(spec.capabilities.dynamicRegistration, false);
+assert.equal(spec.capabilities.x402Payments, false);
+assert.ok(!spec.tools.some((tool) => tool.name === "bazaar_publish_service"));
 
 const mcpHealthRes = await fetch(`${base}/api/mcp`);
 assert.equal(mcpHealthRes.status, 200);
