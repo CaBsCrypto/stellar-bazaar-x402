@@ -41,6 +41,7 @@
     "x402:website-intelligence:preflight": "node scripts/website-intelligence-testnet-one-shot.mjs",
     "x402:website-intelligence:e2e-local": "node scripts/website-intelligence-testnet-one-shot.mjs",
     "test:webmcp:suite": "node scripts/test-webmcp-suite.mjs",
+    "test:fee-split:design": "node scripts/test-fee-split-design.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {

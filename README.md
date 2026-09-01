@@ -306,6 +306,8 @@ console.log("Stellar Receipt:", execution.payment.receiptUrl);
 3. 🟡 **Phase 3 (Security remediation):** read-only MCP, receipt reconciliation gate, canonical deep hashes, retired Testnet payer, and append-only registry disabled by default.
 4. ⚪ **Phase 4 (Future):** provider-owned Service Registry, visual service promises and buyer briefs, limited per-purchase escrow/release/refund rules, disclosed fee splits, SEP-41 multi-asset work, and Mainnet readiness only after independent external audit.
 
+The proposed 1% provider-side fee is documented separately as a **non-custodial, design-only** atomic split. It is not active in x402 or production: see [`docs/NONCUSTODIAL_FEE_SPLIT_DESIGN.md`](docs/NONCUSTODIAL_FEE_SPLIT_DESIGN.md) and the local preview at `/fee-split`.
+
 ---
 
 ## 📖 Documentation & Guides
