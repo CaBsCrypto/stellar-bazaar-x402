@@ -75,8 +75,8 @@ La reconciliación ya no confía en banderas declaradas como `atomic: true` o `r
 
 Gate fail-closed pendiente:
 
-- constructor/despliegue atómico o configuración stateless para impedir front-running de inicialización;
-- inspección completa del árbol de autorización y argumentos de ambas transferencias;
+- ~~constructor/despliegue atómico o configuración stateless~~: el prototipo P1 ahora recibe token y tesorería dentro de la solicitud autorizada y no tiene inicialización ni configuración mutable;
+- ~~inspección completa del árbol de autorización~~: las pruebas verifican una raíz `split(request)` y exactamente dos llamadas SEP-41 con pagador, destinos y montos completos;
 - expiración estricta (`expiresLedger <= currentLedger` falla), replay concurrente y TTL;
 - pinning del router y SAC USDC desplegados, con bytecode revisado;
 - mecanismo x402/facilitador que soporte el router de manera explícita;
@@ -92,7 +92,7 @@ Gate fail-closed pendiente:
 ## Gate de implementación
 
 1. **P0 — rama actual:** política canónica v1, cálculo determinista, reconciliación basada en evidencia y pruebas negativas sin red. No activa comisión.
-2. **P1 — branch de contrato:** router Soroban mínimo, sin admin withdrawal; unit, property y fuzz tests; eventos y errores deterministas.
+2. **P1 — prototipo local implementado:** router Soroban stateless, sin administrador, upgrade, retiro ni saldo intermedio; pruebas unitarias/property-style, rollback, expiración estricta, replay, evento y auth tree. Sigue sin despliegue.
 3. **P2 — conformance:** revisión independiente de auth entries, expiración y replay; definir el mecanismo x402/facilitador soportado; testnet deployment separado.
 4. **P3 — evidencia:** una operación mínima autorizada, verificación de balances, ledger, receipt y entrega; luego repetibilidad.
 5. **Mainnet:** solamente tras auditoría externa, revisión operacional y decisión legal/comercial explícita.
