@@ -54,8 +54,24 @@ export const verifiedWebsiteIntelligenceDelivery = {
   },
 } as const;
 
-export function validateVerifiedWebsiteIntelligenceDelivery(): boolean {
-  return canonicalInputHash(verifiedWebsiteIntelligenceDelivery.result) === verifiedWebsiteIntelligenceDelivery.resultHash
-    && /^[0-9a-f]{64}$/.test(verifiedWebsiteIntelligenceDelivery.payment.transactionHash)
-    && verifiedWebsiteIntelligenceDelivery.payment.ledger > 0;
+export function validateVerifiedWebsiteIntelligenceDelivery(delivery: unknown = verifiedWebsiteIntelligenceDelivery): boolean {
+  try {
+    const candidate = delivery as any;
+    return canonicalInputHash(candidate.result) === candidate.resultHash
+      && /^[0-9a-f]{64}$/.test(candidate.payment.transactionHash)
+      && candidate.payment.ledger > 0
+      && candidate.payment.status === "settled"
+      && candidate.payment.network === "stellar:testnet"
+      && candidate.payment.scheme === "exact"
+      && candidate.payment.assetSymbol === "USDC"
+      && candidate.payment.atomicAmount === "10000"
+      && candidate.reconciliation.status === "matched"
+      && candidate.reconciliation.resultHashMatches === true
+      && candidate.reconciliation.transactionMatchesReceipt === true
+      && candidate.reconciliation.durableRecoveryVerified === true
+      && candidate.boundaries.newPaymentPerformed === false
+      && candidate.boundaries.buyerSignerStoredByBazaar === false;
+  } catch {
+    return false;
+  }
 }

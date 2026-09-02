@@ -3,6 +3,8 @@ import { decodePaymentRequiredHeader, decodePaymentResponseHeader } from "@x402/
 import type { PaymentRequired, PaymentRequirements } from "@x402/core/types";
 import { canonicalInputHash, canonicalJSONStringify, WEBSITE_INTELLIGENCE_ATOMIC_AMOUNT, WEBSITE_INTELLIGENCE_BINDING_EXTENSION, WEBSITE_INTELLIGENCE_DISPLAY_AMOUNT, WEBSITE_INTELLIGENCE_INPUT_HASH_ALGORITHM, WEBSITE_INTELLIGENCE_LOCAL_BASE_URL, WEBSITE_INTELLIGENCE_READINESS_VERSION, WEBSITE_INTELLIGENCE_ROUTE, type SettlementEvidence, validateWebsiteIntelligenceReadiness, reconcileWebsiteIntelligenceSettlement } from "./website-intelligence-readiness.ts";
 import { X402_MAX_TIMEOUT_SECONDS, X402_NETWORK, X402_SCHEME, X402_USDC_CONTRACT } from "./x402-config.ts";
+import { createPaidDeliveryEnvelope } from "./paid-delivery-envelope.ts";
+import { validateDeliveryRecoveryIntent, type DeliveryRecoveryIntent } from "./delivery-recovery-handoff.ts";
 
 export type BalancePreflight = { getBalance(address: string, asset: string): Promise<{ atomic: string; ledger: number }> };
 export type ReceiptLookup = { getReceipt(transactionHash: string): Promise<SettlementEvidence | null> };
@@ -65,6 +67,7 @@ export async function requestWebsiteIntelligencePaymentChallenge(input: {
   expectedPayTo?: string;
   approvedCardHash?: string;
   publicResourceUrl?: string;
+  recoveryIntent?: DeliveryRecoveryIntent;
 }): Promise<ProviderPreflightResponse> {
   if (!input.requestBody || typeof input.requestBody !== "object" || Array.isArray(input.requestBody)) throw new Error("INVALID_JSON_REQUEST_BODY");
   if (!input.idempotencyKey || !/^[A-Za-z0-9._:-]{8,128}$/.test(input.idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
@@ -73,6 +76,7 @@ export async function requestWebsiteIntelligencePaymentChallenge(input: {
   const endpoint = requireWebsiteIntelligenceLocalEndpoint(input.localBaseUrl ?? WEBSITE_INTELLIGENCE_LOCAL_BASE_URL);
   const body = canonicalJSONStringify(input.requestBody);
   const inputHash = canonicalInputHash(input.requestBody);
+  const recoveryIntent = input.recoveryIntent ? validateDeliveryRecoveryIntent(input.recoveryIntent) : null;
   const response = await (input.fetchImpl ?? fetch)(endpoint, {
     method: "POST",
     headers: {
@@ -81,6 +85,7 @@ export async function requestWebsiteIntelligencePaymentChallenge(input: {
       "idempotency-key": input.idempotencyKey,
       "x-bazaar-input-hash": inputHash,
       "x-bazaar-input-hash-algorithm": WEBSITE_INTELLIGENCE_INPUT_HASH_ALGORITHM,
+      ...(recoveryIntent ? { "x-bazaar-request-id": recoveryIntent.requestId, "x-bazaar-recovery-proof": recoveryIntent.proof } : {}),
     },
     body,
     redirect: "error",
@@ -89,6 +94,10 @@ export async function requestWebsiteIntelligencePaymentChallenge(input: {
   if (response.status !== 402) throw new Error(`EXPECTED_PAYMENT_REQUIRED_${response.status}`);
   if (!(response.headers.get("cache-control") ?? "").toLowerCase().includes("no-store")) throw new Error("PAYMENT_REQUIRED_MUST_BE_NO_STORE");
   const paymentRequired = readPaymentRequired(response);
+  if (recoveryIntent) {
+    const binding = (paymentRequired.extensions as Record<string, { info?: Record<string, unknown> }> | undefined)?.[WEBSITE_INTELLIGENCE_BINDING_EXTENSION]?.info;
+    if (binding?.requestId !== recoveryIntent.requestId || binding?.recoveryProof !== recoveryIntent.proof) throw new Error("RECOVERY_BINDING_EXTENSION_MISMATCH");
+  }
   const accepted = validateWebsiteIntelligencePaymentRequired(paymentRequired, { payTo: input.expectedPayTo ?? "", inputHash, cardHash: input.approvedCardHash ?? "", resourceUrl: input.publicResourceUrl ?? "" });
   return { status: response.status, inputHash, idempotencyKey: input.idempotencyKey, paymentRequired, accepted };
 }
@@ -101,6 +110,7 @@ export async function executeWebsiteIntelligenceOneShot(input: {
   acknowledgementOne: boolean;
   acknowledgementTwo: boolean;
   balanceAtomic: string;
+  recoveryIntent?: DeliveryRecoveryIntent;
   createPaidFetch: (beforePayment: () => void) => ProviderPreflightFetch;
 }) {
   const endpointUrl = new URL(input.endpoint);
@@ -109,7 +119,8 @@ export async function executeWebsiteIntelligenceOneShot(input: {
   if (!/^\d+$/.test(input.balanceAtomic) || BigInt(input.balanceAtomic) < BigInt(WEBSITE_INTELLIGENCE_ATOMIC_AMOUNT)) throw new Error("INSUFFICIENT_PREFLIGHT_BALANCE");
   let attempts = 0;
   const beforePayment = () => { attempts += 1; if (attempts > 1) throw new Error("ONE_PAYMENT_ATTEMPT_LIMIT_EXCEEDED"); };
-  const response = await input.createPaidFetch(beforePayment)(input.endpoint, { method: "POST", headers: { accept: "application/json", "content-type": "application/json", "idempotency-key": input.idempotencyKey, "x-bazaar-input-hash": input.expected.inputHash, "x-bazaar-input-hash-algorithm": WEBSITE_INTELLIGENCE_INPUT_HASH_ALGORITHM }, body: canonicalJSONStringify(input.requestBody), redirect: "error", signal: AbortSignal.timeout(10_000) });
+  const recoveryIntent = input.recoveryIntent ? validateDeliveryRecoveryIntent(input.recoveryIntent) : null;
+  const response = await input.createPaidFetch(beforePayment)(input.endpoint, { method: "POST", headers: { accept: "application/json", "content-type": "application/json", "idempotency-key": input.idempotencyKey, "x-bazaar-input-hash": input.expected.inputHash, "x-bazaar-input-hash-algorithm": WEBSITE_INTELLIGENCE_INPUT_HASH_ALGORITHM, ...(recoveryIntent ? { "x-bazaar-request-id": recoveryIntent.requestId, "x-bazaar-recovery-proof": recoveryIntent.proof } : {}) }, body: canonicalJSONStringify(input.requestBody), redirect: "error", signal: AbortSignal.timeout(10_000) });
   if (attempts !== 1) throw new Error("EXPECTED_EXACTLY_ONE_PAYMENT_ATTEMPT");
   if (!response.ok) throw new Error(`PAID_REQUEST_FAILED_${response.status}`);
   const encodedReceipt = response.headers.get("payment-response");
@@ -122,7 +133,19 @@ export async function executeWebsiteIntelligenceOneShot(input: {
   if (receipt.transactionHash !== settlement.transaction) throw new Error("RECEIPT_TRANSACTION_MISMATCH");
   const reconciliation = reconcileWebsiteIntelligenceSettlement(receipt, input.expected, body.result, body.resultHash);
   if (!reconciliation.reconciled) throw new Error("RECEIPT_OR_RESULT_RECONCILIATION_FAILED");
-  return { status: response.status, attempts, transactionHash: settlement.transaction, ledger: receipt.ledger, resultHash: reconciliation.resultHash, reconciled: true };
+  let recovery: { requestId: string; recoveryId: string; expiresAt: string } | undefined;
+  if (recoveryIntent) {
+    const delivered = body.recovery as Record<string, unknown> | undefined;
+    const expectedRecoveryId = canonicalInputHash({ requestId: recoveryIntent.requestId, proof: recoveryIntent.proof, inputHash: input.expected.inputHash, cardHash: input.expected.cardHash });
+    const expiry = typeof delivered?.expiresAt === "string" ? Date.parse(delivered.expiresAt) : NaN;
+    if (delivered?.available !== true || delivered.requestId !== recoveryIntent.requestId || delivered.recoveryId !== expectedRecoveryId || !Number.isFinite(expiry) || expiry <= Date.now()) throw new Error("INVALID_RECOVERY_DELIVERY_BINDING");
+    recovery = { requestId: recoveryIntent.requestId, recoveryId: expectedRecoveryId, expiresAt: delivered.expiresAt as string };
+  }
+  const envelope = createPaidDeliveryEnvelope({
+    policy: { serviceId: "website-intelligence", serviceVersion: "1.0.0", cardUrl: new URL("/v1/service-card", endpointUrl.origin).toString(), cardHash: input.expected.cardHash, method: "POST", route: input.expected.route, inputHash: input.expected.inputHash, idempotencyKey: input.idempotencyKey, scheme: "exact", network: "stellar:testnet", asset: input.expected.asset, atomicAmount: input.expected.amount, payTo: input.expected.payTo },
+    transactionHash: settlement.transaction, ledger: receipt.ledger, result: body.result, resultHash: reconciliation.resultHash, recovery,
+  });
+  return { status: response.status, attempts, transactionHash: settlement.transaction, ledger: receipt.ledger, resultHash: reconciliation.resultHash, result: body.result, receipt, envelope, reconciled: true };
 }
 
 export async function prepareWebsiteIntelligenceOneShot(input: OneShotPreflightInput, balance?: BalancePreflight) {

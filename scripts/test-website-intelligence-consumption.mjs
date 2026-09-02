@@ -10,4 +10,24 @@ assert.equal(verifiedWebsiteIntelligenceDelivery.result.findings.length, 5);
 assert.equal(verifiedWebsiteIntelligenceDelivery.reconciliation.durableRecoveryVerified, true);
 assert.equal(verifiedWebsiteIntelligenceDelivery.boundaries.newPaymentPerformed, false);
 assert.equal("secret" in verifiedWebsiteIntelligenceDelivery, false);
+assert.equal(verifiedWebsiteIntelligenceDelivery.payment.scheme, "exact");
+assert.equal(verifiedWebsiteIntelligenceDelivery.payment.assetSymbol, "USDC");
+assert.equal(verifiedWebsiteIntelligenceDelivery.reconciliation.status, "matched");
+assert.equal(verifiedWebsiteIntelligenceDelivery.boundaries.buyerSignerStoredByBazaar, false);
+for (const mutate of [
+  (d) => { d.payment.network = "stellar:pubnet"; },
+  (d) => { d.payment.assetSymbol = "FAKE"; },
+  (d) => { d.payment.atomicAmount = "9999"; },
+  (d) => { d.payment.transactionHash = "0".repeat(63); },
+  (d) => { d.payment.ledger = 0; },
+  (d) => { d.result.score = 1; },
+  (d) => { d.reconciliation.transactionMatchesReceipt = false; },
+  (d) => { d.reconciliation.durableRecoveryVerified = false; },
+  (d) => { d.boundaries.newPaymentPerformed = true; },
+]) {
+  const tampered = structuredClone(verifiedWebsiteIntelligenceDelivery);
+  mutate(tampered);
+  assert.equal(validateVerifiedWebsiteIntelligenceDelivery(tampered), false);
+}
+assert.equal(validateVerifiedWebsiteIntelligenceDelivery({}), false, "malformed evidence fails closed");
 console.log("website intelligence consumption evidence: PASS");
