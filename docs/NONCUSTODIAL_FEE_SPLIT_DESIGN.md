@@ -4,9 +4,9 @@
 
 ## Decisión de producto
 
-El comprador paga el precio bruto publicado. El proveedor conoce y acepta que Bazaar descuente 1% de su ingreso: 99% va directamente al proveedor y 1% directamente a la tesorería pública de Bazaar. Bazaar no guarda llaves, no firma por el comprador y no retiene fondos.
+El comprador paga el precio bruto publicado. El valor predeterminado es 1%: el proveedor recibe 99% y Bazaar 1%. La política permite configurar la comisión entre 1 y 500 bps (0,01%–5%) para futuras condiciones comerciales, pero el porcentaje queda fijado e inmutable en la Service Card, la cotización y la autorización de cada compra. Bazaar no guarda llaves, no firma por el comprador y no retiene fondos.
 
-The buyer pays the displayed gross price. The provider knowingly accepts a 1% Bazaar fee: 99% goes directly to the provider and 1% directly to Bazaar's disclosed treasury. Bazaar never holds keys, signs for the buyer, or retains funds.
+The buyer pays the displayed gross price. The default fee is 1%: 99% goes to the provider and 1% to Bazaar. Policy may configure 1–500 bps (0.01%–5%) for future commercial terms, but the rate is immutable within each Service Card, quote and buyer authorization. Bazaar never holds keys, signs for the buyer, or retains funds.
 
 Ejemplo para el precio actual de 0.001 USDC (7 decimales):
 
@@ -57,7 +57,8 @@ No reimplementaremos `/verify` o `/settle`, ni afirmaremos compatibilidad upstre
 ## Invariantes de seguridad
 
 - Stellar Testnet y el contrato SAC de USDC Testnet fijados durante el POC; símbolos libres o activos vacíos son rechazados. Mainnet queda bloqueado.
-- Comisión v0 fija en 100 bps; visible antes de autorizar.
+- Comisión predeterminada de 100 bps y máximo técnico de 500 bps; visible y ligada criptográficamente antes de autorizar.
+- El proveedor acepta términos versionados mediante `providerTermsHash`; cambiar la comisión exige una política/cotización nueva y nunca altera compras pendientes o recibos históricos.
 - Proveedor y tesorería son cuentas distintas y fijadas por la política.
 - Una transacción, exactamente dos asignaciones y suma exacta al bruto.
 - Autorización ligada a método, ruta, input, Service Card, activo, monto, destinos y expiración.

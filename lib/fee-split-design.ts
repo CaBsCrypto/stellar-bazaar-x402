@@ -4,6 +4,7 @@ import { StrKey } from "@stellar/stellar-sdk";
 export const FEE_SPLIT_POLICY_VERSION = "bazaar.fee-split-policy/v1" as const;
 export const FEE_SPLIT_RECEIPT_VERSION = "bazaar.fee-split-receipt/v1" as const;
 export const BAZAAR_FEE_BPS = 100;
+export const MAX_BAZAAR_FEE_BPS = 500;
 export const FEE_SPLIT_TESTNET_USDC_ASSET = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA" as const;
 
 export type FeeSplitPolicy = {
@@ -22,6 +23,7 @@ export type FeeSplitPolicy = {
   route: string;
   inputHash: string;
   serviceCardHash: string;
+  providerTermsHash: string;
   nonce: string;
   expiresLedger: number;
   requestBinding: string;
@@ -79,7 +81,8 @@ export function createFeeSplitRequestBinding(policy: Omit<FeeSplitPolicy, "reque
     provider: policy.provider, treasury: policy.treasury,
     grossAtomic: policy.grossAtomic, feeBps: policy.feeBps,
     method: policy.method, route: policy.route, inputHash: policy.inputHash,
-    serviceCardHash: policy.serviceCardHash, nonce: policy.nonce,
+    serviceCardHash: policy.serviceCardHash, providerTermsHash: policy.providerTermsHash,
+    nonce: policy.nonce,
     expiresLedger: policy.expiresLedger,
   });
 }
@@ -88,7 +91,7 @@ export function hashFeeSplitPolicy(policy: FeeSplitPolicy): string { return sha2
 
 export function validateFeeSplitPolicy(policy: FeeSplitPolicy): RuleOutcome[] {
   const gross = positiveInteger(policy.grossAtomic);
-  const feeOk = Number.isSafeInteger(policy.feeBps) && policy.feeBps === BAZAAR_FEE_BPS;
+  const feeOk = Number.isSafeInteger(policy.feeBps) && policy.feeBps > 0 && policy.feeBps <= MAX_BAZAAR_FEE_BPS;
   const numerator = gross === null || !feeOk ? null : gross * BigInt(policy.feeBps);
   return [
     { rule: "policy-version", ok: policy.version === FEE_SPLIT_POLICY_VERSION, reason: "Versión de política no soportada." },
@@ -96,7 +99,7 @@ export function validateFeeSplitPolicy(policy: FeeSplitPolicy): RuleOutcome[] {
     { rule: "testnet-only", ok: policy.network === "stellar:testnet", reason: "Solo Stellar Testnet está permitido." },
     { rule: "exact-scheme", ok: policy.scheme === "exact", reason: "El precio bruto debe usar exact." },
     { rule: "positive-gross", ok: gross !== null, reason: "grossAtomic debe ser entero positivo." },
-    { rule: "fixed-one-percent", ok: feeOk, reason: "v1 fija 100 bps (1%)." },
+    { rule: "bounded-fee", ok: feeOk, reason: "La comisión debe ser un entero entre 1 y 500 bps; 100 bps es el valor predeterminado." },
     { rule: "exact-division", ok: numerator !== null && numerator % 10_000n === 0n, reason: "No se permite redondeo." },
     { rule: "pinned-asset", ok: policy.asset === FEE_SPLIT_TESTNET_USDC_ASSET, reason: "Activo USDC Testnet incorrecto." },
     { rule: "valid-router", ok: validContract(policy.router) && policy.router !== policy.asset, reason: "Se requiere un router C… distinto del SAC." },
@@ -108,6 +111,7 @@ export function validateFeeSplitPolicy(policy: FeeSplitPolicy): RuleOutcome[] {
     { rule: "bound-route", ok: ROUTE.test(policy.route), reason: "Ruta no canónica o no confiable." },
     { rule: "bound-input", ok: HEX_64.test(policy.inputHash), reason: "Falta hash canónico del input." },
     { rule: "bound-card", ok: HEX_64.test(policy.serviceCardHash), reason: "Falta hash de Service Card." },
+    { rule: "provider-terms", ok: HEX_64.test(policy.providerTermsHash), reason: "Falta aceptación versionada de términos del proveedor." },
     { rule: "bound-nonce", ok: HEX_64.test(policy.nonce), reason: "Falta nonce de 32 bytes." },
     { rule: "bounded-expiry", ok: Number.isSafeInteger(policy.expiresLedger) && policy.expiresLedger > 0, reason: "Expiry de ledger inválido." },
     { rule: "canonical-binding", ok: policy.requestBinding === createFeeSplitRequestBinding(policy), reason: "El binding no cubre exactamente todos los términos." },
@@ -118,7 +122,7 @@ export function calculateFeeSplit(policy: FeeSplitPolicy): SplitAllocation[] {
   const failures = validateFeeSplitPolicy(policy).filter(({ ok }) => !ok);
   if (failures.length) throw new Error(`INVALID_FEE_SPLIT_POLICY:${failures.map(({ rule }) => rule).join(",")}`);
   const gross = BigInt(policy.grossAtomic);
-  const fee = gross / 100n;
+  const fee = (gross * BigInt(policy.feeBps)) / 10_000n;
   const providerNet = gross - fee;
   if (fee <= 0n || providerNet <= 0n || fee + providerNet !== gross) throw new Error("INVALID_FEE_SPLIT_ALLOCATION");
   return [

@@ -14,7 +14,8 @@ const unsigned = {
   version: FEE_SPLIT_POLICY_VERSION, status: "design-only", network: "stellar:testnet", scheme: "exact",
   asset: FEE_SPLIT_TESTNET_USDC_ASSET, router, payer, provider, treasury, grossAtomic: "10000",
   feeBps: BAZAAR_FEE_BPS, method: "POST", route: "/api/paid/audit", inputHash: "a".repeat(64),
-  serviceCardHash: "b".repeat(64), nonce: "c".repeat(64), expiresLedger: 123456,
+  serviceCardHash: "b".repeat(64), providerTermsHash: "6".repeat(64),
+  nonce: "c".repeat(64), expiresLedger: 123456,
 };
 const policy = { ...unsigned, requestBinding: createFeeSplitRequestBinding(unsigned) };
 
@@ -25,13 +26,21 @@ assert.deepEqual(calculateFeeSplit(policy), [
 ]);
 for (const grossAtomic of ["0", "-1", "1", "99", "100", "101", "9999", "10001"])
   assert.throws(() => calculateFeeSplit({ ...policy, grossAtomic }), /INVALID_FEE_SPLIT_POLICY/);
-for (const feeBps of [0, 99, 101, 10_000, 100.5, Number.NaN])
+for (const feeBps of [0, 501, 10_000, 100.5, Number.NaN])
   assert.throws(() => calculateFeeSplit({ ...policy, feeBps }), /INVALID_FEE_SPLIT_POLICY/);
+
+const twoPercentUnsigned = { ...unsigned, feeBps: 200 };
+const twoPercentPolicy = { ...twoPercentUnsigned, requestBinding: createFeeSplitRequestBinding(twoPercentUnsigned) };
+assert.deepEqual(calculateFeeSplit(twoPercentPolicy), [
+  { role: "provider", destination: provider, amountAtomic: "9800" },
+  { role: "bazaar", destination: treasury, amountAtomic: "200" },
+]);
 
 const boundMutations = {
   network: "stellar:pubnet", asset: StrKey.encodeContract(Buffer.alloc(32, 9)), router: StrKey.encodeContract(Buffer.alloc(32, 8)),
   payer: provider, provider: treasury, treasury: provider, grossAtomic: "20000", feeBps: 200, method: "GET",
   route: "/api/paid/other", inputHash: "d".repeat(64), serviceCardHash: "e".repeat(64),
+  providerTermsHash: "5".repeat(64),
   nonce: "f".repeat(64), expiresLedger: 123457,
 };
 for (const [field, value] of Object.entries(boundMutations)) {
