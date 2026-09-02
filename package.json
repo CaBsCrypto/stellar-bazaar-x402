@@ -46,6 +46,7 @@
     "test:webmcp:suite": "node scripts/test-webmcp-suite.mjs",
     "test:fee-split:design": "node scripts/test-fee-split-design.mjs",
     "test:three-actors:e2e": "node scripts/test-three-actors-e2e.mjs",
+    "test:p1:ingest-key-gate": "node scripts/test-p1-ingest-operator-key-gate.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs",
     "agent:paid-execution": "node examples/agent-paid-execution.mjs"
   },
