@@ -45,6 +45,7 @@
     "x402:website-intelligence:e2e-local": "node scripts/website-intelligence-testnet-one-shot.mjs",
     "test:webmcp:suite": "node scripts/test-webmcp-suite.mjs",
     "test:fee-split:design": "node scripts/test-fee-split-design.mjs",
+    "test:fee-split:conformance": "node scripts/test-fee-split-x402-conformance.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs"
   },
   "dependencies": {
