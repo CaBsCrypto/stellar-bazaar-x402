@@ -249,6 +249,12 @@ npm run test:e2e:external:testnet
 
 # Ejecutar discovery/política read-only (sin pago)
 npm run agent:quickstart
+
+# Ejecutar el runner de pago validado y reconciliación de recibo
+npm run agent:paid-execution
+
+# Ejecutar el test de integración E2E de los 3 actores (Proveedor + Bazaar + Comprador)
+npm run test:three-actors:e2e
 ```
 
 ---

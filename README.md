@@ -255,6 +255,12 @@ npm run test:e2e:external:testnet
 
 # Run read-only agent discovery/policy demo (no payment)
 npm run agent:quickstart
+
+# Run verified paid agent execution & receipt reconciliation runner
+npm run agent:paid-execution
+
+# Run complete 3-actor integration test (Provider + Bazaar + Buyer Agent)
+npm run test:three-actors:e2e
 ```
 
 ---
