@@ -23,11 +23,11 @@ export default function FeeSplitDesignPage() {
           <p className="eyebrow">Comisión no custodial / Non-custodial fee</p>
           <h1>Un precio visible.<br /><em>Dos destinos atómicos.</em></h1>
           <p className="split-lede">
-            El comprador paga el precio publicado. El proveedor acepta recibir 99% y Bazaar 1%,
+            El comprador paga el precio publicado. El valor predeterminado entrega 99% al proveedor y 1% a Bazaar,
             sin que Bazaar guarde llaves ni retenga fondos. Esta página explica el diseño futuro;
             el x402 actual continúa pagando directamente a un solo proveedor.
           </p>
-          <p className="split-en">The buyer pays the displayed price. The provider knowingly receives 99% and Bazaar 1%. No custody, wallet, or deployed split is claimed.</p>
+          <p className="split-en">The buyer pays the displayed price. The default policy gives 99% to the provider and 1% to Bazaar. Each quote locks its disclosed rate. No custody, wallet, or deployed split is claimed.</p>
         </div>
         <div className="split-summary" aria-label="Ejemplo de distribución de pago">
           <span>Ejemplo exacto / Exact example</span>
@@ -54,7 +54,7 @@ export default function FeeSplitDesignPage() {
           <p className="eyebrow">Sí / In scope</p>
           <h2>Reglas del diseño</h2>
           <ul>
-            <li>1% descontado del ingreso del proveedor.</li>
+            <li>1% predeterminado; cualquier tasa acordada queda fijada antes de autorizar.</li>
             <li>Una operación atómica, dos transferencias directas.</li>
             <li>USDC y Stellar Testnet durante validación.</li>
             <li>Fail-closed ante monto, activo, destino o binding incorrecto.</li>
