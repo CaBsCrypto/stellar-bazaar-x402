@@ -41,9 +41,11 @@ sequenceDiagram
 
 El router no recibe primero el saldo ni lo reenvía después. Dentro de una sola invocación autorizada realiza dos llamadas anidadas al contrato del token. Si una falla, la operación completa debe revertirse. La política canónica liga red, activo, precio bruto, basis points, ambos destinos, request binding y hash de Service Card.
 
-## Brecha x402 que bloquea activación
+## Brecha x402 confirmada que bloquea activación
 
-El esquema `exact` usado actualmente anuncia un único `payTo`. Un router con dos transferencias no se debe presentar como compatible solo por generar una transacción válida: comprador, servidor y facilitador deben soportar explícitamente el mecanismo `(scheme, network)` y verificar la invocación completa.
+El esquema `exact` usado actualmente anuncia un único `payTo`. La auditoría del SDK fijado (`@x402/stellar` 2.24.0) confirmó que el cliente construye una sola invocación SEP-41 `transfer(payer, payTo, amount)` y el verificador exige exactamente esa función, esos tres argumentos y una sola transferencia. También rechaza explícitamente una simulación con múltiples transferencias. Un `payTo` con dirección de contrato solo deposita en ese contrato; no invoca su función de reparto.
+
+Por tanto, el router 99/1 **no es compatible con el mecanismo `exact` estándar actual**. El pago directo 100% al proveedor continúa siendo la única ruta activa y demostrada. No se debe apuntar `payTo` al router, encadenar dos pagos ni hacer una remesa posterior: ninguna de esas alternativas demuestra un reparto atómico y no custodial.
 
 Por tanto, la integración permanece **fail-closed** hasta tener una de estas rutas revisada y conformance-tested:
 
@@ -64,6 +66,21 @@ No reimplementaremos `/verify` o `/settle`, ni afirmaremos compatibilidad upstre
 - El resultado del proveedor se reconcilia con request, Service Card, pago y receipt; un tx hash solo no demuestra entrega.
 - Logs, UI y recibos nunca incluyen seeds, claves del facilitador ni payload de autorización completo.
 
+## Política canónica v1 y evidencia
+
+La política local v1 liga explícitamente red, esquema, SAC, router, pagador, proveedor, tesorería, bruto, comisión, método, ruta, hash de input, hash de Service Card, nonce y expiración de ledger. Cualquier mutación invalida `requestBinding`.
+
+La reconciliación ya no confía en banderas declaradas como `atomic: true` o `routerRetainedFunds: false`. Exige evidencia normalizada de exactamente dos efectos de ledger —pagador a proveedor y pagador a Bazaar— y un delta cero del router. Esto sigue siendo un modelo local: antes de afirmar settlement, un futuro adaptador deberá obtener y validar esos efectos desde Stellar RPC/Horizon y el evento del contrato.
+
+Gate fail-closed pendiente:
+
+- constructor/despliegue atómico o configuración stateless para impedir front-running de inicialización;
+- inspección completa del árbol de autorización y argumentos de ambas transferencias;
+- expiración estricta (`expiresLedger <= currentLedger` falla), replay concurrente y TTL;
+- pinning del router y SAC USDC desplegados, con bytecode revisado;
+- mecanismo x402/facilitador que soporte el router de manera explícita;
+- reconciliación independiente de transacción, evento, efectos y balances.
+
 ## Alternativas rechazadas
 
 - **Pagar al router y reenviar después:** introduce custodia y riesgo operativo.
@@ -73,7 +90,7 @@ No reimplementaremos `/verify` o `/settle`, ni afirmaremos compatibilidad upstre
 
 ## Gate de implementación
 
-1. **P0 — este branch:** política canónica, cálculo determinista, reconciliación, UI y pruebas sin red.
+1. **P0 — rama actual:** política canónica v1, cálculo determinista, reconciliación basada en evidencia y pruebas negativas sin red. No activa comisión.
 2. **P1 — branch de contrato:** router Soroban mínimo, sin admin withdrawal; unit, property y fuzz tests; eventos y errores deterministas.
 3. **P2 — conformance:** revisión independiente de auth entries, expiración y replay; definir el mecanismo x402/facilitador soportado; testnet deployment separado.
 4. **P3 — evidencia:** una operación mínima autorizada, verificación de balances, ledger, receipt y entrega; luego repetibilidad.
