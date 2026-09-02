@@ -6,7 +6,7 @@ export const WEBSITE_INTELLIGENCE_PUBLIC_ENDPOINT = `${WEBSITE_INTELLIGENCE_PUBL
 
 export const verifiedWebsiteIntelligenceDelivery = {
   version: "bazaar.verified-delivery/v1",
-  evidence: "historical-testnet-purchase",
+  evidence: "verified-testnet-purchase-with-durable-recovery",
   provider: "website-intelligence",
   request: { url: "https://example.com", language: "es" },
   payment: {
@@ -16,9 +16,10 @@ export const verifiedWebsiteIntelligenceDelivery = {
     assetSymbol: "USDC",
     atomicAmount: "10000",
     displayAmount: "0.001 USDC",
-    transactionHash: "bb47c3979c7a0031314685fea118687bcba26c4eddb3bb94ceccb980180514b0",
-    ledger: 4424799,
-    explorerUrl: "https://stellar.expert/explorer/testnet/tx/bb47c3979c7a0031314685fea118687bcba26c4eddb3bb94ceccb980180514b0",
+    transactionHash: "9ba1a122c08267fcc65d9a906e32ab4075655b2a566e06d6cb17b397fcc0cc8d",
+    ledger: 4458547,
+    settledAt: "2026-09-02T02:32:02Z",
+    explorerUrl: "https://stellar.expert/explorer/testnet/tx/9ba1a122c08267fcc65d9a906e32ab4075655b2a566e06d6cb17b397fcc0cc8d",
   },
   result: {
     schemaVersion: "1.0",
@@ -46,6 +47,11 @@ export const verifiedWebsiteIntelligenceDelivery = {
     transactionMatchesReceipt: true,
     durableRecoveryVerified: true,
   },
+  recoveryEvidence: {
+    status: "recovered",
+    additionalPaymentPerformed: false,
+    credentialStoredByBazaar: false,
+  },
   boundaries: {
     newPaymentPerformed: false,
     fixtureInputOnly: true,
@@ -69,6 +75,9 @@ export function validateVerifiedWebsiteIntelligenceDelivery(delivery: unknown = 
       && candidate.reconciliation.resultHashMatches === true
       && candidate.reconciliation.transactionMatchesReceipt === true
       && candidate.reconciliation.durableRecoveryVerified === true
+      && candidate.recoveryEvidence.status === "recovered"
+      && candidate.recoveryEvidence.additionalPaymentPerformed === false
+      && candidate.recoveryEvidence.credentialStoredByBazaar === false
       && candidate.boundaries.newPaymentPerformed === false
       && candidate.boundaries.buyerSignerStoredByBazaar === false;
   } catch {
