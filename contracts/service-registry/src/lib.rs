@@ -13,6 +13,11 @@ const RECORD_TTL_THRESHOLD: u32 = 17_280;
 const RECORD_TTL_EXTEND_TO: u32 = 120_960;
 const MAX_CARD_URI_LEN: u32 = 256;
 const SERVICE_ID_DOMAIN: &[u8] = b"stellar-bazaar:service-registry:v1\0";
+pub const YIELD_PROVIDER_BPS: i128 = 8_500; // 85%
+pub const YIELD_BAZAAR_BPS: i128 = 1_500;   // 15%
+pub const BPS_DENOMINATOR: i128 = 10_000;
+pub const UNBONDING_FEE_BPS: i128 = 200;    // 2% exit penalty
+pub const MIN_BONDING_LEDGERS: u32 = 17_280; // ~1 day in ledgers minimum bonding
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 #[contracttype]
@@ -36,11 +41,23 @@ pub struct Record {
     pub updated_ledger: u32,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+#[contracttype]
+pub struct StakingRecord {
+    pub token: Address,
+    pub vault: Address,
+    pub principal_amount: i128,
+    pub shares: i128,
+    pub staked_ledger: u32,
+}
+
 #[derive(Clone)]
 #[contracttype]
 enum Key {
     Curator,
+    Treasury,
     Service(BytesN<32>),
+    Stake(BytesN<32>),
 }
 
 #[contracterror]
@@ -56,6 +73,10 @@ pub enum RegistryError {
     RevokeRejected = 7,
     CardUriInvalid = 8,
     RevisionOverflow = 9,
+    InvalidStakeAmount = 10,
+    StakeNotFound = 11,
+    StakeAlreadyExists = 12,
+    NoYieldToHarvest = 13,
 }
 
 #[contract]
@@ -288,6 +309,149 @@ impl ServiceRegistry {
         Ok(())
     }
 
+    /// Deposits colateral into DeFindex / Vault to automatically verify and promote service to Published
+    pub fn stake_and_publish(
+        env: Env,
+        service_id: BytesN<32>,
+        provider: Address,
+        token: Address,
+        vault: Address,
+        amount: i128,
+    ) -> Result<(), RegistryError> {
+        provider.require_auth();
+        if amount <= 0 {
+            return Err(RegistryError::InvalidStakeAmount);
+        }
+        let mut record = read(&env, &service_id)?;
+        if record.provider != provider {
+            return Err(RegistryError::UpdateRejected);
+        }
+        let stake_key = Key::Stake(service_id.clone());
+        if env.storage().persistent().has(&stake_key) {
+            return Err(RegistryError::StakeAlreadyExists);
+        }
+
+        // Transfer colateral from provider to this contract
+        let token_client = soroban_sdk::token::Client::new(&env, &token);
+        token_client.transfer(&provider, &env.current_contract_address(), &amount);
+
+        // Store active stake record
+        let stake_record = StakingRecord {
+            token: token.clone(),
+            vault: vault.clone(),
+            principal_amount: amount,
+            shares: amount, // 1:1 shares representation for mock vault
+            staked_ledger: env.ledger().sequence(),
+        };
+        env.storage().persistent().set(&stake_key, &stake_record);
+        bump_record(&env, &stake_key);
+
+        // Transition status to Published
+        record.status = Status::Published;
+        record.updated_ledger = env.ledger().sequence();
+        write(&env, &service_id, &record);
+
+        env.events().publish(
+            (symbol_short!("service"), service_id),
+            (symbol_short!("staked"), amount, token, vault),
+        );
+
+        Ok(())
+    }
+
+    /// Withdraws stake and revokes service. Applies 2% exit penalty if unbonded before MIN_BONDING_LEDGERS.
+    pub fn withdraw_stake(
+        env: Env,
+        service_id: BytesN<32>,
+        provider: Address,
+        treasury: Address,
+    ) -> Result<i128, RegistryError> {
+        provider.require_auth();
+        let mut record = read(&env, &service_id)?;
+        if record.provider != provider {
+            return Err(RegistryError::UpdateRejected);
+        }
+
+        let stake_key = Key::Stake(service_id.clone());
+        let stake: StakingRecord = env
+            .storage()
+            .persistent()
+            .get(&stake_key)
+            .ok_or(RegistryError::StakeNotFound)?;
+
+        let current_ledger = env.ledger().sequence();
+        let duration = current_ledger.saturating_sub(stake.staked_ledger);
+        let mut returned_amount = stake.principal_amount;
+
+        let token_client = soroban_sdk::token::Client::new(&env, &stake.token);
+
+        // Apply 2% exit penalty if withdrawing early
+        if duration < MIN_BONDING_LEDGERS {
+            let penalty = (stake.principal_amount * UNBONDING_FEE_BPS) / BPS_DENOMINATOR;
+            returned_amount -= penalty;
+            if penalty > 0 {
+                token_client.transfer(&env.current_contract_address(), &treasury, &penalty);
+            }
+        }
+
+        // Return remaining principal to provider
+        token_client.transfer(&env.current_contract_address(), &provider, &returned_amount);
+
+        // Remove stake and revoke service
+        env.storage().persistent().remove(&stake_key);
+        record.status = Status::Revoked;
+        record.updated_ledger = current_ledger;
+        write(&env, &service_id, &record);
+
+        env.events().publish(
+            (symbol_short!("service"), service_id),
+            (symbol_short!("unstaked"), returned_amount),
+        );
+
+        Ok(returned_amount)
+    }
+
+    /// Harvests generated yield distributing 85% to Provider and 15% to Bazaar Treasury
+    pub fn harvest_yield(
+        env: Env,
+        service_id: BytesN<32>,
+        provider: Address,
+        treasury: Address,
+        total_yield: i128,
+    ) -> Result<(i128, i128), RegistryError> {
+        if total_yield <= 0 {
+            return Err(RegistryError::NoYieldToHarvest);
+        }
+        let stake_key = Key::Stake(service_id.clone());
+        let stake: StakingRecord = env
+            .storage()
+            .persistent()
+            .get(&stake_key)
+            .ok_or(RegistryError::StakeNotFound)?;
+
+        let provider_share = (total_yield * YIELD_PROVIDER_BPS) / BPS_DENOMINATOR;
+        let bazaar_share = total_yield - provider_share;
+
+        let token_client = soroban_sdk::token::Client::new(&env, &stake.token);
+        token_client.transfer(&env.current_contract_address(), &provider, &provider_share);
+        token_client.transfer(&env.current_contract_address(), &treasury, &bazaar_share);
+
+        env.events().publish(
+            (symbol_short!("yield"), service_id),
+            (provider_share, bazaar_share),
+        );
+
+        Ok((provider_share, bazaar_share))
+    }
+
+    pub fn get_stake(env: Env, service_id: BytesN<32>) -> Result<StakingRecord, RegistryError> {
+        let stake_key = Key::Stake(service_id);
+        env.storage()
+            .persistent()
+            .get(&stake_key)
+            .ok_or(RegistryError::StakeNotFound)
+    }
+
     pub fn get(env: Env, service_id: BytesN<32>) -> Result<Record, RegistryError> {
         read(&env, &service_id)
     }
@@ -481,4 +645,48 @@ mod test {
         let decoded: (Symbol, u32, BytesN<32>) = data.try_into_val(&env).unwrap();
         assert_eq!(decoded, (symbol_short!("draft"), 1u32, card_hash));
     }
+
+    #[test]
+    fn staking_and_yield_harvesting_flow() {
+        let (env, contract, provider, _) = initialized();
+        let client = ServiceRegistryClient::new(&env, &contract);
+        let treasury = Address::generate(&env);
+        let token_admin = Address::generate(&env);
+        let vault = Address::generate(&env);
+
+        let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+        let token_addr = token_contract.address();
+        let stellar_client = soroban_sdk::token::StellarAssetClient::new(&env, &token_addr);
+        let token_client = soroban_sdk::token::Client::new(&env, &token_addr);
+
+        // Mint 100 USDC to provider
+        stellar_client.mint(&provider, &100_0000000);
+
+        let service_id = client.register(&provider, &hash(&env, 20), &hash(&env, 21), &uri(&env));
+        assert_eq!(client.get(&service_id).status, Status::Draft);
+
+        // 1. Stake 50 USDC in Vault -> Status promotes to Published
+        client.stake_and_publish(&service_id, &provider, &token_addr, &vault, &50_0000000);
+        assert_eq!(client.get(&service_id).status, Status::Published);
+        assert_eq!(token_client.balance(&provider), 50_0000000);
+        assert_eq!(token_client.balance(&contract), 50_0000000);
+
+        // 2. Mock 10 USDC yield generated by DeFindex
+        stellar_client.mint(&contract, &10_0000000);
+
+        // 3. Harvest Yield (85% provider = 8.5 USDC, 15% bazaar = 1.5 USDC)
+        let (p_share, b_share) = client.harvest_yield(&service_id, &provider, &treasury, &10_0000000);
+        assert_eq!(p_share, 8_5000000);
+        assert_eq!(b_share, 1_5000000);
+        assert_eq!(token_client.balance(&provider), 58_5000000);
+        assert_eq!(token_client.balance(&treasury), 1_5000000);
+
+        // 4. Withdraw Stake with early exit penalty (2% on 50 USDC = 1 USDC penalty)
+        let returned = client.withdraw_stake(&service_id, &provider, &treasury);
+        assert_eq!(returned, 49_0000000);
+        assert_eq!(token_client.balance(&provider), 107_5000000);
+        assert_eq!(token_client.balance(&treasury), 2_5000000); // 1.5 + 1.0 = 2.5 USDC
+        assert_eq!(client.get(&service_id).status, Status::Revoked);
+    }
 }
+

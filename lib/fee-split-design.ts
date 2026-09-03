@@ -4,13 +4,14 @@ import { StrKey } from "@stellar/stellar-sdk";
 export const FEE_SPLIT_POLICY_VERSION = "bazaar.fee-split-policy/v0" as const;
 export const FEE_SPLIT_RECEIPT_VERSION = "bazaar.fee-split-receipt/v0" as const;
 export const BAZAAR_FEE_BPS = 100;
+export const BAZAAR_TREASURY_ADDRESS = "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ" as const;
 export const FEE_SPLIT_TESTNET_USDC_ASSET = "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA" as const;
 
 export type FeeSplitPolicy = {
   version: typeof FEE_SPLIT_POLICY_VERSION;
   status: "design-only";
   network: "stellar:testnet";
-  scheme: "exact";
+  scheme: "exact" | "split-exact";
   asset: typeof FEE_SPLIT_TESTNET_USDC_ASSET;
   grossAtomic: string;
   feeBps: number;
@@ -101,8 +102,8 @@ export function validateFeeSplitPolicy(policy: FeeSplitPolicy): RuleOutcome[] {
     },
     {
       rule: "exact-scheme",
-      ok: policy.scheme === "exact",
-      reason: "El importe bruto debe estar definido por el esquema exact.",
+      ok: policy.scheme === "exact" || policy.scheme === "split-exact",
+      reason: "El importe bruto debe estar definido por el esquema exact o split-exact.",
     },
     {
       rule: "positive-gross",

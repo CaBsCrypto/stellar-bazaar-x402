@@ -1,0 +1,17 @@
+[package]
+name = "bazaar-fee-split-router"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+overflow-checks = true
+
+[dependencies]
+soroban-sdk = "=21.7.7"
+
+[dev-dependencies]
+soroban-sdk = { version = "=21.7.7", features = ["testutils"] }

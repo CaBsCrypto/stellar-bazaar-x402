@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PublisherForm } from "@/components/PublisherForm";
+import { ListingStakingSection } from "@/components/ListingStakingSection";
 
 export default function Publish() {
   return (
@@ -11,6 +12,7 @@ export default function Publish() {
         </Link>
         <div className="nav-links">
           <Link href="/#catalogo">Catálogo</Link>
+          <a href="#modelo-listing">Staking DeFindex</a>
           <a href="#formulario">Registrar servicio</a>
           <Link href="/docs">Docs</Link>
           <a href="https://github.com/CaBsCrypto/stellar-bazaar-x402">GitHub ↗</a>
@@ -37,6 +39,10 @@ export default function Publish() {
           <span>Sin custodia Bazaar</span>
         </div>
       </header>
+
+      {/* Seccion de Listing & Staking DeFindex */}
+      <ListingStakingSection />
+
       <section className="shell publish-section" id="formulario">
         <div className="section-heading">
           <div>
@@ -50,3 +56,4 @@ export default function Publish() {
     </main>
   );
 }
+

@@ -36,21 +36,28 @@ export async function GET(req: NextRequest) {
     asset: p.get("asset") ?? undefined,
   });
 
-  return NextResponse.json({
-    ok: true,
-    query: q,
-    ranking: {
-      version: "lexical-v1",
-      method: "exact token weights: name 5, tag 3, asset 3, kind 2, description 1",
-      ai: false,
+  return NextResponse.json(
+    {
+      ok: true,
+      query: q,
+      ranking: {
+        version: "lexical-v1",
+        method: "exact token weights: name 5, tag 3, asset 3, kind 2, description 1",
+        ai: false,
+      },
+      results: rankServices(base, q).map((r) => ({
+        resource: toServiceCard(r.service),
+        score: r.score,
+        reasons: r.reasons,
+      })),
+      nextCursor: null,
+      partialResults: !registry.available,
+      dynamicRegistry: registry.available ? "available" : "unavailable",
     },
-    results: rankServices(base, q).map((r) => ({
-      resource: toServiceCard(r.service),
-      score: r.score,
-      reasons: r.reasons,
-    })),
-    nextCursor: null,
-    partialResults: !registry.available,
-    dynamicRegistry: registry.available ? "available" : "unavailable",
-  });
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60",
+      },
+    },
+  );
 }

@@ -4,12 +4,21 @@ import { createOnboardingMcpServer } from "@/lib/mcp-onboarding-server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+let globalServerInstance: ReturnType<typeof createOnboardingMcpServer> | null = null;
+
+function getSharedMcpServer() {
+  if (!globalServerInstance) {
+    globalServerInstance = createOnboardingMcpServer();
+  }
+  return globalServerInstance;
+}
+
 export async function POST(request: Request) {
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
-  const server = createOnboardingMcpServer();
+  const server = getSharedMcpServer();
   await server.connect(transport);
   return transport.handleRequest(request);
 }

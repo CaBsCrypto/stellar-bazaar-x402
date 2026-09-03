@@ -1,0 +1,10 @@
+C:\Users\MGC\Documents\Codex\2026-08-12\stellar-bazaar-x402\contracts\fee-split-router\target\debug\deps\crypto_common-3e1ce9d590a151b3.d: C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\lib.rs C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\hazmat.rs C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\generate.rs C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\../README.md
+
+C:\Users\MGC\Documents\Codex\2026-08-12\stellar-bazaar-x402\contracts\fee-split-router\target\debug\deps\libcrypto_common-3e1ce9d590a151b3.rlib: C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\lib.rs C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\hazmat.rs C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\generate.rs C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\../README.md
+
+C:\Users\MGC\Documents\Codex\2026-08-12\stellar-bazaar-x402\contracts\fee-split-router\target\debug\deps\libcrypto_common-3e1ce9d590a151b3.rmeta: C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\lib.rs C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\hazmat.rs C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\generate.rs C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\../README.md
+
+C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\lib.rs:
+C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\hazmat.rs:
+C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\generate.rs:
+C:\Users\MGC\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\crypto-common-0.2.2\src\../README.md:

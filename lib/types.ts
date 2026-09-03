@@ -1,5 +1,5 @@
 export type ServiceKind = "http" | "mcp";
-export type PaymentScheme = "exact" | "upto";
+export type PaymentScheme = "exact" | "upto" | "split-exact";
 export type SupportedSep41Asset = "USDC" | "XLM" | "EURC";
 
 export interface PaidService {

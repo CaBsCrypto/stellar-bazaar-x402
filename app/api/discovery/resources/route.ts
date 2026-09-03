@@ -21,12 +21,19 @@ export async function GET(req: NextRequest) {
     maxPrice: p.get("maxPrice") ? Number(p.get("maxPrice")) : undefined,
   });
 
-  return NextResponse.json({
-    results: results.map(toServiceCard),
-    count: results.length,
-    cursor: null,
-    indexStatus: "local-mvp",
-    partialResults: !registry.available,
-    dynamicRegistry: registry.available ? "available" : "unavailable",
-  });
+  return NextResponse.json(
+    {
+      results: results.map(toServiceCard),
+      count: results.length,
+      cursor: null,
+      indexStatus: "local-mvp",
+      partialResults: !registry.available,
+      dynamicRegistry: registry.available ? "available" : "unavailable",
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
+      },
+    },
+  );
 }

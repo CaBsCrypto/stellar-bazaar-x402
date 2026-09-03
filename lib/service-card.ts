@@ -8,7 +8,9 @@ export function toServiceCard(s: PaidService): ServiceCard {
     name: s.name,
     description: s.description,
     kind: s.kind,
-    url: s.routeTemplate.startsWith("/") ? "http://localhost:3000" : "https://demo.bazaar.invalid",
+    url: s.routeTemplate.startsWith("/")
+      ? (typeof process !== "undefined" && process.env.NEXT_PUBLIC_APP_URL ? process.env.NEXT_PUBLIC_APP_URL : "https://stellar-bazaar-x402.vercel.app")
+      : "https://demo.bazaar.invalid",
     routeTemplate: s.routeTemplate,
     input: s.input.map((name) => ({ name, type: name === "amount" ? "number" : "string", required: true })),
     network: s.network,

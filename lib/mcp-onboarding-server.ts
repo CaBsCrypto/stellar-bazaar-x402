@@ -54,7 +54,7 @@ export function createOnboardingMcpServer() {
     "get_bazaar_capabilities",
     {
       description:
-        "Capability and policy card for read-only service discovery and validation.",
+        "Capability, architecture, and policy card explaining how AI agents discover, pay, deliver, and validate services in Stellar Bazaar.",
       inputSchema: {},
     },
     async () =>
@@ -65,6 +65,22 @@ export function createOnboardingMcpServer() {
           discovery: "read-only",
           mutationViaMcp: false,
           providerMetadataTrusted: false,
+        },
+        architecture: {
+          standard: "x402 (HTTP 402 Payment Required)",
+          network: "stellar:testnet",
+          settlementAsset: "USDC (CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA)",
+          facilitatorUrl: "https://channels.openzeppelin.com/x402/testnet",
+          monetization: {
+            takeRateFeeBps: 100, // 1% treasury, 99% provider
+            defindexStaking: "85% yield provider / 15% platform performance fee",
+          },
+          providerStepsToDeliver: [
+            "1. Expose HTTP endpoint that challenges requests without payment-signature with HTTP 402 + PAYMENT-REQUIRED header.",
+            "2. Define deterministic ServiceCard manifest with name, routeTemplate, inputs, price and Stellar destination wallet.",
+            "3. Validate ServiceCard conformance via validate_service_card tool or POST /api/conformance/service-card.",
+            "4. Verify on-chain payment via facilitator and deliver payload with PAYMENT-RESPONSE header.",
+          ],
         },
         paymentFlow: paymentFlowCapability,
       }),

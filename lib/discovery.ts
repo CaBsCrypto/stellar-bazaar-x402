@@ -115,7 +115,7 @@ export function validateServiceCard(card: ServiceCard): ValidationOutcome[] {
   );
 
   rule("payment.network", card.network === "stellar:testnet", "Network declarada como Stellar Testnet.", "El MVP sólo acepta stellar:testnet.");
-  rule("payment.scheme", card.payment.scheme === "exact" || card.payment.scheme === "upto", "Scheme reconocido.", "Scheme debe ser exact o upto.");
+  rule("payment.scheme", card.payment.scheme === "exact" || card.payment.scheme === "upto" || card.payment.scheme === "split-exact", "Scheme reconocido.", "Scheme debe ser exact, upto o split-exact.");
   rule(
     "payment.amount",
     /^\d+(\.\d{1,7})?$/.test(card.payment.amount) && Number(card.payment.amount) > 0,

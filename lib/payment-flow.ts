@@ -41,7 +41,7 @@ export type PaymentFlowSnapshot = {
   receipt: {
     receiptVersion: "bazaar.normalized-receipt/v1";
     network: "stellar:testnet";
-    scheme: "exact" | "upto";
+    scheme: "exact" | "upto" | "split-exact";
     assetSymbol: string;
     assetContract: string | null;
     atomicAmount: string | null;

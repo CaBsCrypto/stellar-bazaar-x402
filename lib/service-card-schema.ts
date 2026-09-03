@@ -59,7 +59,7 @@ const serviceCardSchema = z.object({
   ),
   network: z.literal("stellar:testnet"),
   payment: z.object({
-    scheme: z.enum(["exact", "upto"]),
+    scheme: z.enum(["exact", "upto", "split-exact"]),
     asset: z.string().min(1, "asset es obligatorio."),
     amount: z
       .string()

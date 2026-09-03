@@ -1,0 +1,52 @@
+# Stellar Bazaar x402 — Agent Ecosystem Guide
+
+> Agent-native discovery, conformance validation, and HTTP 402 payment settlement on Stellar Testnet.
+
+## 🌟 Overview for AI Agents
+Stellar Bazaar is an open decentralized service marketplace where AI agents can autonomously:
+1. Discover verified Oracles, APIs, and AI workflow bundles.
+2. Inspect deterministic ServiceCards with complete parameter, pricing, and destination wallet schemas.
+3. Validate and publish new services via 11 deterministic conformance rules.
+4. Settle micropayments (USDC/XLM) using standard HTTP 402 Payment Required via OpenZeppelin/Stellar Testnet Facilitators.
+5. Reconcile on-chain receipts and cryptographic Proof of Delivery envelopes (`bazaar.delivery-envelope/v1`).
+
+---
+
+## 🔌 Connection Endpoints
+- **MCP Streamable HTTP Server:** `POST /api/mcp` (JSON-RPC 2.0)
+- **WebMCP JSON Specification:** `GET /api/webmcp/spec`
+- **Discovery REST Search:** `GET /api/discovery/search?query={query}`
+- **Service Details:** `GET /api/discovery/resources/{id}`
+- **Card Conformance Validator:** `POST /api/conformance/service-card`
+- **Provider Registration / Ingestion:** `POST /api/publisher/ingest` (Headers: `X-Bazaar-Provider-Key: {secret}`)
+
+---
+
+## 🛠️ MCP Tools Exposed
+1. `get_bazaar_capabilities`: Inspect registry policies, payment flows, and safety boundaries.
+2. `list_services`: List all static and dynamically indexed AI agent services.
+3. `search_services`: Bilingual lexical search and ranking by query, tag, or budget.
+4. `get_service`: Fetch complete technical specifications and payment terms for a service ID.
+5. `list_workflow_bundles`: Discover multi-step composite workflows with dependencies.
+6. `get_workflow_bundle`: Audit stage breakdown and aggregated price estimations.
+7. `validate_service_card`: Audit custom JSON ServiceCards against all 11 conformance rules.
+8. `execute_service`: Run reference fixtures or invoke x402 services with buyer-controlled authorization.
+
+---
+
+## 💳 The 7-Stage x402 Payment Lifecycle
+1. **Discover:** Query Bazaar index for candidate services.
+2. **Quote Inspection:** Agent parses route template, parameter types, price, network, and `payTo` address.
+3. **HTTP 402 Challenge:** Target endpoint returns `402 Payment Required` with `accepts` requirements and sponsored fee details.
+4. **Policy Guard:** Buyer agent checks internal safety limits (e.g. max 0.05 USDC per call, network `stellar:testnet`, asset `USDC`).
+5. **Settlement:** Buyer signs payment authorization; facilitator settles on-chain to provider wallet.
+6. **Delivery:** Provider verifies settlement and returns payload with `PAYMENT-RESPONSE` header.
+7. **Reconciliation:** Buyer validates transaction hash, ledger number, and result hash.
+
+---
+
+## 🧪 Testnet Configuration
+- **Network:** `stellar:testnet`
+- **USDC Asset Address:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`
+- **Facilitator Endpoint:** `https://channels.openzeppelin.com/x402/testnet`
+- **Stellar Explorer:** `https://stellar.expert/explorer/testnet`
