@@ -112,7 +112,7 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
         </div>
 
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: "1.5rem" }}>
-          <div style={{ maxWidth: "620px" }}>
+          <div style={{ maxWidth: "660px" }}>
             <span
               style={{
                 display: "inline-flex",
@@ -130,19 +130,56 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
               }}
             >
               {activeTab === "seller" 
-                ? "⚡ Onboarding de Proveedor (99% Revenue Share)" 
+                ? "⚡ Onboarding de Proveedor (99% Revenue Share Inmediato)" 
                 : "⚡ Onboarding de Comprador (Discovery + x402 Settlement)"}
             </span>
             <h2 style={{ fontSize: "1.6rem", fontWeight: 700, margin: "0.2rem 0 0.6rem 0", color: "#f8fafc" }}>
               {activeTab === "seller" 
-                ? "¿Quieres monetizar tu API o Agente en minutos?" 
-                : "¿Quieres equipar a tu Agente con APIs y Oráculos?"}
+                ? "¿Cómo monetizas tu API o Agente en Stellar Bazaar?" 
+                : "¿Cómo consume y paga tu Agente en Stellar Bazaar?"}
             </h2>
-            <p style={{ color: "#94a3b8", fontSize: "0.95rem", lineHeight: 1.6, margin: 0 }}>
-              {activeTab === "seller"
-                ? "Copia este prompt y pégaselo a tu agente (Cursor, Claude o tu bot). Implementará el cobro HTTP 402 hacia tu wallet y generará tu ServiceCard validada."
-                : "Copia este prompt y pégaselo a tu agente. Se conectará al servidor MCP de Stellar Bazaar para buscar tools, consultar precios y pagar en Testnet."}
-            </p>
+            
+            {activeTab === "seller" ? (
+              <div style={{ color: "#94a3b8", fontSize: "0.92rem", lineHeight: 1.6, marginTop: "0.5rem" }}>
+                <p style={{ margin: "0 0 0.8rem 0" }}>
+                  Stellar Bazaar permite a desarrolladores y empresas vender datos, inferencias y herramientas a agentes de IA <strong>sin custodia ni suscripciones mensuales</strong>:
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.8rem", marginBottom: "0.8rem" }}>
+                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(54, 185, 144, 0.2)" }}>
+                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>1. Tu API en tu Servidor</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Mantienes tu código en tu propio hosting. Solo respondes con HTTP 402 al recibir peticiones sin pago.</span>
+                  </div>
+                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(54, 185, 144, 0.2)" }}>
+                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>2. 99% Directo a tu Wallet</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Cada llamada se liquida en 4s on-chain. Recibes el 99% de los USDC directo en tu clave pública (G...).</span>
+                  </div>
+                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(54, 185, 144, 0.2)" }}>
+                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>3. Indexación en Servidor MCP</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tu ServiceCard se expone en /api/mcp para que miles de agentes de IA descubran y compren tu tool.</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ color: "#94a3b8", fontSize: "0.92rem", lineHeight: 1.6, marginTop: "0.5rem" }}>
+                <p style={{ margin: "0 0 0.8rem 0" }}>
+                  Tu agente de IA puede descubrir y contratar servicios descentralizados de forma 100% autónoma:
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.8rem", marginBottom: "0.8rem" }}>
+                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(112, 87, 232, 0.2)" }}>
+                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>1. Descubrimiento MCP</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tu agente consulta /api/mcp y filtra herramientas por intención, precio y latencia.</span>
+                  </div>
+                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(112, 87, 232, 0.2)" }}>
+                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>2. Pago en 4 Segundos</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Firma criptográfica Ed25519; liquida en USDC Testnet respetando tu límite de gasto fijado.</span>
+                  </div>
+                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(112, 87, 232, 0.2)" }}>
+                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>3. Recibo y Auditoría</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Recibe el resultado verificado con recibo on-chain inmutable en Stellar Expert.</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", minWidth: "220px" }}>
