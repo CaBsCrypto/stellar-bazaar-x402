@@ -3,6 +3,7 @@ import {Catalog} from "@/components/Catalog";
 import {WorkflowShowcase} from "@/components/WorkflowShowcase";
 import {VerifiedProviderCatalog} from "@/components/VerifiedProviderCatalog";
 import {PromiseSummarySection} from "@/components/PromiseSummarySection";
+import {AgentDirectConnectCard} from "@/components/AgentDirectConnectCard";
 
 const buyerSteps=[
   ["01","Descubre","Busca APIs HTTP y tools MCP por intención y filtros."],
@@ -45,6 +46,8 @@ export default function Home(){return <main>
       <div className="floating settle">EVIDENCIA<br/><b>STELLAR x402 ✓</b></div>
     </div>
   </header>
+
+  <AgentDirectConnectCard/>
 
   <section className="definition shell" id="producto"><div><span className="kicker">UNA FRONTERA CLARA</span><h2>Bazaar indexa servicios pagados.</h2><p>Ayuda a buyers y agentes a encontrar rutas invocables, comparar metadata relevante y llegar al proveedor correcto.</p><Link href="/resources/swap-risk-quote" className="text-link">Ver un recurso funcionando →</Link></div><div className="definition-grid"><article className="yes"><span>SÍ ES</span><strong>Discovery + catálogo</strong><p>Service cards, búsqueda, filtros, contratos de entrada/salida y requisitos de pago declarados.</p></article><article className="no"><span>NO ES</span><strong>Wallet ni marketplace de perfiles</strong><p>No custodia, no firma, no escrow, no Passport y no contrata personas o agentes.</p></article></div></section>
 
