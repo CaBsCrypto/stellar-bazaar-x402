@@ -65,9 +65,27 @@ export const services: PaidService[] = [
     input: ["pair", "depth"],
     output: ["spreadBps", "midPrice", "orderbook"],
     accent: "amber"
+  },
+  {
+    id: "sentinel-agent-intelligence",
+    name: "Sentinel Agent Intelligence",
+    eyebrow: "Partner Pilot · AI Oracle",
+    description: "Oráculo autónomo de inferencia de señales para agentes. Genera análisis sintéticos y score de riesgo on-chain.",
+    kind: "http",
+    tags: ["ai", "oracle", "partner-pilot", "intelligence"],
+    routeTemplate: "/api/x402/swap-risk?pair={pair}&amount={amount}&side=buy",
+    provider: "Sentinel AI Labs (External Pilot #1)",
+    network: "stellar:testnet",
+    payment: { scheme: "exact", asset: "USDC", amount: "0.003" },
+    latency: "~310 ms live",
+    input: ["pair", "amount"],
+    output: ["signalScore", "marketConfidence", "recommendationHash"],
+    accent: "mint",
+    featured: true
   }
 ];
 
 export function getService(id: string) {
   return services.find((service) => service.id === id);
 }
+
