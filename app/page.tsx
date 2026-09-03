@@ -15,7 +15,7 @@ export default function Home() {
           <span>✦</span> Stellar Bazaar <sup>x402</sup>
         </Link>
         <div className="nav-links">
-          <a href="#catalogo">Catálogo</a>
+          <Link href="/catalogo">Catálogo</Link>
           <a href="#conectar-agente">Conectar Agente</a>
           <Link href="/buyer-execution">Workspace Comprador</Link>
           <Link href="/publish">Publicar API</Link>
@@ -33,8 +33,8 @@ export default function Home() {
             Descubre, invoca y monetiza APIs mediante <strong>W3C WebMCP</strong> y micropagos instantáneos <strong>x402 en USDC sobre Stellar</strong>.
           </p>
           <div className="hero-actions">
-            <a className="primary" href="#conectar-agente">Conectar mi Agente →</a>
-            <a className="ghost" href="#catalogo">Explorar Catálogo ({">"}5 servicios)</a>
+            <a className="primary" href="#conectar-agente">⚡ Conectar mi Agente →</a>
+            <Link className="ghost" href="/catalogo">Ver Catálogo Completo ↗</Link>
           </div>
           <div className="trust-line">
             <span>🤖 7 Tools WebMCP</span>
