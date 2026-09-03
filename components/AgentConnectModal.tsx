@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export function AgentConnectModal({
   isOpen,
@@ -55,7 +56,7 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
         width: "100vw",
         height: "100vh",
         backgroundColor: "rgba(8, 10, 15, 0.85)",
-        backdropFilter: "blur(8px)",
+        backdropFilter: "blur(10px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -67,14 +68,22 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
       <div
         style={{
           background: "linear-gradient(135deg, rgba(20, 24, 38, 0.98) 0%, rgba(13, 15, 23, 0.99) 100%)",
-          border: "1px solid rgba(54, 185, 144, 0.4)",
+          border: activeTab === "seller" ? "1px solid rgba(54, 185, 144, 0.45)" : "1px solid rgba(112, 87, 232, 0.45)",
           borderRadius: "20px",
-          maxWidth: "680px",
           width: "100%",
-          padding: "2rem",
-          boxShadow: "0 20px 60px rgba(0, 0, 0, 0.7), 0 0 30px rgba(54, 185, 144, 0.15)",
+          maxWidth: "960px",
+          aspectRatio: "16 / 9",
+          maxHeight: "90vh",
+          padding: "2rem 2.5rem",
+          boxShadow: activeTab === "seller"
+            ? "0 24px 70px rgba(0, 0, 0, 0.8), 0 0 35px rgba(54, 185, 144, 0.2)"
+            : "0 24px 70px rgba(0, 0, 0, 0.8), 0 0 35px rgba(112, 87, 232, 0.2)",
           position: "relative",
-          animation: "modalFadeIn 0.25s ease-out",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          overflowY: "auto",
+          transition: "border 0.3s ease, box-shadow 0.3s ease",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -87,8 +96,8 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
             background: "rgba(255, 255, 255, 0.08)",
             border: "none",
             borderRadius: "50%",
-            width: "32px",
-            height: "32px",
+            width: "36px",
+            height: "36px",
             color: "#94a3b8",
             cursor: "pointer",
             fontSize: "1.2rem",
@@ -96,6 +105,7 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
             alignItems: "center",
             justifyContent: "center",
             transition: "all 0.2s",
+            zIndex: 10,
           }}
           onMouseEnter={(e) => (e.currentTarget.style.color = "#fff")}
           onMouseLeave={(e) => (e.currentTarget.style.color = "#94a3b8")}
@@ -103,101 +113,112 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
           ✕
         </button>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "0.5rem" }}>
-          <span
-            style={{
-              padding: "4px 10px",
-              borderRadius: "20px",
-              background: "rgba(54, 185, 144, 0.15)",
-              color: "#36b990",
-              fontSize: "0.75rem",
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-            }}
-          >
-            ⚡ Protocolo de Conexión
-          </span>
+        {/* Top Header */}
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "0.4rem" }}>
+            <span
+              style={{
+                padding: "4px 12px",
+                borderRadius: "20px",
+                background: activeTab === "seller" ? "rgba(54, 185, 144, 0.15)" : "rgba(112, 87, 232, 0.15)",
+                color: activeTab === "seller" ? "#36b990" : "#c4b5fd",
+                fontSize: "0.75rem",
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              ⚡ {activeTab === "seller" ? "Protocolo de Monetización (Vendedor)" : "Protocolo de Consumo (Comprador)"}
+            </span>
+          </div>
+
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "0.8rem" }}>
+            <div>
+              <h2 style={{ fontSize: "1.6rem", fontWeight: 700, margin: "0.2rem 0", color: "#f8fafc" }}>
+                {activeTab === "seller" ? "Monetiza tu API con Agentes de IA" : "Equipa a tu Agente con APIs y Oráculos"}
+              </h2>
+              <p style={{ color: "#94a3b8", fontSize: "0.88rem", margin: 0 }}>
+                {activeTab === "seller"
+                  ? "Copia el prompt y pégalo en tu asistente. Cobrarás en USDC Testnet directo a tu wallet."
+                  : "Copia el prompt y pégalo en tu asistente. Se conectará vía MCP para descubrir y pagar servicios."}
+              </p>
+            </div>
+
+            {/* Role Switcher Tabs */}
+            <div style={{ display: "flex", gap: "0.5rem" }}>
+              <button
+                onClick={() => setActiveTab("seller")}
+                style={{
+                  padding: "0.5rem 1rem",
+                  borderRadius: "8px",
+                  border: activeTab === "seller" ? "1px solid #36b990" : "1px solid rgba(255, 255, 255, 0.08)",
+                  background: activeTab === "seller" ? "rgba(54, 185, 144, 0.15)" : "rgba(255, 255, 255, 0.03)",
+                  color: activeTab === "seller" ? "#36b990" : "#94a3b8",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                👨‍💻 Vendedor
+              </button>
+              <button
+                onClick={() => setActiveTab("buyer")}
+                style={{
+                  padding: "0.5rem 1rem",
+                  borderRadius: "8px",
+                  border: activeTab === "buyer" ? "1px solid #7057e8" : "1px solid rgba(255, 255, 255, 0.08)",
+                  background: activeTab === "buyer" ? "rgba(112, 87, 232, 0.15)" : "rgba(255, 255, 255, 0.03)",
+                  color: activeTab === "buyer" ? "#c4b5fd" : "#94a3b8",
+                  fontWeight: 600,
+                  fontSize: "0.82rem",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+              >
+                🤖 Comprador
+              </button>
+            </div>
+          </div>
         </div>
 
-        <h2 style={{ fontSize: "1.6rem", fontWeight: 700, margin: "0.4rem 0 0.8rem 0", color: "#f8fafc" }}>
-          Conecta tu Agente a Stellar Bazaar
-        </h2>
-
-        <p style={{ color: "#94a3b8", fontSize: "0.9rem", lineHeight: 1.5, margin: "0 0 1.2rem 0" }}>
-          Selecciona tu rol, copia el prompt optimizado y pégalo en tu asistente de IA (Cursor, Claude, ChatGPT o tu bot local).
-        </p>
-
-        {/* Tab Selector */}
-        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem" }}>
-          <button
-            onClick={() => setActiveTab("seller")}
-            style={{
-              flex: 1,
-              padding: "0.6rem 1rem",
-              borderRadius: "10px",
-              border: activeTab === "seller" ? "1px solid #36b990" : "1px solid rgba(255, 255, 255, 0.08)",
-              background: activeTab === "seller" ? "rgba(54, 185, 144, 0.15)" : "rgba(255, 255, 255, 0.03)",
-              color: activeTab === "seller" ? "#36b990" : "#94a3b8",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-          >
-            👨‍💻 Modo Vendedor (Monetizar mi API)
-          </button>
-          <button
-            onClick={() => setActiveTab("buyer")}
-            style={{
-              flex: 1,
-              padding: "0.6rem 1rem",
-              borderRadius: "10px",
-              border: activeTab === "buyer" ? "1px solid #7057e8" : "1px solid rgba(255, 255, 255, 0.08)",
-              background: activeTab === "buyer" ? "rgba(112, 87, 232, 0.15)" : "rgba(255, 255, 255, 0.03)",
-              color: activeTab === "buyer" ? "#c4b5fd" : "#94a3b8",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-          >
-            🤖 Modo Comprador (Consumir Servicios)
-          </button>
-        </div>
-
-        {/* Prompt Box */}
+        {/* Prompt Code Box (Flexible Height) */}
         <div
           style={{
+            margin: "1rem 0",
             background: "#080a0f",
             border: "1px solid rgba(255, 255, 255, 0.1)",
             borderRadius: "12px",
-            padding: "1rem 1.2rem",
+            padding: "1rem 1.4rem",
             fontFamily: "var(--font-mono, monospace)",
-            fontSize: "0.82rem",
+            fontSize: "0.85rem",
             color: activeTab === "seller" ? "#93c5fd" : "#d8b4fe",
             whiteSpace: "pre-wrap",
-            lineHeight: 1.5,
-            marginBottom: "1.4rem",
-            maxHeight: "220px",
+            lineHeight: 1.55,
+            flex: 1,
             overflowY: "auto",
+            minHeight: "130px",
           }}
         >
           {currentPrompt}
         </div>
 
-        {/* Actions */}
-        <div style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap" }}>
+        {/* Bottom Actions Footer */}
+        <div style={{ display: "flex", gap: "0.8rem", flexWrap: "wrap", alignItems: "center" }}>
           <button
             onClick={copyPrompt}
             style={{
               flex: 2,
-              minWidth: "200px",
-              background: copied ? "#36b990" : "linear-gradient(135deg, #36b990 0%, #299874 100%)",
-              color: "#081018",
+              minWidth: "220px",
+              background: copied
+                ? "#36b990"
+                : activeTab === "seller"
+                  ? "linear-gradient(135deg, #36b990 0%, #299874 100%)"
+                  : "linear-gradient(135deg, #7057e8 0%, #583ec9 100%)",
+              color: activeTab === "seller" ? "#081018" : "#ffffff",
               border: "none",
               borderRadius: "10px",
-              padding: "0.85rem 1.4rem",
+              padding: "0.9rem 1.4rem",
               fontWeight: 700,
               fontSize: "0.95rem",
               cursor: "pointer",
@@ -205,56 +226,86 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
               alignItems: "center",
               justifyContent: "center",
               gap: "8px",
-              boxShadow: "0 4px 14px rgba(54, 185, 144, 0.3)",
+              boxShadow: activeTab === "seller"
+                ? "0 4px 16px rgba(54, 185, 144, 0.3)"
+                : "0 4px 16px rgba(112, 87, 232, 0.3)",
               transition: "all 0.2s",
             }}
           >
-            {copied ? "✓ ¡Copiado al Portapapeles!" : "📋 Copiar Prompt para mi Agente"}
+            {copied ? "✓ ¡Copiado al Portapapeles!" : `📋 Copiar Prompt (${activeTab === "seller" ? "Vendedor" : "Comprador"})`}
           </button>
+
+          {activeTab === "seller" ? (
+            <Link
+              href="/publish"
+              onClick={onClose}
+              style={{
+                flex: 1,
+                minWidth: "140px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(54, 185, 144, 0.12)",
+                border: "1px solid rgba(54, 185, 144, 0.35)",
+                borderRadius: "10px",
+                padding: "0.9rem 1rem",
+                color: "#36b990",
+                fontSize: "0.88rem",
+                textDecoration: "none",
+                fontWeight: 600,
+              }}
+            >
+              🚀 Kit /publish ↗
+            </Link>
+          ) : (
+            <Link
+              href="/buyer-execution"
+              onClick={onClose}
+              style={{
+                flex: 1,
+                minWidth: "140px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "rgba(112, 87, 232, 0.12)",
+                border: "1px solid rgba(112, 87, 232, 0.35)",
+                borderRadius: "10px",
+                padding: "0.9rem 1rem",
+                color: "#c4b5fd",
+                fontSize: "0.88rem",
+                textDecoration: "none",
+                fontWeight: 600,
+              }}
+            >
+              🛒 Workspace ↗
+            </Link>
+          )}
+
           <a
             href="/llms.txt"
             target="_blank"
             rel="noreferrer"
             style={{
               flex: 1,
+              minWidth: "120px",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               background: "rgba(255, 255, 255, 0.05)",
               border: "1px solid rgba(255, 255, 255, 0.1)",
               borderRadius: "10px",
-              padding: "0.85rem 1rem",
+              padding: "0.9rem 1rem",
               color: "#cbd5e1",
-              fontSize: "0.85rem",
+              fontSize: "0.88rem",
               textDecoration: "none",
               fontWeight: 600,
             }}
           >
             📄 /llms.txt ↗
           </a>
-          <a
-            href="/api/mcp"
-            target="_blank"
-            rel="noreferrer"
-            style={{
-              flex: 1,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "rgba(112, 87, 232, 0.1)",
-              border: "1px solid rgba(112, 87, 232, 0.3)",
-              borderRadius: "10px",
-              padding: "0.85rem 1rem",
-              color: "#c4b5fd",
-              fontSize: "0.85rem",
-              textDecoration: "none",
-              fontWeight: 600,
-            }}
-          >
-            🤖 /api/mcp ↗
-          </a>
         </div>
       </div>
     </div>
   );
 }
+
