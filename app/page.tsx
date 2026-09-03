@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Catalog } from "@/components/Catalog";
 import { AgentDirectConnectCard } from "@/components/AgentDirectConnectCard";
 import { WorkflowShowcase } from "@/components/WorkflowShowcase";
+import { LandingClientWrapper } from "@/components/LandingClientWrapper";
 
 export default function Home() {
   return (
@@ -32,15 +33,13 @@ export default function Home() {
           <p>
             Descubre, invoca y monetiza APIs mediante <strong>W3C WebMCP</strong> y micropagos instantáneos <strong>x402 en USDC sobre Stellar</strong>.
           </p>
-          <div className="hero-actions">
-            <a className="primary" href="#conectar-agente">⚡ Conectar mi Agente →</a>
-            <Link className="ghost" href="/catalogo">Ver Catálogo Completo ↗</Link>
-          </div>
-          <div className="trust-line">
-            <span>🤖 7 Tools WebMCP</span>
-            <span>⚡ Pagos x402 USDC</span>
-            <span>🛡️ No-custodial (99/1 split)</span>
-          </div>
+          <LandingClientWrapper>
+            <div className="trust-line">
+              <span>🤖 7 Tools WebMCP</span>
+              <span>⚡ Pagos x402 USDC</span>
+              <span>🛡️ No-custodial (99/1 split)</span>
+            </div>
+          </LandingClientWrapper>
         </div>
         <div className="orbital" aria-label="Flujo conceptual de discovery">
           <div className="orbit orbit-one"><span>WebMCP</span></div>
