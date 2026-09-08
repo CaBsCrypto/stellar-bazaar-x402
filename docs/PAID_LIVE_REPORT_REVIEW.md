@@ -4,7 +4,7 @@ Estado: implementación local; publicación y nueva compra Testnet pendientes de
 
 ## Recorrido
 
-El cliente solicita mode=live, español, https://example.com. El proveedor prepara y conserva el HTML analizado y su hash antes del cobro. Un marcador duradero impide repetir el intento. La recuperación exige acceso privado y evidencia de la transacción original. El cliente conserva la respuesta antes de escribir actividad, operación y manifiesto en Bazaar. Resultado permite explorar el informe y preparar una pregunta editable para copiar al chat.
+El cliente solicita mode=live, español, https://example.com. El proveedor prepara y conserva el informe derivado del HTML y su hash antes del cobro. Un marcador duradero impide repetir el intento. La recuperación exige acceso privado y evidencia de la transacción original. El cliente conserva la respuesta antes de escribir actividad, operación y manifiesto en Bazaar. Resultado permite explorar el informe y preparar una pregunta editable para copiar al chat.
 
 El original, los identificadores y el comprobante permanecen asociados. Los errores de Redis permiten repetir exclusivamente store; recover obtiene el mismo informe, sin nuevo análisis ni pago. El estado nuevo vive en work/private-website-live-paid-pilot, separado del piloto anterior. Nunca se versionan estos archivos privados.
 
@@ -45,3 +45,13 @@ Configurar WEBSITE_INTELLIGENCE_LIVE_PROVIDER_ORIGIN y WEBSITE_INTELLIGENCE_LIVE
 5. verify confirma la transacción. Abrir /history, comprobar las tres pestañas, preparar pregunta, bloquear, volver a entrar y recuperar desde un proceso nuevo.
 
 La recuperación remota caduca a las 24 horas; la entrega copiada a la biblioteca permanece. S3, nuevos proveedores, publicación de la biblioteca y envío directo al chat quedan fuera del bloque.
+
+## Commits y cierre de la revisión local
+
+- Proveedor: 2450694 integra el análisis HTML real; 11737bb añade preparación duradera, intento único, recuperación y pruebas.
+- Bazaar: 9f40059 conserva fichas y destinatarios; e13fd4d consolida biblioteca, actividad y preguntas; f693b6d añade el cliente aislado del nuevo piloto.
+- Confirmación final: build de Bazaar aprobado; test:activity, test:deliverables, test:provider-card, test:website-report y test-paid-live-client aprobados.
+- Navegador: 1280 y 390 píxeles, teclado, edición, copia y alternativa manual, bloqueo y recuperación aprobados; cero solicitudes de escritura.
+- Recuperación desde proceso nuevo: informe histórico pagado mantiene una operación, una versión y seis eventos; informe real anterior sin pago mantiene cinco eventos. Ambos rechazan otro propietario.
+- El proveedor queda limpio en su rama de integración. Los dos cambios locales del ejemplo fast-provider-template se conservan fuera de estos commits.
+- No se publicó ni se realizó un nuevo pago. El criterio de éxito completo sigue pendiente del piloto Testnet aprobado.
