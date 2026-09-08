@@ -1,3 +1,4 @@
+import { preserveDeliverable, type DeliveryCopyInput, type DeliveryCopyResult } from "./deliverable-client.ts";
 import { createEd25519Signer } from "@x402/stellar";
 import { ExactStellarScheme } from "@x402/stellar/exact/client";
 import { x402Client } from "@x402/core/client";
@@ -5,6 +6,10 @@ import { wrapFetchWithPayment } from "@x402/fetch";
 import { decodePaymentResponseHeader } from "@x402/core/http";
 import type { SettleResponse } from "@x402/core/types";
 import type { ServiceCard, PaymentScheme } from "./types.ts";
+import { providerRequestUrl } from "./provider-request-url.ts";
+import { appendActivity } from "./activity-client.ts";
+import type { ActivityInput } from "./activity.ts";
+import { appendOperationHistory, decimalToAtomic, type HistoryClientOptions } from "./operation-history-client.ts";
 import { validateServiceCard } from "./discovery.ts";
 import { assertActiveTestnetPayerSecret } from "./testnet-payer-safety.ts";
 import { deriveProviderDelivery, type ProviderDelivery } from "./delivery-boundaries.ts";
@@ -42,6 +47,7 @@ export interface SettlementReceiptContext {
 }
 
 export interface BazaarClientOptions {
+  history?: HistoryClientOptions;
   baseUrl: string;
   payerSecretKey?: string;
   maxPriceAllowedUsdc?: number;
@@ -53,6 +59,8 @@ export interface BazaarClientOptions {
 }
 
 export interface BazaarAgentExecutionResult<T = unknown> {
+  library?: DeliveryCopyResult;
+  history?: { status: "recorded" | "failed" | "disabled"; clientOperationId: string };
   ok: boolean;
   data: T;
   status: number;
@@ -96,6 +104,27 @@ export interface DeFindexStakingStatus {
 }
 
 export class BazaarAgentClient {
+  private history?: HistoryClientOptions;
+  private taskStart?: Promise<void>;
+  private activityFailed = false;
+  private eventSequence = 0;
+  private async reportStep(kind: ActivityInput["kind"], title: string, operationId?: string, serviceId?: string) {
+    if (!this.history?.taskId) return;
+    const event: ActivityInput = { eventId: String(Date.now()) + ":" + String(++this.eventSequence).padStart(8,"0") + ":" + crypto.randomUUID(), taskId: this.history.taskId, title, kind,
+      mode: this.history.mode ?? "testnet", agentId: this.history.agentId, operationId, serviceId };
+    if(await appendActivity(this.baseUrl,this.history,event)==="failed") this.activityFailed=true;
+  }
+  private async ensureTask() {
+    if (!this.history?.taskId) return;
+    this.taskStart ??= this.reportStep("task-started",this.history.taskTitle ?? "Actividad de mi agente");
+    await this.taskStart;
+  }
+  /** Call once the whole task ends, including all purchases. Does not execute or pay. */
+  async finishTask(failed = false) {
+    await this.ensureTask(); await this.reportStep(failed ? "error" : "task-completed", failed ? "Tarea interrumpida" : "Tarea terminada");
+    return { status: this.activityFailed ? "failed" : this.history?.taskId ? "recorded" : "disabled" };
+  }
+
   private baseUrl: string;
   private payerSecretKey?: string;
   private maxPriceAllowedUsdc: number;
@@ -107,6 +136,7 @@ export class BazaarAgentClient {
   private paidFetch: typeof fetch;
 
   constructor(options: BazaarClientOptions) {
+    this.history = options.history;
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
     this.payerSecretKey = options.payerSecretKey?.trim();
     this.maxPriceAllowedUsdc = options.maxPriceAllowedUsdc ?? 1.0;
@@ -127,6 +157,7 @@ export class BazaarAgentClient {
   }
 
   async searchServicesREST(query: string): Promise<ServiceCard[]> {
+    await this.ensureTask(); await this.reportStep("search", "Búsqueda de servicios");
     const res = await fetch(`${this.baseUrl}/api/discovery/search?query=${encodeURIComponent(query)}`);
     if (!res.ok) throw new Error(`Search failed with status ${res.status}`);
     const data = await res.json();
@@ -134,6 +165,7 @@ export class BazaarAgentClient {
   }
 
   async searchServicesMCP(query: string): Promise<ServiceCard[]> {
+    await this.ensureTask(); await this.reportStep("search", "Búsqueda de servicios por MCP");
     const res = await fetch(`${this.baseUrl}/api/mcp`, {
       method: "POST",
       headers: {
@@ -297,6 +329,58 @@ export class BazaarAgentClient {
     card: ServiceCard,
     params: Record<string, string | number | boolean>,
   ): Promise<BazaarAgentExecutionResult<T>> {
+    const clientOperationId = crypto.randomUUID();
+    await this.ensureTask();
+    await this.reportStep("service-selected", "Servicio seleccionado", clientOperationId, card.id);
+    await this.reportStep("request-started", "Preparando solicitud al proveedor", clientOperationId, card.id);
+    let outcome: BazaarAgentExecutionResult<T>;
+    try {
+      outcome = await this.executeServiceCore<T>(card, params);
+    } catch (error) {
+      if (this.history) {
+        try {
+          await appendOperationHistory(this.baseUrl, this.history, {
+            clientOperationId, taskId: this.history.taskId, mode: this.history.mode ?? "testnet", agentId: this.history.agentId,
+            service: { id: card.id, title: card.name, provider: card.provider.name, url: card.url },
+            payment: { status: "unknown", network: card.network, asset: card.payment.asset,
+              amountAtomic: decimalToAtomic(card.payment.amount), recipient: card.payment.destination },
+            delivery: { status: "unknown" },
+          });
+        } catch { /* Recording must not mask the original execution error. */ }
+      }
+      await this.reportStep("error", "Ejecución interrumpida; consultar pago y entrega", clientOperationId, card.id);
+      throw error;
+    }
+    await this.reportStep("payment-reported", "Pago reportado por el comprador", clientOperationId, card.id);
+    await this.reportStep("delivery-reported", outcome.delivery.resultAvailable ? "Resultado recibido" : "Entrega pendiente", clientOperationId, card.id);
+    const deliveryBundle = this.history?.preserveFiles && outcome.data && typeof outcome.data === "object" ? (outcome.data as Record<string, unknown>).bazaarDelivery as DeliveryCopyInput | undefined : undefined;
+    let historyStatus: "recorded" | "failed" | "disabled" = "disabled";
+    if (this.history) {
+      try {
+        historyStatus = await appendOperationHistory(this.baseUrl, this.history, {
+          clientOperationId, taskId: this.history.taskId, mode: this.history.mode ?? "testnet", agentId: this.history.agentId,
+          service: { id: card.id, title: card.name, provider: card.provider.name, url: card.url },
+          payment: { status: "reported-unverified", network: card.network, asset: card.payment.asset,
+            amountAtomic: decimalToAtomic(card.payment.amount), recipient: card.payment.destination,
+            transactionHash: outcome.payment.transactionHash },
+          delivery: { status: outcome.delivery.resultAvailable ? "reported-delivered" : "pending",
+            ...(this.history.includeResult && outcome.delivery.resultAvailable && !deliveryBundle ? { result: outcome.data } : {}) },
+        });
+      } catch { historyStatus = "failed"; }
+    }
+    let library: DeliveryCopyResult | undefined;
+    if (deliveryBundle && this.history) {
+      library = historyStatus === "recorded" ? await preserveDeliverable({baseUrl:this.baseUrl,writeToken:this.history.writeToken,operationId:clientOperationId,providerOrigin:card.url,delivery:deliveryBundle}) : {status:"failed",failedFiles:[]};
+    }
+    if (this.activityFailed && historyStatus === "recorded") historyStatus = "failed";
+    // A journal failure must never turn a completed payment into an automatic retry.
+    return { ...outcome, ...(library ? {library} : {}), history: { status: historyStatus, clientOperationId } };
+  }
+
+  private async executeServiceCore<T = unknown>(
+    card: ServiceCard,
+    params: Record<string, string | number | boolean>,
+  ): Promise<BazaarAgentExecutionResult<T>> {
     const policyCheck = this.validatePaymentPolicy(card);
     if (!policyCheck.allowed) {
       throw new Error(`AGENT_POLICY_VIOLATION: ${policyCheck.reason}`);
@@ -310,14 +394,7 @@ export class BazaarAgentClient {
       );
     }
 
-    let resolvedRoute = card.routeTemplate;
-    for (const [key, value] of Object.entries(params)) {
-      resolvedRoute = resolvedRoute.replace(`{${key}}`, encodeURIComponent(String(value)));
-    }
-
-    const targetUrl = resolvedRoute.startsWith("http")
-      ? resolvedRoute
-      : `${this.baseUrl}${resolvedRoute}`;
+    const targetUrl = providerRequestUrl(card, params);
 
     const response = await this.paidFetch(targetUrl);
     const status = response.status;

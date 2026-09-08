@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import { buildWebsiteReportBundle } from '../lib/website-intelligence-history.ts';
+import { verifiedWebsiteIntelligenceDelivery } from '../lib/website-intelligence-consumption.ts';
+const result = { ...verifiedWebsiteIntelligenceDelivery.result, mode: 'live', finalUrl: 'https://example.com/', fetchedAt: '2026-09-08T12:00:00.000Z', limitations: ['HTML sin JavaScript.'], network: { attempted: true, allowed: true } };
+const input = { operationId: 'live-report-test', taskId: 'live-report-task', agentId: 'local-test', mode: 'mock', providerOrigin: 'http://127.0.0.1:8788', payTo: 'G' + 'A'.repeat(55), result };
+const bundle = buildWebsiteReportBundle(input);
+assert.equal(bundle.operation.payment.amountAtomic, '0'); assert.equal(bundle.operation.payment.status, 'not-requested');
+assert.equal(bundle.operation.service.url, 'http://127.0.0.1:8788/v1/audits');
+assert.match(bundle.manifest.title, /análisis real/); assert.match(bundle.manifest.content.sections[0].body, /sin pago/);
+assert.match(bundle.manifest.content.sections[0].body, /2026-09-08/);
+assert.equal(bundle.manifest.content.sections[2].title, 'Puntuación orientativa');
+assert.deepEqual(bundle.manifest.originalResult, result); assert.deepEqual(buildWebsiteReportBundle(input), bundle);
+assert.throws(() => buildWebsiteReportBundle({ ...input, mode: 'testnet' }));
+assert.throws(() => buildWebsiteReportBundle({ ...input, result: { ...result, fetchedAt: undefined } }));
+console.log('PASS: live provenance, unpaid loopback restriction, original and stable IDs');

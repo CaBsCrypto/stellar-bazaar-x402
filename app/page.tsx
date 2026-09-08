@@ -20,6 +20,7 @@ export default function Home() {
           <a href="#conectar-agente">Conectar Agente</a>
           <Link href="/buyer-execution">Workspace Comprador</Link>
           <Link href="/publish">Publicar API</Link>
+          <Link href="/history">Historial / History</Link>
           <Link href="/docs">Docs</Link>
           <a href="https://github.com/CaBsCrypto/stellar-bazaar-x402" target="_blank" rel="noreferrer">GitHub ↗</a>
         </div>
