@@ -3,6 +3,8 @@ export type PaymentScheme = "exact" | "upto" | "split-exact";
 export type SupportedSep41Asset = "USDC" | "XLM" | "EURC";
 
 export interface PaidService {
+  /** Preserve the authoritative provider card through ranking/view conversions. */
+  sourceCard?: ServiceCard;
   id: string;
   name: string;
   eyebrow: string;
@@ -12,7 +14,7 @@ export interface PaidService {
   routeTemplate: string;
   provider: string;
   network: "stellar:testnet";
-  payment: { scheme: PaymentScheme; asset: SupportedSep41Asset | string; amount: string };
+  payment: { scheme: PaymentScheme; asset: SupportedSep41Asset | string; amount: string; destination?: string };
   latency: string;
   input: string[];
   output: string[];
