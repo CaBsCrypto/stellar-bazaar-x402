@@ -162,7 +162,7 @@ vm.runInNewContext(compiled, {
   exports: module.exports,
   module,
   require: (name) =>
-    name === "@/lib/deliverable" ? deliverable : require(name),
+    name === "./RecoveryStatus" ? {RecoveryStatus:()=>null} : name === "@/lib/deliverable" ? deliverable : require(name),
 });
 const unsafeText = buildWebsiteReportBundle({
   ...input,

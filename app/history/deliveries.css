@@ -787,3 +787,10 @@ body:has(.purchase-workspace) {
 .question-close {float:right}
 .report-sections h4 {font-size:.85rem;color:#b9cebf;margin:16px 0 8px}
 @media(max-width:600px){.question-dialog{padding:16px}.question-dialog textarea{min-height:210px}.question-actions button{width:100%}}
+
+.recovery-status { padding: 16px 24px; border-block: 1px solid #343746; }
+.recovery-status dl { display: flex; flex-wrap: wrap; gap: 16px 32px; margin: 0; }
+.recovery-status dt { font-size: .8rem; color: #b9bdcf; }
+.recovery-status dd { margin: 4px 0 0; overflow-wrap: anywhere; }
+.recovery-status p { max-width: 70ch; line-height: 1.5; }
+@media (max-width: 600px) { .recovery-status { padding: 16px; } .recovery-status dl { display: grid; } }

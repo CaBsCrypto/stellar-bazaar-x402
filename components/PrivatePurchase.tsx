@@ -158,7 +158,7 @@ export function PrivatePurchase({
       legacy={
         <section className="legacy-delivery">
           <p className="delivery-state">
-            Entrega anterior · contenido conservado
+            {record.delivery.result !== undefined ? "Contenido conservado" : "Entrega pendiente"}
           </p>
           {record.delivery.result !== undefined ? (
             <>

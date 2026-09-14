@@ -1,4 +1,5 @@
 "use client";
+import { RecoveryStatus } from "./RecoveryStatus";
 import { PrivatePurchase } from "./PrivatePurchase";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TaskSummary, ActivityEvent } from "@/lib/activity";
@@ -460,6 +461,7 @@ export function ActivityDashboard({
       )}
       {task && (
         <>
+          {!purchases.length && <RecoveryStatus events={events} />}
           {!purchases.length && <details open><summary>Actividad de la tarea · sin entrega disponible</summary>          <h3>Pasos de la tarea</h3>
           {!events.length && <p>No hay pasos históricos para esta compra.</p>}
           <ol className="activity-timeline">

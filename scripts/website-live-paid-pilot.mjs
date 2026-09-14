@@ -1,3 +1,4 @@
+import { recoverRecordedPurchase } from "./lib/automatic-recovery.mjs";
 import { createPreviewFetch } from "./lib/preview-access.mjs";
 import { assertPaidLiveReport } from "./lib/paid-live-report.mjs";
 import { inspectPilotTransaction } from "./lib/private-pilot-chain.mjs";
@@ -464,6 +465,38 @@ async function execute(run) {
     view: baseUrl + "/history",
   };
 }
+async function recoverRun(run) {
+  return recoverRecordedPurchase(run, {
+    persist: value => writePrivateJSON(runPath, value),
+    loadBackup: () => {
+      const path = join(directory, "provider-response.json");
+      if (!existsSync(path)) return;
+      const backup = readPrivateJSON(path);
+      return backup.status === 200 ? JSON.parse(backup.body) : undefined;
+    },
+    accept: body => acceptDeliveredBody(run, body),
+    store: () => storeRun(run),
+    report: async () => {
+      const a = access();
+      await appendActivity(baseUrl, {writeToken:a.writeToken}, {
+        eventId: run.operationId + ":recovery-" + (run.recovery?.queries ?? 0) + "-" + run.status,
+        operationId:run.operationId,taskId:run.taskId,agentId:run.agentId,mode:"testnet",kind:"request-started",
+        title:run.status === "storage-pending" ? "Entrega recibida; pendiente de guardar" : "Entrega pendiente de recuperación; no se repetirá el pago",
+        result:{recoveryStatus:{payment:run.chain?.verifiedPayment ? "verified-by-agent" : run.transactionHash ? "reported" : "pending",delivery:run.status === "storage-pending" ? "pending-storage" : "pending-recovery"}},
+      });
+    },
+    requestRecovery: async () => {
+      const capsule = createPrivateRecoveryCapsule({serviceId:"website-intelligence",providerOrigin,recoveryPath:"/v1/x402/audits/recover",requestId:run.requestId,recoveryToken:run.recoveryToken});
+      const recoveryId = canonicalInputHash({requestId:run.requestId,proof:run.proof,inputHash:run.expected.inputHash,cardHash:run.cardHash});
+      const response = await providerFetch(providerOrigin + "/v1/x402/audits/recover",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(createProviderRecoveryRequest(capsule,recoveryId)),redirect:"error",signal:AbortSignal.timeout(10000)});
+      const raw = await response.text();
+      if (!response.ok) {const error = new Error("RECOVERY_NOT_AVAILABLE");error.retryable=![400,401,403,404,410,422].includes(response.status);throw error;}
+      writePrivateJSON(join(directory,"provider-response.json"),{status:response.status,body:raw});
+      return JSON.parse(raw);
+    },
+  });
+}
+
 async function main() {
   const origin = new URL(providerOrigin);
   if (origin.protocol !== "https:" || origin.origin !== providerOrigin) throw Error("LIVE_APPROVED_ORIGIN_REQUIRED");
@@ -519,7 +552,15 @@ async function main() {
     }
     const run = readPrivateJSON(runPath);
     if (run.providerOrigin && run.providerOrigin !== providerOrigin) throw Error("PILOT_ORIGIN_CHANGED");
-    if (command === "execute") return await execute(run);
+    if (command === "execute") {
+      if (run.paymentAttempted) return await recoverRun(run);
+      try { return await execute(run); }
+      catch (error) {
+        const latest = readPrivateJSON(runPath);
+        if (!latest.paymentAttempted) throw error;
+        return await recoverRun(latest);
+      }
+    }
     if (command === "store") {
       const result = await storeRun(run);
       return {
@@ -529,62 +570,7 @@ async function main() {
         paymentAttempted: false,
       };
     }
-    if (command === "recover") {
-      if (!run.paymentAttempted) throw Error("NO_PAYMENT_ATTEMPT_TO_RECOVER");
-      if (run.result) {
-        const result = await storeRun(run);
-        return {
-          ok: result.status === "stored",
-          storage: result.status,
-          paymentAttempted: false,
-        };
-      }
-      const backup = join(directory, "provider-response.json");
-      if (existsSync(backup)) {
-        try {
-          const local = readPrivateJSON(backup);
-          if (local.status === 200)
-            acceptDeliveredBody(run, JSON.parse(local.body));
-        } catch {}
-      }
-      if (!run.result) {
-        const capsule = createPrivateRecoveryCapsule({
-          serviceId: "website-intelligence",
-          providerOrigin,
-          recoveryPath: "/v1/x402/audits/recover",
-          requestId: run.requestId,
-          recoveryToken: run.recoveryToken,
-        });
-        const recoveryId = canonicalInputHash({
-          requestId: run.requestId,
-          proof: run.proof,
-          inputHash: run.expected.inputHash,
-          cardHash: run.cardHash,
-        });
-        const response = await providerFetch(
-          providerOrigin + "/v1/x402/audits/recover",
-          {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify(
-              createProviderRecoveryRequest(capsule, recoveryId),
-            ),
-            redirect: "error",
-            signal: AbortSignal.timeout(10000),
-          },
-        );
-        if (!response.ok)
-          throw Error("PROVIDER_RECOVERY_NOT_AVAILABLE_NO_REPAYMENT");
-        acceptDeliveredBody(run, await response.json());
-      }
-      const result = await storeRun(run);
-      return {
-        ok: result.status === "stored",
-        storage: result.status,
-        operationId: run.operationId,
-        paymentAttempted: false,
-      };
-    }
+    if (command === "recover") return await recoverRun(run);
     throw Error(
       "COMMAND_REQUIRED_SETUP_SERVE_FIXTURE_PREFLIGHT_EXECUTE_STORE_RECOVER_STATUS",
     );

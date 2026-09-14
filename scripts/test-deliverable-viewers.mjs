@@ -31,6 +31,7 @@ function moduleAt(relative, deps) {
 const { reviewDeliveries } = moduleAt("../lib/review-deliveries.ts", {});
 const { DeliverableViewer } = moduleAt("../components/DeliverableViewer.tsx", {
   "@/lib/deliverable": delivery,
+  "./RecoveryStatus": {RecoveryStatus:()=>null},
 });
 const render = (saved) =>
   renderToStaticMarkup(

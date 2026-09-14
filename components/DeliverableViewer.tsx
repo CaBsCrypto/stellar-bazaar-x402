@@ -1,4 +1,5 @@
 "use client";
+import { RecoveryStatus } from "./RecoveryStatus";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import {
   deliveryAvailability,
@@ -728,6 +729,7 @@ export function PurchaseWorkspace({
           )}
         </div>
       </header>
+      <RecoveryStatus events={events} record={record} available={!!manifest} />
       <div
         className="delivery-tabs"
         role="tablist"

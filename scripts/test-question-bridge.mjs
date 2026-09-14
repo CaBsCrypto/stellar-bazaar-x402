@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url);
 const source = readFileSync(new URL('../components/DeliverableViewer.tsx', import.meta.url), 'utf8');
 const module = { exports: {} };
 vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText,
-  { module, exports: module.exports, URL, require: name => name === '@/lib/deliverable' ? delivery : require(name) });
+  { module, exports: module.exports, URL, require: name => name === "./RecoveryStatus" ? {RecoveryStatus:()=>null} : name === '@/lib/deliverable' ? delivery : require(name) });
 const { prepareReportQuestion, cleanQuestionText } = module.exports;
 const manifest = { title: 'Informe', summary: 'Resumen del proveedor', originalResult: { provider: 'website-intelligence', mode: 'live', requestedUrl: 'https://example.com/', fetchedAt: '2026-09-08T05:57:55.303Z', receipt: 'NEVER INCLUDE', token: 'NEVER INCLUDE' }, content: { kind: 'report', sections: [{ id: 'one', title: 'Descripción ausente', body: 'Añadir descripción.', findings: ['description=(ausente)'] }, { id: 'two', title: 'Otro hallazgo', body: 'Otro contenido' }] } };
 const question = prepareReportQuestion(manifest, 'understand', 'one');
