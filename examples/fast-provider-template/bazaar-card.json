@@ -18,7 +18,7 @@
     "scheme": "exact",
     "asset": "USDC",
     "amount": "0.001",
-    "destination": "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ"
+    "destination": "REPLACE_WITH_PROVIDER_TESTNET_PUBLIC_ADDRESS"
   },
   "provider": {
     "name": "Fast Weather Provider"

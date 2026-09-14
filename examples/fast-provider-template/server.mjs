@@ -6,13 +6,17 @@
  */
 
 import http from "node:http";
+import { StrKey } from "@stellar/stellar-sdk";
 import { readFileSync, existsSync } from "node:fs";
 import { decodePaymentSignatureHeader, encodePaymentRequiredHeader, encodePaymentResponseHeader } from "@x402/core/http";
 import { HTTPFacilitatorClient } from "@x402/core/server";
 import { USDC_TESTNET_ADDRESS } from "@x402/stellar";
 
 const PORT = Number(process.env.PORT ?? 4020);
-const SELLER_ADDRESS = process.env.X402_SELLER_ADDRESS ?? "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ";
+const SELLER_ADDRESS = process.env.X402_SELLER_ADDRESS?.trim();
+if (!SELLER_ADDRESS || !StrKey.isValidEd25519PublicKey(SELLER_ADDRESS)) {
+  throw new Error("Set X402_SELLER_ADDRESS to the provider's own Testnet public address before starting.");
+}
 const FACILITATOR_API_KEY = process.env.STELLAR_X402_FACILITATOR_API_KEY ?? "";
 const FACILITATOR_URL = process.env.STELLAR_X402_FACILITATOR_URL ?? "https://channels.openzeppelin.com/x402/testnet";
 const QUOTE_AMOUNT = "10000"; // 0.0010000 USDC (7 decimals)

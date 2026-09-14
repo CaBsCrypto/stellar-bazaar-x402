@@ -55,3 +55,11 @@ La recuperación remota caduca a las 24 horas; la entrega copiada a la bibliotec
 - Recuperación desde proceso nuevo: informe histórico pagado mantiene una operación, una versión y seis eventos; informe real anterior sin pago mantiene cinco eventos. Ambos rechazan otro propietario.
 - El proveedor queda limpio en su rama de integración. Los dos cambios locales del ejemplo fast-provider-template se conservan fuera de estos commits.
 - No se publicó ni se realizó un nuevo pago. El criterio de éxito completo sigue pendiente del piloto Testnet aprobado.
+
+## Seguimiento del 14 de septiembre de 2026
+
+- Proveedor 11737bb: las 55 pruebas se ejecutaron nuevamente y aprobaron.
+- Vercel: sesión existente y proyecto vinculado comprobados. El intento de crear Preview fue rechazado por la revisión automática antes de ejecutarse; no existe un nuevo despliegue de este bloque. Se requiere aprobación explícita para enviar el código de esta rama al proyecto website-intelligence-provider, con X402_SETTLEMENT_ENABLED=false y WEBSITE_INTELLIGENCE_LIVE_ENABLED=false, sin promoción a producción.
+- La compra nueva permanece pendiente; ninguna autorización de publicación sustituye la revisión final del pago.
+- Ejemplo fast-provider-template revisado: elimina el destinatario fijo, exige la cuenta pública del proveedor y comprueba su checksum; la ficha requiere configurar la misma cuenta antes de publicar.
+- S3 privado no está configurado. No se afirma carga/descarga real ni se presentan ejemplos multimedia como compras reales. Nuevos proveedores quedan después del recorrido completo.
