@@ -63,3 +63,22 @@ La recuperación remota caduca a las 24 horas; la entrega copiada a la bibliotec
 - La compra nueva permanece pendiente; ninguna autorización de publicación sustituye la revisión final del pago.
 - Ejemplo fast-provider-template revisado: elimina el destinatario fijo, exige la cuenta pública del proveedor y comprueba su checksum; la ficha requiere configurar la misma cuenta antes de publicar.
 - S3 privado no está configurado. No se afirma carga/descarga real ni se presentan ejemplos multimedia como compras reales. Nuevos proveedores quedan después del recorrido completo.
+
+## Preview autorizado y validado — 14 de septiembre de 2026
+
+Tras autorización explícita del usuario, se desplegó el commit del proveedor 11737bb en Preview del proyecto website-intelligence-provider. El rechazo anterior quedó resuelto con esa autorización; no se promovió producción.
+
+- URL: https://website-intelligence-provider-iash50mn7.vercel.app
+- Despliegue: dpl_5tYbWYVcCZDcpH2D6Qw2wkVjCm5e. Estado Vercel: Ready; target: preview.
+- X402_SETTLEMENT_ENABLED=false y WEBSITE_INTELLIGENCE_LIVE_ENABLED=false fijados en este despliegue.
+- GET /health: 200, x402.enabled=false, executionMode=disabled.
+- POST /v1/x402/audits con mode=live, español, example.com y sin firma: 503 LIVE_PAYMENT_NOT_ENABLED.
+- POST /v1/audits con mode=live: 403 LIVE_USE_PAID_ENDPOINT.
+- POST /v1/x402/audits/recover con cuerpo vacío: 400 RECOVERY_REQUEST_INVALID. Esto comprueba rechazo de formato, no autenticación de una entrega existente.
+- Ficha deshabilitada: 1.0.0, payment.enabled=false, hash 21d9d48b73232a10b8c1cef2f5f9d9e429ce95a081fc5147986f4b6c283e123e. Este NO es el hash aprobado de la futura ficha live.
+- Las variables privadas de Redis y facilitador existen en Preview. No se leyeron sus valores. Su presencia no demuestra conectividad desde este despliegue.
+- Vercel protege el Preview; la verificación utilizó la sesión autenticada existente y el acceso de protección gestionado por su CLI. Ningún acceso privado se incluye aquí.
+
+Antes de habilitar live, configurar el origen y su lista permitida para el Preview: la ficha deshabilitada aún hereda resourceUrl del dominio de producción. No ejecutar el comprador con ese enlace. La configuración live modificará la ficha y su hash; revisar los valores finales antes de firmar. El cliente también necesitará acceso autorizado a la protección del Preview sin reenviarlo al proveedor analizado.
+
+No se firmó ni se ejecutó un pago. La siguiente etapa es activar/configurar el piloto exclusivamente en Preview y realizar el preflight sin firma; después presentar la URL, ficha, destinatario, activo e importe exactos para autorización final del pago.
