@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { initWebMCP } from "@/lib/webmcp/polyfill";
 import { registerBazaarTools } from "@/lib/webmcp/register";
 import { ModelContextRegistry, WebMCPActivityLog, WebMCPToolDefinition, AgentPolicyConfig } from "@/lib/webmcp/types";
@@ -21,6 +22,7 @@ const PRESET_QUERIES: Record<string, string> = {
 };
 
 export function WebMCPProvider() {
+  const pathname = usePathname();
   const [status, setStatus] = useState<"initializing" | "ready" | "error">("initializing");
   const [isNative, setIsNative] = useState<boolean>(false);
   const [tools, setTools] = useState<WebMCPToolDefinition[]>([]);
@@ -197,6 +199,8 @@ export function WebMCPProvider() {
       l.toolName.toLowerCase().includes(activityFilter.toLowerCase()) ||
       JSON.stringify(l.input).toLowerCase().includes(activityFilter.toLowerCase())
   );
+
+  if (pathname === "/history" || pathname?.startsWith("/history/")) return null;
 
   return (
     <>

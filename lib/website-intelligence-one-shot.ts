@@ -73,7 +73,7 @@ export async function requestWebsiteIntelligencePaymentChallenge(input: {
   if (!input.requestBody || typeof input.requestBody !== "object" || Array.isArray(input.requestBody)) throw new Error("INVALID_JSON_REQUEST_BODY");
   if (!input.idempotencyKey || !/^[A-Za-z0-9._:-]{8,128}$/.test(input.idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
   const timeoutMs = input.timeoutMs ?? 10_000;
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 10_000) throw new Error("INVALID_TIMEOUT");
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 30_000) throw new Error("INVALID_TIMEOUT");
   const endpoint = requireWebsiteIntelligenceLocalEndpoint(input.localBaseUrl ?? WEBSITE_INTELLIGENCE_LOCAL_BASE_URL, input.approvedPublicOrigin);
   const body = canonicalJSONStringify(input.requestBody);
   const inputHash = canonicalInputHash(input.requestBody);

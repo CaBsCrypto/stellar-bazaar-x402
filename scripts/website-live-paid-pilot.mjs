@@ -1,3 +1,4 @@
+import { createPreviewFetch } from "./lib/preview-access.mjs";
 import { assertPaidLiveReport } from "./lib/paid-live-report.mjs";
 import { inspectPilotTransaction } from "./lib/private-pilot-chain.mjs";
 import { assertPilotPaymentChallenge } from "./lib/private-pilot-challenge.mjs";
@@ -49,10 +50,20 @@ import { authenticateHistory } from "../lib/operation-history-auth.ts";
 const directory = resolve("work/private-website-live-paid-pilot"),
   accessPath = resolve("work/private-website-report-pilot/access.json"),
   runPath = join(directory, "run.json");
+const previewConfigPath = join(directory, "preview-access.json");
+const previewConfig = existsSync(previewConfigPath) ? readPrivateJSON(previewConfigPath) : {};
 const baseUrl = "http://127.0.0.1:3214",
-  providerOrigin = process.env.WEBSITE_INTELLIGENCE_LIVE_PROVIDER_ORIGIN ?? WEBSITE_INTELLIGENCE_PUBLIC_BASE_URL;
+  providerOrigin = process.env.WEBSITE_INTELLIGENCE_LIVE_PROVIDER_ORIGIN ?? previewConfig.origin ?? WEBSITE_INTELLIGENCE_PUBLIC_BASE_URL;
 const command = process.argv[2],
   hash = (value) => createHash("sha256").update(value).digest("hex");
+let protectedFetch;
+function providerFetch(input, init) {
+  if (!protectedFetch) {
+    const secret = selectedEnv(".env.x402.local", ["WEBSITE_INTELLIGENCE_PREVIEW_ACCESS_TOKEN"]).WEBSITE_INTELLIGENCE_PREVIEW_ACCESS_TOKEN ?? (previewConfig.origin === providerOrigin ? previewConfig.token : undefined);
+    protectedFetch = createPreviewFetch(providerOrigin, secret);
+  }
+  return protectedFetch(input, init);
+}
 const publicKeys = [
   "X402_PAYER_ADDRESS",
   "X402_SELLER_ADDRESS",
@@ -147,7 +158,7 @@ async function balances(address) {
 async function publicPreflight(run) {
   const env = selectedEnv(".env.x402.local", publicKeys),
     cardUrl = providerOrigin + "/v1/service-card";
-  const response = await fetch(cardUrl, {
+  const response = await providerFetch(cardUrl, {
     redirect: "error",
     signal: AbortSignal.timeout(15000),
   });
@@ -157,7 +168,7 @@ async function publicPreflight(run) {
     payTo = env.WEBSITE_INTELLIGENCE_APPROVED_PAY_TO || env.X402_SELLER_ADDRESS,
     payer = env.X402_PAYER_ADDRESS;
   if (card.version !== "1.2.0" || card.networkPolicy?.fixtureOnly !== false) throw Error("LIVE_PROVIDER_NOT_ENABLED");
-  const configuredHash = env.WEBSITE_INTELLIGENCE_LIVE_APPROVED_CARD_HASH;
+  const configuredHash = env.WEBSITE_INTELLIGENCE_LIVE_APPROVED_CARD_HASH ?? (previewConfig.origin === providerOrigin ? previewConfig.cardHash : undefined);
   if (!configuredHash || !/^[a-f0-9]{64}$/.test(configuredHash)) throw Error("LIVE_CARD_REVIEW_REQUIRED");
   if (card.payment?.payTo !== payTo) throw Error("SELLER_MISMATCH");
   if (
@@ -216,12 +227,14 @@ async function publicPreflight(run) {
     throw Error("PREFLIGHT_FAILED");
   // Persist the identity before any remote preparation: response loss must reuse it.
   writePrivateJSON(runPath, {
-    ...run, version: "website-report-pilot/v1", operationId,
+    ...run, version: "website-report-pilot/v1", providerOrigin, operationId,
     taskId: run?.taskId ?? operationId, agentId: "website-intelligence-pilot",
     payTo, payer, cardHash, requestBody, expected, recoveryToken, requestId, proof,
     before, sellerBefore, status: "preparing", paymentAttempted: false,
   });
   await requestWebsiteIntelligencePaymentChallenge({
+    fetchImpl: providerFetch,
+    timeoutMs: 30000,
     requestBody,
     idempotencyKey: operationId,
     localBaseUrl: providerOrigin,
@@ -234,6 +247,7 @@ async function publicPreflight(run) {
   return {
     ...run,
     version: "website-report-pilot/v1",
+    providerOrigin,
     operationId,
     taskId: run?.taskId ?? operationId,
     agentId: "website-intelligence-pilot",
@@ -396,7 +410,7 @@ async function execute(run) {
         )
           throw Error("SIGNED_TRANSFER_MISMATCH");
       });
-      const paid = wrapFetchWithPayment(fetch, client);
+      const paid = wrapFetchWithPayment(providerFetch, client);
       return async (url, init) => {
         const response = await paid(url, init);
         const raw = await response.clone().text();
@@ -504,6 +518,7 @@ async function main() {
       return { ...evidence, paymentAttempted: false };
     }
     const run = readPrivateJSON(runPath);
+    if (run.providerOrigin && run.providerOrigin !== providerOrigin) throw Error("PILOT_ORIGIN_CHANGED");
     if (command === "execute") return await execute(run);
     if (command === "store") {
       const result = await storeRun(run);
@@ -546,7 +561,7 @@ async function main() {
           inputHash: run.expected.inputHash,
           cardHash: run.cardHash,
         });
-        const response = await fetch(
+        const response = await providerFetch(
           providerOrigin + "/v1/x402/audits/recover",
           {
             method: "POST",

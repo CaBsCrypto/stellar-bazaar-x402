@@ -20,6 +20,7 @@ assert.equal(huge.truncated, true); assert.equal(huge.text.length, 6000); assert
 assert.throws(() => prepareReportQuestion(manifest, 'understand', 'missing'));
 const sensitive = 'token: shhh\nAuthorization: Bearer abc\nhttps://files.example.com/image?X-Amz-Signature=private\n' + 'S' + 'A'.repeat(55) + '\n' + 'a'.repeat(64);
 assert.doesNotMatch(cleanQuestionText(sensitive), /shhh|Bearer abc|X-Amz|SA{55}|a{64}/);
+assert.doesNotMatch(cleanQuestionText('x-vercel-protection-bypass: short-private-value'), /short-private-value/);
 console.log('PASS: selected context, intents, 6000-character limit, redaction, no receipt or credentials');
 
 if (process.argv.includes('--browser')) {

@@ -900,7 +900,7 @@ export function reportTitle(manifest: ReportManifest): string {
 export function cleanQuestionText(text: string): string {
   return text
     .replace(/-----BEGIN[\s\S]*?-----END[^\n]*-----/g, "[clave omitida]")
-    .replace(/^.*(?:token|secret|password|contraseña|clave privada|authorization|cookie|credential|api.?key|mnemonic|seed|comprobante|receipt|transactionHash)\s*[:=].*$/gim, "[dato privado omitido]")
+    .replace(/^.*(?:token|secret|password|contraseña|clave privada|authorization|cookie|credential|api.?key|mnemonic|seed|comprobante|receipt|transactionHash|x-vercel-protection-bypass)\s*[:=].*$/gim, "[dato privado omitido]")
     .replace(/\bBearer\s+\S+/gi, "[acceso omitido]")
     .replace(/https?:\/\/[^\s<>"']+/gi, (value) => {
       try { const url = new URL(value); if (url.username || url.password || url.search || url.hash) return "[enlace privado omitido]"; return url.origin + url.pathname; } catch { return "[enlace omitido]"; }
