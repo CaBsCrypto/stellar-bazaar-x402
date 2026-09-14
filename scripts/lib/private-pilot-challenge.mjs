@@ -11,7 +11,7 @@ export function assertPilotPaymentChallenge(context, run) {
       inputHash: run.expected.inputHash,
       cardHash: run.cardHash,
       resourceUrl:
-        "https://website-intelligence-provider.vercel.app/v1/x402/audits",
+        (run.providerOrigin ?? "https://website-intelligence-provider.vercel.app") + "/v1/x402/audits",
     },
   );
   const binding =

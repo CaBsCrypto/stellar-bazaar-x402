@@ -91,3 +91,12 @@ assert.equal(signatures, 1);
 console.log(
   "Actual x402 pre-sign hook rejects changed price, timeout, resource, input/card hashes and recovery binding before any signature PASS. No real signer/network/payment.",
 );
+
+run.providerOrigin = "https://approved-preview.vercel.app";
+await assert.rejects(() => client.createPaymentPayload(required));
+assert.equal(signatures, 1);
+const preview = structuredClone(required);
+preview.resource.url = run.providerOrigin + "/v1/x402/audits";
+await client.createPaymentPayload(preview);
+assert.equal(signatures, 2);
+console.log("PASS: approved Preview accepted; old production origin rejected before signature.");
