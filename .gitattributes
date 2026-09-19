@@ -1,0 +1,7 @@
+# Linguistic and vendored file overrides for GitHub
+*.d linguist-vendored
+*.rlib linguist-vendored
+*.rmeta linguist-vendored
+contracts/**/target/** linguist-vendored
+work/** linguist-vendored
+public/demo-deliveries/** linguist-vendored
