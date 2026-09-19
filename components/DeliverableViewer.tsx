@@ -707,7 +707,7 @@ export function PurchaseWorkspace({
           <span>{record.service.provider}</span>
           <span>·</span>
           <time dateTime={record.recordedAt}>
-            {new Date(record.recordedAt).toLocaleDateString()}
+            {record.recordedAt.slice(0, 10)}
           </time>
           {manifest && (
             <span className="version-badge">{manifest.versionLabel}</span>
