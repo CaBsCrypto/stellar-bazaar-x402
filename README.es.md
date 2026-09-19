@@ -175,8 +175,12 @@ Todas: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), contrat
    * Cada card bilingüe enlaza su repositorio y deployment públicos, fija el commit validado y declara `fixture-live` o `discovery-only`. Los pagos están inactivos y no se inventa precio. Consulta el [informe QA HTTPS puntual](docs/VERIFIED_PROVIDER_QA.md) y el [plan de inclusión](docs/PROVIDER_CATALOG_PLAN.md).
 7. **Workflow Bundles — Schema y Fixtures (solo lectura):**
    * `bazaar.workflow-bundle/v1` con 20 reglas deterministas (19 activas para fixtures ready/draft) (ciclos, gates, artifacts, precio) y 2 bundles fixture. Ver [WORKFLOW_BUNDLES_FUTURE.md](docs/internal/WORKFLOW_BUNDLES_FUTURE.md).
-8. **Baterías de Pruebas Automatizadas (cero riesgo de fondos):**
-   * Ecosistema 5-en-1, onboarding MCP (paginación + corpus hostil), workflow bundles (13 casos negativos), seguridad de agentes, ingesta de publishers, external provider CI/mock y suites de contrato público.
+8. **Entregables Privados Interactivos y Almacenamiento Cloud S3 / Cloudflare R2:**
+   * Manifiestos de entregables privados (`bazaar.deliverable/v1`) con soporte para contenido multimedia enriquecido (streaming de video MP4 con subtítulos `.vtt`, galería interactiva de comparación de afiches en alta resolución y transcripción de escenas).
+   * Validado en vivo contra **Cloudflare R2** con cero costo de salida/egress (streaming gratis), acceso temporal prefirmado PUT/GET con verificación estricta de integridad SHA-256 y actualización atómica en Redis.
+   * Interfaz dedicada de Revisión Humano/Agente en `/history/review` con bloqueo de privacidad de sesión, descargas bit a bit verificadas y reproducción por rangos (*scrubbing*).
+9. **Baterías de Pruebas Automatizadas (cero riesgo de fondos):**
+   * Ecosistema 5-en-1, almacenamiento privado E2E (`test:private-storage:e2e`), onboarding MCP (paginación + corpus hostil), workflow bundles (13 casos negativos), seguridad de agentes, ingesta de publishers, external provider CI/mock y suites de contrato público.
 
 ---
 

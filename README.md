@@ -181,8 +181,12 @@ All settlements: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic
    * Every bilingual card links its public repository and deployment, pins the validated source commit, and states `fixture-live` or `discovery-only`. Payments are inactive and no price is invented. See the [point-in-time HTTPS QA report](docs/VERIFIED_PROVIDER_QA.md) and [catalog inclusion plan](docs/PROVIDER_CATALOG_PLAN.md).
 7. **Workflow Bundle Schema & Fixtures (read-only):**
    * `bazaar.workflow-bundle/v1` with 20 deterministic rules (19 active for ready/draft fixtures) (cycles, gates, artifacts, price) and 2 fixture bundles. See [WORKFLOW_BUNDLES_FUTURE.md](docs/internal/WORKFLOW_BUNDLES_FUTURE.md).
-8. **Automated E2E Test Batteries (zero fund risk):**
-   * Ecosystem 5-in-1, MCP onboarding (pagination + hostile corpus), workflow bundles (13 negative cases), agent safety, publisher ingest, external provider CI/mock, and public contract suites.
+8. **Private Interactive Deliverables & S3/R2 Cloud Storage:**
+   * Private deliverable manifests (`bazaar.deliverable/v1`) supporting rich multimedia assets (streaming MP4 video with `.vtt` subtitles, high-resolution comparison galleries, and scene transcription).
+   * Fully validated against **Cloudflare R2** with zero egress/streaming costs, presigned temporary PUT/GET access with SHA-256 checksum verification, and atomic state updates in Redis.
+   * Dedicated Human/Agent Review interface at `/history/review` with full privacy session locking, byte-for-byte SHA-256 download verification, and range-based scrubbing.
+9. **Automated E2E Test Batteries (zero fund risk):**
+   * Ecosystem 5-in-1, private storage E2E (`test:private-storage:e2e`), MCP onboarding (pagination + hostile corpus), workflow bundles (13 negative cases), agent safety, publisher ingest, external provider CI/mock, and public contract suites.
 
 ---
 
