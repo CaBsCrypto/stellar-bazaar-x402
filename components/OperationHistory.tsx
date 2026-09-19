@@ -70,6 +70,41 @@ export function OperationHistory() {
     if (context && context !== window.modelContext && typeof context.registerTool === "function" && typeof context.unregisterTool === "function") {
       native.current = context; setNativeAvailable(true);
     }
+
+    // Auto-detect magic link token in URL hash (e.g. #token=bz_read_... or ?token=...)
+    try {
+      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const searchParams = new URLSearchParams(window.location.search);
+      const urlToken = hashParams.get("token") || searchParams.get("token");
+      if (urlToken && /^[a-zA-Z0-9_-]{32,128}$/.test(urlToken.trim())) {
+        const clean = urlToken.trim();
+        setToken(clean);
+        void (async () => {
+          const controller = new AbortController();
+          pending.current = controller;
+          const request = ++generation.current;
+          setState("loading"); setEntries([]);
+          try {
+            const response = await fetch("/api/operations?limit=20", {
+              headers: { Authorization: `Bearer ${clean}` },
+              cache: "no-store", credentials: "omit", signal: controller.signal, redirect: "error",
+            });
+            if (request !== generation.current) return;
+            if (!response.ok) {
+              setState(response.status === 401 || response.status === 403 ? "unauthorized" : response.status === 503 ? "unavailable" : "error");
+              return;
+            }
+            const body = await response.json();
+            if (request !== generation.current) return;
+            if (body.version !== "1" || !Array.isArray(body.records)) throw new Error("Invalid history response");
+            setEntries(body.records); setState("ready");
+          } catch {
+            if (request === generation.current && !controller.signal.aborted) setState("error");
+          }
+        })();
+      }
+    } catch { /* URL parsing error fallback */ }
+
     return () => { generation.current += 1; pending.current?.abort(); };
   }, []);
 

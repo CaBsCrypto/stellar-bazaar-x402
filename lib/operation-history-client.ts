@@ -1,12 +1,18 @@
 /** Buyer-controlled journal transport. It never signs or retries a payment. */
 export interface HistoryClientOptions {
   writeToken: string;
+  readToken?: string;
   taskId?: string;
   taskTitle?: string;
   mode?: "fixture" | "mock" | "testnet";
   agentId?: string;
   includeResult?: boolean;
   preserveFiles?: boolean;
+}
+
+export function formatHumanHistoryUrl(baseUrl: string, readToken: string): string {
+  const base = baseUrl.replace(/\/$/, "");
+  return `${base}/history#token=${encodeURIComponent(readToken.trim())}`;
 }
 
 export function decimalToAtomic(value: string): string {
