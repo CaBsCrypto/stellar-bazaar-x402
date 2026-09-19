@@ -54,6 +54,7 @@
     "test:activity:redis": "node scripts/test-activity-redis.mjs",
     "review:history": "node scripts/serve-history-review.mjs",
     "test:deliverables": "node scripts/test-deliverables.mjs && node scripts/test-deliverable-viewers.mjs",
+    "test:private-storage:e2e": "node scripts/prepare-test-deliverables.mjs && node scripts/test-private-storage-e2e.mjs",
     "pilot:website-report": "node scripts/website-report-pilot.mjs",
     "test:website-report": "node scripts/test-website-intelligence-history.mjs && node scripts/test-website-report-pilot.mjs && node scripts/test-website-report-challenge.mjs",
     "test:private-report:redis": "node scripts/test-private-report-redis.mjs --run-isolated-test",
