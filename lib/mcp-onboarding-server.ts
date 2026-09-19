@@ -1,3 +1,4 @@
+import { historyConnection } from "./history-connection";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
 import { services } from "./catalog";
@@ -44,7 +45,7 @@ const decodeCursor = (raw: string): number | null => {
   }
 };
 
-export function createOnboardingMcpServer() {
+export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{ ok: boolean; body: unknown }>) {
   const server = new McpServer({
     name: "stellar-bazaar-discovery",
     version: "0.5.0",
@@ -60,6 +61,7 @@ export function createOnboardingMcpServer() {
     async () =>
       result({
         ...pilotCapabilityCard,
+        historyConnection,
         writes: [],
         registry: {
           discovery: "read-only",
@@ -83,6 +85,7 @@ export function createOnboardingMcpServer() {
           ],
         },
         paymentFlow: paymentFlowCapability,
+        operationHistory: { tool: "get_operation_history", authentication: "HTTP Authorization Bearer", endpoint: "/api/operations", evidence: "agent-reported", paymentsInitiated: false, humanApprovalRequired: false },
       }),
   );
 
@@ -287,5 +290,18 @@ export function createOnboardingMcpServer() {
     },
   );
 
+  server.registerTool(
+    "get_operation_history",
+    {
+      description: "Read the authenticated owner's private agent-reported journal. Requires a history credential in the HTTP Authorization header; never pass credentials as tool arguments. No payment or approval action.",
+      inputSchema: {},
+    },
+    async () => {
+      if (!readOperationHistory) return errorEnvelope("HISTORY_UNAUTHORIZED", "History access is required.", "history");
+      const response = await readOperationHistory();
+      if (!response.ok) return { isError: true, content: [{ type: "text" as const, text: JSON.stringify(response.body) }] };
+      return result(response.body);
+    },
+  );
   return server;
 }

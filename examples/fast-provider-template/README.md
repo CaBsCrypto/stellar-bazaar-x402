@@ -4,7 +4,17 @@ This template contains a complete, working microservice protected by the **x402 
 
 ## Quickstart
 
-### 1. Start the Provider Server
+### 1. Configure the recipient and start the Provider Server
+
+Set `X402_SELLER_ADDRESS` to your own Stellar Testnet public account address before starting. The server refuses missing or invalid addresses and has no default recipient. Never use a secret seed here.
+
+Replace `REPLACE_WITH_PROVIDER_TESTNET_PUBLIC_ADDRESS` in `bazaar-card.json` with the same public address before validating or publishing. The template is intentionally not publishable until configured.
+
+PowerShell:
+```powershell
+$env:X402_SELLER_ADDRESS = "YOUR_TESTNET_PUBLIC_ACCOUNT_ADDRESS"
+```
+
 ```bash
 node server.mjs
 ```

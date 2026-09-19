@@ -1,3 +1,4 @@
+import { historyConnection } from "../history-connection";
 import { ModelContextRegistry, WebMCPToolDefinition } from "./types";
 import { services } from "../catalog";
 import { rankServices, validateServiceCard } from "../discovery";
@@ -9,7 +10,7 @@ import type { ServiceCard } from "../types";
 /**
  * Registers all Stellar Bazaar tools to the active ModelContext registry (native or polyfilled).
  */
-export function registerBazaarTools(registry: ModelContextRegistry): void {
+export function registerBazaarTools(registry: ModelContextRegistry, options: {privateExecution?: boolean} = {}): void {
   // 1. List Services Tool (Full Catalog & Registry)
   const listServicesTool: WebMCPToolDefinition<{ includePilots?: boolean }> = {
     name: "bazaar_list_services",
@@ -43,7 +44,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
         : baseServices;
 
       // Broadcast visual event to UI so the page can respond to agent queries
-      if (typeof window !== "undefined") {
+      if (!options.privateExecution && typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("webmcp-ui-action", {
             detail: { action: "list_services", total: allServices.length },
@@ -57,6 +58,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
           total: allServices.length,
           services: allServices,
           mode: "read-only-discovery",
+          historyConnection,
         },
       };
     },
@@ -86,7 +88,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
       }
 
       // Broadcast visual filter event to the page UI
-      if (typeof window !== "undefined") {
+      if (!options.privateExecution && typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("webmcp-ui-action", {
             detail: {
@@ -149,7 +151,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
       }
 
       // Highlight target service card in UI
-      if (typeof window !== "undefined") {
+      if (!options.privateExecution && typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("webmcp-ui-action", {
             detail: { action: "highlight_service", serviceId: input.serviceId },
@@ -322,7 +324,7 @@ export function registerBazaarTools(registry: ModelContextRegistry): void {
       };
 
       // Notify UI for real-time visual delivery
-      if (typeof window !== "undefined") {
+      if (!options.privateExecution && typeof window !== "undefined") {
         window.dispatchEvent(
           new CustomEvent("webmcp-ui-action", {
             detail: {

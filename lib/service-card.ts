@@ -2,6 +2,7 @@ import type { PaidService, ServiceCard } from "./types.ts";
 import { syncDeliveryContract } from "./delivery-contract.ts";
 
 export function toServiceCard(s: PaidService): ServiceCard {
+  if (s.sourceCard) return structuredClone(s.sourceCard);
   return {
     version: "bazaar.service-card/v0",
     id: s.id,
@@ -16,7 +17,7 @@ export function toServiceCard(s: PaidService): ServiceCard {
     network: s.network,
     payment: {
       ...s.payment,
-      destination: "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ",
+      destination: s.payment.destination ?? "",
     },
     provider: { name: s.provider },
     tags: s.tags,
@@ -26,6 +27,7 @@ export function toServiceCard(s: PaidService): ServiceCard {
 
 export function toPaidService(card: ServiceCard): PaidService {
   return {
+    sourceCard: structuredClone(card),
     id: card.id,
     name: card.name,
     eyebrow: card.tags[0] ? card.tags[0].toUpperCase() : "DYNAMIC",
@@ -39,6 +41,7 @@ export function toPaidService(card: ServiceCard): PaidService {
       scheme: card.payment.scheme,
       asset: card.payment.asset,
       amount: card.payment.amount,
+      destination: card.payment.destination,
     },
     latency: "<500ms",
     input: card.input.map((i) => i.name),

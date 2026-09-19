@@ -32,10 +32,10 @@ export type ProviderPreflightResponse = {
 
 export type ProviderPreflightFetch = (input: string, init: RequestInit) => Promise<Response>;
 
-export function requireWebsiteIntelligenceLocalEndpoint(baseUrl: string): string {
+export function requireWebsiteIntelligenceLocalEndpoint(baseUrl: string, approvedPublicOrigin?: string): string {
   const base = new URL(baseUrl);
   const local = base.protocol === "http:" && ["127.0.0.1", "localhost", "[::1]"].includes(base.hostname);
-  const verifiedPublic = base.protocol === "https:" && base.hostname === "website-intelligence-provider.vercel.app";
+  const verifiedPublic = base.protocol === "https:" && (base.hostname === "website-intelligence-provider.vercel.app" || (approvedPublicOrigin !== undefined && base.origin === approvedPublicOrigin));
   if ((!local && !verifiedPublic) || base.username || base.password || base.search || base.hash || (base.pathname !== "/" && base.pathname !== "")) throw new Error("LOCAL_ENDPOINT_NOT_ALLOWLISTED");
   return new URL(WEBSITE_INTELLIGENCE_ROUTE, base.origin).toString();
 }
@@ -64,6 +64,7 @@ export async function requestWebsiteIntelligencePaymentChallenge(input: {
   timeoutMs?: number;
   fetchImpl?: ProviderPreflightFetch;
   localBaseUrl?: string;
+  approvedPublicOrigin?: string;
   expectedPayTo?: string;
   approvedCardHash?: string;
   publicResourceUrl?: string;
@@ -72,8 +73,8 @@ export async function requestWebsiteIntelligencePaymentChallenge(input: {
   if (!input.requestBody || typeof input.requestBody !== "object" || Array.isArray(input.requestBody)) throw new Error("INVALID_JSON_REQUEST_BODY");
   if (!input.idempotencyKey || !/^[A-Za-z0-9._:-]{8,128}$/.test(input.idempotencyKey)) throw new Error("INVALID_IDEMPOTENCY_KEY");
   const timeoutMs = input.timeoutMs ?? 10_000;
-  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 10_000) throw new Error("INVALID_TIMEOUT");
-  const endpoint = requireWebsiteIntelligenceLocalEndpoint(input.localBaseUrl ?? WEBSITE_INTELLIGENCE_LOCAL_BASE_URL);
+  if (!Number.isInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 30_000) throw new Error("INVALID_TIMEOUT");
+  const endpoint = requireWebsiteIntelligenceLocalEndpoint(input.localBaseUrl ?? WEBSITE_INTELLIGENCE_LOCAL_BASE_URL, input.approvedPublicOrigin);
   const body = canonicalJSONStringify(input.requestBody);
   const inputHash = canonicalInputHash(input.requestBody);
   const recoveryIntent = input.recoveryIntent ? validateDeliveryRecoveryIntent(input.recoveryIntent) : null;
@@ -107,6 +108,9 @@ export async function executeWebsiteIntelligenceOneShot(input: {
   requestBody: unknown;
   idempotencyKey: string;
   expected: Omit<SettlementEvidence, "status" | "transactionHash" | "ledger" | "issuedAt" | "expiresAt" | "settledAt">;
+  approvedPublicOrigin?: string;
+  responseTimeoutMs?: number;
+  serviceVersion?: string;
   acknowledgementOne: boolean;
   acknowledgementTwo: boolean;
   balanceAtomic: string;
@@ -114,13 +118,15 @@ export async function executeWebsiteIntelligenceOneShot(input: {
   createPaidFetch: (beforePayment: () => void) => ProviderPreflightFetch;
 }) {
   const endpointUrl = new URL(input.endpoint);
-  if (requireWebsiteIntelligenceLocalEndpoint(endpointUrl.origin) !== input.endpoint) throw new Error("LOCAL_ENDPOINT_NOT_ALLOWLISTED");
+  if (requireWebsiteIntelligenceLocalEndpoint(endpointUrl.origin, input.approvedPublicOrigin) !== input.endpoint) throw new Error("LOCAL_ENDPOINT_NOT_ALLOWLISTED");
   if (!input.acknowledgementOne || !input.acknowledgementTwo) throw new Error("TWO_EXPLICIT_ACKNOWLEDGEMENTS_REQUIRED");
   if (!/^\d+$/.test(input.balanceAtomic) || BigInt(input.balanceAtomic) < BigInt(WEBSITE_INTELLIGENCE_ATOMIC_AMOUNT)) throw new Error("INSUFFICIENT_PREFLIGHT_BALANCE");
+  const responseTimeoutMs = input.responseTimeoutMs ?? 10_000;
+  if (!Number.isInteger(responseTimeoutMs) || responseTimeoutMs < 1 || responseTimeoutMs > 30_000) throw new Error("INVALID_TIMEOUT");
   let attempts = 0;
   const beforePayment = () => { attempts += 1; if (attempts > 1) throw new Error("ONE_PAYMENT_ATTEMPT_LIMIT_EXCEEDED"); };
   const recoveryIntent = input.recoveryIntent ? validateDeliveryRecoveryIntent(input.recoveryIntent) : null;
-  const response = await input.createPaidFetch(beforePayment)(input.endpoint, { method: "POST", headers: { accept: "application/json", "content-type": "application/json", "idempotency-key": input.idempotencyKey, "x-bazaar-input-hash": input.expected.inputHash, "x-bazaar-input-hash-algorithm": WEBSITE_INTELLIGENCE_INPUT_HASH_ALGORITHM, ...(recoveryIntent ? { "x-bazaar-request-id": recoveryIntent.requestId, "x-bazaar-recovery-proof": recoveryIntent.proof } : {}) }, body: canonicalJSONStringify(input.requestBody), redirect: "error", signal: AbortSignal.timeout(10_000) });
+  const response = await input.createPaidFetch(beforePayment)(input.endpoint, { method: "POST", headers: { accept: "application/json", "content-type": "application/json", "idempotency-key": input.idempotencyKey, "x-bazaar-input-hash": input.expected.inputHash, "x-bazaar-input-hash-algorithm": WEBSITE_INTELLIGENCE_INPUT_HASH_ALGORITHM, ...(recoveryIntent ? { "x-bazaar-request-id": recoveryIntent.requestId, "x-bazaar-recovery-proof": recoveryIntent.proof } : {}) }, body: canonicalJSONStringify(input.requestBody), redirect: "error", signal: AbortSignal.timeout(responseTimeoutMs) });
   if (attempts !== 1) throw new Error("EXPECTED_EXACTLY_ONE_PAYMENT_ATTEMPT");
   if (!response.ok) throw new Error(`PAID_REQUEST_FAILED_${response.status}`);
   const encodedReceipt = response.headers.get("payment-response");
@@ -142,7 +148,7 @@ export async function executeWebsiteIntelligenceOneShot(input: {
     recovery = { requestId: recoveryIntent.requestId, recoveryId: expectedRecoveryId, expiresAt: delivered.expiresAt as string };
   }
   const envelope = createPaidDeliveryEnvelope({
-    policy: { serviceId: "website-intelligence", serviceVersion: "1.0.0", cardUrl: new URL("/v1/service-card", endpointUrl.origin).toString(), cardHash: input.expected.cardHash, method: "POST", route: input.expected.route, inputHash: input.expected.inputHash, idempotencyKey: input.idempotencyKey, scheme: "exact", network: "stellar:testnet", asset: input.expected.asset, atomicAmount: input.expected.amount, payTo: input.expected.payTo },
+    policy: { serviceId: "website-intelligence", serviceVersion: input.serviceVersion ?? "1.0.0", cardUrl: new URL("/v1/service-card", endpointUrl.origin).toString(), cardHash: input.expected.cardHash, method: "POST", route: input.expected.route, inputHash: input.expected.inputHash, idempotencyKey: input.idempotencyKey, scheme: "exact", network: "stellar:testnet", asset: input.expected.asset, atomicAmount: input.expected.amount, payTo: input.expected.payTo },
     transactionHash: settlement.transaction, ledger: receipt.ledger, result: body.result, resultHash: reconciliation.resultHash, recovery,
   });
   return { status: response.status, attempts, transactionHash: settlement.transaction, ledger: receipt.ledger, resultHash: reconciliation.resultHash, result: body.result, receipt, envelope, reconciled: true };

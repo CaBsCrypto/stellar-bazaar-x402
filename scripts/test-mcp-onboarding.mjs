@@ -14,6 +14,7 @@ const readTools = [
   "list_workflow_bundles",
   "get_workflow_bundle",
   "validate_service_card",
+  "get_operation_history",
 ];
 const pilotIds = [
   "website-intelligence-pilot",

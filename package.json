@@ -5,6 +5,8 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "test:history": "node scripts/test-operation-history.mjs && node scripts/test-operation-history-client.mjs && node scripts/test-operation-history-ui.mjs",
+    "test:provider-card": "node scripts/test-provider-card-preservation.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -47,9 +49,20 @@
     "test:fee-split:design": "node scripts/test-fee-split-design.mjs",
     "test:three-actors:e2e": "node scripts/test-three-actors-e2e.mjs",
     "agent:quickstart": "node examples/agent-autonomous-buyer.mjs",
-    "agent:paid-execution": "node examples/agent-paid-execution.mjs"
+    "agent:paid-execution": "node examples/agent-paid-execution.mjs",
+    "test:activity": "node scripts/test-activity-panel.mjs && node scripts/test-private-webmcp.mjs",
+    "test:activity:redis": "node scripts/test-activity-redis.mjs",
+    "review:history": "node scripts/serve-history-review.mjs",
+    "test:deliverables": "node scripts/test-deliverables.mjs && node scripts/test-deliverable-viewers.mjs",
+    "test:private-storage:e2e": "node scripts/prepare-test-deliverables.mjs && node scripts/test-private-storage-e2e.mjs",
+    "pilot:website-report": "node scripts/website-report-pilot.mjs",
+    "test:website-report": "node scripts/test-website-intelligence-history.mjs && node scripts/test-website-report-pilot.mjs && node scripts/test-website-report-challenge.mjs",
+    "test:private-report:redis": "node scripts/test-private-report-redis.mjs --run-isolated-test",
+    "test:pilot:saved-report": "node scripts/test-pilot-saved-report.mjs"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "3.1127.0",
+    "@aws-sdk/s3-request-presigner": "3.1127.0",
     "@modelcontextprotocol/sdk": "1.30.0",
     "@stellar/stellar-sdk": "14.4.2",
     "@upstash/redis": "^1.38.2",

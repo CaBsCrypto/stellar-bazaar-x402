@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {createPreviewFetch} from './lib/preview-access.mjs';
+let calls=0;
+const origin='https://preview-test.vercel.app';
+const transport=createPreviewFetch(origin,'fake-private-value',async (input,init)=>{calls++;assert.equal(new URL(String(input)).origin,origin);assert.equal(new Headers(init.headers).get('x-vercel-protection-bypass'),'fake-private-value');assert.equal(init.redirect,'error');return new Response('{}');});
+await transport(origin+'/v1/service-card');
+for(const url of ['https://example.com','https://preview-test.vercel.app.evil.test','https://user:password@preview-test.vercel.app']) await assert.rejects(transport(url));
+assert.equal(calls,1);
+await assert.rejects(createPreviewFetch(origin,'fake',async()=>new Response('',{status:302,headers:{location:'https://example.com'}}))(origin));
+assert.throws(()=>createPreviewFetch(origin,''));
+console.log('PASS: Preview credential restricted to exact origin; redirects and missing access rejected. No network.');

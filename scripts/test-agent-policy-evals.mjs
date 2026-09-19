@@ -25,7 +25,8 @@ const toolsB = await rpc(4, "tools/list", {});
 const toolNamesA = toolsA.result.tools.map((tool) => tool.name);
 const toolNamesB = toolsB.result.tools.map((tool) => tool.name);
 assert.deepEqual(toolNamesA, toolNamesB);
-assert.equal(toolNamesA.length, 7);
+assert.equal(toolNamesA.length, 8);
+assert.ok(toolNamesA.includes("get_operation_history"));
 assert.ok(toolNamesA.every((name) => !/(register|update|delete|pay|sign|execute)/i.test(name)));
 
 const searchA = await rpc(5, "tools/call", { name: "search_services", arguments: { query: "mercado", limit: 50 } });

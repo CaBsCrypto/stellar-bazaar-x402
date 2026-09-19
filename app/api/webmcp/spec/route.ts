@@ -1,3 +1,4 @@
+import { historyConnection } from "@/lib/history-connection";
 import { services } from "@/lib/catalog";
 import { workflowBundles } from "@/lib/workflow-bundles";
 
@@ -6,6 +7,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const spec = {
+    historyConnection,
     schemaVersion: "webmcp.specification/v1",
     specification: "W3C Web Machine Learning Community Group (Draft)",
     name: "stellar-bazaar-webmcp",

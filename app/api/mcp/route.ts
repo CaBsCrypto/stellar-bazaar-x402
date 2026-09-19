@@ -1,26 +1,26 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createOnboardingMcpServer } from "@/lib/mcp-onboarding-server";
+import { GET as readOperations } from "@/app/api/operations/route";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
-let globalServerInstance: ReturnType<typeof createOnboardingMcpServer> | null = null;
-
-function getSharedMcpServer() {
-  if (!globalServerInstance) {
-    globalServerInstance = createOnboardingMcpServer();
-  }
-  return globalServerInstance;
-}
 
 export async function POST(request: Request) {
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
   });
-  const server = getSharedMcpServer();
+  // Credential context belongs to one request; never share it between transports.
+  const server = createOnboardingMcpServer(async () => {
+    const response = await readOperations(new Request(new URL("/api/operations", request.url), {
+      headers: { Authorization: request.headers.get("Authorization") ?? "" },
+    }));
+    return { ok: response.ok, body: await response.json() };
+  });
   await server.connect(transport);
-  return transport.handleRequest(request);
+  const response = await transport.handleRequest(request);
+  response.headers.set("Cache-Control", "private, no-store");
+  return response;
 }
 
 export function GET() {
@@ -40,6 +40,7 @@ export function GET() {
       "list_workflow_bundles",
       "get_workflow_bundle",
       "validate_service_card",
+      "get_operation_history",
     ],
     writes: [],
     paidCall: false,

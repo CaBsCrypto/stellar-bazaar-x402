@@ -20,10 +20,11 @@ Entrégame el endpoint listo y el JSON validado.`;
   const buyerPrompt = `Conéctate como Agente Comprador a Stellar Bazaar x402:
 👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
 👉 Contexto: https://stellar-bazaar-x402.vercel.app/llms.txt
+👉 Actividad y entregas privadas: https://stellar-bazaar-x402.vercel.app/HISTORY_CONNECTION.md
 
 Tus 2 tareas:
 1. Consulta la lista de servicios con la tool 'list_services' o 'search_services'.
-2. Invoca y liquida micropagos x402 en USDC Testnet usando tu wallet fondeada.
+2. Para comprar, usa el cliente comprador con wallet Testnet y verificador configurados. Configura el historial privado siguiendo la guía para que el humano vea los pasos y resultados. MCP discovery no firma ni realiza pagos. Nunca incluyas credenciales en este prompt.
 
 Comienza buscando servicios DeFi y Oráculos disponibles.`;
 
