@@ -1,4 +1,6 @@
-import { ModelContextRegistry, WebMCPToolDefinition, WebMCPActivityLog } from "./types";
+import type { ModelContextRegistry, WebMCPToolDefinition, WebMCPActivityLog } from "./types.ts";
+
+export const initWebMCPPolyfill = initWebMCP;
 
 const activityLogs: WebMCPActivityLog[] = [];
 

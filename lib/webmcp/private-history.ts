@@ -1,7 +1,7 @@
-import type { ModelContextRegistry, WebMCPToolDefinition } from "./types";
-import { registerBazaarTools } from "./register";
-import { appendActivity } from "../activity-client";
-import { historyConnection } from "../history-connection";
+import type { ModelContextRegistry, WebMCPToolDefinition } from "./types.ts";
+import { registerBazaarTools } from "./register.ts";
+import { appendActivity } from "../activity-client.ts";
+import { historyConnection } from "../history-connection.ts";
 export function connectPrivateHistory(
   registry: ModelContextRegistry,
   options: {

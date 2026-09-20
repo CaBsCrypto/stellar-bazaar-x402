@@ -1,4 +1,4 @@
-import type { PaidService } from "./types";
+import type { PaidService } from "./types.ts";
 
 export type PilotCard = {
   version: "bazaar.pilot-card/v1";
