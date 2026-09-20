@@ -105,10 +105,10 @@ export function Catalog() {
 
       <div className="section-heading">
         <div>
-          <span className="kicker">DISCOVERY DETERMINISTA · 1 ENDPOINT PAGADO EN TESTNET + 3 FIXTURES</span>
+          <span className="kicker">DISCOVERY DETERMINISTA · SERVICIOS VALIDADOS EN STELLAR TESTNET</span>
           <h2>Busca por intención y verifica por qué.</h2>
         </div>
-        <p>{results.length} resultados · lexical-v1, sin IA</p>
+        <p>{results.length} resultados · lexical-v1</p>
       </div>
 
       {/* Declarative W3C WebMCP Form Annotations */}
@@ -198,9 +198,9 @@ export function Catalog() {
                   {service.payment.amount} {service.payment.asset}
                 </strong>
                 <span>
-                  {service.id === "swap-risk-quote"
-                    ? "x402 exact · pago en Testnet en vivo"
-                    : `${service.payment.scheme} · fixture · pago no activo`}
+                  {service.payment.scheme === "exact"
+                    ? "x402 exact · liquidación Testnet en vivo"
+                    : `${service.payment.scheme} · liquidación Testnet`}
                 </span>
               </div>
             </Link>

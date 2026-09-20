@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Navbar } from "@/components/Navbar";
 import { Catalog } from "@/components/Catalog";
 import { AgentDirectConnectCard } from "@/components/AgentDirectConnectCard";
 import { WorkflowShowcase } from "@/components/WorkflowShowcase";
@@ -11,23 +12,7 @@ export default function Home() {
         ⚡ <strong>W3C WebMCP & x402 EN VIVO</strong> · STELLAR TESTNET · LIQUIDACIÓN DIRECTA EN USDC · <Link href="/publish">Publicar un Servicio de IA →</Link>
       </div>
 
-      <nav className="nav shell">
-        <Link href="/" className="brand">
-          <span>✦</span> Stellar Bazaar <sup>x402</sup>
-        </Link>
-        <div className="nav-links">
-          <Link href="/catalogo">Catálogo</Link>
-          <a href="#conectar-agente">Conectar Agente</a>
-          <Link href="/agent-chat">Agent Chat</Link>
-          <Link href="/webmcp-playground">WebMCP</Link>
-          <Link href="/buyer-execution">Workspace Comprador</Link>
-          <Link href="/publish">Publicar API</Link>
-          <Link href="/history">Historial</Link>
-          <Link href="/docs">Docs</Link>
-          <a href="https://github.com/CaBsCrypto/stellar-bazaar-x402" target="_blank" rel="noreferrer">GitHub ↗</a>
-        </div>
-        <span className="network-pill"><i /> Testnet en vivo</span>
-      </nav>
+      <Navbar />
 
       <header className="hero shell" style={{ paddingBottom: "1.5rem" }}>
         <div className="hero-copy">

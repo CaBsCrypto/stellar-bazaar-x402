@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Navbar } from "@/components/Navbar";
 import { Catalog } from "@/components/Catalog";
 
 export default function CatalogoPage() {
@@ -8,19 +9,7 @@ export default function CatalogoPage() {
         ⚡ <strong>CATÁLOGO DE SERVICIOS x402</strong> · STELLAR TESTNET · DESCUBRIMIENTO NATIVO PARA AGENTES W3C WEBMCP
       </div>
 
-      <nav className="nav shell">
-        <Link href="/" className="brand">
-          <span>✦</span> Stellar Bazaar <sup>x402</sup>
-        </Link>
-        <div className="nav-links">
-          <Link href="/" className="active">← Volver al Inicio</Link>
-          <Link href="/buyer-execution">Workspace Comprador</Link>
-          <Link href="/publish">Publicar API</Link>
-          <Link href="/docs">Docs</Link>
-          <a href="https://github.com/CaBsCrypto/stellar-bazaar-x402" target="_blank" rel="noreferrer">GitHub ↗</a>
-        </div>
-        <span className="network-pill"><i /> Testnet en vivo</span>
-      </nav>
+      <Navbar />
 
       <div className="shell" style={{ marginTop: "2rem", marginBottom: "4rem" }}>
         <div className="section-heading" style={{ marginBottom: "2rem" }}>

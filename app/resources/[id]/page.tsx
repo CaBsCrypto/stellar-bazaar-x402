@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Navbar } from "@/components/Navbar";
 import { PaymentDemo } from "@/components/PaymentDemo";
 import { TestnetPaymentDemo } from "@/components/TestnetPaymentDemo";
 import { getService, services } from "@/lib/catalog";
@@ -18,13 +19,7 @@ export default async function ResourcePage({ params }: { params: Promise<{ id: s
       <div className="mock-banner">
         ⚡ <strong>PAGO x402 EXACT EN VIVO</strong> · STELLAR TESTNET · LIQUIDACIÓN DIRECTA EN USDC · ENTREGABLES VERIFICADOS
       </div>
-      <nav className="nav shell">
-        <Link href="/" className="brand">
-          <span>✦</span> Stellar Bazaar <sup>x402</sup>
-        </Link>
-        <Link href="/#catalogo">← Volver al catálogo</Link>
-        <span className="network-pill"><i /> Testnet · Live</span>
-      </nav>
+      <Navbar />
       <div className="detail shell">
         <section className="resource-info">
           <div className="detail-title">

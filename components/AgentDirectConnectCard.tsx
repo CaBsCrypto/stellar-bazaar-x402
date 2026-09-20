@@ -196,8 +196,8 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
-          gap: "1.8rem",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))",
+          gap: "1.5rem",
           alignItems: "stretch",
         }}
       >
@@ -207,7 +207,7 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
             background: "linear-gradient(145deg, rgba(20, 22, 36, 0.95) 0%, rgba(13, 15, 25, 0.98) 100%)",
             border: "1px solid rgba(112, 87, 232, 0.3)",
             borderRadius: "16px",
-            padding: "1.8rem",
+            padding: "clamp(1.2rem, 3vw, 1.8rem)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",
@@ -365,10 +365,10 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
         {/* SELLER CARD */}
         <div
           style={{
-            background: "linear-gradient(145deg, rgba(16, 28, 26, 0.95) 0%, rgba(10, 18, 16, 0.98) 100%)",
+            background: "linear-gradient(145deg, rgba(16, 26, 26, 0.95) 0%, rgba(10, 18, 18, 0.98) 100%)",
             border: "1px solid rgba(54, 185, 144, 0.3)",
             borderRadius: "16px",
-            padding: "1.8rem",
+            padding: "clamp(1.2rem, 3vw, 1.8rem)",
             display: "flex",
             flexDirection: "column",
             justifyContent: "space-between",

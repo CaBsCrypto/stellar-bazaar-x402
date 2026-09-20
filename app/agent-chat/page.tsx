@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Navbar } from "@/components/Navbar";
 import { AgentChatDemo } from "@/components/AgentChatDemo";
 
 export const metadata: Metadata = {
@@ -13,20 +14,7 @@ export default function AgentChatPage() {
       <div className="mock-banner">
         AI AGENT ASSISTANT · TESTNET x402 PURCHASES · CLOUDFLARE R2 DELIVERABLES · ZERO-KNOWLEDGE
       </div>
-      <nav className="nav shell">
-        <Link href="/" className="brand">
-          <span>✦</span> Stellar Bazaar <sup>x402</sup>
-        </Link>
-        <div className="nav-links">
-          <Link href="/catalogo">Catálogo</Link>
-          <Link href="/buyer-execution">Buyer Workspace</Link>
-          <Link href="/history">Historial</Link>
-          <Link href="/docs">Docs</Link>
-        </div>
-        <span className="network-pill">
-          <i /> Stellar Testnet
-        </span>
-      </nav>
+      <Navbar />
       <div className="shell">
         <AgentChatDemo />
       </div>

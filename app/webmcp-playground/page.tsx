@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { Navbar } from "@/components/Navbar";
 import { WebMCPPlayground } from "@/components/WebMCPPlayground";
 
 export const metadata: Metadata = {
@@ -13,21 +14,7 @@ export default function WebMCPPlaygroundPage() {
       <div className="mock-banner">
         WEBMCP INTERFACE · BROWSER AGENT RUNTIME · MODEL CONTEXT PROTOCOL · CLIENT ADAPTER
       </div>
-      <nav className="nav shell">
-        <Link href="/" className="brand">
-          <span>✦</span> Stellar Bazaar <sup>x402</sup>
-        </Link>
-        <div className="nav-links">
-          <Link href="/catalogo">Catálogo</Link>
-          <Link href="/agent-chat">Agent Chat</Link>
-          <Link href="/buyer-execution">Buyer Workspace</Link>
-          <Link href="/history">Historial</Link>
-          <Link href="/docs">Docs</Link>
-        </div>
-        <span className="network-pill">
-          <i /> WebMCP Ready
-        </span>
-      </nav>
+      <Navbar />
       <div className="shell">
         <WebMCPPlayground />
       </div>
