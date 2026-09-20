@@ -1,12 +1,14 @@
 #![no_std]
 
-//! Bazaar Fee Split Router — Non-custodial 99/1 atomic payment splitter.
+//! Bazaar Fee Split Router — Non-custodial atomic payment splitter for Soroban.
+//! Supports customizable fee basis points (up to 10.00% max cap) with zero rounding loss.
 
 use soroban_sdk::{
     contract, contracterror, contractimpl, symbol_short, token, Address, BytesN, Env,
 };
 
-pub const BAZAAR_FEE_BPS: i128 = 100; // 1%
+pub const DEFAULT_BAZAAR_FEE_BPS: i128 = 100; // 1%
+pub const MAX_BAZAAR_FEE_BPS: i128 = 1_000; // Max 10%
 pub const BPS_DENOMINATOR: i128 = 10_000;
 
 #[contracterror]
@@ -17,6 +19,7 @@ pub enum SplitError {
     RoundingNotPermitted = 2,
     SameDestination = 3,
     TransferFailed = 4,
+    InvalidFeeBps = 5,
 }
 
 #[contract]
@@ -25,11 +28,11 @@ pub struct FeeSplitRouter;
 #[contractimpl]
 impl FeeSplitRouter {
     /// Executes a non-custodial atomic split of `gross_amount` in `token` from `payer`:
-    /// - 99% is transferred directly to `provider`
-    /// - 1% is transferred directly to `treasury`
+    /// - `(10,000 - fee_bps) / 10,000` is transferred directly to `provider`
+    /// - `fee_bps / 10,000` is transferred directly to `treasury`
     ///
     /// Requires authorization from `payer`.
-    /// Reverts atomically if any transfer fails or if rounding would lose precision.
+    /// Reverts atomically if any transfer fails, if fee_bps exceeds MAX_BAZAAR_FEE_BPS, or if rounding would lose precision.
     pub fn split_payment(
         env: Env,
         token: Address,
@@ -37,6 +40,7 @@ impl FeeSplitRouter {
         provider: Address,
         treasury: Address,
         gross_amount: i128,
+        fee_bps: i128,
         request_binding: BytesN<32>,
         card_hash: BytesN<32>,
     ) -> Result<(i128, i128), SplitError> {
@@ -45,14 +49,18 @@ impl FeeSplitRouter {
             return Err(SplitError::SameDestination);
         }
 
-        // 2. Validate amount
+        // 2. Validate amount & fee_bps
         if gross_amount <= 0 {
             return Err(SplitError::InvalidAmount);
         }
 
+        if fee_bps <= 0 || fee_bps > MAX_BAZAAR_FEE_BPS {
+            return Err(SplitError::InvalidFeeBps);
+        }
+
         // 3. Exact fee calculation without rounding loss
         let fee_numerator = gross_amount
-            .checked_mul(BAZAAR_FEE_BPS)
+            .checked_mul(fee_bps)
             .ok_or(SplitError::InvalidAmount)?;
 
         if fee_numerator % BPS_DENOMINATOR != 0 {
@@ -74,16 +82,16 @@ impl FeeSplitRouter {
         // 5. Execute atomic token transfers
         let client = token::Client::new(&env, &token);
 
-        // Transfer 99% net to provider
+        // Transfer net portion to provider
         client.transfer(&payer, &provider, &provider_net);
 
-        // Transfer 1% fee to Bazaar treasury
+        // Transfer fee portion to Bazaar treasury
         client.transfer(&payer, &treasury, &fee_amount);
 
         // 6. Emit verifiable provenance event
         env.events().publish(
             (symbol_short!("split"), token, payer),
-            (provider, treasury, provider_net, fee_amount, request_binding, card_hash),
+            (provider, treasury, provider_net, fee_amount, fee_bps, request_binding, card_hash),
         );
 
         Ok((provider_net, fee_amount))
@@ -99,7 +107,7 @@ mod test {
     };
 
     #[test]
-    fn test_successful_atomic_fee_split() {
+    fn test_successful_atomic_fee_split_1_percent() {
         let env = Env::default();
         env.mock_all_auths();
 
@@ -123,13 +131,14 @@ mod test {
         let binding = BytesN::from_array(&env, &[1u8; 32]);
         let card = BytesN::from_array(&env, &[2u8; 32]);
 
-        // Gross = 10,000 (0.001 USDC). 99% = 9,900, 1% = 100
+        // Gross = 10,000 (0.001 USDC), fee_bps = 100 (1%). 99% = 9,900, 1% = 100
         let (net, fee) = client.split_payment(
             &token_addr,
             &payer,
             &provider,
             &treasury,
             &10_000,
+            &100,
             &binding,
             &card,
         );
@@ -141,6 +150,82 @@ mod test {
         assert_eq!(token_client.balance(&payer), 90_000);
         assert_eq!(token_client.balance(&provider), 9_900);
         assert_eq!(token_client.balance(&treasury), 100);
+    }
+
+    #[test]
+    fn test_successful_atomic_fee_split_3_percent() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let router_id = env.register_contract(None, FeeSplitRouter);
+        let client = FeeSplitRouterClient::new(&env, &router_id);
+
+        let token_admin = Address::generate(&env);
+        let payer = Address::generate(&env);
+        let provider = Address::generate(&env);
+        let treasury = Address::generate(&env);
+
+        let token_contract = env.register_stellar_asset_contract_v2(token_admin.clone());
+        let token_addr = token_contract.address();
+        let stellar_client = token::StellarAssetClient::new(&env, &token_addr);
+        let token_client = token::Client::new(&env, &token_addr);
+
+        stellar_client.mint(&payer, &100_000);
+
+        let binding = BytesN::from_array(&env, &[1u8; 32]);
+        let card = BytesN::from_array(&env, &[2u8; 32]);
+
+        // Gross = 10,000 (0.001 USDC), fee_bps = 300 (3%). 97% = 9,700, 3% = 300
+        let (net, fee) = client.split_payment(
+            &token_addr,
+            &payer,
+            &provider,
+            &treasury,
+            &10_000,
+            &300,
+            &binding,
+            &card,
+        );
+
+        assert_eq!(net, 9_700);
+        assert_eq!(fee, 300);
+
+        assert_eq!(token_client.balance(&payer), 90_000);
+        assert_eq!(token_client.balance(&provider), 9_700);
+        assert_eq!(token_client.balance(&treasury), 300);
+    }
+
+    #[test]
+    fn test_fee_bps_exceeding_max_rejected() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let router_id = env.register_contract(None, FeeSplitRouter);
+        let client = FeeSplitRouterClient::new(&env, &router_id);
+
+        let token_admin = Address::generate(&env);
+        let payer = Address::generate(&env);
+        let provider = Address::generate(&env);
+        let treasury = Address::generate(&env);
+
+        let token_contract = env.register_stellar_asset_contract_v2(token_admin);
+        let token_addr = token_contract.address();
+        let binding = BytesN::from_array(&env, &[1u8; 32]);
+        let card = BytesN::from_array(&env, &[2u8; 32]);
+
+        // fee_bps = 1001 (> 1000 max)
+        let result = client.try_split_payment(
+            &token_addr,
+            &payer,
+            &provider,
+            &treasury,
+            &10_000,
+            &1001,
+            &binding,
+            &card,
+        );
+
+        assert_eq!(result, Err(Ok(SplitError::InvalidFeeBps)));
     }
 
     #[test]
@@ -161,13 +246,14 @@ mod test {
         let binding = BytesN::from_array(&env, &[1u8; 32]);
         let card = BytesN::from_array(&env, &[2u8; 32]);
 
-        // 10,001 cannot be divided into exact 1% without remainder
+        // 10,001 cannot be divided into exact 3% (300 bps) without remainder
         let result = client.try_split_payment(
             &token_addr,
             &payer,
             &provider,
             &treasury,
             &10_001,
+            &300,
             &binding,
             &card,
         );
@@ -198,6 +284,7 @@ mod test {
             &same_dest,
             &same_dest,
             &10_000,
+            &100,
             &binding,
             &card,
         );
@@ -205,4 +292,3 @@ mod test {
         assert_eq!(result, Err(Ok(SplitError::SameDestination)));
     }
 }
-
