@@ -18,9 +18,11 @@ export default function Home() {
         <div className="nav-links">
           <Link href="/catalogo">Catálogo</Link>
           <a href="#conectar-agente">Conectar Agente</a>
+          <Link href="/agent-chat">Agent Chat</Link>
+          <Link href="/webmcp-playground">WebMCP</Link>
           <Link href="/buyer-execution">Workspace Comprador</Link>
           <Link href="/publish">Publicar API</Link>
-          <Link href="/history">Historial / History</Link>
+          <Link href="/history">Historial</Link>
           <Link href="/docs">Docs</Link>
           <a href="https://github.com/CaBsCrypto/stellar-bazaar-x402" target="_blank" rel="noreferrer">GitHub ↗</a>
         </div>
