@@ -1,11 +1,11 @@
-import { historyConnection } from "../history-connection";
-import { ModelContextRegistry, WebMCPToolDefinition } from "./types";
-import { services } from "../catalog";
-import { rankServices, validateServiceCard } from "../discovery";
-import { workflowBundles } from "../workflow-bundles";
-import { getPaymentFlow, paymentFlowCapability } from "../payment-flow";
-import { pilotCards, pilotSearchServices } from "../pilot-cards";
-import type { ServiceCard } from "../types";
+import { historyConnection } from "../history-connection.ts";
+import type { ModelContextRegistry, WebMCPToolDefinition } from "./types.ts";
+import { services } from "../catalog.ts";
+import { rankServices, validateServiceCard } from "../discovery.ts";
+import { workflowBundles } from "../workflow-bundles.ts";
+import { getPaymentFlow, paymentFlowCapability } from "../payment-flow.ts";
+import { pilotCards, pilotSearchServices } from "../pilot-cards.ts";
+import type { ServiceCard } from "../types.ts";
 
 /**
  * Registers all Stellar Bazaar tools to the active ModelContext registry (native or polyfilled).

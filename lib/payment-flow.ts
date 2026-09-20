@@ -1,5 +1,5 @@
-import { services } from "./catalog";
-import { pilotCards } from "./pilot-cards";
+import { services } from "./catalog.ts";
+import { pilotCards } from "./pilot-cards.ts";
 
 export const PAYMENT_FLOW_VERSION = "bazaar.payment-flow/v1" as const;
 
