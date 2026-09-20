@@ -3,291 +3,472 @@
 import { useState } from "react";
 import Link from "next/link";
 
+type BuyerFormat = "prompt" | "mcp_json" | "sdk";
+type SellerFormat = "prompt" | "cli" | "sdk";
+
 export function AgentDirectConnectCard() {
-  const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState<"seller" | "buyer">("seller");
+  const [buyerFormat, setBuyerFormat] = useState<BuyerFormat>("prompt");
+  const [sellerFormat, setSellerFormat] = useState<SellerFormat>("prompt");
+  const [copiedBuyer, setCopiedBuyer] = useState(false);
+  const [copiedSeller, setCopiedSeller] = useState(false);
 
-  const sellerPrompt = `Actúa como Agente Desarrollador y publica una nueva Skill / API monetizada en Stellar Bazaar x402:
-👉 Especificación & Contexto: https://stellar-bazaar-x402.vercel.app/llms.txt
-👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
-👉 Kit & CLI: npm run bazaar-cli init / validate (o @stellar-bazaar/provider-kit)
-
-Tus 3 pasos de integración:
-1. Agrega el middleware HTTP 402 a nuestro endpoint para cobrar en USDC Testnet a nuestra wallet Stellar (G...).
-2. Formatea la respuesta bajo el estándar 'bazaarDelivery' (con manifest, archivos de entrega y hashes SHA-256).
-3. Genera y valida la ServiceCard oficial usando la herramienta MCP 'validate_service_card' o el validador en https://stellar-bazaar-x402.vercel.app/publish
-
-El Smart Contract FeeSplitRouter distribuirá automáticamente el 97% a nuestra wallet y el 3% a la tesorería del Bazaar sin custodia. Entrégame el endpoint listo y la ServiceCard JSON validada.`;
-
+  // Buyer Snippets
   const buyerPrompt = `Actúa como Agente Comprador de IA y conéctate a Stellar Bazaar x402:
 👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
-👉 Especificación & Contexto: https://stellar-bazaar-x402.vercel.app/llms.txt
-👉 Playground WebMCP: https://stellar-bazaar-x402.vercel.app/webmcp-playground
+👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
 
-Tus 3 pasos de ejecución:
-1. Descubre herramientas activas llamando a la tool MCP 'search_services' o 'list_services' (auditorías web, riesgo DeFi, oráculos).
-2. Evalúa la ServiceCard contra tu presupuesto (ej. máx 0.05 USDC) y liquida el pago x402 en Stellar Testnet.
-3. Tras la entrega privada, genera y entrega al usuario humano su enlace mágico directo con token hash zero-knowledge (/history#token=bz_read_...) para que acceda a su historial y reportes en Cloudflare R2 con un solo clic.
+Tus tareas:
+1. Descubre herramientas llamando a 'search_services' (auditorías web, riesgo DeFi, oráculos).
+2. Valida la ServiceCard y ejecuta pagos en USDC sobre Stellar Testnet.
+3. Devuelve al usuario humano su enlace mágico con token hash (/history#token=bz_read_...) para acceder a sus reportes en Cloudflare R2.`;
 
-Comienza consultando los servicios disponibles en el catálogo.`;
-
-  const currentPrompt = activeTab === "seller" ? sellerPrompt : buyerPrompt;
-
-  const copyPrompt = async () => {
-    try {
-      await navigator.clipboard.writeText(currentPrompt);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
-    } catch {
-      // Fallback
+  const buyerMcpJson = `{
+  "mcpServers": {
+    "stellar-bazaar": {
+      "url": "https://stellar-bazaar-x402.vercel.app/api/mcp",
+      "transport": "sse"
     }
+  }
+}`;
+
+  const buyerSdkCode = `import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
+
+const agent = new BazaarAgentClient({
+  baseUrl: "https://stellar-bazaar-x402.vercel.app",
+  maxPriceAllowedUsdc: 0.10,
+  allowedNetworks: ["stellar:testnet"],
+});
+
+// 1. Descubre servicios vía MCP
+const services = await agent.searchServicesREST("website");
+
+// 2. Genera enlace mágico de historial para el humano
+const historyUrl = agent.getHumanHistoryLink();
+console.log("Historial privado:", historyUrl);`;
+
+  // Seller Snippets
+  const sellerPrompt = `Actúa como Agente Desarrollador y publica una Skill monetizada en Stellar Bazaar x402:
+👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
+👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+👉 CLI: npm run bazaar-cli init / validate
+
+Tus tareas:
+1. Agrega el middleware HTTP 402 a nuestro endpoint para cobrar en USDC Testnet a nuestra wallet Stellar (G...).
+2. Formatea la respuesta bajo 'bazaarDelivery' (con manifest, archivos de entrega y hashes SHA-256).
+3. Valida la ServiceCard con la tool MCP 'validate_service_card'.
+El Smart Contract FeeSplitRouter liquidará automáticamente 97% a nuestra wallet y 3% a la tesorería del Bazaar.`;
+
+  const sellerCliCode = `# 1. Inicializar plantilla de servicio
+npm run bazaar-cli init mi-servicio.json
+
+# 2. Validar conformidad con el estándar del Bazaar
+npm run bazaar-cli validate mi-servicio.json
+
+# 3. Simular reparto atómico de comisiones
+npm run bazaar-cli split 0.05`;
+
+  const sellerSdkCode = `import { generateCanonicalServiceCard, createDeliverableBundle } from "@/lib/provider-kit";
+
+// 1. Genera la ServiceCard oficial
+const card = generateCanonicalServiceCard({
+  id: "mi-servicio-ai",
+  name: "Mi Servicio AI",
+  description: "Microservicio de inferencia con cobro x402",
+  tags: ["ai", "analysis"],
+  pricing: { amountUsdc: "0.05", destinationAddress: "G..." },
+  endpointUrl: "https://mi-api.com/x402/run",
+  input: [{ name: "prompt", type: "string", required: true }],
+  provider: { name: "Mi Org" }
+});
+
+// 2. Empaqueta el entregable con hashes SHA-256
+const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
+
+  const getBuyerText = () => {
+    if (buyerFormat === "prompt") return buyerPrompt;
+    if (buyerFormat === "mcp_json") return buyerMcpJson;
+    return buyerSdkCode;
+  };
+
+  const getSellerText = () => {
+    if (sellerFormat === "prompt") return sellerPrompt;
+    if (sellerFormat === "cli") return sellerCliCode;
+    return sellerSdkCode;
+  };
+
+  const copyBuyer = async () => {
+    try {
+      await navigator.clipboard.writeText(getBuyerText());
+      setCopiedBuyer(true);
+      setTimeout(() => setCopiedBuyer(false), 2500);
+    } catch {}
+  };
+
+  const copySeller = async () => {
+    try {
+      await navigator.clipboard.writeText(getSellerText());
+      setCopiedSeller(true);
+      setTimeout(() => setCopiedSeller(false), 2500);
+    } catch {}
   };
 
   return (
-    <section className="shell agent-connect-section" style={{ margin: "2.5rem auto" }}>
+    <section className="shell agent-connect-section" style={{ margin: "3rem auto" }}>
+      <div style={{ textAlign: "center", marginBottom: "2.5rem" }}>
+        <span
+          style={{
+            fontSize: "0.78rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.1em",
+            fontWeight: 700,
+            padding: "4px 14px",
+            borderRadius: "20px",
+            background: "rgba(138, 180, 248, 0.1)",
+            color: "#8ab4f8",
+            border: "1px solid rgba(138, 180, 248, 0.25)",
+            display: "inline-block",
+            marginBottom: "0.6rem",
+          }}
+        >
+          AI AGENT INTEGRATION HUB · MCP & x402 PROTOCOL
+        </span>
+        <h2 style={{ fontSize: "2.2rem", fontWeight: 800, margin: "0.2rem 0 0.5rem 0", letterSpacing: "-0.02em" }}>
+          Conecta a tu Agente en un Solo Clic
+        </h2>
+        <p style={{ color: "#94a3b8", maxWidth: "680px", margin: "0 auto", fontSize: "1rem", lineHeight: 1.5 }}>
+          Permite que tu agente de IA (Cursor, Claude, Copilot, ChatGPT, Antigravity) descubra y consuma servicios, o construya y monetice nuevas Skills con reparto automático de comisiones.
+        </p>
+      </div>
+
+      {/* Dual Side-by-Side Cards Grid */}
       <div
         style={{
-          background: "linear-gradient(135deg, rgba(20, 24, 38, 0.95) 0%, rgba(13, 15, 23, 0.98) 100%)",
-          border: activeTab === "seller" ? "1px solid rgba(54, 185, 144, 0.35)" : "1px solid rgba(112, 87, 232, 0.35)",
-          borderRadius: "16px",
-          padding: "2rem",
-          boxShadow: activeTab === "seller" 
-            ? "0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(54, 185, 144, 0.08)"
-            : "0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(112, 87, 232, 0.08)",
-          position: "relative",
-          overflow: "hidden",
-          transition: "border 0.3s ease, box-shadow 0.3s ease",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(440px, 1fr))",
+          gap: "1.8rem",
+          alignItems: "stretch",
         }}
       >
+        {/* BUYER CARD */}
         <div
           style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "3px",
-            background: activeTab === "seller" 
-              ? "linear-gradient(90deg, #36b990, #299874, #36b990)"
-              : "linear-gradient(90deg, #7057e8, #9333ea, #7057e8)",
-            transition: "background 0.3s ease",
+            background: "linear-gradient(145deg, rgba(20, 22, 36, 0.95) 0%, rgba(13, 15, 25, 0.98) 100%)",
+            border: "1px solid rgba(112, 87, 232, 0.3)",
+            borderRadius: "16px",
+            padding: "1.8rem",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.3), 0 0 20px rgba(112, 87, 232, 0.06)",
+            position: "relative",
           }}
-        />
+        >
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <span
+                style={{
+                  background: "rgba(112, 87, 232, 0.15)",
+                  color: "#c4b5fd",
+                  border: "1px solid rgba(112, 87, 232, 0.3)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  padding: "4px 10px",
+                  borderRadius: "8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span>🤖</span> MODO COMPRADOR
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Discovery MCP + x402</span>
+            </div>
 
-        {/* Mode Selector Tabs */}
-        <div style={{ display: "flex", gap: "0.6rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
-          <button
-            onClick={() => setActiveTab("seller")}
-            style={{
-              padding: "0.65rem 1.2rem",
-              borderRadius: "10px",
-              border: activeTab === "seller" ? "1px solid #36b990" : "1px solid rgba(255, 255, 255, 0.08)",
-              background: activeTab === "seller" ? "rgba(54, 185, 144, 0.15)" : "rgba(255, 255, 255, 0.03)",
-              color: activeTab === "seller" ? "#36b990" : "#94a3b8",
-              fontWeight: 700,
-              fontSize: "0.9rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              transition: "all 0.2s",
-            }}
-          >
-            <span>👨‍💻</span> 1-Prompt VENDEDOR (Crear Skill & Monetizar con x402)
-          </button>
-          <button
-            onClick={() => setActiveTab("buyer")}
-            style={{
-              padding: "0.65rem 1.2rem",
-              borderRadius: "10px",
-              border: activeTab === "buyer" ? "1px solid #7057e8" : "1px solid rgba(255, 255, 255, 0.08)",
-              background: activeTab === "buyer" ? "rgba(112, 87, 232, 0.15)" : "rgba(255, 255, 255, 0.03)",
-              color: activeTab === "buyer" ? "#c4b5fd" : "#94a3b8",
-              fontWeight: 700,
-              fontSize: "0.9rem",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "8px",
-              transition: "all 0.2s",
-            }}
-          >
-            <span>🤖</span> 1-Prompt COMPRADOR (Discovery MCP + Pagos x402)
-          </button>
-        </div>
+            <h3 style={{ fontSize: "1.35rem", fontWeight: 700, margin: "0 0 0.4rem 0", color: "#f8fafc" }}>
+              Tu Agente como Cliente Autónomo
+            </h3>
+            <p style={{ color: "#94a3b8", fontSize: "0.88rem", lineHeight: 1.5, margin: "0 0 1.2rem 0" }}>
+              Permite que tu agente descubra microservicios, liquide pagos en Stellar Testnet y te devuelva enlaces mágicos a tus reportes privados en Cloudflare R2.
+            </p>
 
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "flex-start", gap: "1.5rem" }}>
-          <div style={{ maxWidth: "660px" }}>
-            <span
+            {/* Sub-tabs */}
+            <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.8rem", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setBuyerFormat("prompt")}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: "6px",
+                  border: buyerFormat === "prompt" ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.08)",
+                  background: buyerFormat === "prompt" ? "rgba(112, 87, 232, 0.2)" : "rgba(255,255,255,0.02)",
+                  color: buyerFormat === "prompt" ? "#c4b5fd" : "#94a3b8",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                1-Prompt de Agente
+              </button>
+              <button
+                type="button"
+                onClick={() => setBuyerFormat("mcp_json")}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: "6px",
+                  border: buyerFormat === "mcp_json" ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.08)",
+                  background: buyerFormat === "mcp_json" ? "rgba(112, 87, 232, 0.2)" : "rgba(255,255,255,0.02)",
+                  color: buyerFormat === "mcp_json" ? "#c4b5fd" : "#94a3b8",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                claude_desktop_config.json
+              </button>
+              <button
+                type="button"
+                onClick={() => setBuyerFormat("sdk")}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: "6px",
+                  border: buyerFormat === "sdk" ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.08)",
+                  background: buyerFormat === "sdk" ? "rgba(112, 87, 232, 0.2)" : "rgba(255,255,255,0.02)",
+                  color: buyerFormat === "sdk" ? "#c4b5fd" : "#94a3b8",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                TypeScript SDK
+              </button>
+            </div>
+
+            {/* Code Box */}
+            <div
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                padding: "4px 10px",
-                borderRadius: "20px",
-                background: activeTab === "seller" ? "rgba(54, 185, 144, 0.15)" : "rgba(112, 87, 232, 0.15)",
-                color: activeTab === "seller" ? "#36b990" : "#c4b5fd",
+                background: "#080a10",
+                border: "1px solid #232838",
+                borderRadius: "8px",
+                padding: "0.9rem",
+                fontFamily: "monospace",
                 fontSize: "0.8rem",
-                fontWeight: 600,
-                letterSpacing: "0.5px",
-                textTransform: "uppercase",
-                marginBottom: "0.8rem",
+                color: "#d8b4fe",
+                whiteSpace: "pre-wrap",
+                maxHeight: "180px",
+                overflowY: "auto",
+                lineHeight: 1.45,
+                position: "relative",
               }}
             >
-              {activeTab === "seller" 
-                ? "⚡ Onboarding de Skill / Proveedor (FeeSplitRouter On-Chain 97/3)" 
-                : "⚡ Onboarding de Comprador (MCP Discovery + Magic Links R2)"}
-            </span>
-            <h2 style={{ fontSize: "1.6rem", fontWeight: 700, margin: "0.2rem 0 0.6rem 0", color: "#f8fafc" }}>
-              {activeTab === "seller" 
-                ? "Dale a tu Agente un solo prompt para monetizar su Skill" 
-                : "Dale a tu Agente un solo prompt para comprar en el Bazaar"}
-            </h2>
-            
-            {activeTab === "seller" ? (
-              <div style={{ color: "#94a3b8", fontSize: "0.92rem", lineHeight: 1.6, marginTop: "0.5rem" }}>
-                <p style={{ margin: "0 0 0.8rem 0" }}>
-                  Pega este prompt en tu agente (Cursor, Claude, ChatGPT, Antigravity) para que construya y registre automáticamente tu servicio:
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.8rem", marginBottom: "0.8rem" }}>
-                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(54, 185, 144, 0.2)" }}>
-                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>1. Estandarización Provider Kit</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Genera la ServiceCard canónica y empaqueta entregables R2 con hashes SHA-256.</span>
-                  </div>
-                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(54, 185, 144, 0.2)" }}>
-                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>2. Reparto Atómico Soroban</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Cada micropago x402 liquida 97% a tu wallet y 3% a la tesorería de forma no-custodial.</span>
-                  </div>
-                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(54, 185, 144, 0.2)" }}>
-                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>3. Indexación Global MCP</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tu herramienta queda disponible para ser descubierta y consumida por cualquier agente de IA.</span>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div style={{ color: "#94a3b8", fontSize: "0.92rem", lineHeight: 1.6, marginTop: "0.5rem" }}>
-                <p style={{ margin: "0 0 0.8rem 0" }}>
-                  Pega este prompt en tu agente para que busque, pague y te devuelva los reportes directamente:
-                </p>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.8rem", marginBottom: "0.8rem" }}>
-                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(112, 87, 232, 0.2)" }}>
-                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>1. Descubrimiento MCP & WebMCP</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tu agente consulta /api/mcp o navigator.modelContext para listar herramientas.</span>
-                  </div>
-                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(112, 87, 232, 0.2)" }}>
-                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>2. Pagos x402 en 4 Segundos</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Liquida en USDC sobre Stellar Testnet respetando los límites de presupuesto.</span>
-                  </div>
-                  <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(112, 87, 232, 0.2)" }}>
-                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>3. Enlace Mágico Desbloqueado</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>El agente te devuelve un enlace (/history#token=...) que abre tus reportes en R2 al instante.</span>
-                  </div>
-                </div>
-              </div>
-            )}
+              {getBuyerText()}
+            </div>
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", minWidth: "240px" }}>
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: "0.8rem", marginTop: "1.2rem" }}>
             <button
-              onClick={copyPrompt}
+              type="button"
+              onClick={copyBuyer}
               style={{
-                background: copied 
-                  ? "#36b990" 
-                  : activeTab === "seller" 
-                    ? "linear-gradient(135deg, #36b990 0%, #299874 100%)"
-                    : "linear-gradient(135deg, #7057e8 0%, #583ec9 100%)",
-                color: activeTab === "seller" ? "#081018" : "#ffffff",
+                flex: 1,
+                padding: "0.75rem 1rem",
+                background: copiedBuyer ? "#10b981" : "linear-gradient(135deg, #7057e8 0%, #583ec9 100%)",
+                color: "#ffffff",
                 border: "none",
-                borderRadius: "10px",
-                padding: "0.85rem 1.4rem",
+                borderRadius: "8px",
                 fontWeight: 700,
-                fontSize: "0.95rem",
+                fontSize: "0.88rem",
                 cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(112, 87, 232, 0.3)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                gap: "8px",
-                transition: "all 0.2s ease",
-                boxShadow: activeTab === "seller" 
-                  ? "0 4px 14px rgba(54, 185, 144, 0.3)"
-                  : "0 4px 14px rgba(112, 87, 232, 0.3)",
+                gap: "6px",
+                transition: "all 0.2s",
               }}
             >
-              {copied ? "✓ ¡Prompt Copiado!" : `📋 Copiar Prompt (${activeTab === "seller" ? "Vendedor" : "Comprador"})`}
+              {copiedBuyer ? "✓ ¡Copiado!" : "📋 Copiar Configuración / Prompt"}
             </button>
-            <div style={{ display: "flex", gap: "0.5rem" }}>
-              {activeTab === "seller" ? (
-                <Link
-                  href="/publish"
-                  style={{
-                    flex: 1,
-                    textAlign: "center",
-                    background: "rgba(54, 185, 144, 0.1)",
-                    border: "1px solid rgba(54, 185, 144, 0.3)",
-                    borderRadius: "8px",
-                    padding: "0.5rem",
-                    color: "#36b990",
-                    fontSize: "0.8rem",
-                    textDecoration: "none",
-                    fontWeight: 600,
-                  }}
-                >
-                  🚀 Validador ↗
-                </Link>
-              ) : (
-                <Link
-                  href="/agent-chat"
-                  style={{
-                    flex: 1,
-                    textAlign: "center",
-                    background: "rgba(112, 87, 232, 0.1)",
-                    border: "1px solid rgba(112, 87, 232, 0.3)",
-                    borderRadius: "8px",
-                    padding: "0.5rem",
-                    color: "#c4b5fd",
-                    fontSize: "0.8rem",
-                    textDecoration: "none",
-                    fontWeight: 600,
-                  }}
-                >
-                  💬 Probar Chat ↗
-                </Link>
-              )}
-              <Link
-                href="/webmcp-playground"
-                style={{
-                  flex: 1,
-                  textAlign: "center",
-                  background: "rgba(255, 255, 255, 0.05)",
-                  border: "1px solid rgba(255, 255, 255, 0.1)",
-                  borderRadius: "8px",
-                  padding: "0.5rem",
-                  color: "#cbd5e1",
-                  fontSize: "0.8rem",
-                  textDecoration: "none",
-                  fontWeight: 600,
-                }}
-              >
-                🛠️ WebMCP ↗
-              </Link>
-            </div>
+            <Link
+              href="/agent-chat"
+              style={{
+                padding: "0.75rem 1rem",
+                background: "rgba(112, 87, 232, 0.12)",
+                border: "1px solid rgba(112, 87, 232, 0.35)",
+                color: "#c4b5fd",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              💬 Probar Chat Live
+            </Link>
           </div>
         </div>
 
+        {/* SELLER CARD */}
         <div
           style={{
-            marginTop: "1.4rem",
-            background: "#080a0f",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "10px",
-            padding: "1rem 1.2rem",
-            fontFamily: "var(--font-mono, monospace)",
-            fontSize: "0.82rem",
-            color: activeTab === "seller" ? "#93c5fd" : "#d8b4fe",
-            whiteSpace: "pre-wrap",
-            lineHeight: 1.5,
+            background: "linear-gradient(145deg, rgba(16, 28, 26, 0.95) 0%, rgba(10, 18, 16, 0.98) 100%)",
+            border: "1px solid rgba(54, 185, 144, 0.3)",
+            borderRadius: "16px",
+            padding: "1.8rem",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
+            boxShadow: "0 12px 36px rgba(0, 0, 0, 0.3), 0 0 20px rgba(54, 185, 144, 0.06)",
+            position: "relative",
           }}
         >
-          {currentPrompt}
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+              <span
+                style={{
+                  background: "rgba(54, 185, 144, 0.15)",
+                  color: "#36b990",
+                  border: "1px solid rgba(54, 185, 144, 0.3)",
+                  fontSize: "0.78rem",
+                  fontWeight: 700,
+                  padding: "4px 10px",
+                  borderRadius: "8px",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
+                <span>👨‍💻</span> MODO VENDEDOR / SKILL CREATOR
+              </span>
+              <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>FeeSplitRouter (97/3 Split)</span>
+            </div>
+
+            <h3 style={{ fontSize: "1.35rem", fontWeight: 700, margin: "0 0 0.4rem 0", color: "#f8fafc" }}>
+              Monetiza tu API o Skill de IA
+            </h3>
+            <p style={{ color: "#94a3b8", fontSize: "0.88rem", lineHeight: 1.5, margin: "0 0 1.2rem 0" }}>
+              Empaqueta cualquier endpoint bajo el estándar del Bazaar, valida la ServiceCard oficial y recibe pagos en USDC con liquidación automática on-chain.
+            </p>
+
+            {/* Sub-tabs */}
+            <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.8rem", flexWrap: "wrap" }}>
+              <button
+                type="button"
+                onClick={() => setSellerFormat("prompt")}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: "6px",
+                  border: sellerFormat === "prompt" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.08)",
+                  background: sellerFormat === "prompt" ? "rgba(54, 185, 144, 0.2)" : "rgba(255,255,255,0.02)",
+                  color: sellerFormat === "prompt" ? "#36b990" : "#94a3b8",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                1-Prompt de Agente
+              </button>
+              <button
+                type="button"
+                onClick={() => setSellerFormat("cli")}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: "6px",
+                  border: sellerFormat === "cli" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.08)",
+                  background: sellerFormat === "cli" ? "rgba(54, 185, 144, 0.2)" : "rgba(255,255,255,0.02)",
+                  color: sellerFormat === "cli" ? "#36b990" : "#94a3b8",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                bazaar-cli Tooling
+              </button>
+              <button
+                type="button"
+                onClick={() => setSellerFormat("sdk")}
+                style={{
+                  padding: "5px 10px",
+                  borderRadius: "6px",
+                  border: sellerFormat === "sdk" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.08)",
+                  background: sellerFormat === "sdk" ? "rgba(54, 185, 144, 0.2)" : "rgba(255,255,255,0.02)",
+                  color: sellerFormat === "sdk" ? "#36b990" : "#94a3b8",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Provider Kit SDK
+              </button>
+            </div>
+
+            {/* Code Box */}
+            <div
+              style={{
+                background: "#080f0c",
+                border: "1px solid #1a382e",
+                borderRadius: "8px",
+                padding: "0.9rem",
+                fontFamily: "monospace",
+                fontSize: "0.8rem",
+                color: "#6ee7b7",
+                whiteSpace: "pre-wrap",
+                maxHeight: "180px",
+                overflowY: "auto",
+                lineHeight: 1.45,
+                position: "relative",
+              }}
+            >
+              {getSellerText()}
+            </div>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: "flex", gap: "0.8rem", marginTop: "1.2rem" }}>
+            <button
+              type="button"
+              onClick={copySeller}
+              style={{
+                flex: 1,
+                padding: "0.75rem 1rem",
+                background: copiedSeller ? "#10b981" : "linear-gradient(135deg, #36b990 0%, #299874 100%)",
+                color: "#081018",
+                border: "none",
+                borderRadius: "8px",
+                fontWeight: 700,
+                fontSize: "0.88rem",
+                cursor: "pointer",
+                boxShadow: "0 4px 14px rgba(54, 185, 144, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "6px",
+                transition: "all 0.2s",
+              }}
+            >
+              {copiedSeller ? "✓ ¡Copiado!" : "📋 Copiar Configuración / Prompt"}
+            </button>
+            <Link
+              href="/publish"
+              style={{
+                padding: "0.75rem 1rem",
+                background: "rgba(54, 185, 144, 0.12)",
+                border: "1px solid rgba(54, 185, 144, 0.35)",
+                color: "#36b990",
+                borderRadius: "8px",
+                fontWeight: 600,
+                fontSize: "0.85rem",
+                textDecoration: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+              }}
+            >
+              🚀 Validador
+            </Link>
+          </div>
         </div>
       </div>
     </section>
