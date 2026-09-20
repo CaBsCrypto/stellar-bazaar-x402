@@ -513,6 +513,10 @@ export function OperationHistory() {
                         </a>
                       )}
                     </section>
+                    <section>
+                      <h3 style={{ fontSize: "0.95rem", color: "#f8fafc", margin: "0 0 6px 0" }}>{c.delivery}</h3>
+                      <strong style={{ color: "#38bdf8", fontSize: "0.85rem" }}>{c.statuses[entry.delivery.status]}</strong>
+                      {entry.delivery.result !== undefined ? <HistoryResult value={entry.delivery.result} label={c.result} /> : <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>{c.absent}</p>}
                     </section>
                   </div>
                 </article>
