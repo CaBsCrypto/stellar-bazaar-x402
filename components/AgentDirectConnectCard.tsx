@@ -5,10 +5,12 @@ import Link from "next/link";
 
 type BuyerFormat = "prompt" | "mcp_json" | "sdk";
 type SellerFormat = "prompt" | "cli" | "sdk";
+type SellerExample = "scriptwriter" | "auditor" | "oracle" | "custom";
 
 export function AgentDirectConnectCard() {
   const [buyerFormat, setBuyerFormat] = useState<BuyerFormat>("prompt");
   const [sellerFormat, setSellerFormat] = useState<SellerFormat>("prompt");
+  const [sellerExample, setSellerExample] = useState<SellerExample>("scriptwriter");
   const [copiedBuyer, setCopiedBuyer] = useState(false);
   const [copiedSeller, setCopiedSeller] = useState(false);
 
@@ -46,17 +48,67 @@ const services = await agent.searchServicesREST("website");
 const historyUrl = agent.getHumanHistoryLink();
 console.log("Historial privado:", historyUrl);`;
 
-  // Seller Snippets
-  const sellerPrompt = `Actúa como Agente Desarrollador y publica una Skill monetizada en Stellar Bazaar x402:
+  // Seller Prompt Examples
+  const sellerPrompts: Record<SellerExample, string> = {
+    scriptwriter: `Actúa como Agente Desarrollador y crea la Skill 'AI Video Scriptwriter' para Stellar Bazaar x402:
 👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
 👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
-👉 CLI: npm run bazaar-cli init / validate
+👉 Kit: @stellar-bazaar/provider-kit (o npm run bazaar-cli)
 
-Tus tareas:
-1. Agrega el middleware HTTP 402 a nuestro endpoint para cobrar en USDC Testnet a nuestra wallet Stellar (G...).
-2. Formatea la respuesta bajo 'bazaarDelivery' (con manifest, archivos de entrega y hashes SHA-256).
-3. Valida la ServiceCard con la tool MCP 'validate_service_card'.
-El Smart Contract FeeSplitRouter liquidará automáticamente 97% a nuestra wallet y 3% a la tesorería del Bazaar.`;
+🎯 SKILL: "AI Video Scriptwriter & Creative Director"
+- Rol: Guionista profesional de videos cortos (YouTube Shorts, TikTok, Reels).
+- Inputs: 'topic' (string), 'durationSeconds' (number), 'tone' (string).
+- Precio: 0.02 USDC en Stellar Testnet.
+- Wallet de Cobro: [Tu clave pública Stellar G...]
+
+Tus 2 entregables:
+1. 'server.ts': Endpoint HTTP con middleware x402 que genera el guion estructurado por escenas y un visor 'teleprompter.html' bajo el estándar 'bazaarDelivery' (con hashes SHA-256).
+2. 'service-card.json': Ficha oficial de catálogo validada para indexación MCP.
+(El Smart Contract FeeSplitRouter distribuirá automáticamente 97% a nuestra wallet y 3% a la tesorería del Bazaar).`,
+
+    auditor: `Actúa como Agente Desarrollador y crea la Skill 'Soroban Smart Contract Auditor' para Stellar Bazaar x402:
+👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
+👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+
+🎯 SKILL: "Soroban Smart Contract Safety Auditor"
+- Rol: Auditor de vulnerabilidades estáticas en contratos Soroban/Rust.
+- Inputs: 'contractAddress' (string), 'sourceCode' (string opcional).
+- Precio: 0.05 USDC en Stellar Testnet.
+- Wallet de Cobro: [Tu clave pública Stellar G...]
+
+Tus 2 entregables:
+1. 'server.ts': Endpoint x402 que analiza seguridad y emite 'audit-report.html' bajo el estándar 'bazaarDelivery'.
+2. 'service-card.json': Ficha oficial del catálogo validada para indexación MCP.`,
+
+    oracle: `Actúa como Agente Desarrollador y crea la Skill 'DeFi Arbitrage & Oracle' para Stellar Bazaar x402:
+👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
+👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+
+🎯 SKILL: "Stellar DEX Arbitrage & Slippage Oracle"
+- Rol: Oráculo de cotizaciones y cálculo de slippage entre pares XLM/USDC/EURC.
+- Inputs: 'pair' (string), 'amount' (number), 'side' (string: buy/sell).
+- Precio: 0.01 USDC en Stellar Testnet.
+- Wallet de Cobro: [Tu clave pública Stellar G...]
+
+Tus 2 entregables:
+1. 'server.ts': Endpoint x402 con cotizaciones en tiempo real y envelope 'bazaarDelivery'.
+2. 'service-card.json': Ficha oficial de catálogo validada para indexación MCP.`,
+
+    custom: `Actúa como Agente Desarrollador y crea una Skill personalizada para Stellar Bazaar x402:
+👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
+👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+
+🎯 DATOS DE LA SKILL:
+- Nombre: "[Nombre de tu Servicio]"
+- Descripción: "[Qué hace la herramienta]"
+- Inputs: "[parámetros requeridos]"
+- Precio: "[Monto]" USDC en Stellar Testnet
+- Wallet de Cobro: "[Tu wallet pública Stellar G...]"
+
+Tus 2 entregables:
+1. 'server.ts': Endpoint HTTP con middleware x402 y estándar 'bazaarDelivery'.
+2. 'service-card.json': Ficha oficial del catálogo validada para indexación MCP.`,
+  };
 
   const sellerCliCode = `# 1. Inicializar plantilla de servicio
 npm run bazaar-cli init mi-servicio.json
@@ -91,7 +143,7 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
   };
 
   const getSellerText = () => {
-    if (sellerFormat === "prompt") return sellerPrompt;
+    if (sellerFormat === "prompt") return sellerPrompts[sellerExample];
     if (sellerFormat === "cli") return sellerCliCode;
     return sellerSdkCode;
   };
@@ -352,8 +404,8 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
               Empaqueta cualquier endpoint bajo el estándar del Bazaar, valida la ServiceCard oficial y recibe pagos en USDC con liquidación automática on-chain.
             </p>
 
-            {/* Sub-tabs */}
-            <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.8rem", flexWrap: "wrap" }}>
+            {/* Mode selection tabs */}
+            <div style={{ display: "flex", gap: "0.4rem", marginBottom: "0.6rem", flexWrap: "wrap" }}>
               <button
                 type="button"
                 onClick={() => setSellerFormat("prompt")}
@@ -403,6 +455,72 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
                 Provider Kit SDK
               </button>
             </div>
+
+            {/* Example selector pills (when in prompt mode) */}
+            {sellerFormat === "prompt" && (
+              <div style={{ display: "flex", gap: "0.3rem", marginBottom: "0.8rem", flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  onClick={() => setSellerExample("scriptwriter")}
+                  style={{
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    border: sellerExample === "scriptwriter" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.06)",
+                    background: sellerExample === "scriptwriter" ? "rgba(54, 185, 144, 0.15)" : "transparent",
+                    color: sellerExample === "scriptwriter" ? "#6ee7b7" : "#94a3b8",
+                    fontSize: "0.72rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  🎬 Guionista de Videos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSellerExample("auditor")}
+                  style={{
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    border: sellerExample === "auditor" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.06)",
+                    background: sellerExample === "auditor" ? "rgba(54, 185, 144, 0.15)" : "transparent",
+                    color: sellerExample === "auditor" ? "#6ee7b7" : "#94a3b8",
+                    fontSize: "0.72rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  🔍 Auditor Soroban
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSellerExample("oracle")}
+                  style={{
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    border: sellerExample === "oracle" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.06)",
+                    background: sellerExample === "oracle" ? "rgba(54, 185, 144, 0.15)" : "transparent",
+                    color: sellerExample === "oracle" ? "#6ee7b7" : "#94a3b8",
+                    fontSize: "0.72rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  📊 Oráculo DeFi
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSellerExample("custom")}
+                  style={{
+                    padding: "3px 8px",
+                    borderRadius: "4px",
+                    border: sellerExample === "custom" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.06)",
+                    background: sellerExample === "custom" ? "rgba(54, 185, 144, 0.15)" : "transparent",
+                    color: sellerExample === "custom" ? "#6ee7b7" : "#94a3b8",
+                    fontSize: "0.72rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  ⚙️ Plantilla Personalizada
+                </button>
+              </div>
+            )}
 
             {/* Code Box */}
             <div
