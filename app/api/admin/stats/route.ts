@@ -1,17 +1,32 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { services } from "@/lib/catalog";
 import { getAllDynamicServiceCards, storageMode } from "@/lib/dynamic-registry";
+import { verifyAdminAccess } from "@/lib/admin-guard";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const authHeader = request.headers.get("authorization");
+  
+  // Guard: Verify secret admin token
+  if (!verifyAdminAccess(authHeader)) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: "UNAUTHORIZED",
+        message: "Acceso denegado. Se requiere un Admin Access Key válido.",
+      },
+      { status: 401 }
+    );
+  }
+
   try {
     const dynamicCards = await getAllDynamicServiceCards();
     const dynamicCount = dynamicCards.length;
     const staticCount = services.length;
     const totalServices = staticCount + dynamicCount;
 
-    // Check health status of main built-in services
+    // Health status of core services
     const servicesHealth = [
       {
         id: "swap-risk-quote",
@@ -55,7 +70,7 @@ export async function GET() {
       }
     ];
 
-    // Combine with dynamic services
+    // Dynamic services
     const dynamicList = dynamicCards.map(d => ({
       id: d.id,
       name: d.card.name,
