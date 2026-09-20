@@ -25,7 +25,20 @@ export function Navbar() {
     };
   }, [mobileMenuOpen]);
 
-  const mainNavLinks = [
+  interface DrawerLink {
+    href: string;
+    label: string;
+    icon: string;
+    badge?: string;
+    external?: boolean;
+  }
+
+  interface DrawerSection {
+    title: string;
+    links: DrawerLink[];
+  }
+
+  const mainNavLinks: Array<{ href: string; label: string; badge: string | null }> = [
     { href: "/catalogo", label: "Catálogo", badge: null },
     { href: "/agent-chat", label: "Agent Chat", badge: "Live" },
     { href: "/webmcp-playground", label: "WebMCP", badge: null },
@@ -35,7 +48,7 @@ export function Navbar() {
     { href: "/docs", label: "Docs", badge: null },
   ];
 
-  const drawerSections = [
+  const drawerSections: DrawerSection[] = [
     {
       title: "Explorar & Catálogo",
       links: [
