@@ -176,268 +176,299 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
 
   return (
     <section className="shell agent-connect-dropdown-section" style={{ margin: "1.5rem auto 2.5rem auto" }}>
-      {/* Sleek Minimal Trigger Bar */}
-      <div
-        style={{
-          background: "linear-gradient(135deg, rgba(20, 24, 38, 0.8) 0%, rgba(13, 16, 26, 0.95) 100%)",
-          border: "1px solid rgba(112, 87, 232, 0.25)",
-          borderRadius: "14px",
-          padding: "12px 18px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: "12px",
-          boxShadow: "0 6px 20px rgba(0, 0, 0, 0.25)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+      <style>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(-6px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .agent-hub-trigger {
+          background: linear-gradient(135deg, rgba(20, 24, 38, 0.8) 0%, rgba(13, 16, 26, 0.95) 100%);
+          border: 1px solid rgba(112, 87, 232, 0.25);
+          border-radius: 14px;
+          padding: 12px 16px;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 10px;
+          box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        }
+        .agent-hub-label-group {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-wrap: wrap;
+          min-width: 0;
+        }
+        .agent-hub-label-group .hub-subtitle {
+          display: none;
+        }
+        .agent-hub-actions {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          flex-shrink: 0;
+        }
+        .agent-hub-toggle-btn {
+          border: 1px solid rgba(112, 87, 232, 0.5);
+          color: #ffffff;
+          border-radius: 8px;
+          padding: 7px 14px;
+          font-size: 0.82rem;
+          font-weight: 700;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          transition: all 0.15s ease;
+          white-space: nowrap;
+        }
+        .agent-hub-mcp-btn {
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          color: #e2e8f0;
+          border-radius: 8px;
+          padding: 7px 12px;
+          font-size: 0.8rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.15s ease;
+          white-space: nowrap;
+        }
+        .agent-hub-dropdown {
+          margin-top: 10px;
+          background: linear-gradient(145deg, rgba(16, 19, 30, 0.98) 0%, rgba(10, 12, 20, 0.99) 100%);
+          border: 1px solid rgba(112, 87, 232, 0.3);
+          border-radius: 14px;
+          padding: clamp(1rem, 3vw, 1.6rem);
+          animation: fadeIn 0.2s ease-out;
+        }
+        .agent-hub-main-tabs {
+          display: flex;
+          gap: 8px;
+          margin-bottom: 1.2rem;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          padding-bottom: 12px;
+        }
+        .agent-hub-main-tab {
+          flex: 1;
+          padding: 8px 10px;
+          border-radius: 8px;
+          font-weight: 700;
+          font-size: 0.82rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          text-align: center;
+        }
+        .agent-hub-sub-tabs {
+          display: flex;
+          gap: 6px;
+          flex-wrap: wrap;
+          margin-top: 0.6rem;
+        }
+        .agent-hub-code-box {
+          border-radius: 8px;
+          padding: 0.9rem 1rem;
+          font-family: monospace;
+          font-size: clamp(0.72rem, 2.5vw, 0.82rem);
+          white-space: pre-wrap;
+          max-height: 180px;
+          overflow-y: auto;
+          line-height: 1.5;
+          word-break: break-word;
+          margin-top: 0.8rem;
+        }
+        .agent-hub-cta-row {
+          display: flex;
+          gap: 8px;
+          margin-top: 1rem;
+          flex-wrap: wrap;
+        }
+        .agent-hub-cta-row .primary-cta {
+          flex: 1;
+          min-width: 0;
+          padding: 0.7rem 1rem;
+          border: none;
+          border-radius: 8px;
+          font-weight: 700;
+          font-size: 0.85rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .agent-hub-cta-row .secondary-cta {
+          padding: 0.7rem 1rem;
+          border-radius: 8px;
+          font-weight: 600;
+          font-size: 0.82rem;
+          text-decoration: none;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          white-space: nowrap;
+        }
+        @media (min-width: 560px) {
+          .agent-hub-label-group .hub-subtitle {
+            display: inline;
+          }
+        }
+      `}</style>
+
+      {/* Trigger Bar */}
+      <div className="agent-hub-trigger">
+        <div className="agent-hub-label-group">
           <span
             style={{
               background: "rgba(112, 87, 232, 0.2)",
               color: "#c4b5fd",
               border: "1px solid rgba(112, 87, 232, 0.4)",
-              fontSize: "0.75rem",
+              fontSize: "0.72rem",
               fontWeight: 800,
               padding: "3px 10px",
               borderRadius: "20px",
               letterSpacing: "0.05em",
+              flexShrink: 0,
             }}
           >
             ⚡ AGENT HUB
           </span>
-          <span style={{ fontSize: "0.95rem", fontWeight: 700, color: "#f8fafc" }}>
-            Conecta tu Agente de IA o Monetiza una Skill
+          <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#f8fafc" }}>
+            Conecta o Monetiza una Skill
           </span>
-          <span style={{ fontSize: "0.82rem", color: "#94a3b8" }}>
-            (Claude, Cursor, Antigravity, CrewAI)
+          <span className="hub-subtitle" style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+            (Claude, Cursor, CrewAI…)
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+        <div className="agent-hub-actions">
           <button
             type="button"
             onClick={copyQuickMcp}
+            className="agent-hub-mcp-btn"
             style={{
               background: copiedQuickMcp ? "#10b981" : "rgba(255, 255, 255, 0.08)",
-              border: "1px solid rgba(255, 255, 255, 0.15)",
               color: copiedQuickMcp ? "#04150d" : "#e2e8f0",
-              borderRadius: "8px",
-              padding: "7px 14px",
-              fontSize: "0.8rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              transition: "all 0.15s ease",
             }}
           >
-            {copiedQuickMcp ? "✓ Config MCP Copiada" : "📋 Copiar JSON MCP"}
+            {copiedQuickMcp ? "✓ Copiado" : "📋 MCP"}
           </button>
 
           <button
             type="button"
             onClick={() => setIsOpen(!isOpen)}
+            className="agent-hub-toggle-btn"
             style={{
-              background: isOpen ? "rgba(112, 87, 232, 0.25)" : "linear-gradient(135deg, #7057e8 0%, #583ec9 100%)",
-              border: "1px solid rgba(112, 87, 232, 0.5)",
-              color: "#ffffff",
-              borderRadius: "8px",
-              padding: "7px 16px",
-              fontSize: "0.82rem",
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              transition: "all 0.15s ease",
+              background: isOpen
+                ? "rgba(112, 87, 232, 0.25)"
+                : "linear-gradient(135deg, #7057e8 0%, #583ec9 100%)",
             }}
             aria-expanded={isOpen}
           >
-            {isOpen ? "Ocultar Prompts ▲" : "Ver Prompts & SDKs ▼"}
+            {isOpen ? "Ocultar ▲" : "Prompts & SDKs ▼"}
           </button>
         </div>
       </div>
 
-      {/* Collapsible Dropdown Content */}
+      {/* Collapsible Dropdown */}
       {isOpen && (
-        <div
-          style={{
-            marginTop: "12px",
-            background: "linear-gradient(145deg, rgba(16, 19, 30, 0.98) 0%, rgba(10, 12, 20, 0.99) 100%)",
-            border: "1px solid rgba(112, 87, 232, 0.3)",
-            borderRadius: "14px",
-            padding: "clamp(1.2rem, 2.5vw, 1.8rem)",
-            animation: "fadeIn 0.2s ease-out",
-          }}
-        >
-          {/* Main Segmented Toggle */}
-          <div
-            style={{
-              display: "flex",
-              gap: "8px",
-              marginBottom: "1.4rem",
-              borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
-              paddingBottom: "12px",
-              flexWrap: "wrap",
-            }}
-          >
+        <div className="agent-hub-dropdown">
+          {/* Main tabs */}
+          <div className="agent-hub-main-tabs">
             <button
               type="button"
               onClick={() => setActiveTab("buyer")}
+              className="agent-hub-main-tab"
               style={{
-                padding: "8px 18px",
-                borderRadius: "8px",
                 border: activeTab === "buyer" ? "1px solid #7057e8" : "1px solid rgba(255, 255, 255, 0.08)",
                 background: activeTab === "buyer" ? "rgba(112, 87, 232, 0.25)" : "transparent",
                 color: activeTab === "buyer" ? "#c4b5fd" : "#94a3b8",
-                fontWeight: 700,
-                fontSize: "0.88rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
               }}
             >
-              🤖 Modo Comprador (Consumir APIs & Tools)
+              🤖 Comprador
             </button>
-
             <button
               type="button"
               onClick={() => setActiveTab("seller")}
+              className="agent-hub-main-tab"
               style={{
-                padding: "8px 18px",
-                borderRadius: "8px",
                 border: activeTab === "seller" ? "1px solid #36b990" : "1px solid rgba(255, 255, 255, 0.08)",
                 background: activeTab === "seller" ? "rgba(54, 185, 144, 0.25)" : "transparent",
                 color: activeTab === "seller" ? "#6ee7b7" : "#94a3b8",
-                fontWeight: 700,
-                fontSize: "0.88rem",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
               }}
             >
-              🚀 Modo Desarrollador (Publicar y Monetizar Skill)
+              🚀 Desarrollador
             </button>
           </div>
 
           {/* TAB 1: BUYER */}
           {activeTab === "buyer" && (
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.8rem", flexWrap: "wrap", gap: "8px" }}>
-                <p style={{ color: "#cbd5e1", fontSize: "0.9rem", margin: 0 }}>
-                  Permite que tu agente descubra servicios, pague en Testnet y te devuelva enlaces mágicos a <Link href="/history" style={{ color: "#c4b5fd", textDecoration: "underline" }}>tu historial privado</Link>.
-                </p>
+              <p style={{ color: "#cbd5e1", fontSize: "0.88rem", margin: "0 0 0.6rem" }}>
+                Permite que tu agente descubra servicios, pague en Testnet y te devuelva enlaces a{" "}
+                <Link href="/history" style={{ color: "#c4b5fd", textDecoration: "underline" }}>tu historial privado</Link>.
+              </p>
 
-                {/* Sub-tabs */}
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+              <div className="agent-hub-sub-tabs">
+                {(["prompt", "mcp_json", "sdk"] as BuyerFormat[]).map((fmt) => (
                   <button
+                    key={fmt}
                     type="button"
-                    onClick={() => setBuyerFormat("prompt")}
+                    onClick={() => setBuyerFormat(fmt)}
                     style={{
                       padding: "4px 10px",
                       borderRadius: "6px",
-                      border: buyerFormat === "prompt" ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.08)",
-                      background: buyerFormat === "prompt" ? "rgba(112, 87, 232, 0.2)" : "transparent",
-                      color: buyerFormat === "prompt" ? "#c4b5fd" : "#94a3b8",
-                      fontSize: "0.78rem",
+                      border: buyerFormat === fmt ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.08)",
+                      background: buyerFormat === fmt ? "rgba(112, 87, 232, 0.2)" : "transparent",
+                      color: buyerFormat === fmt ? "#c4b5fd" : "#94a3b8",
+                      fontSize: "0.76rem",
                       fontWeight: 600,
                       cursor: "pointer",
                     }}
                   >
-                    Prompt para Agente
+                    {fmt === "prompt" ? "Prompt" : fmt === "mcp_json" ? "MCP JSON" : "TS SDK"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setBuyerFormat("mcp_json")}
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "6px",
-                      border: buyerFormat === "mcp_json" ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.08)",
-                      background: buyerFormat === "mcp_json" ? "rgba(112, 87, 232, 0.2)" : "transparent",
-                      color: buyerFormat === "mcp_json" ? "#c4b5fd" : "#94a3b8",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    mcp_servers.json
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setBuyerFormat("sdk")}
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "6px",
-                      border: buyerFormat === "sdk" ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.08)",
-                      background: buyerFormat === "sdk" ? "rgba(112, 87, 232, 0.2)" : "transparent",
-                      color: buyerFormat === "sdk" ? "#c4b5fd" : "#94a3b8",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    TypeScript SDK
-                  </button>
-                </div>
+                ))}
               </div>
 
-              {/* Code Box */}
               <div
+                className="agent-hub-code-box"
                 style={{
                   background: "#080a10",
                   border: "1px solid #232838",
-                  borderRadius: "8px",
-                  padding: "1rem",
-                  fontFamily: "monospace",
-                  fontSize: "0.82rem",
                   color: "#d8b4fe",
-                  whiteSpace: "pre-wrap",
-                  maxHeight: "180px",
-                  overflowY: "auto",
-                  lineHeight: 1.45,
                 }}
               >
                 {getBuyerText()}
               </div>
 
-              <div style={{ display: "flex", gap: "10px", marginTop: "1rem", flexWrap: "wrap" }}>
+              <div className="agent-hub-cta-row">
                 <button
                   type="button"
                   onClick={copyBuyer}
+                  className="primary-cta"
                   style={{
-                    padding: "0.65rem 1.2rem",
                     background: copiedBuyer ? "#10b981" : "linear-gradient(135deg, #7057e8 0%, #583ec9 100%)",
                     color: "#ffffff",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
                   }}
                 >
-                  {copiedBuyer ? "✓ ¡Copiado!" : "📋 Copiar Configuración / Prompt"}
+                  {copiedBuyer ? "✓ ¡Copiado!" : "📋 Copiar"}
                 </button>
                 <Link
                   href="/agent-chat"
+                  className="secondary-cta"
                   style={{
-                    padding: "0.65rem 1.2rem",
                     background: "rgba(112, 87, 232, 0.12)",
                     border: "1px solid rgba(112, 87, 232, 0.35)",
                     color: "#c4b5fd",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    fontSize: "0.85rem",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
                   }}
                 >
-                  💬 Probar Chat Live
+                  💬 Chat Live
                 </Link>
               </div>
             </div>
@@ -446,120 +477,89 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
           {/* TAB 2: SELLER */}
           {activeTab === "seller" && (
             <div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.8rem", flexWrap: "wrap", gap: "8px" }}>
-                <p style={{ color: "#cbd5e1", fontSize: "0.9rem", margin: 0 }}>
-                  Genera el middleware HTTP x402 y la ServiceCard para que cualquier agente descubra tu API y te pague directamente.
-                </p>
+              <p style={{ color: "#cbd5e1", fontSize: "0.88rem", margin: "0 0 0.6rem" }}>
+                Genera el middleware HTTP x402 y la ServiceCard para que cualquier agente descubra tu API y te pague directamente.
+              </p>
 
-                {/* Sub-tabs */}
-                <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+              <div className="agent-hub-sub-tabs">
+                {(["prompt", "cli", "sdk"] as SellerFormat[]).map((fmt) => (
                   <button
+                    key={fmt}
                     type="button"
-                    onClick={() => setSellerFormat("prompt")}
+                    onClick={() => setSellerFormat(fmt)}
                     style={{
                       padding: "4px 10px",
                       borderRadius: "6px",
-                      border: sellerFormat === "prompt" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.08)",
-                      background: sellerFormat === "prompt" ? "rgba(54, 185, 144, 0.2)" : "transparent",
-                      color: sellerFormat === "prompt" ? "#6ee7b7" : "#94a3b8",
-                      fontSize: "0.78rem",
+                      border: sellerFormat === fmt ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.08)",
+                      background: sellerFormat === fmt ? "rgba(54, 185, 144, 0.2)" : "transparent",
+                      color: sellerFormat === fmt ? "#6ee7b7" : "#94a3b8",
+                      fontSize: "0.76rem",
                       fontWeight: 600,
                       cursor: "pointer",
                     }}
                   >
-                    Prompt para Agente
+                    {fmt === "prompt" ? "Prompt" : fmt === "cli" ? "Bazaar CLI" : "Provider Kit"}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setSellerFormat("cli")}
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "6px",
-                      border: sellerFormat === "cli" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.08)",
-                      background: sellerFormat === "cli" ? "rgba(54, 185, 144, 0.2)" : "transparent",
-                      color: sellerFormat === "cli" ? "#6ee7b7" : "#94a3b8",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Bazaar CLI
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setSellerFormat("sdk")}
-                    style={{
-                      padding: "4px 10px",
-                      borderRadius: "6px",
-                      border: sellerFormat === "sdk" ? "1px solid #36b990" : "1px solid rgba(255,255,255,0.08)",
-                      background: sellerFormat === "sdk" ? "rgba(54, 185, 144, 0.2)" : "transparent",
-                      color: sellerFormat === "sdk" ? "#6ee7b7" : "#94a3b8",
-                      fontSize: "0.78rem",
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Provider Kit
-                  </button>
-                </div>
+                ))}
               </div>
 
-              {/* Code Box */}
+              {sellerFormat === "prompt" && (
+                <div className="agent-hub-sub-tabs" style={{ marginTop: "0.5rem" }}>
+                  {(["scriptwriter", "auditor", "oracle", "custom"] as SellerExample[]).map((ex) => (
+                    <button
+                      key={ex}
+                      type="button"
+                      onClick={() => setSellerExample(ex)}
+                      style={{
+                        padding: "3px 9px",
+                        borderRadius: "6px",
+                        border: sellerExample === ex ? "1px solid rgba(54,185,144,0.6)" : "1px solid rgba(255,255,255,0.06)",
+                        background: sellerExample === ex ? "rgba(54,185,144,0.12)" : "transparent",
+                        color: sellerExample === ex ? "#6ee7b7" : "#64748b",
+                        fontSize: "0.72rem",
+                        fontWeight: 600,
+                        cursor: "pointer",
+                      }}
+                    >
+                      {ex === "scriptwriter" ? "🎬 Script" : ex === "auditor" ? "🔐 Auditor" : ex === "oracle" ? "📊 Oráculo" : "✏️ Custom"}
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div
+                className="agent-hub-code-box"
                 style={{
                   background: "#080a10",
                   border: "1px solid #1a2e26",
-                  borderRadius: "8px",
-                  padding: "1rem",
-                  fontFamily: "monospace",
-                  fontSize: "0.82rem",
                   color: "#6ee7b7",
-                  whiteSpace: "pre-wrap",
-                  maxHeight: "180px",
-                  overflowY: "auto",
-                  lineHeight: 1.45,
                 }}
               >
                 {getSellerText()}
               </div>
 
-              <div style={{ display: "flex", gap: "10px", marginTop: "1rem", flexWrap: "wrap" }}>
+              <div className="agent-hub-cta-row">
                 <button
                   type="button"
                   onClick={copySeller}
+                  className="primary-cta"
                   style={{
-                    padding: "0.65rem 1.2rem",
                     background: copiedSeller ? "#10b981" : "linear-gradient(135deg, #36b990 0%, #299874 100%)",
                     color: "#081018",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontWeight: 700,
-                    fontSize: "0.85rem",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
                   }}
                 >
-                  {copiedSeller ? "✓ ¡Copiado!" : "📋 Copiar Prompt para Agente"}
+                  {copiedSeller ? "✓ ¡Copiado!" : "📋 Copiar Prompt"}
                 </button>
                 <Link
                   href="/publish"
+                  className="secondary-cta"
                   style={{
-                    padding: "0.65rem 1.2rem",
                     background: "rgba(54, 185, 144, 0.12)",
                     border: "1px solid rgba(54, 185, 144, 0.35)",
                     color: "#36b990",
-                    borderRadius: "8px",
-                    fontWeight: 600,
-                    fontSize: "0.85rem",
-                    textDecoration: "none",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
                   }}
                 >
-                  🚀 Validador de Publicación
+                  🚀 /publish
                 </Link>
               </div>
             </div>
