@@ -7,26 +7,29 @@ export function AgentDirectConnectCard() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"seller" | "buyer">("seller");
 
-  const sellerPrompt = `Conecta nuestro servicio al marketplace de Stellar Bazaar x402:
-👉 Contexto: https://stellar-bazaar-x402.vercel.app/llms.txt
+  const sellerPrompt = `Actúa como Agente Desarrollador y publica una nueva Skill / API monetizada en Stellar Bazaar x402:
+👉 Especificación & Contexto: https://stellar-bazaar-x402.vercel.app/llms.txt
 👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+👉 Kit & CLI: npm run bazaar-cli init / validate (o @stellar-bazaar/provider-kit)
 
-Tus 2 tareas:
-1. Agrega a nuestro endpoint el middleware HTTP 402 para cobrar en USDC Testnet a nuestra wallet Stellar (G...).
-2. Genera y valida nuestro manifest 'service-card.json' usando el validador en https://stellar-bazaar-x402.vercel.app/publish
+Tus 3 pasos de integración:
+1. Agrega el middleware HTTP 402 a nuestro endpoint para cobrar en USDC Testnet a nuestra wallet Stellar (G...).
+2. Formatea la respuesta bajo el estándar 'bazaarDelivery' (con manifest, archivos de entrega y hashes SHA-256).
+3. Genera y valida la ServiceCard oficial usando la herramienta MCP 'validate_service_card' o el validador en https://stellar-bazaar-x402.vercel.app/publish
 
-Entrégame el endpoint listo y el JSON validado.`;
+El Smart Contract FeeSplitRouter distribuirá automáticamente el 97% a nuestra wallet y el 3% a la tesorería del Bazaar sin custodia. Entrégame el endpoint listo y la ServiceCard JSON validada.`;
 
-  const buyerPrompt = `Conéctate como Agente Comprador a Stellar Bazaar x402:
+  const buyerPrompt = `Actúa como Agente Comprador de IA y conéctate a Stellar Bazaar x402:
 👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
-👉 Contexto: https://stellar-bazaar-x402.vercel.app/llms.txt
-👉 Actividad y entregas privadas: https://stellar-bazaar-x402.vercel.app/HISTORY_CONNECTION.md
+👉 Especificación & Contexto: https://stellar-bazaar-x402.vercel.app/llms.txt
+👉 Playground WebMCP: https://stellar-bazaar-x402.vercel.app/webmcp-playground
 
-Tus 2 tareas:
-1. Consulta la lista de servicios con la tool 'list_services' o 'search_services'.
-2. Para comprar, usa el cliente comprador con wallet Testnet y verificador configurados. Configura el historial privado siguiendo la guía para que el humano vea los pasos y resultados. MCP discovery no firma ni realiza pagos. Nunca incluyas credenciales en este prompt.
+Tus 3 pasos de ejecución:
+1. Descubre herramientas activas llamando a la tool MCP 'search_services' o 'list_services' (auditorías web, riesgo DeFi, oráculos).
+2. Evalúa la ServiceCard contra tu presupuesto (ej. máx 0.05 USDC) y liquida el pago x402 en Stellar Testnet.
+3. Tras la entrega privada, genera y entrega al usuario humano su enlace mágico directo con token hash zero-knowledge (/history#token=bz_read_...) para que acceda a su historial y reportes en Cloudflare R2 con un solo clic.
 
-Comienza buscando servicios DeFi y Oráculos disponibles.`;
+Comienza consultando los servicios disponibles en el catálogo.`;
 
   const currentPrompt = activeTab === "seller" ? sellerPrompt : buyerPrompt;
 
@@ -89,7 +92,7 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
               transition: "all 0.2s",
             }}
           >
-            <span>👨‍💻</span> Soy VENDEDOR (Quiero monetizar mi API)
+            <span>👨‍💻</span> 1-Prompt VENDEDOR (Crear Skill & Monetizar con x402)
           </button>
           <button
             onClick={() => setActiveTab("buyer")}
@@ -108,7 +111,7 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
               transition: "all 0.2s",
             }}
           >
-            <span>🤖</span> Soy COMPRADOR (Quiero que mi Agente consuma)
+            <span>🤖</span> 1-Prompt COMPRADOR (Discovery MCP + Pagos x402)
           </button>
         </div>
 
@@ -131,59 +134,59 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
               }}
             >
               {activeTab === "seller" 
-                ? "⚡ Onboarding de Proveedor (99% Revenue Share Inmediato)" 
-                : "⚡ Onboarding de Comprador (Discovery + x402 Settlement)"}
+                ? "⚡ Onboarding de Skill / Proveedor (FeeSplitRouter On-Chain 97/3)" 
+                : "⚡ Onboarding de Comprador (MCP Discovery + Magic Links R2)"}
             </span>
             <h2 style={{ fontSize: "1.6rem", fontWeight: 700, margin: "0.2rem 0 0.6rem 0", color: "#f8fafc" }}>
               {activeTab === "seller" 
-                ? "¿Cómo monetizas tu API o Agente en Stellar Bazaar?" 
-                : "¿Cómo consume y paga tu Agente en Stellar Bazaar?"}
+                ? "Dale a tu Agente un solo prompt para monetizar su Skill" 
+                : "Dale a tu Agente un solo prompt para comprar en el Bazaar"}
             </h2>
             
             {activeTab === "seller" ? (
               <div style={{ color: "#94a3b8", fontSize: "0.92rem", lineHeight: 1.6, marginTop: "0.5rem" }}>
                 <p style={{ margin: "0 0 0.8rem 0" }}>
-                  Stellar Bazaar permite a desarrolladores y empresas vender datos, inferencias y herramientas a agentes de IA <strong>sin custodia ni suscripciones mensuales</strong>:
+                  Pega este prompt en tu agente (Cursor, Claude, ChatGPT, Antigravity) para que construya y registre automáticamente tu servicio:
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.8rem", marginBottom: "0.8rem" }}>
                   <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(54, 185, 144, 0.2)" }}>
-                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>1. Tu API en tu Servidor</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Mantienes tu código en tu propio hosting. Solo respondes con HTTP 402 al recibir peticiones sin pago.</span>
+                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>1. Estandarización Provider Kit</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Genera la ServiceCard canónica y empaqueta entregables R2 con hashes SHA-256.</span>
                   </div>
                   <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(54, 185, 144, 0.2)" }}>
-                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>2. 99% Directo a tu Wallet</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Cada llamada se liquida en 4s on-chain. Recibes el 99% de los USDC directo en tu clave pública (G...).</span>
+                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>2. Reparto Atómico Soroban</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Cada micropago x402 liquida 97% a tu wallet y 3% a la tesorería de forma no-custodial.</span>
                   </div>
                   <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(54, 185, 144, 0.2)" }}>
-                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>3. Indexación en Servidor MCP</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tu ServiceCard se expone en /api/mcp para que miles de agentes de IA descubran y compren tu tool.</span>
+                    <strong style={{ color: "#36b990", display: "block", fontSize: "0.85rem" }}>3. Indexación Global MCP</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tu herramienta queda disponible para ser descubierta y consumida por cualquier agente de IA.</span>
                   </div>
                 </div>
               </div>
             ) : (
               <div style={{ color: "#94a3b8", fontSize: "0.92rem", lineHeight: 1.6, marginTop: "0.5rem" }}>
                 <p style={{ margin: "0 0 0.8rem 0" }}>
-                  Tu agente de IA puede descubrir y contratar servicios descentralizados de forma 100% autónoma:
+                  Pega este prompt en tu agente para que busque, pague y te devuelva los reportes directamente:
                 </p>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "0.8rem", marginBottom: "0.8rem" }}>
                   <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(112, 87, 232, 0.2)" }}>
-                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>1. Descubrimiento MCP</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tu agente consulta /api/mcp y filtra herramientas por intención, precio y latencia.</span>
+                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>1. Descubrimiento MCP & WebMCP</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Tu agente consulta /api/mcp o navigator.modelContext para listar herramientas.</span>
                   </div>
                   <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(112, 87, 232, 0.2)" }}>
-                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>2. Pago en 4 Segundos</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Firma criptográfica Ed25519; liquida en USDC Testnet respetando tu límite de gasto fijado.</span>
+                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>2. Pagos x402 en 4 Segundos</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Liquida en USDC sobre Stellar Testnet respetando los límites de presupuesto.</span>
                   </div>
                   <div style={{ background: "rgba(255, 255, 255, 0.03)", padding: "0.75rem 1rem", borderRadius: "10px", border: "1px solid rgba(112, 87, 232, 0.2)" }}>
-                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>3. Recibo y Auditoría</strong>
-                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>Recibe el resultado verificado con recibo on-chain inmutable en Stellar Expert.</span>
+                    <strong style={{ color: "#c4b5fd", display: "block", fontSize: "0.85rem" }}>3. Enlace Mágico Desbloqueado</strong>
+                    <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>El agente te devuelve un enlace (/history#token=...) que abre tus reportes en R2 al instante.</span>
                   </div>
                 </div>
               </div>
             )}
           </div>
 
-          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", minWidth: "220px" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem", minWidth: "240px" }}>
             <button
               onClick={copyPrompt}
               style={{
@@ -228,11 +231,11 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
                     fontWeight: 600,
                   }}
                 >
-                  🚀 Kit /publish ↗
+                  🚀 Validador ↗
                 </Link>
               ) : (
                 <Link
-                  href="/buyer-execution"
+                  href="/agent-chat"
                   style={{
                     flex: 1,
                     textAlign: "center",
@@ -246,13 +249,11 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
                     fontWeight: 600,
                   }}
                 >
-                  🛒 Workspace ↗
+                  💬 Probar Chat ↗
                 </Link>
               )}
-              <a
-                href="/llms.txt"
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href="/webmcp-playground"
                 style={{
                   flex: 1,
                   textAlign: "center",
@@ -263,10 +264,11 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
                   color: "#cbd5e1",
                   fontSize: "0.8rem",
                   textDecoration: "none",
+                  fontWeight: 600,
                 }}
               >
-                📄 /llms.txt ↗
-              </a>
+                🛠️ WebMCP ↗
+              </Link>
             </div>
           </div>
         </div>
@@ -291,4 +293,3 @@ Comienza buscando servicios DeFi y Oráculos disponibles.`;
     </section>
   );
 }
-
