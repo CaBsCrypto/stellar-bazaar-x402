@@ -23,7 +23,7 @@ const TABS: Tab[] = [
     code: `{
   "mcpServers": {
     "stellar-bazaar": {
-      "url": "https://stellar-bazaar-x402.vercel.app/api/mcp"
+      "url": "https://bazaar.browns.studio/api/mcp"
     }
   }
 }`,
@@ -37,7 +37,7 @@ const TABS: Tab[] = [
     code: `import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
 
 const client = new BazaarAgentClient({
-  baseUrl: "https://stellar-bazaar-x402.vercel.app",
+  baseUrl: "https://bazaar.browns.studio",
   allowedNetworks: ["stellar:testnet"],
   allowedAssets: ["USDC"],
   maxPriceAllowedUsdc: 0.05,

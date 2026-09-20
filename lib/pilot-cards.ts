@@ -21,8 +21,8 @@ export type PilotCard = {
     network: "stellar:testnet";
     scheme: "exact";
     priceProviderOwned: true;
-    atomicAmount?: "10000";
-    displayAmount?: "0.001 USDC";
+    atomicAmount?: string;
+    displayAmount?: string;
     evidence?: { status: "verified-testnet"; transaction: string; ledger: number; checkedAt: string };
     blocker?: { es: string; en: string };
   };

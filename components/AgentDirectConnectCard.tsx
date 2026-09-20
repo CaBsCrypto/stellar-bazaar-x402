@@ -16,8 +16,8 @@ export function AgentDirectConnectCard() {
 
   // Buyer Snippets
   const buyerPrompt = `Actúa como Agente Comprador de IA y conéctate a Stellar Bazaar x402:
-👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
-👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
+👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
+👉 Especificación: https://bazaar.browns.studio/llms.txt
 
 Tus tareas:
 1. Descubre herramientas llamando a 'search_services' (auditorías web, riesgo DeFi, oráculos).
@@ -27,7 +27,7 @@ Tus tareas:
   const buyerMcpJson = `{
   "mcpServers": {
     "stellar-bazaar": {
-      "url": "https://stellar-bazaar-x402.vercel.app/api/mcp",
+      "url": "https://bazaar.browns.studio/api/mcp",
       "transport": "sse"
     }
   }
@@ -36,7 +36,7 @@ Tus tareas:
   const buyerSdkCode = `import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
 
 const agent = new BazaarAgentClient({
-  baseUrl: "https://stellar-bazaar-x402.vercel.app",
+  baseUrl: "https://bazaar.browns.studio",
   maxPriceAllowedUsdc: 0.10,
   allowedNetworks: ["stellar:testnet"],
 });
@@ -51,8 +51,8 @@ console.log("Historial privado:", historyUrl);`;
   // Seller Prompt Examples
   const sellerPrompts: Record<SellerExample, string> = {
     scriptwriter: `Actúa como Agente Desarrollador y crea la Skill 'AI Video Scriptwriter' para Stellar Bazaar x402:
-👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
-👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+👉 Especificación: https://bazaar.browns.studio/llms.txt
+👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
 👉 Kit: @stellar-bazaar/provider-kit (o npm run bazaar-cli)
 
 🎯 SKILL: "AI Video Scriptwriter & Creative Director"
@@ -67,8 +67,8 @@ Tus 2 entregables:
 (El Smart Contract FeeSplitRouter distribuirá automáticamente 97% a nuestra wallet y 3% a la tesorería del Bazaar).`,
 
     auditor: `Actúa como Agente Desarrollador y crea la Skill 'Soroban Smart Contract Auditor' para Stellar Bazaar x402:
-👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
-👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+👉 Especificación: https://bazaar.browns.studio/llms.txt
+👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
 
 🎯 SKILL: "Soroban Smart Contract Safety Auditor"
 - Rol: Auditor de vulnerabilidades estáticas en contratos Soroban/Rust.
@@ -81,8 +81,8 @@ Tus 2 entregables:
 2. 'service-card.json': Ficha oficial del catálogo validada para indexación MCP.`,
 
     oracle: `Actúa como Agente Desarrollador y crea la Skill 'DeFi Arbitrage & Oracle' para Stellar Bazaar x402:
-👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
-👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+👉 Especificación: https://bazaar.browns.studio/llms.txt
+👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
 
 🎯 SKILL: "Stellar DEX Arbitrage & Slippage Oracle"
 - Rol: Oráculo de cotizaciones y cálculo de slippage entre pares XLM/USDC/EURC.
@@ -95,8 +95,8 @@ Tus 2 entregables:
 2. 'service-card.json': Ficha oficial de catálogo validada para indexación MCP.`,
 
     custom: `Actúa como Agente Desarrollador y crea una Skill personalizada para Stellar Bazaar x402:
-👉 Especificación: https://stellar-bazaar-x402.vercel.app/llms.txt
-👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+👉 Especificación: https://bazaar.browns.studio/llms.txt
+👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
 
 🎯 DATOS DE LA SKILL:
 - Nombre: "[Nombre de tu Servicio]"

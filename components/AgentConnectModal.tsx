@@ -14,18 +14,18 @@ export function AgentConnectModal({
   const [activeTab, setActiveTab] = useState<"seller" | "buyer">("seller");
 
   const sellerPrompt = `Conecta nuestro servicio al marketplace de Stellar Bazaar x402:
-👉 Contexto: https://stellar-bazaar-x402.vercel.app/llms.txt
-👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
+👉 Contexto: https://bazaar.browns.studio/llms.txt
+👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
 
 Tus 2 tareas:
 1. Agrega a nuestro endpoint el middleware HTTP 402 para cobrar en USDC Testnet a nuestra wallet Stellar (G...).
-2. Genera y valida nuestro manifest 'service-card.json' usando el validador en https://stellar-bazaar-x402.vercel.app/publish
+2. Genera y valida nuestro manifest 'service-card.json' usando el validador en https://bazaar.browns.studio/publish
 
 Entrégame el endpoint listo y el JSON validado.`;
 
   const buyerPrompt = `Conéctate como Agente Comprador a Stellar Bazaar x402:
-👉 Servidor MCP: https://stellar-bazaar-x402.vercel.app/api/mcp
-👉 Contexto: https://stellar-bazaar-x402.vercel.app/llms.txt
+👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
+👉 Contexto: https://bazaar.browns.studio/llms.txt
 
 Tus 2 tareas:
 1. Consulta la lista de servicios con la tool 'list_services' o 'search_services'.

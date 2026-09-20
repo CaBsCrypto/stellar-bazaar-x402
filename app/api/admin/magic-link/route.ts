@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     const token = await createMagicLinkToken(email);
-    const origin = request.nextUrl.origin || "https://stellar-bazaar-x402.vercel.app";
+    const origin = request.nextUrl.origin || "https://bazaar.browns.studio";
     const magicLink = `${origin}/admin#key=${token}`;
 
     const resendApiKey = process.env.RESEND_API_KEY;

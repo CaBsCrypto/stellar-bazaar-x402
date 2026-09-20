@@ -91,7 +91,6 @@ export const services: PaidService[] = [
     kind: "http",
     tags: ["ai", "video-script", "creative-director", "teleprompter", "shorts", "tiktok", "reels"],
     routeTemplate: "/api/script?topic={topic}&durationSeconds={durationSeconds}&tone={tone}",
-    url: "https://ai-video-scriptwriter.vercel.app",
     provider: "AI Creative Studio",
     network: "stellar:testnet",
     payment: {
@@ -103,7 +102,7 @@ export const services: PaidService[] = [
     latency: "~450 ms live",
     input: ["topic", "durationSeconds", "tone"],
     output: ["script", "teleprompterHtml", "bazaarDelivery"],
-    accent: "cyan",
+    accent: "violet",
     featured: true
   }
 ];
