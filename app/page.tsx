@@ -8,7 +8,7 @@ export default function Home() {
   return (
     <main>
       <div className="mock-banner">
-        ⚡ <strong>W3C WebMCP & x402 EN VIVO</strong> · STELLAR TESTNET · 7 TOOLS ACTIVAS · LIQUIDACIÓN DIRECTA EN USDC · <Link href="/resources/swap-risk-quote">Swap Risk Quote →</Link>
+        ⚡ <strong>W3C WebMCP & x402 EN VIVO</strong> · STELLAR TESTNET · LIQUIDACIÓN DIRECTA EN USDC · <Link href="/publish">Publicar un Servicio de IA →</Link>
       </div>
 
       <nav className="nav shell">
@@ -38,7 +38,7 @@ export default function Home() {
           </p>
           <LandingClientWrapper>
             <div className="trust-line">
-              <span>🤖 7 Tools WebMCP</span>
+              <span>🤖 Tools WebMCP & APIs</span>
               <span>⚡ Pagos x402 USDC</span>
               <span>🛡️ No-custodial (99/1 split)</span>
             </div>
