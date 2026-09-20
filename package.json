@@ -6,6 +6,8 @@
   "type": "module",
   "scripts": {
     "test:history": "node scripts/test-operation-history.mjs && node scripts/test-operation-history-client.mjs && node scripts/test-operation-history-ui.mjs",
+    "test:agent-chat": "node scripts/test-agent-chat-flow.mjs",
+    "agent:chat": "node scripts/agent-human-chat.mjs",
     "test:provider-card": "node scripts/test-provider-card-preservation.mjs",
     "dev": "next dev",
     "build": "next build",
