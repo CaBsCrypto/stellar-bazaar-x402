@@ -4,6 +4,7 @@ import { Redis } from "@upstash/redis";
 const DEFAULT_ADMIN_TOKEN = "bz_admin_stellar_bazaar_sec_2026";
 const AUTHORIZED_ADMIN_EMAILS = [
   "cristian@browns.studio",
+  "cabscryptocontacto@gmail.com",
 ];
 
 const redisUrl = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;

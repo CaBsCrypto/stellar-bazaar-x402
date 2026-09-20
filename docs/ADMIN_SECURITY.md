@@ -26,6 +26,7 @@ El panel `/admin` y su API de telemetría `/api/admin/stats` están protegidos m
 
 Por defecto, los correos autorizados son:
 - `cristian@browns.studio`
+- `cabscryptocontacto@gmail.com`
 - Correos adicionales listados en la variable de entorno `ADMIN_ALLOWED_EMAILS` (separados por coma).
 
 ---
