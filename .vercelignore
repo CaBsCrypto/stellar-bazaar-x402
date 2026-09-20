@@ -1,0 +1,7 @@
+.git
+.next
+node_modules
+target
+contracts/**/target
+*.log
+.env*.local
