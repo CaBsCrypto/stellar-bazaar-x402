@@ -33,6 +33,12 @@ const STORAGE_KEY = "bazaar_admin_access_token";
 export function AdminOperationsDashboard() {
   const [token, setToken] = useState<string>("");
   const [inputToken, setInputToken] = useState<string>("");
+  const [emailInput, setEmailInput] = useState<string>("cristian@browns.studio");
+  const [magicLinkSent, setMagicLinkSent] = useState<boolean>(false);
+  const [magicLinkMsg, setMagicLinkMsg] = useState<string>("");
+  const [requestingMagic, setRequestingMagic] = useState<boolean>(false);
+  const [authTab, setAuthTab] = useState<"email" | "key">("email");
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [authError, setAuthError] = useState<string>("");
 
@@ -52,7 +58,7 @@ export function AdminOperationsDashboard() {
       if (match && match[1]) {
         activeToken = match[1];
         localStorage.setItem(STORAGE_KEY, activeToken);
-        // Clean URL hash without reload for security
+        // Clean URL hash without reload for privacy
         window.history.replaceState(null, "", window.location.pathname);
       } else {
         activeToken = localStorage.getItem(STORAGE_KEY) || "";
@@ -91,7 +97,7 @@ export function AdminOperationsDashboard() {
         localStorage.setItem(STORAGE_KEY, tokenToUse);
       } else if (res.status === 401) {
         setIsAuthenticated(false);
-        setAuthError("Clave de administrador incorrecta o expirada.");
+        setAuthError("Clave o Magic Link no válido o expirado.");
         localStorage.removeItem(STORAGE_KEY);
       } else {
         setAuthError("Error al consultar el servidor.");
@@ -113,11 +119,35 @@ export function AdminOperationsDashboard() {
     }
   }, [token, loadData]);
 
-  function handleLogin(e: React.FormEvent) {
+  function handleLoginKey(e: React.FormEvent) {
     e.preventDefault();
     if (!inputToken.trim()) return;
     setToken(inputToken.trim());
     loadData(inputToken.trim());
+  }
+
+  async function handleRequestMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!emailInput.trim()) return;
+    try {
+      setRequestingMagic(true);
+      setMagicLinkMsg("");
+      const res = await fetch("/api/admin/magic-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: emailInput.trim() }),
+      });
+      const data = await res.json();
+      setMagicLinkSent(true);
+      setMagicLinkMsg(data.message || "Enlace de acceso enviado.");
+      if (data.devMagicLink) {
+        console.log("Dev Magic Link:", data.devMagicLink);
+      }
+    } catch (err) {
+      setMagicLinkMsg("Error al solicitar el enlace. Intenta nuevamente.");
+    } finally {
+      setRequestingMagic(false);
+    }
   }
 
   function handleLogout() {
@@ -131,92 +161,205 @@ export function AdminOperationsDashboard() {
   // --- LOCKED STATE (AUTH FORM) ---
   if (!loading && !isAuthenticated) {
     return (
-      <div style={{ maxWidth: "480px", margin: "4rem auto", padding: "0 1rem" }}>
+      <div style={{ maxWidth: "500px", margin: "4rem auto", padding: "0 1rem" }}>
         <div
           style={{
-            background: "rgba(13, 17, 28, 0.8)",
-            border: "1px solid rgba(255, 255, 255, 0.1)",
+            background: "rgba(13, 17, 28, 0.85)",
+            border: "1px solid rgba(255, 255, 255, 0.12)",
             borderRadius: "16px",
             padding: "2.5rem 2rem",
             boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
             textAlign: "center",
           }}
         >
-          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🔒</div>
+          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🛡️</div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0 0 0.5rem 0" }}>
             Bazaar Admin Center
           </h1>
           <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "1.75rem", lineHeight: 1.4 }}>
-            Esta vista contiene telemetría sensible y supervisión de agentes del protocolo. Ingresa tu clave de acceso.
+            Telemetría sensible y supervisión en vivo del protocolo de agentes. Acceso restringido para el equipo de <strong>Browns Studio</strong>.
           </p>
 
-          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-            <div style={{ textAlign: "left" }}>
-              <label
-                style={{
-                  display: "block",
-                  color: "#cbd5e1",
-                  fontSize: "0.8rem",
-                  marginBottom: "0.4rem",
-                  fontWeight: 600,
-                }}
-              >
-                Admin Access Key:
-              </label>
-              <input
-                type="password"
-                value={inputToken}
-                onChange={(e) => setInputToken(e.target.value)}
-                placeholder="bz_admin_..."
-                style={{
-                  width: "100%",
-                  padding: "0.75rem 1rem",
-                  background: "rgba(0,0,0,0.4)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
-                  borderRadius: "8px",
-                  color: "#fff",
-                  fontSize: "0.95rem",
-                  outline: "none",
-                  fontFamily: "monospace",
-                }}
-              />
-            </div>
-
-            {authError && (
-              <div
-                style={{
-                  padding: "0.6rem",
-                  background: "rgba(239, 68, 68, 0.15)",
-                  border: "1px solid rgba(239, 68, 68, 0.3)",
-                  borderRadius: "6px",
-                  color: "#f87171",
-                  fontSize: "0.82rem",
-                }}
-              >
-                {authError}
-              </div>
-            )}
-
+          {/* Tab Selector */}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "4px",
+              background: "rgba(0,0,0,0.3)",
+              padding: "4px",
+              borderRadius: "8px",
+              marginBottom: "1.5rem",
+              border: "1px solid rgba(255, 255, 255, 0.08)",
+            }}
+          >
             <button
-              type="submit"
-              disabled={refreshing || !inputToken.trim()}
+              onClick={() => setAuthTab("email")}
               style={{
-                marginTop: "0.5rem",
-                padding: "0.75rem",
-                background: "linear-gradient(135deg, #7057e8 0%, #4338ca 100%)",
-                border: "none",
-                borderRadius: "8px",
-                color: "#fff",
+                background: authTab === "email" ? "rgba(112, 87, 232, 0.3)" : "transparent",
+                color: authTab === "email" ? "#fff" : "#94a3b8",
+                border: authTab === "email" ? "1px solid rgba(112, 87, 232, 0.5)" : "none",
+                padding: "8px",
+                borderRadius: "6px",
+                fontSize: "0.85rem",
                 fontWeight: 600,
-                fontSize: "0.95rem",
-                cursor: inputToken.trim() ? "pointer" : "not-allowed",
-                opacity: inputToken.trim() ? 1 : 0.6,
-                transition: "all 0.2s ease",
+                cursor: "pointer",
               }}
             >
-              {refreshing ? "Verificando..." : "Desbloquear Centro de Control →"}
+              ✉️ Magic Link Email
             </button>
-          </form>
+            <button
+              onClick={() => setAuthTab("key")}
+              style={{
+                background: authTab === "key" ? "rgba(112, 87, 232, 0.3)" : "transparent",
+                color: authTab === "key" ? "#fff" : "#94a3b8",
+                border: authTab === "key" ? "1px solid rgba(112, 87, 232, 0.5)" : "none",
+                padding: "8px",
+                borderRadius: "6px",
+                fontSize: "0.85rem",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              🔑 Master Key
+            </button>
+          </div>
+
+          {authTab === "email" ? (
+            <form onSubmit={handleRequestMagicLink} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div style={{ textAlign: "left" }}>
+                <label
+                  style={{
+                    display: "block",
+                    color: "#cbd5e1",
+                    fontSize: "0.8rem",
+                    marginBottom: "0.4rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Correo Autorizado (@browns.studio):
+                </label>
+                <input
+                  type="email"
+                  value={emailInput}
+                  onChange={(e) => setEmailInput(e.target.value)}
+                  placeholder="cristian@browns.studio"
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    background: "rgba(0,0,0,0.4)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    fontSize: "0.95rem",
+                    outline: "none",
+                  }}
+                />
+              </div>
+
+              {magicLinkMsg && (
+                <div
+                  style={{
+                    padding: "0.75rem",
+                    background: magicLinkSent ? "rgba(54, 185, 144, 0.15)" : "rgba(239, 68, 68, 0.15)",
+                    border: `1px solid ${magicLinkSent ? "rgba(54, 185, 144, 0.3)" : "rgba(239, 68, 68, 0.3)"}`,
+                    borderRadius: "6px",
+                    color: magicLinkSent ? "#36b990" : "#f87171",
+                    fontSize: "0.82rem",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {magicLinkMsg}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={requestingMagic || !emailInput.trim()}
+                style={{
+                  marginTop: "0.5rem",
+                  padding: "0.75rem",
+                  background: "linear-gradient(135deg, #7057e8 0%, #4338ca 100%)",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: "0.95rem",
+                  cursor: emailInput.trim() ? "pointer" : "not-allowed",
+                  opacity: emailInput.trim() ? 1 : 0.6,
+                }}
+              >
+                {requestingMagic ? "Enviando Magic Link..." : "Enviar Enlace a mi Correo →"}
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleLoginKey} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              <div style={{ textAlign: "left" }}>
+                <label
+                  style={{
+                    display: "block",
+                    color: "#cbd5e1",
+                    fontSize: "0.8rem",
+                    marginBottom: "0.4rem",
+                    fontWeight: 600,
+                  }}
+                >
+                  Admin Master Access Key:
+                </label>
+                <input
+                  type="password"
+                  value={inputToken}
+                  onChange={(e) => setInputToken(e.target.value)}
+                  placeholder="bz_admin_..."
+                  style={{
+                    width: "100%",
+                    padding: "0.75rem 1rem",
+                    background: "rgba(0,0,0,0.4)",
+                    border: "1px solid rgba(255, 255, 255, 0.15)",
+                    borderRadius: "8px",
+                    color: "#fff",
+                    fontSize: "0.95rem",
+                    outline: "none",
+                    fontFamily: "monospace",
+                  }}
+                />
+              </div>
+
+              {authError && (
+                <div
+                  style={{
+                    padding: "0.6rem",
+                    background: "rgba(239, 68, 68, 0.15)",
+                    border: "1px solid rgba(239, 68, 68, 0.3)",
+                    borderRadius: "6px",
+                    color: "#f87171",
+                    fontSize: "0.82rem",
+                  }}
+                >
+                  {authError}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={refreshing || !inputToken.trim()}
+                style={{
+                  marginTop: "0.5rem",
+                  padding: "0.75rem",
+                  background: "linear-gradient(135deg, #7057e8 0%, #4338ca 100%)",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontWeight: 600,
+                  fontSize: "0.95rem",
+                  cursor: inputToken.trim() ? "pointer" : "not-allowed",
+                  opacity: inputToken.trim() ? 1 : 0.6,
+                }}
+              >
+                {refreshing ? "Verificando..." : "Desbloquear con Master Key →"}
+              </button>
+            </form>
+          )}
 
           <div
             style={{
@@ -227,7 +370,7 @@ export function AdminOperationsDashboard() {
               color: "#64748b",
             }}
           >
-            Tip: Puedes ingresar automáticamente mediante <code>/admin#key=&lt;tu_clave&gt;</code>.
+            Tip: Al hacer clic en el Magic Link del correo entrarás directamente sin contraseñas.
           </div>
         </div>
       </div>

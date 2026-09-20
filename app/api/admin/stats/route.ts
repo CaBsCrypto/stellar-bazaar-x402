@@ -1,20 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { services } from "@/lib/catalog";
 import { getAllDynamicServiceCards, storageMode } from "@/lib/dynamic-registry";
-import { verifyAdminAccess } from "@/lib/admin-guard";
+import { verifyAdminAccessAsync } from "@/lib/admin-guard";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   
-  // Guard: Verify secret admin token
-  if (!verifyAdminAccess(authHeader)) {
+  // Guard: Verify secret admin token (or OTP magic token)
+  const isAuthorized = await verifyAdminAccessAsync(authHeader);
+  if (!isAuthorized) {
     return NextResponse.json(
       {
         success: false,
         error: "UNAUTHORIZED",
-        message: "Acceso denegado. Se requiere un Admin Access Key válido.",
+        message: "Acceso denegado. Se requiere un Admin Access Key o Magic Link válido.",
       },
       { status: 401 }
     );
