@@ -28,8 +28,7 @@ export function DeliverableReview() {
   const [selected, setSelected] = useState(0),
     delivery = reviewDeliveries[selected];
   const access: FileAccess = useCallback(async (file) => {
-    const url = reviewFilePaths[file.id];
-    if (!url) throw Error();
+    const url = reviewFilePaths[file.id] || "";
     return { url };
   }, []);
   const record: PurchaseRecord = {
