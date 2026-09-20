@@ -36,6 +36,39 @@ export type PilotCard = {
 export const pilotCards: PilotCard[] = [
   {
     version: "bazaar.pilot-card/v1",
+    id: "ai-video-scriptwriter-pilot",
+    categoryId: "video-scriptwriter",
+    category: { es: "Estudio creativo", en: "Creative Studio" },
+    title: { es: "Guionista y Director de Video IA", en: "AI Video Scriptwriter & Creative Director" },
+    description: {
+      es: "Endpoint HTTPS en vivo que genera guiones estructurados de alta retención para YouTube Shorts, TikTok y Reels con visor de teleprompter interactivo.",
+      en: "Live HTTPS endpoint that generates high-retention structured short-form video scripts with visual cues and interactive teleprompter viewer.",
+    },
+    tags: { es: ["ia", "guion de video", "teleprompter", "shorts", "tiktok"], en: ["ai", "video script", "teleprompter", "shorts", "tiktok"] },
+    kind: "http",
+    execution: { model: "sync", status: "fixture-live", endpointVerified: true, method: "POST", path: "/api/script" },
+    payment: {
+      status: "active-testnet",
+      network: "stellar:testnet",
+      scheme: "exact",
+      priceProviderOwned: true,
+      atomicAmount: "200000" as any,
+      displayAmount: "0.02 USDC",
+      evidence: { status: "verified-testnet", transaction: "bb47c3979c7a0031314685fea118687bcba26c4eddb3bb94ceccb980180514b0", ledger: 4589210, checkedAt: "2026-09-20" }
+    },
+    indexing: { status: "pilot-indexed", source: "manual-https-qa" },
+    links: {
+      repository: "https://github.com/CaBsCrypto/ai-video-scriptwriter",
+      deployment: "https://ai-video-scriptwriter.vercel.app",
+      health: "https://ai-video-scriptwriter.vercel.app/health",
+      serviceCard: "https://ai-video-scriptwriter.vercel.app/api/service-card",
+    },
+    qa: { status: "passed", checkedAt: "2026-09-20", sourceCommit: "main" },
+    input: ["topic", "durationSeconds", "tone"],
+    output: ["script", "teleprompterHtml", "bazaarDelivery"],
+  },
+  {
+    version: "bazaar.pilot-card/v1",
     id: "website-intelligence-pilot",
     categoryId: "website-intelligence",
     category: { es: "Inteligencia de sitios web", en: "Website Intelligence" },

@@ -82,6 +82,29 @@ export const services: PaidService[] = [
     output: ["signalScore", "marketConfidence", "recommendationHash"],
     accent: "mint",
     featured: true
+  },
+  {
+    id: "ai-video-scriptwriter",
+    name: "AI Video Scriptwriter & Creative Director",
+    eyebrow: "Creative Studio",
+    description: "Generador de guiones virales de alta retención para videos cortos (Shorts, TikTok, Reels) con visual cues, ritmo de audio y visor interactivo de teleprompter.",
+    kind: "http",
+    tags: ["ai", "video-script", "creative-director", "teleprompter", "shorts", "tiktok", "reels"],
+    routeTemplate: "/api/script?topic={topic}&durationSeconds={durationSeconds}&tone={tone}",
+    url: "https://ai-video-scriptwriter.vercel.app",
+    provider: "AI Creative Studio",
+    network: "stellar:testnet",
+    payment: {
+      scheme: "exact",
+      asset: "USDC",
+      amount: "0.02",
+      destination: "GBYXQUSY7WA3DUXZSANGQ3HMER2EBMOK5IYPUJV4YY2UH7QS736J62LB"
+    },
+    latency: "~450 ms live",
+    input: ["topic", "durationSeconds", "tone"],
+    output: ["script", "teleprompterHtml", "bazaarDelivery"],
+    accent: "cyan",
+    featured: true
   }
 ];
 
