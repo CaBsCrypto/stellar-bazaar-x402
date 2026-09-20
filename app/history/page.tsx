@@ -1,12 +1,7 @@
 import "./deliveries.css";
 import type { Metadata } from "next";
-import dynamic from "next/dynamic";
+import { OperationHistory } from "@/components/OperationHistory";
 import "./history.css";
-
-const OperationHistory = dynamic(
-  () => import("@/components/OperationHistory").then((mod) => mod.OperationHistory),
-  { ssr: false }
-);
 
 export const metadata: Metadata = {
   title: "Historial privado / Private history — Stellar Bazaar",
@@ -16,3 +11,4 @@ export const metadata: Metadata = {
 export default function HistoryPage() {
   return <OperationHistory />;
 }
+
