@@ -153,13 +153,13 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <a href="https://github.com/CaBsCrypto/stellar-bazaar-x402" target="_blank" rel="noreferrer" style={{ color: "#94a3b8", fontSize: "0.85rem", textDecoration: "none" }}>
-                  GitHub Oficial ↗
+                <a href="/api/capabilities" target="_blank" rel="noreferrer" style={{ color: "#94a3b8", fontSize: "0.85rem", textDecoration: "none" }}>
+                  ⚙️ Capacidades del Protocolo ↗
                 </a>
               </li>
               <li>
                 <a href="https://stellar.expert/explorer/testnet" target="_blank" rel="noreferrer" style={{ color: "#94a3b8", fontSize: "0.85rem", textDecoration: "none" }}>
-                  Stellar Expert Explorer ↗
+                  🌐 Stellar Expert Explorer ↗
                 </a>
               </li>
             </ul>

@@ -115,14 +115,6 @@ export function Navbar() {
               )}
             </Link>
           ))}
-          <a
-            href="https://github.com/CaBsCrypto/stellar-bazaar-x402"
-            target="_blank"
-            rel="noreferrer"
-            className="external-link"
-          >
-            GitHub ↗
-          </a>
         </div>
 
         <div className="nav-right">
@@ -245,20 +237,6 @@ export function Navbar() {
                   </div>
                 </div>
               ))}
-
-              <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)" }}>
-                <a
-                  href="https://github.com/CaBsCrypto/stellar-bazaar-x402"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mobile-nav-link external"
-                  onClick={() => setMobileMenuOpen(false)}
-                  style={{ display: "flex", alignItems: "center", gap: "8px", color: "#c4b5fd" }}
-                >
-                  <span>🐙</span>
-                  <span>GitHub Oficial del Proyecto ↗</span>
-                </a>
-              </div>
             </div>
 
             <div className="mobile-drawer-footer">
