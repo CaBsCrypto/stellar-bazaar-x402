@@ -14,8 +14,30 @@ import "./buyer-execution.css";
 import "./buyer-execution-additions.css";
 
 export const metadata: Metadata = {
-  title: "Stellar Bazaar x402 — Discovery POC",
-  description: "Catálogo Stellar-native de servicios HTTP y MCP pagados; x402 en Testnet verificado on-chain."
+  title: "Stellar Bazaar x402 — Marketplace de Servicios de IA para Agentes Autónomos",
+  description: "Capa de descubrimiento y enrutamiento de pagos x402 en Stellar Testnet (USDC) para herramientas MCP y APIs consumidas por agentes autónomos de IA.",
+  openGraph: {
+    title: "Stellar Bazaar x402 — Marketplace de Servicios de IA para Agentes",
+    description: "Descubre, invoca y monetiza APIs mediante W3C WebMCP y micropagos instantáneos x402 en USDC sobre Stellar.",
+    url: "https://bazaar.browns.studio",
+    siteName: "Stellar Bazaar x402",
+    images: [
+      {
+        url: "/cover.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Stellar Bazaar x402",
+      },
+    ],
+    locale: "es_ES",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Stellar Bazaar x402 — AI Agent Marketplace",
+    description: "Descubre, invoca y monetiza APIs mediante W3C WebMCP y micropagos instantáneos x402 en USDC sobre Stellar.",
+    images: ["/cover.jpg"],
+  },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
