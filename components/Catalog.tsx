@@ -111,6 +111,125 @@ export function Catalog() {
         <p>{results.length} resultados · lexical-v1</p>
       </div>
 
+      {/* Quick Filter Chips for 1-tap mobile navigation */}
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          overflowX: "auto",
+          paddingBottom: "8px",
+          marginBottom: "12px",
+          scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => {
+            setQuery("");
+            setKind("all");
+            setScheme("all");
+            setMaxPrice("");
+          }}
+          style={{
+            padding: "6px 14px",
+            borderRadius: "20px",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+            border: !query && kind === "all" ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.1)",
+            background: !query && kind === "all" ? "rgba(112, 87, 232, 0.25)" : "rgba(255,255,255,0.04)",
+            color: !query && kind === "all" ? "#c4b5fd" : "#94a3b8",
+            transition: "all 0.15s ease",
+          }}
+        >
+          ✨ Todos
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setQuery("video");
+            setKind("all");
+          }}
+          style={{
+            padding: "6px 14px",
+            borderRadius: "20px",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+            border: query === "video" ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.1)",
+            background: query === "video" ? "rgba(112, 87, 232, 0.25)" : "rgba(255,255,255,0.04)",
+            color: query === "video" ? "#c4b5fd" : "#94a3b8",
+            transition: "all 0.15s ease",
+          }}
+        >
+          🎬 AI Video Script
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setQuery("swap");
+            setKind("all");
+          }}
+          style={{
+            padding: "6px 14px",
+            borderRadius: "20px",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+            border: query === "swap" ? "1px solid #7057e8" : "1px solid rgba(255,255,255,0.1)",
+            background: query === "swap" ? "rgba(112, 87, 232, 0.25)" : "rgba(255,255,255,0.04)",
+            color: query === "swap" ? "#c4b5fd" : "#94a3b8",
+            transition: "all 0.15s ease",
+          }}
+        >
+          🧪 Sandbox Quote (0.001 USDC)
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setKind(kind === "http" ? "all" : "http");
+          }}
+          style={{
+            padding: "6px 14px",
+            borderRadius: "20px",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+            border: kind === "http" ? "1px solid #38bdf8" : "1px solid rgba(255,255,255,0.1)",
+            background: kind === "http" ? "rgba(56, 189, 248, 0.2)" : "rgba(255,255,255,0.04)",
+            color: kind === "http" ? "#38bdf8" : "#94a3b8",
+            transition: "all 0.15s ease",
+          }}
+        >
+          ⚡ HTTP x402
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setKind(kind === "mcp" ? "all" : "mcp");
+          }}
+          style={{
+            padding: "6px 14px",
+            borderRadius: "20px",
+            fontSize: "0.82rem",
+            fontWeight: 600,
+            whiteSpace: "nowrap",
+            cursor: "pointer",
+            border: kind === "mcp" ? "1px solid #a855f7" : "1px solid rgba(255,255,255,0.1)",
+            background: kind === "mcp" ? "rgba(168, 85, 247, 0.2)" : "rgba(255,255,255,0.04)",
+            color: kind === "mcp" ? "#c084fc" : "#94a3b8",
+            transition: "all 0.15s ease",
+          }}
+        >
+          🤖 MCP Native
+        </button>
+      </div>
+
       {/* Declarative W3C WebMCP Form Annotations */}
       <form
         className="search-row"
@@ -125,17 +244,33 @@ export function Catalog() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Ej. riesgo de swap, seguridad Soroban…"
+            placeholder="Buscar por intención, prompt o tecnología…"
             {...({ toolparamdescription: "Palabras clave de búsqueda" } as Record<string, unknown>)}
           />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              style={{
+                background: "transparent",
+                border: "none",
+                color: "#94a3b8",
+                cursor: "pointer",
+                padding: "0 8px",
+                fontSize: "1rem",
+              }}
+            >
+              ✕
+            </button>
+          )}
         </label>
         <select className="filter-select" value={kind} onChange={(e) => setKind(e.target.value as typeof kind)}>
-          <option value="all">HTTP + MCP</option>
-          <option value="http">HTTP</option>
-          <option value="mcp">MCP</option>
+          <option value="all">Tipo: Todos</option>
+          <option value="http">HTTP x402</option>
+          <option value="mcp">MCP Protocol</option>
         </select>
         <select className="filter-select" value={scheme} onChange={(e) => setScheme(e.target.value as typeof scheme)}>
-          <option value="all">Exact + upto</option>
+          <option value="all">Esquema: Todos</option>
           <option value="exact">exact</option>
           <option value="upto">upto</option>
         </select>
@@ -152,7 +287,7 @@ export function Catalog() {
       </form>
 
       <div className="ranking-note">
-        <strong>Ranking explicable:</strong> coincidencia exacta por tokens: nombre +5, tags +3, tipo +2, descripción +1. Alias ES→metadata conocidos; desempate alfabético.
+        <strong>Discovery determinista:</strong> ranking explicable por tokens y tags. Ejecución nativa x402 con liquidación instantánea en Stellar Testnet.
       </div>
 
       <div className="card-grid">
@@ -190,7 +325,18 @@ export function Catalog() {
               )}
               <div className="tag-row">
                 {service.tags.slice(0, 3).map((tag) => (
-                  <span key={tag}>{tag}</span>
+                  <span
+                    key={tag}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setQuery(tag);
+                    }}
+                    style={{ cursor: "pointer" }}
+                    title={`Filtrar por ${tag}`}
+                  >
+                    #{tag}
+                  </span>
                 ))}
               </div>
               <div className="price-row">
