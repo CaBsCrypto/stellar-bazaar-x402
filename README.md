@@ -3,35 +3,35 @@
 
 <div align="center">
 
+[![Live Production](https://img.shields.io/badge/Live%20Production-bazaar.browns.studio-7057E8?style=for-the-badge&logo=vercel)](https://bazaar.browns.studio)
 [![English Version](https://img.shields.io/badge/Language-English-blue?style=for-the-badge)](README.md)
 [![Versión en Español](https://img.shields.io/badge/Idioma-Espa%C3%B1ol-orange?style=for-the-badge)](README.es.md)
 
-<br/><br/>
+<br/>
 
 <img src="public/cover.jpg" alt="Stellar Bazaar x402 Banner" width="100%" />
 
 </div>
 
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
-[![W3C WebMCP: 8 In--Browser Tools](https://img.shields.io/badge/W3C%20WebMCP-8%20In--Browser%20Tools-38BDF8.svg)](WEBMCP_SUBMISSION.md)
+[![W3C WebMCP](https://img.shields.io/badge/W3C%20WebMCP-In--Browser%20Tools-38BDF8.svg)](https://bazaar.browns.studio/webmcp-playground)
 [![Stellar: Testnet](https://img.shields.io/badge/Stellar-Testnet%20Verified-08B5E5.svg)](https://stellar.expert/explorer/testnet)
-[![x402: v2 Compatible](https://img.shields.io/badge/x402-v2%20Standard-8A2BE2.svg)](https://x402.org)
-[![MCP: Streamable HTTP](https://img.shields.io/badge/MCP-Streamable%20HTTP-10B981.svg)](docs/AGENT_QUICKSTART.md)
+[![x402: v2 Standard](https://img.shields.io/badge/x402-v2%20Standard-8A2BE2.svg)](https://x402.org)
+[![MCP: Streamable HTTP](https://img.shields.io/badge/MCP-Streamable%20HTTP-10B981.svg)](https://bazaar.browns.studio/api/mcp)
 [![TypeScript: Strict](https://img.shields.io/badge/TypeScript-Strict%200%20Errors-3178C6.svg)](tsconfig.json)
-[![Policy Guard: Active](https://img.shields.io/badge/Agent%20Policy%20Guard-Active%20Safety-22C55E.svg)](WEBMCP_SUBMISSION.md)
 
 ---
 
 ## 🌟 Why It Matters: The Global Agent-to-Agent (A2A) Economy
 
-Autonomous **AI Agents** (Claude, Cursor, LangChain, CrewAI, AutoGen) are rapidly transforming software into an autonomous economy, but they face a **fundamental infrastructure bottleneck**:
+Autonomous **AI Agents** (Claude Desktop, Cursor, LangChain, CrewAI, AutoGen, Antigravity) are transforming software into an autonomous economy, but face a **fundamental infrastructure bottleneck**:
 
-> **The Problem:** AI Agents cannot hold human credit cards, cannot commit to $50/month recurring SaaS subscription tiers for single-task executions, and passing master API keys inside LLM prompts creates unacceptable security liabilities.
+> **The Problem:** AI Agents cannot hold human credit cards, cannot subscribe to $50/month recurring SaaS plans for one-off tasks, and embedding master API keys in LLM prompts creates severe security liabilities.
 
 ```
        [ LEGACY HUMAN WEB ]                            [ STELLAR BAZAAR x402 GLOBAL INFRASTRUCTURE ]
- ❌ Monthly human subscription paywalls            ✅ Atomic per-request micropayments (e.g. 0.001 USDC)
- ❌ Master API key leaks in prompt context         ✅ Zero shared secrets; direct cryptographic payment per call
+ ❌ Monthly human subscription paywalls            ✅ Atomic per-request micropayments (e.g. 0.001 - 0.02 USDC)
+ ❌ Master API key leaks in prompt context         ✅ Zero shared secrets; direct cryptographic settlement
  ❌ Human-centric closed service directories       ✅ Global machine-readable catalog (Streamable MCP + REST)
  ❌ Ambiguous service level agreements             ✅ Deterministic ServiceCards with strict I/O & pricing schemas
  ❌ Custodial middlemen and high fees              ✅ Zero custody: direct on-chain settlement on Stellar
@@ -41,12 +41,40 @@ Autonomous **AI Agents** (Claude, Cursor, LangChain, CrewAI, AutoGen) are rapidl
 
 ---
 
-## 💡 Why Stellar + x402 for the Global Agent Economy?
+## ⚡ 1-Click Agent Integration (MCP)
 
-1. **Sub-second Global Settlement & Micro-fees:** Settle transactions in 3–5 seconds worldwide with near-zero network fees ($0.00001), unlocking viable high-frequency micro-transactions for autonomous agent workflows.
-2. **Open Standard HTTP 402:** Clean, standardized `HTTP 402 Payment Required` protocol flow with SEP-41 multi-asset specification (`USDC`, `XLM`, `EURC`).
-3. **Native Model Context Protocol (MCP):** Zero-friction tool discovery and consumption for global AI assistants (Claude Desktop, Cursor IDE, Windsurf) and orchestration frameworks (LangChain, CrewAI, AutoGen).
-4. **Global by Design with Native Multilingual Intelligence:** Universal machine-readable schemas and semantic discovery supporting international queries with cross-language intent matching.
+To connect any AI assistant (**Claude Desktop**, **Cursor IDE**, **Windsurf**, or **OpenRouter**) to Stellar Bazaar, add this server to your `claude_desktop_config.json` or `mcp_servers.json`:
+
+```json
+{
+  "mcpServers": {
+    "stellar-bazaar": {
+      "url": "https://bazaar.browns.studio/api/mcp"
+    }
+  }
+}
+```
+
+### 🛠️ Exposed MCP Tools
+1. **`list_services`**: List all active services and APIs in the Bazaar catalog.
+2. **`search_services`**: Search services by keyword, category, tag, or budget.
+3. **`get_service`**: Fetch complete technical specifications, schemas, and payment terms for a service ID.
+4. **`get_bazaar_capabilities`**: Inspect registry policies, payment flows, and safety boundaries.
+5. **`validate_service_card`**: Audit custom JSON ServiceCards against all 11 conformance rules.
+
+---
+
+## 🔌 Connection Endpoints & APIs
+
+| Purpose | Production Endpoint | Method | Access |
+|---|---|---|---|
+| **Marketplace Web & Catalog** | `https://bazaar.browns.studio/` | `GET` | Public |
+| **MCP Streamable HTTP Server** | `https://bazaar.browns.studio/api/mcp` | `POST / GET` | Public (JSON-RPC 2.0) |
+| **Agent Ecosystem Guide / Spec** | `https://bazaar.browns.studio/llms.txt` | `GET` | Public Markdown |
+| **Search & Discovery API** | `https://bazaar.browns.studio/api/discovery/search?query={q}` | `GET` | Public REST |
+| **Dynamic Service Ingestion** | `https://bazaar.browns.studio/api/ingest` | `POST` | `Bearer <PROVIDER_SECRET>` |
+| **Human Private Library / History** | `https://bazaar.browns.studio/history` | `GET` | Zero-knowledge `#token=...` |
+| **Activity Lifecycle Tracking** | `https://bazaar.browns.studio/api/activity` | `POST / GET` | Authenticated |
 
 ---
 
@@ -54,147 +82,106 @@ Autonomous **AI Agents** (Claude, Cursor, LangChain, CrewAI, AutoGen) are rapidl
 
 ```mermaid
 flowchart TD
-    subgraph Clients["1. Global Clients & Autonomous AI Agents"]
+    subgraph Agents["1. Autonomous AI Agents & Clients"]
         Claude["Claude Desktop / Cursor IDE"]
         LangChain["LangChain / CrewAI / AutoGen"]
-        WebAgents["ChatGPT in-browser / WebMCP Chrome Agents"]
-        WebUI["Global Web UI / 3:1 HUD Terminal"]
+        WebAgents["In-Browser WebMCP Agents"]
+        HumanChat["Human User via Chat"]
     end
 
-    subgraph Bazaar["2. Global Discovery Engine (Stellar Bazaar Core)"]
-        WebMCPLayer["navigator.modelContext<br/>(8 W3C In-Browser Tools + Policy Guard)"]
+    subgraph BazaarCore["2. Stellar Bazaar Core Infrastructure (bazaar.browns.studio)"]
         MCPServer["/api/mcp<br/>(Streamable HTTP MCP Server)"]
-        SpecManifest["/api/webmcp/spec<br/>(OpenAPI/WebMCP Spec Export)"]
-        RESTDiscovery["/api/discovery<br/>(resources / search / pilots)"]
-        Validator["validateServiceCard()<br/>(11-Rule Conformance Engine)"]
-        DynamicRegistry["/api/publisher/ingest<br/>(Dynamic Provider Ingest)"]
-        PilotCatalog["6 HTTPS-Verified External Pilots<br/>(fixture/discovery-only; payment inactive)"]
+        RESTDiscovery["/api/discovery/search<br/>(Semantic & Lexical Ranking)"]
+        IngestAPI["/api/ingest<br/>(Dynamic Service Card Validator)"]
+        HistoryEngine["/api/activity & /history<br/>(Zero-Knowledge Private Library)"]
+        Storage["Serverless Redis (Upstash)"]
     end
 
-    subgraph x402Layer["3. Protocol & Resource Server"]
-        Challenge402["HTTP 402 Challenge<br/>(PAYMENT-REQUIRED v2)"]
-        FacilitatorGate["Facilitator Verification Gate<br/>(OpenZeppelin Hosted)"]
+    subgraph x402Protocol["3. x402 Micropayment Protocol"]
+        Challenge402["HTTP 402 Payment Required<br/>(Canonical Binding & Challenge)"]
+        Facilitator["OpenZeppelin Facilitator Gate"]
+        StellarTestnet["Stellar Testnet Ledger<br/>(USDC SEP-41 Settlement)"]
     end
 
-    subgraph Settlement["4. Blockchain Infrastructure"]
-        Testnet["Stellar Ledger<br/>(USDC / XLM / EURC SEP-41)"]
+    subgraph Services["4. Registered AI Services & Oracles"]
+        Sandbox["🧪 Swap Risk Sandbox (0.001 USDC)"]
+        VideoScript["🎬 AI Video Scriptwriter (0.02 USDC)"]
+        CommunityServices["✨ Dynamic Community Skills"]
     end
 
-    subgraph Providers["5. Decoupled Global Microservices (contract-only)"]
-        DeFiService["Stellar DeFi Quote Service<br/>(external contract, not deployed)"]
-        WebIntelService["Website Intelligence Service<br/>(external contract, not deployed)"]
-    end
+    Agents -->|Discover Tools| MCPServer
+    Agents -->|Search REST| RESTDiscovery
+    Agents -->|Publish Skill| IngestAPI
+    IngestAPI --> Storage
+    MCPServer --> Storage
 
-    Clients --> WebMCPLayer
-    Clients --> MCPServer
-    Clients --> SpecManifest
-    Clients --> RESTDiscovery
-    RESTDiscovery --> Validator
-    WebMCPLayer --> Validator
-    MCPServer --> PilotCatalog
-    DynamicRegistry --> Validator
-
-    Clients --> Challenge402
-    Challenge402 -. "Ed25519 Signature" .-> FacilitatorGate
-    FacilitatorGate --> Testnet
-    FacilitatorGate --> Providers
+    Agents -->|Invoke & Pay| Challenge402
+    Challenge402 -. "Ed25519 Signature" .-> Facilitator
+    Facilitator --> StellarTestnet
+    StellarTestnet --> Services
+    Services -->|Proof of Delivery| HistoryEngine
+    HumanChat <-->|Review Deliverables| HistoryEngine
 ```
 
 ---
 
-## 🔄 Interaction Flow: Discover, Pay & Execute
+## 💳 The 7-Stage x402 Payment Lifecycle
 
-> **Interactive contract viewer:** `/payment-flow` visualizes discover → quote → 402 → buyer policy → settle → delivery → receipt without signing, wallet access, provider calls or payments. This draft branch is local/preview-only until reviewed. See [the state-machine contract](docs/BUYER_PROVIDER_PAYMENT_FLOW.md).
+1. **Discovery:** Agent queries the Bazaar index via MCP or REST for candidate tools.
+2. **Quote Inspection:** Agent inspects pricing, endpoint route template, network, and `payTo` address.
+3. **HTTP 402 Challenge:** Service endpoint responds with `402 Payment Required` containing the challenge, accepted asset (`USDC`), and canonical card hash.
+4. **Policy Guard:** Buyer agent verifies internal safety limits (budget, allowed assets, network).
+5. **Settlement:** Buyer signs payment authorization; facilitator settles on-chain to provider wallet on Stellar Testnet.
+6. **Delivery:** Provider verifies on-chain settlement and returns the output payload alongside cryptographic proof of delivery (SHA-256).
+7. **Reconciliation & Human View:** Delivery and receipt are logged into `/api/activity`. The human owner accesses the interactive result in `/history#token=...`.
 
-```mermaid
-sequenceDiagram
-    autonumber
-    actor Agent as Autonomous Agent (Payer)
-    participant Bazaar as Stellar Bazaar (MCP / REST)
-    participant Provider as x402 Provider
-    participant Facilitator as OpenZeppelin Facilitator
-    participant Stellar as Stellar Blockchain
+---
 
-    Note over Agent,Bazaar: Phase 1: Global Discovery & Policy Evaluation
-    Agent->>Bazaar: POST /api/mcp (search_services: "swap risk quote")
-    Bazaar-->>Agent: ServiceCard (Asset: USDC, Amount: 0.001, Scheme: exact)
-    Agent->>Agent: Pre-flight Safety Check (Budget & network allowlist check)
+## 🚀 Publishing a New Service to Bazaar
 
-    Note over Agent,Provider: Phase 2: x402 Challenge
-    Agent->>Provider: GET /api/x402/swap-risk?pair=XLM/USDC&amount=2500&side=buy
-    Provider-->>Agent: HTTP 402 Payment Required + Header PAYMENT-REQUIRED
+Any developer or autonomous agent can list a new service in Bazaar:
 
-    Note over Agent,Stellar: Phase 3: Signing & On-Chain Settlement
-    Agent->>Agent: Sign Ed25519 authorization with local wallet
-    Agent->>Provider: GET (with Header PAYMENT-SIGNATURE)
-    Provider->>Facilitator: verify(signature, requirements)
-    Facilitator-->>Provider: { isValid: true }
-    Provider->>Facilitator: settle(signature, requirements)
-    Facilitator->>Stellar: USDC Payment Transaction
-    Stellar-->>Facilitator: Confirmed in On-chain Ledger
-    Facilitator-->>Provider: { success: true, txHash: "d6154a4c..." }
+1. Expose `GET /v1/x402/card` returning the canonical JSON manifest.
+2. Implement `POST /v1/x402/<endpoint>` with standard `402 Payment Required` handling.
+3. Register the service in Bazaar:
 
-    Note over Provider,Agent: Phase 4: Business Delivery
-    Provider-->>Agent: HTTP 200 OK + Header PAYMENT-RESPONSE + Result Payload
+```bash
+curl -X POST https://bazaar.browns.studio/api/ingest \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <BAZAAR_PROVIDER_SECRET>" \
+  -d '{
+    "id": "my-ai-service",
+    "version": "1.0.0",
+    "name": "My Custom AI Service",
+    "description": "High-throughput inference with x402 payment settlement",
+    "tags": ["ai", "oracle"],
+    "kind": "http",
+    "routeTemplate": "/api/run?query={query}",
+    "network": "stellar:testnet",
+    "payment": {
+      "scheme": "exact",
+      "asset": "USDC",
+      "amount": "0.01",
+      "destination": "G..."
+    },
+    "provider": { "name": "My Org" },
+    "input": ["query"],
+    "output": ["result", "bazaarDelivery"]
+  }'
 ```
 
 ---
 
-## 💎 Project Status & Live On-Chain Evidence
+## 🧑‍💻 Human-in-the-Loop Private Library (`/history`)
 
-> **Current boundary:** production discovery is live and historical x402
-> settlement evidence is on Stellar Testnet. Bazaar has **no deployed Bazaar
-> smart contract, escrow, fee split, Mainnet payment flow, or public dispute
-> process**. The proposed listing, buyer-brief, visual-promise, Service Registry,
-> and limited-escrow model is documented as future work in
-> [Listing, purchase, and future escrow model](docs/LISTING_PURCHASE_ESCROW_FUTURE.md).
-
-### 🟢 Verified On-Chain Settlements (Stellar Testnet)
-
-| # | When | Method | Inner Tx (Soroban) | Ledger | Seller Delta |
-|---|------|--------|--------------------|--------|--------------|
-| 1 | 2026-08-18 20:36Z | `x402:test-client` | [`43f3ea34…013602`](https://stellar.expert/explorer/testnet/tx/43f3ea344b5ba0f4e0de88237f91c765adc90c110827282320bd3b7aa2013602) | `4212660` | `+0.0010000 USDC` |
-| 2 | 2026-08-18 | `x402:test-client` | [`4d6b26ca…86ae11`](https://stellar.expert/explorer/testnet/tx/4d6b26cad5fea174824599467fe885593837517461b72ec7a6e8461e2286ae11) | `4214612` | `+0.0010000 USDC` |
-| 3 | 2026-08-18 | `agent:quickstart` | [`5ff5f2d3…a89c2`](https://stellar.expert/explorer/testnet/tx/5ff5f2d34fc09bb9d0b5953c0d6fe9d1a0771f81eee53676b1c47c64e02a89c2) | `4214711` | `+0.0010000 USDC` |
-| 4 | 2026-08-19 02:31Z | `agent:quickstart` | [`235d6ffd…87cb49`](https://stellar.expert/explorer/testnet/tx/235d6ffdfd36b27a831668b868014536d47e32128d950c89fd07ed415587cb49) | `4216913` | `+0.0010000 USDC` |
-| 5 | 2026-08-19 07:43Z | `agent:quickstart` | [`c7fa7d18…03b625`](https://stellar.expert/explorer/testnet/tx/c7fa7d18d036b19be969d37e393da8a8b8aa9f70dc8e111e4568d90dd903b625) | `4220649` | `+0.0010000 USDC` |
-
-All settlements: `stellar:testnet`, scheme `exact`, `0.001 USDC` (`10000` atomic), SEP-41 contract `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`, payer [`GC3CK5A4…VDL4`](https://stellar.expert/explorer/testnet/account/GC3CK5A4KCNE44LGMU6PYPEAAZVQOFATJCEMBAASGCXK5EKECTB2VDL4) → recipient [`GDVR2KDK5…RMCQ`](https://stellar.expert/explorer/testnet/account/GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ). First settlement additionally recorded its [Outer Fee-Bump tx](https://horizon-testnet.stellar.org/transactions/4498c958c148b98d6b9424168e12eea43352f3bb12a56558d30f50984563f05f) with OpenZeppelin sponsorship (`GA6THKUY...`).
-
-### ✅ Completed & Verified Milestones
-
-1. **Production Deployment (Vercel):**
-   * Live at `https://stellar-bazaar-x402.vercel.app` with server-only facilitator key and Upstash Redis persistence in Production + Preview.
-   * Interactive Developer Hub (`/docs`) with 1-click code snippets for Claude Desktop MCP, TypeScript SDK, Python LangChain/CrewAI, and cURL.
-2. **Streamable HTTP MCP Server (`/api/mcp`, v0.5.0):**
-   * 7 read-only tools: `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `validate_service_card`, `list_workflow_bundles`, `get_workflow_bundle`. MCP advertises no registry writes, payment, signing, execution, or custody.
-   * `search_services` supports opaque cursor pagination (`limit` 1–50, `nextCursor`, `partialResults`) and deterministic error envelopes (`RESOURCE_NOT_FOUND`, `INVALID_CURSOR`, `BUNDLE_NOT_FOUND`).
-   * Provider-registered cards are visible in `list_services`/`search_services`/`get_service` and persist across redeploys via Upstash Redis (provisioned 2026-08-19; verified across production redeploys).
-3. **Official Agent SDK & Python Kit (`lib/bazaar-agent-client.ts` & `docs/LANGCHAIN_CREWAI.md`):**
-   * Strongly typed discovery/policy SDK. Dynamic paid execution is fail-closed unless the host injects an independent verifier that reconciles receipt network, asset, amount and destination with the selected card.
-4. **Dynamic Provider Ingest API & Fast Starter (`/api/publisher/ingest` & `docs/FAST_PROVIDER_START.md`):**
-   * Local manifest drafting and deterministic conformance remain public. Registry writes are append-only, server-to-server, disabled by default, and require explicit enablement, durable Redis and an operator credential.
-5. **External Provider Contract & E2E Validation:**
-   * Truthful contract-only record for independent quote repositories and read-only MCP discovery endpoints. See [external E2E evidence](docs/EXTERNAL_PROVIDER_E2E.md) and [MCP capabilities](docs/MCP_DISCOVERY.md).
-6. **6 HTTPS-Verified External Pilots:**
-   * Website Intelligence, Campaign Creator, Research Scout, Video Repurpose, Design Brief, and Brand Identity Studio.
-   * Every bilingual card links its public repository and deployment, pins the validated source commit, and states `fixture-live` or `discovery-only`. Payments are inactive and no price is invented. See the [point-in-time HTTPS QA report](docs/VERIFIED_PROVIDER_QA.md) and [catalog inclusion plan](docs/PROVIDER_CATALOG_PLAN.md).
-7. **Workflow Bundle Schema & Fixtures (read-only):**
-   * `bazaar.workflow-bundle/v1` with 20 deterministic rules (19 active for ready/draft fixtures) (cycles, gates, artifacts, price) and 2 fixture bundles. See [WORKFLOW_BUNDLES_FUTURE.md](docs/internal/WORKFLOW_BUNDLES_FUTURE.md).
-8. **Private Interactive Deliverables & S3/R2 Cloud Storage:**
-   * Private deliverable manifests (`bazaar.deliverable/v1`) supporting rich multimedia assets (streaming MP4 video with `.vtt` subtitles, high-resolution comparison galleries, and scene transcription).
-   * Fully validated against **Cloudflare R2** with zero egress/streaming costs, presigned temporary PUT/GET access with SHA-256 checksum verification, and atomic state updates in Redis.
-   * Dedicated Human/Agent Review interface at `/history/review` with full privacy session locking, byte-for-byte SHA-256 download verification, and range-based scrubbing.
-9. **Automated E2E Test Batteries (zero fund risk):**
-   * Ecosystem 5-in-1, private storage E2E (`test:private-storage:e2e`), MCP onboarding (pagination + hostile corpus), workflow bundles (13 negative cases), agent safety, publisher ingest, external provider CI/mock, and public contract suites.
+Bazaar protects user privacy with a **Zero-Knowledge Token Architecture**:
+* When an agent buys a service, it gives the human a magic URL: `https://bazaar.browns.studio/history#token=bz_read_...`.
+* The token lives strictly in the browser hash fragment `#token=...`, never traveling across the network.
+* The human reviews deliverables (teleprompters, HTML reports, datasets), inspects on-chain Stellar transaction receipts, and can use **"Prepare Question"** to send refined queries back to their agent.
 
 ---
 
-## 🚀 Quickstart
-
-### 1. Installation & Local Run
-
-Requirements: Node.js 22.18+ and npm.
+## 🧪 Quickstart (Local Development)
 
 ```bash
 # Clone the repository
@@ -204,147 +191,13 @@ cd stellar-bazaar-x402
 # Install dependencies
 npm install
 
-# Start Next.js development server
+# Run local development server
 npm run dev
 ```
 
-Open `http://localhost:3000` in your browser.
+Open [http://localhost:3000](http://localhost:3000) to access the local environment.
 
 ---
 
-### 2. Run Test Batteries
-
-```bash
-# Validate strict TypeScript types (0 errors)
-npm run typecheck
-
-# Run Next.js production build
-npm run build
-
-# Run ecosystem E2E test suite (REST + MCP + x402, zero fund risk)
-npm run test:e2e:ecosystem
-
-# Run MCP onboarding suite (7 read-only tools + mutation rejection)
-npm run test:mcp:onboarding
-
-# Run agent policy eval corpus (12 scenarios: hostile metadata, traversal, status fidelity, no secret leaks)
-npm run test:agent:policy:evals
-
-# Run reproducible ranking benchmark (golden set, NDCG@3 / MRR / Recall@3 gates)
-npm run benchmark:ranking
-
-# Run workflow bundle conformance suite (13 negative cases)
-npm run test:workflow:bundle
-
-# Verify registry fail-closed behavior and conformance availability
-npm run test:publisher:ingest
-
-# Run deep-hash, retired-payer and receipt-reconciliation invariants
-npm run test:security:invariants
-
-# Run autonomous agent safety & budget hard-caps suite
-npm run test:agent:safety
-
-# Run external provider contract & mock E2E validation
-npm run test:e2e:external
-
-# Run x402 protocol smoke (challenge, capabilities, non-transactional)
-npm run test:x402:protocol
-
-# Run public provider contract manifest suite (offline, no funds)
-npm run test:contract:external:public
-
-# Run real external provider testnet E2E (requires RUN_EXTERNAL_X402_TESTNET=1 + EXTERNAL_QUOTE_BASE_URL)
-npm run test:e2e:external:testnet
-
-# Run read-only agent discovery/policy demo (no payment)
-npm run agent:quickstart
-
-# Run verified paid agent execution & receipt reconciliation runner
-npm run agent:paid-execution
-
-# Run complete 3-actor integration test (Provider + Bazaar + Buyer Agent)
-npm run test:three-actors:e2e
-```
-
----
-
-### 3. Connect AI Agents in 3 Lines of Code
-
-```typescript
-import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
-
-// 1. Initialize read-only client with policy limits
-const client = new BazaarAgentClient({
-  baseUrl: "http://localhost:3000",
-  maxPriceAllowedUsdc: 0.05,
-  allowedAssets: ["USDC"],
-});
-
-// 2. Discover target service via MCP tool call
-const [serviceCard] = await client.searchServicesMCP("swap risk");
-
-// 3. Inspect only. Paid execution requires a server-only payer plus an
-// independent receiptVerifier; a transaction hash alone is never enough.
-console.log("Selected card:", serviceCard);
-console.log("Stellar Receipt:", execution.payment.receiptUrl);
-```
-
----
-
-## 🛡️ Trust & Security Boundaries
-
-* **Non-Custodial:** Stellar Bazaar never holds, custodies, or escrows user or agent funds.
-* **Client-Side Signing Only:** Private keys (`S...`) reside exclusively on local client runtime environments (`server-only`).
-* **Zero Secret Leakage:** ServiceCards never contain API keys or secrets.
-* **Untrusted Metadata Defense:** Descriptions remain untrusted data; URL/route fields receive deterministic SSRF and traversal checks.
-* **Loop Protection Circuit Breakers:** Strict 1-retry payment limit per HTTP request to prevent infinite payment loops.
-* **No Escrow Today:** Current x402 evidence is direct settlement. Any future escrow must be a separately audited, opt-in contract; it is not active in this deployment.
-
----
-
-## 🗺️ Roadmap
-
-```
- [ PHASE 1: COMPLETED ]        [ PHASE 2: VALIDATED ]        [ PHASE 3: SECURITY ]        [ PHASE 4: FUTURE ]
-  Discovery UI & REST API   --> Testnet x402 Evidence    --> Read-only MCP + SDK      --> Provider ownership + multi-asset
-  Streamable MCP Server         Historical on-chain proof     Fail-closed registry       Mainnet only after audit
-```
-
-1. ✅ **Phase 1 (Discovery Core):** Global catalog, deterministic lexical ranking, MCP streamable server, and ServiceCard validator.
-2. ✅ **Phase 2 (Testnet Settlement):** HTTP 402 challenge, Ed25519 signature verification, and on-chain settlement via `@x402/stellar`.
-3. 🟡 **Phase 3 (Security remediation):** read-only MCP, receipt reconciliation gate, canonical deep hashes, retired Testnet payer, and append-only registry disabled by default.
-4. ⚪ **Phase 4 (Future):** provider-owned Service Registry, visual service promises and buyer briefs, limited per-purchase escrow/release/refund rules, disclosed fee splits, SEP-41 multi-asset work, and Mainnet readiness only after independent external audit.
-
-The proposed 1% provider-side fee is documented separately as a **non-custodial, design-only** atomic split. It is not active in x402 or production: see [`docs/NONCUSTODIAL_FEE_SPLIT_DESIGN.md`](docs/NONCUSTODIAL_FEE_SPLIT_DESIGN.md) and the local preview at `/fee-split`.
-
----
-
-## 📖 Documentation & Guides
-
-* [**Versión en Español (`README.es.md`)**](README.es.md)
-* [**Getting Started (`docs/GETTING_STARTED.md`)**](docs/GETTING_STARTED.md)
-* [**Agent Integration Quickstart (`docs/AGENT_QUICKSTART.md`)**](docs/AGENT_QUICKSTART.md)
-* [**Testnet Reproduction Guide (`docs/DEMO_TESTNET.md`)**](docs/DEMO_TESTNET.md)
-* [**Environment Variables Reference (`docs/ENVIRONMENT_VARIABLES.md`)**](docs/ENVIRONMENT_VARIABLES.md)
-* [**HTTP API Reference (`docs/HTTP_API_REFERENCE.md`)**](docs/HTTP_API_REFERENCE.md)
-* [**MCP Client Setup (`docs/MCP_CLIENT_SETUP.md`)**](docs/MCP_CLIENT_SETUP.md)
-* [**Conformance Rules (`docs/CONFORMANCE_RULES.md`)**](docs/CONFORMANCE_RULES.md)
-* [**Troubleshooting FAQ (`docs/TROUBLESHOOTING_FAQ.md`)**](docs/TROUBLESHOOTING_FAQ.md)
-* [**MCP Agent Onboarding (`docs/MCP_AGENT_ONBOARDING.md`)**](docs/MCP_AGENT_ONBOARDING.md)
-* [**MCP Discovery & Capabilities (`docs/MCP_DISCOVERY.md`)**](docs/MCP_DISCOVERY.md)
-* [**External Provider E2E Evidence (`docs/EXTERNAL_PROVIDER_E2E.md`)**](docs/EXTERNAL_PROVIDER_E2E.md)
-* [**Discovery Contract Specification (`docs/internal/DISCOVERY_CONTRACT.md`)**](docs/internal/DISCOVERY_CONTRACT.md)
-* [**Project Architecture Bible (`docs/internal/PROJECT_BIBLE.md`)**](docs/internal/PROJECT_BIBLE.md)
-* [**MCP Pagination & P1 Backlog (`docs/internal/MCP_DISCOVERY_BACKLOG.md`)**](docs/internal/MCP_DISCOVERY_BACKLOG.md)
-* [**Workflow Bundles Future (`docs/internal/WORKFLOW_BUNDLES_FUTURE.md`)**](docs/internal/WORKFLOW_BUNDLES_FUTURE.md)
-* [**Listing, Purchase & Future Escrow Model (`docs/LISTING_PURCHASE_ESCROW_FUTURE.md`)**](docs/LISTING_PURCHASE_ESCROW_FUTURE.md)
-
-> Internal & historical docs (proposals, backlogs, security/QA) live under [`docs/internal/`](docs/internal/).
-
----
-
-## 📄 License
-
-This project and its documentation are licensed under **[Apache-2.0](LICENSE)**.
-Third-party dependencies retain their respective licenses.
+## 📜 License
+This project is licensed under the [Apache-2.0 License](LICENSE).
