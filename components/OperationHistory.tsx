@@ -53,6 +53,8 @@ export function HistoryResult({ value, label }: { value: unknown; label: string 
   return <details><summary>{label}</summary><pre>{JSON.stringify(value, null, 2)}</pre></details>;
 }
 
+import { Navbar } from "@/components/Navbar";
+
 export function OperationHistory() {
   const [locale, setLocale] = useState<Locale>("es");
   const [token, setToken] = useState("");
@@ -60,6 +62,7 @@ export function OperationHistory() {
   const [entries, setEntries] = useState<Entry[]>([]);
   const [agentAccess, setAgentAccess] = useState(false);
   const [nativeAvailable, setNativeAvailable] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
   const native = useRef<ModelContextRegistry | null>(null);
   const pending = useRef<AbortController | null>(null);
   const generation = useRef(0);
@@ -145,6 +148,7 @@ export function OperationHistory() {
   }, []);
 
   async function readHistory() {
+    if (!token.trim()) return;
     pending.current?.abort();
     const controller = new AbortController();
     pending.current = controller;
@@ -169,33 +173,316 @@ export function OperationHistory() {
     }
   }
 
-  return <main className="operation-history" lang={locale}>
-    <nav className="history-nav" aria-label={locale === "es" ? "Navegación" : "Navigation"}>
-      <Link href="/" className="brand">✦ Stellar Bazaar <sup>x402</sup></Link>
-      <Link href="/catalogo">{c.catalog}</Link>
-      <label className="history-locale"><span>Idioma / Language</span><select value={locale} onChange={event => setLocale(event.target.value as Locale)}><option value="es">Español</option><option value="en">English</option></select></label>
-    </nav>
-    <header><p className="kicker">{c.heading}</p><h1>{c.title}</h1><p>{c.subtitle}</p></header>
-    <section className="history-access" aria-label={c.token}>
-      <form onSubmit={event => { event.preventDefault(); void readHistory(); }}>
-        <label htmlFor="history-access-token">{c.token}</label>
-        <input id="history-access-token" type="password" value={token} onChange={event => { generation.current += 1; pending.current?.abort(); setAgentAccess(false); setEntries([]); setState("locked"); setToken(event.target.value); }} autoComplete="off" spellCheck={false} maxLength={512} aria-describedby="history-access-help" />
-        <p id="history-access-help">{c.access}</p>
-        <div className="history-actions"><button type="submit" disabled={!token.trim() || state === "loading"}>{state === "ready" ? c.refresh : c.unlock}</button><button type="button" onClick={lock}>{c.lock}</button></div>
-      </form>
-      <details><summary>Conexión del navegador</summary>{nativeAvailable ? <label className="history-agent-access"><input type="checkbox" checked={agentAccess} disabled={!token.trim()} onChange={event => setAgentAccess(event.target.checked)} />{locale === "es" ? "Conectar historial privado al agente del navegador (solo lectura)" : "Connect private history to the browser agent (read-only)"}</label> : <p>{locale === "es" ? "WebMCP nativo no disponible en este navegador. El historial web funciona de forma independiente." : "Native WebMCP is unavailable in this browser. Web history works independently."}</p>}</details>
-      {agentAccess && <p role="status">{locale === "es" ? "Agente conectado: puede leer este historial privado hasta bloquear la vista o salir de la página." : "Agent connected: it can read this private history until you lock the view or leave the page."}</p>}
-    </section>
-    <details className="history-evidence-note"><summary>Cómo interpretar este registro</summary><p>{c.note}</p></details>
-    <div role="status" aria-live="polite">{state !== "ready" ? c[state] : entries.length === 0 ? c.empty : c.latest}</div>
-    {state === "ready" && <ActivityDashboard token={token.trim()} onUnauthorized={lock} />}
-    {state === "ready" && <details><summary>Últimas operaciones · vista técnica</summary><section aria-label={c.heading} className="history-records">{entries.map(entry => <article key={entry.id} className="history-record">
-      <div className="history-record-heading"><h2>{entry.service.title}</h2><span className="history-badge">{c.modes[entry.mode]}</span></div>
-      <p className="history-evidence-note">{c.evidence}</p>
-      <dl><div><dt>{c.provider}</dt><dd>{entry.service.provider}</dd></div><div><dt>{c.agent}</dt><dd>{entry.agentId || c.unidentified}</dd></div><div><dt>{c.recorded}</dt><dd><time dateTime={entry.recordedAt}>{entry.recordedAt}</time></dd></div><div><dt>{c.op}</dt><dd>{entry.clientOperationId}</dd></div><div><dt>{c.origin}</dt><dd>{entry.service.url}</dd></div></dl>
-      <div className="history-outcomes"><section><h3>{c.payment}</h3><strong>{c.statuses[entry.payment.status]}</strong><dl><div><dt>{c.amount}</dt><dd><HistoryAmount atomic={entry.payment.amountAtomic} asset={entry.payment.asset} /></dd></div><div><dt>{c.asset}</dt><dd>{entry.payment.asset}</dd></div><div><dt>{c.network}</dt><dd>{entry.payment.network}</dd></div><div><dt>{c.recipient}</dt><dd>{short(entry.payment.recipient)}</dd></div></dl>
-        {entry.mode === "testnet" && entry.payment.network === "stellar:testnet" && /^[a-fA-F0-9]{64}$/.test(entry.payment.transactionHash || "") && <a href={`https://stellar.expert/explorer/testnet/tx/${entry.payment.transactionHash}`} target="_blank" rel="noopener noreferrer">{c.transaction} ↗</a>}
-      </section><section><h3>{c.delivery}</h3><strong>{c.statuses[entry.delivery.status]}</strong>{entry.delivery.result !== undefined ? <HistoryResult value={entry.delivery.result} label={c.result} /> : <p>{c.absent}</p>}</section></div>
-    </article>)}</section></details>}
-  </main>;
+  const pasteToken = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text && text.trim()) {
+        const clean = text.trim();
+        setToken(clean);
+      }
+    } catch {}
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <Navbar />
+
+      <main className="operation-history shell" lang={locale} style={{ flex: 1, paddingBottom: "4rem" }}>
+        <header style={{ marginTop: "1rem", marginBottom: "2rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
+            <span className="kicker" style={{ margin: 0 }}>
+              🔒 {c.heading.toUpperCase()} · CLOUDFLARE R2 & STELLAR TESTNET
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <label style={{ fontSize: "0.82rem", color: "#94a3b8" }}>Idioma:</label>
+              <select
+                value={locale}
+                onChange={(event) => setLocale(event.target.value as Locale)}
+                style={{
+                  padding: "4px 10px",
+                  borderRadius: "8px",
+                  background: "rgba(255,255,255,0.06)",
+                  color: "#f8fafc",
+                  border: "1px solid rgba(255,255,255,0.15)",
+                  fontSize: "0.8rem",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="es">Español</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+
+          <h1 style={{ marginTop: "12px", marginBottom: "8px" }}>{c.title}</h1>
+          <p style={{ color: "#94a3b8", fontSize: "1.05rem", maxWidth: "750px", margin: 0 }}>
+            {c.subtitle}
+          </p>
+        </header>
+
+        {/* Security / Token Card */}
+        <section
+          className="history-access"
+          style={{
+            background: "linear-gradient(135deg, rgba(20, 24, 38, 0.85) 0%, rgba(13, 16, 26, 0.95) 100%)",
+            border: "1px solid rgba(112, 87, 232, 0.3)",
+            borderRadius: "16px",
+            padding: "clamp(1.2rem, 3vw, 2rem)",
+            boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+            marginBottom: "2rem",
+          }}
+        >
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void readHistory();
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
+              <label htmlFor="history-access-token" style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>
+                🔑 {c.token}
+              </label>
+              <button
+                type="button"
+                onClick={pasteToken}
+                style={{
+                  background: "rgba(112, 87, 232, 0.15)",
+                  border: "1px solid rgba(112, 87, 232, 0.4)",
+                  color: "#c4b5fd",
+                  padding: "4px 10px",
+                  borderRadius: "6px",
+                  fontSize: "0.78rem",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                📋 Pegar Token
+              </button>
+            </div>
+
+            <div style={{ position: "relative", marginBottom: "12px" }}>
+              <input
+                id="history-access-token"
+                type="password"
+                placeholder="Ej. bz_read_7a9f4c82b01e3d..."
+                value={token}
+                onChange={(event) => {
+                  generation.current += 1;
+                  pending.current?.abort();
+                  setAgentAccess(false);
+                  setEntries([]);
+                  setState("locked");
+                  setToken(event.target.value);
+                }}
+                autoComplete="off"
+                spellCheck={false}
+                maxLength={512}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  background: "rgba(8, 10, 16, 0.8)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  borderRadius: "10px",
+                  padding: "12px 16px",
+                  color: "#ffffff",
+                  fontSize: "0.95rem",
+                  fontFamily: "monospace",
+                }}
+              />
+            </div>
+
+            <p style={{ fontSize: "0.82rem", color: "#94a3b8", lineHeight: 1.5, margin: "0 0 16px 0" }}>
+              💡 {c.access}
+            </p>
+
+            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", alignItems: "center" }}>
+              <button
+                type="submit"
+                disabled={!token.trim() || state === "loading"}
+                style={{
+                  padding: "10px 22px",
+                  borderRadius: "10px",
+                  background: "linear-gradient(135deg, #7057e8 0%, #583ec9 100%)",
+                  color: "#ffffff",
+                  border: "none",
+                  fontWeight: 700,
+                  fontSize: "0.9rem",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 14px rgba(112, 87, 232, 0.4)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                {state === "loading" ? "⏳ Consultando…" : state === "ready" ? `🔄 ${c.refresh}` : `🔓 ${c.unlock}`}
+              </button>
+
+              {token.trim() && (
+                <button
+                  type="button"
+                  onClick={lock}
+                  style={{
+                    padding: "10px 18px",
+                    borderRadius: "10px",
+                    background: "rgba(239, 68, 68, 0.15)",
+                    color: "#fca5a5",
+                    border: "1px solid rgba(239, 68, 68, 0.35)",
+                    fontWeight: 600,
+                    fontSize: "0.88rem",
+                    cursor: "pointer",
+                  }}
+                >
+                  🔒 {c.lock}
+                </button>
+              )}
+            </div>
+          </form>
+
+          <details style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+            <summary style={{ cursor: "pointer", color: "#c4b5fd", fontSize: "0.85rem", fontWeight: 600 }}>
+              ⚙️ Conexión nativa del navegador (WebMCP)
+            </summary>
+            <div style={{ marginTop: "10px" }}>
+              {nativeAvailable ? (
+                <label className="history-agent-access" style={{ display: "flex", gap: "10px", alignItems: "center", color: "#e2e8f0", fontSize: "0.88rem" }}>
+                  <input
+                    type="checkbox"
+                    checked={agentAccess}
+                    disabled={!token.trim()}
+                    onChange={(event) => setAgentAccess(event.target.checked)}
+                  />
+                  {locale === "es"
+                    ? "Conectar historial privado al agente del navegador (solo lectura)"
+                    : "Connect private history to the browser agent (read-only)"}
+                </label>
+              ) : (
+                <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: 0 }}>
+                  {locale === "es"
+                    ? "WebMCP nativo no detectado en este navegador. El historial web funciona de forma totalmente segura e independiente vía REST."
+                    : "Native WebMCP is unavailable in this browser. Web history works independently."}
+                </p>
+              )}
+              {agentAccess && (
+                <p role="status" style={{ color: "#36b990", fontSize: "0.85rem", marginTop: "8px" }}>
+                  ✓ {locale === "es" ? "Agente conectado: puede leer este historial privado hasta bloquear la vista." : "Agent connected: it can read this private history until you lock the view."}
+                </p>
+              )}
+            </div>
+          </details>
+        </section>
+
+        {/* Info Box */}
+        <details
+          className="history-evidence-note"
+          style={{
+            background: "rgba(255, 255, 255, 0.03)",
+            border: "1px solid rgba(255, 255, 255, 0.08)",
+            borderRadius: "12px",
+            padding: "12px 18px",
+            marginBottom: "1.5rem",
+          }}
+        >
+          <summary style={{ cursor: "pointer", color: "#94a3b8", fontSize: "0.88rem", fontWeight: 600 }}>
+            ℹ️ Cómo interpretar este registro y la privacidad de tus entregas
+          </summary>
+          <p style={{ color: "#cbd5e1", fontSize: "0.85rem", margin: "8px 0 0 0", lineHeight: 1.6 }}>
+            {c.note}
+          </p>
+        </details>
+
+        {/* State / Status Indicator */}
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            marginBottom: "1.5rem",
+            padding: "12px 18px",
+            borderRadius: "10px",
+            background: state === "ready" ? "rgba(16, 185, 129, 0.1)" : state === "loading" ? "rgba(56, 189, 248, 0.1)" : "rgba(255,255,255,0.03)",
+            border: state === "ready" ? "1px solid rgba(16, 185, 129, 0.3)" : state === "loading" ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(255,255,255,0.06)",
+            color: state === "ready" ? "#6ee7b7" : state === "loading" ? "#38bdf8" : "#94a3b8",
+            fontSize: "0.9rem",
+            fontWeight: 600,
+          }}
+        >
+          {state !== "ready" ? c[state] : entries.length === 0 ? c.empty : `✓ ${c.latest}`}
+        </div>
+
+        {state === "ready" && <ActivityDashboard token={token.trim()} onUnauthorized={lock} />}
+
+        {state === "ready" && entries.length > 0 && (
+          <details style={{ marginTop: "2rem" }}>
+            <summary style={{ cursor: "pointer", color: "#c4b5fd", fontWeight: 700, fontSize: "1rem", padding: "10px 0" }}>
+              🔍 Últimas operaciones · vista técnica detallada
+            </summary>
+            <section aria-label={c.heading} className="history-records" style={{ marginTop: "1rem" }}>
+              {entries.map((entry) => (
+                <article
+                  key={entry.id}
+                  className="history-record"
+                  style={{
+                    background: "rgba(16, 19, 30, 0.9)",
+                    border: "1px solid rgba(112, 87, 232, 0.25)",
+                    borderRadius: "14px",
+                    padding: "1.5rem",
+                    marginBottom: "1.2rem",
+                  }}
+                >
+                  <div className="history-record-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
+                    <h2 style={{ fontSize: "1.15rem", margin: 0, color: "#f8fafc" }}>{entry.service.title}</h2>
+                    <span className="history-badge" style={{ background: "rgba(112, 87, 232, 0.2)", color: "#c4b5fd", border: "1px solid rgba(112, 87, 232, 0.4)", borderRadius: "20px", padding: "4px 12px", fontSize: "0.75rem", fontWeight: 700 }}>
+                      {c.modes[entry.mode]}
+                    </span>
+                  </div>
+                  <p className="history-evidence-note" style={{ color: "#94a3b8", fontSize: "0.82rem", margin: "6px 0 16px 0" }}>
+                    {c.evidence}
+                  </p>
+                  <dl style={{ display: "grid", gap: "8px", margin: "16px 0" }}>
+                    <div style={{ display: "flex", gap: "12px" }}>
+                      <dt style={{ color: "#94a3b8", minWidth: "120px", fontSize: "0.85rem" }}>{c.provider}:</dt>
+                      <dd style={{ margin: 0, color: "#e2e8f0", fontSize: "0.85rem" }}>{entry.service.provider}</dd>
+                    </div>
+                    <div style={{ display: "flex", gap: "12px" }}>
+                      <dt style={{ color: "#94a3b8", minWidth: "120px", fontSize: "0.85rem" }}>{c.agent}:</dt>
+                      <dd style={{ margin: 0, color: "#e2e8f0", fontSize: "0.85rem" }}>{entry.agentId || c.unidentified}</dd>
+                    </div>
+                    <div style={{ display: "flex", gap: "12px" }}>
+                      <dt style={{ color: "#94a3b8", minWidth: "120px", fontSize: "0.85rem" }}>{c.recorded}:</dt>
+                      <dd style={{ margin: 0, color: "#e2e8f0", fontSize: "0.85rem" }}>
+                        <time dateTime={entry.recordedAt}>{entry.recordedAt}</time>
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="history-outcomes" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "14px", marginTop: "14px" }}>
+                    <section>
+                      <h3 style={{ fontSize: "0.95rem", color: "#f8fafc", margin: "0 0 6px 0" }}>{c.payment}</h3>
+                      <strong style={{ color: "#6ee7b7", fontSize: "0.85rem" }}>{c.statuses[entry.payment.status]}</strong>
+                      <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "#cbd5e1" }}>
+                        <HistoryAmount atomic={entry.payment.amountAtomic} asset={entry.payment.asset} /> · {entry.payment.network}
+                      </div>
+                      {entry.mode === "testnet" && entry.payment.network === "stellar:testnet" && /^[a-fA-F0-9]{64}$/.test(entry.payment.transactionHash || "") && (
+                        <a
+                          href={`https://stellar.expert/explorer/testnet/tx/${entry.payment.transactionHash}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{ color: "#c4b5fd", fontSize: "0.82rem", display: "inline-block", marginTop: "6px" }}
+                        >
+                          {c.transaction} ↗
+                        </a>
+                      )}
+                    </section>
+                    <section>
+                      <h3 style={{ fontSize: "0.95rem", color: "#f8fafc", margin: "0 0 6px 0" }}>{c.delivery}</h3>
+                      <strong style={{ color: "#38bdf8", fontSize: "0.85rem" }}>{c.statuses[entry.delivery.status]}</strong>
+                      {entry.delivery.result !== undefined ? <HistoryResult value={entry.delivery.result} label={c.result} /> : <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>{c.absent}</p>}
+                    </section>
+                  </div>
+                </article>
+              ))}
+            </section>
+          </details>
+        )}
+      </main>
+    </div>
+  );
 }

@@ -24,6 +24,8 @@ const icons = {
   report: "≡",
   other: "↓",
 };
+import { Navbar } from "@/components/Navbar";
+
 export function DeliverableReview() {
   const [selected, setSelected] = useState(0),
     delivery = reviewDeliveries[selected];
@@ -52,14 +54,10 @@ export function DeliverableReview() {
     delivery: { status: "reported-delivered" },
   };
   return (
-    <main className="delivery-library">
-      <nav className="library-nav">
-        <a href="/history">
-          ✦ Stellar Bazaar <small>x402</small>
-        </a>
-        <a href="/history">Mi historial ↗</a>
-      </nav>
-      <header className="library-header">
+    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
+      <Navbar />
+      <main className="delivery-library shell" style={{ flex: 1 }}>
+        <header className="library-header" style={{ paddingTop: "1rem" }}>
         <p className="library-eyebrow">TU AGENTE CREA. TÚ EXPLORAS.</p>
         <h1>
           Tu biblioteca de entregas<span>.</span>
@@ -126,5 +124,6 @@ export function DeliverableReview() {
         />
       </div>
     </main>
+  </div>
   );
 }
