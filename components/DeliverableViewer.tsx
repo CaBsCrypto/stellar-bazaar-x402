@@ -117,10 +117,12 @@ function useFile(
     if (file && available)
       access(file, false, controller.signal)
         .then((result) => {
-          if (active) setUrl(result.url);
+          if (active && !controller.signal.aborted) setUrl(result.url);
         })
-        .catch(() => {
-          if (active) setError(true);
+        .catch((err) => {
+          if (active && !controller.signal.aborted && !(err instanceof DOMException && err.name === "AbortError")) {
+            setError(true);
+          }
         });
     return () => {
       active = false;
