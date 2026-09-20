@@ -23,7 +23,6 @@ export default function Home() {
           <Link href="/buyer-execution">Workspace Comprador</Link>
           <Link href="/publish">Publicar API</Link>
           <Link href="/history">Historial</Link>
-          <Link href="/admin">Admin</Link>
           <Link href="/docs">Docs</Link>
           <a href="https://github.com/CaBsCrypto/stellar-bazaar-x402" target="_blank" rel="noreferrer">GitHub ↗</a>
         </div>

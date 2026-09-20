@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
 interface AdminStats {
@@ -28,7 +28,14 @@ interface ServiceItem {
   registeredAt?: string;
 }
 
+const STORAGE_KEY = "bazaar_admin_access_token";
+
 export function AdminOperationsDashboard() {
+  const [token, setToken] = useState<string>("");
+  const [inputToken, setInputToken] = useState<string>("");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [authError, setAuthError] = useState<string>("");
+
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [builtIn, setBuiltIn] = useState<ServiceItem[]>([]);
   const [dynamicServices, setDynamicServices] = useState<ServiceItem[]>([]);
@@ -36,31 +43,198 @@ export function AdminOperationsDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("");
 
-  async function loadData() {
+  // Check URL hash (#key=...) or localStorage on mount
+  useEffect(() => {
+    let activeToken = "";
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash;
+      const match = /#key=([a-zA-Z0-9_\-.~]+)/.exec(hash);
+      if (match && match[1]) {
+        activeToken = match[1];
+        localStorage.setItem(STORAGE_KEY, activeToken);
+        // Clean URL hash without reload for security
+        window.history.replaceState(null, "", window.location.pathname);
+      } else {
+        activeToken = localStorage.getItem(STORAGE_KEY) || "";
+      }
+    }
+
+    if (activeToken) {
+      setToken(activeToken);
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  const loadData = useCallback(async (tokenToUse: string) => {
+    if (!tokenToUse) {
+      setLoading(false);
+      return;
+    }
     try {
       setRefreshing(true);
-      const res = await fetch("/api/admin/stats", { cache: "no-store" });
+      const res = await fetch("/api/admin/stats", {
+        headers: {
+          Authorization: `Bearer ${tokenToUse}`,
+        },
+        cache: "no-store",
+      });
+
       if (res.ok) {
         const data = await res.json();
         setStats(data.stats);
         setBuiltIn(data.builtInServices || []);
         setDynamicServices(data.dynamicServices || []);
         setLastUpdated(new Date().toLocaleTimeString());
+        setIsAuthenticated(true);
+        setAuthError("");
+        localStorage.setItem(STORAGE_KEY, tokenToUse);
+      } else if (res.status === 401) {
+        setIsAuthenticated(false);
+        setAuthError("Clave de administrador incorrecta o expirada.");
+        localStorage.removeItem(STORAGE_KEY);
+      } else {
+        setAuthError("Error al consultar el servidor.");
       }
     } catch (e) {
       console.error("Failed to load admin stats", e);
+      setAuthError("No se pudo conectar con el servidor.");
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }
-
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (token) {
+      loadData(token);
+      const interval = setInterval(() => loadData(token), 10000);
+      return () => clearInterval(interval);
+    }
+  }, [token, loadData]);
+
+  function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!inputToken.trim()) return;
+    setToken(inputToken.trim());
+    loadData(inputToken.trim());
+  }
+
+  function handleLogout() {
+    localStorage.removeItem(STORAGE_KEY);
+    setToken("");
+    setInputToken("");
+    setIsAuthenticated(false);
+    setStats(null);
+  }
+
+  // --- LOCKED STATE (AUTH FORM) ---
+  if (!loading && !isAuthenticated) {
+    return (
+      <div style={{ maxWidth: "480px", margin: "4rem auto", padding: "0 1rem" }}>
+        <div
+          style={{
+            background: "rgba(13, 17, 28, 0.8)",
+            border: "1px solid rgba(255, 255, 255, 0.1)",
+            borderRadius: "16px",
+            padding: "2.5rem 2rem",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+            textAlign: "center",
+          }}
+        >
+          <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🔒</div>
+          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0 0 0.5rem 0" }}>
+            Bazaar Admin Center
+          </h1>
+          <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "1.75rem", lineHeight: 1.4 }}>
+            Esta vista contiene telemetría sensible y supervisión de agentes del protocolo. Ingresa tu clave de acceso.
+          </p>
+
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+            <div style={{ textAlign: "left" }}>
+              <label
+                style={{
+                  display: "block",
+                  color: "#cbd5e1",
+                  fontSize: "0.8rem",
+                  marginBottom: "0.4rem",
+                  fontWeight: 600,
+                }}
+              >
+                Admin Access Key:
+              </label>
+              <input
+                type="password"
+                value={inputToken}
+                onChange={(e) => setInputToken(e.target.value)}
+                placeholder="bz_admin_..."
+                style={{
+                  width: "100%",
+                  padding: "0.75rem 1rem",
+                  background: "rgba(0,0,0,0.4)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  borderRadius: "8px",
+                  color: "#fff",
+                  fontSize: "0.95rem",
+                  outline: "none",
+                  fontFamily: "monospace",
+                }}
+              />
+            </div>
+
+            {authError && (
+              <div
+                style={{
+                  padding: "0.6rem",
+                  background: "rgba(239, 68, 68, 0.15)",
+                  border: "1px solid rgba(239, 68, 68, 0.3)",
+                  borderRadius: "6px",
+                  color: "#f87171",
+                  fontSize: "0.82rem",
+                }}
+              >
+                {authError}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={refreshing || !inputToken.trim()}
+              style={{
+                marginTop: "0.5rem",
+                padding: "0.75rem",
+                background: "linear-gradient(135deg, #7057e8 0%, #4338ca 100%)",
+                border: "none",
+                borderRadius: "8px",
+                color: "#fff",
+                fontWeight: 600,
+                fontSize: "0.95rem",
+                cursor: inputToken.trim() ? "pointer" : "not-allowed",
+                opacity: inputToken.trim() ? 1 : 0.6,
+                transition: "all 0.2s ease",
+              }}
+            >
+              {refreshing ? "Verificando..." : "Desbloquear Centro de Control →"}
+            </button>
+          </form>
+
+          <div
+            style={{
+              marginTop: "2rem",
+              paddingTop: "1.25rem",
+              borderTop: "1px solid rgba(255, 255, 255, 0.06)",
+              fontSize: "0.78rem",
+              color: "#64748b",
+            }}
+          >
+            Tip: Puedes ingresar automáticamente mediante <code>/admin#key=&lt;tu_clave&gt;</code>.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- UNLOCKED / DASHBOARD VIEW ---
   return (
     <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 1rem" }}>
       {/* Header Bar */}
@@ -91,7 +265,7 @@ export function AdminOperationsDashboard() {
                 fontWeight: 600,
               }}
             >
-              LIVE SUPERVISOR
+              AUTHENTICATED
             </span>
           </div>
           <p style={{ color: "#94a3b8", fontSize: "0.9rem", margin: "0.4rem 0 0 0" }}>
@@ -99,28 +273,42 @@ export function AdminOperationsDashboard() {
           </p>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
           {lastUpdated && (
             <span style={{ color: "#64748b", fontSize: "0.85rem" }}>
               Último scan: <strong>{lastUpdated}</strong>
             </span>
           )}
           <button
-            onClick={() => void loadData()}
+            onClick={() => void loadData(token)}
             disabled={refreshing}
             style={{
               background: "rgba(255, 255, 255, 0.06)",
               border: "1px solid rgba(255, 255, 255, 0.15)",
               color: "#fff",
-              padding: "0.5rem 1rem",
+              padding: "0.5rem 0.9rem",
               borderRadius: "8px",
               cursor: refreshing ? "not-allowed" : "pointer",
               fontSize: "0.85rem",
               fontWeight: 600,
-              transition: "all 0.2s ease",
             }}
           >
-            {refreshing ? "Actualizando..." : "🔄 Actualizar"}
+            {refreshing ? "Actualizando..." : "🔄 Refrescar"}
+          </button>
+          <button
+            onClick={handleLogout}
+            style={{
+              background: "rgba(239, 68, 68, 0.12)",
+              border: "1px solid rgba(239, 68, 68, 0.3)",
+              color: "#f87171",
+              padding: "0.5rem 0.9rem",
+              borderRadius: "8px",
+              cursor: "pointer",
+              fontSize: "0.85rem",
+              fontWeight: 600,
+            }}
+          >
+            🔒 Cerrar Sesión
           </button>
         </div>
       </div>
@@ -239,7 +427,6 @@ export function AdminOperationsDashboard() {
                 padding: "1.25rem",
                 textDecoration: "none",
                 display: "block",
-                transition: "transform 0.2s ease, border-color 0.2s ease",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.4rem" }}>
