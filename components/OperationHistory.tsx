@@ -54,6 +54,8 @@ export function HistoryResult({ value, label }: { value: unknown; label: string 
 }
 
 import { Navbar } from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Footer } from "@/components/Footer";
 
 export function OperationHistory() {
   const [locale, setLocale] = useState<Locale>("es");
@@ -188,6 +190,46 @@ export function OperationHistory() {
       <Navbar />
 
       <main className="operation-history shell" lang={locale} style={{ flex: 1, paddingBottom: "4rem" }}>
+        <Breadcrumbs
+          items={[{ label: "Mi Historial Privado" }]}
+          backHref="/catalogo"
+          backLabel="← Volver al Catálogo"
+          actions={
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Link
+                href="/history/review"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(112, 87, 232, 0.2)",
+                  border: "1px solid rgba(112, 87, 232, 0.4)",
+                  color: "#c4b5fd",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                👁️ Ver Demo de Entregables
+              </Link>
+              <Link
+                href="/agent-chat"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(54, 185, 144, 0.2)",
+                  border: "1px solid rgba(54, 185, 144, 0.4)",
+                  color: "#6ee7b7",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                💬 Agent Chat
+              </Link>
+            </div>
+          }
+        />
+
         <header style={{ marginTop: "1rem", marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
             <span className="kicker" style={{ margin: 0 }}>
@@ -471,10 +513,6 @@ export function OperationHistory() {
                         </a>
                       )}
                     </section>
-                    <section>
-                      <h3 style={{ fontSize: "0.95rem", color: "#f8fafc", margin: "0 0 6px 0" }}>{c.delivery}</h3>
-                      <strong style={{ color: "#38bdf8", fontSize: "0.85rem" }}>{c.statuses[entry.delivery.status]}</strong>
-                      {entry.delivery.result !== undefined ? <HistoryResult value={entry.delivery.result} label={c.result} /> : <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>{c.absent}</p>}
                     </section>
                   </div>
                 </article>
@@ -483,6 +521,8 @@ export function OperationHistory() {
           </details>
         )}
       </main>
+
+      <Footer />
     </div>
   );
 }

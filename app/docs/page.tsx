@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Footer } from "@/components/Footer";
 import { DocsCodeTabs } from "@/components/DocsCodeTabs";
 import "@/app/docs.css";
 
@@ -16,6 +18,50 @@ export default function DocsPage() {
       </div>
 
       <Navbar />
+
+      <div className="docs-shell" style={{ marginTop: "1rem" }}>
+        <Breadcrumbs
+          items={[{ label: "Documentación & SDKs" }]}
+          backHref="/catalogo"
+          backLabel="← Volver al Catálogo"
+          actions={
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Link
+                href="/publish"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(54, 185, 144, 0.2)",
+                  border: "1px solid rgba(54, 185, 144, 0.4)",
+                  color: "#6ee7b7",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                🚀 Publicar Skill
+              </Link>
+              <a
+                href="/llms.txt"
+                target="_blank"
+                rel="noreferrer"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(112, 87, 232, 0.2)",
+                  border: "1px solid rgba(112, 87, 232, 0.4)",
+                  color: "#c4b5fd",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                📄 llms.txt ↗
+              </a>
+            </div>
+          }
+        />
+      </div>
 
       <header className="docs-shell docs-hero">
         <span className="kicker">DEVELOPER HUB & AGENT KIT</span>
@@ -86,7 +132,7 @@ export default function DocsPage() {
         </div>
       </section>
 
-      <section className="docs-shell docs-section">
+      <section className="docs-shell docs-section" style={{ marginBottom: "4rem" }}>
         <h2>📡 Endpoints Machine-Readable de Stellar Bazaar</h2>
         <p className="subtitle">
           Especificaciones estructuradas para descubrimiento algorítmico e inspección de capacidades.
@@ -133,6 +179,8 @@ export default function DocsPage() {
           </tbody>
         </table>
       </section>
+
+      <Footer />
     </main>
   );
 }

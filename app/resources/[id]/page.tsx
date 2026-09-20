@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Footer } from "@/components/Footer";
 import { PaymentDemo } from "@/components/PaymentDemo";
 import { TestnetPaymentDemo } from "@/components/TestnetPaymentDemo";
 import { getService, services } from "@/lib/catalog";
@@ -20,7 +22,53 @@ export default async function ResourcePage({ params }: { params: Promise<{ id: s
         ⚡ <strong>PAGO x402 EXACT EN VIVO</strong> · STELLAR TESTNET · LIQUIDACIÓN DIRECTA EN USDC · ENTREGABLES VERIFICADOS
       </div>
       <Navbar />
-      <div className="detail shell">
+
+      <div className="shell" style={{ marginTop: "1rem" }}>
+        <Breadcrumbs
+          items={[
+            { label: "Catálogo", href: "/catalogo" },
+            { label: service.name },
+          ]}
+          backHref="/catalogo"
+          backLabel="← Volver al Catálogo"
+          actions={
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Link
+                href="/agent-chat"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(112, 87, 232, 0.2)",
+                  border: "1px solid rgba(112, 87, 232, 0.4)",
+                  color: "#c4b5fd",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                💬 Probar en Chat
+              </Link>
+              <Link
+                href="/history"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(255, 255, 255, 0.06)",
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  color: "#cbd5e1",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                🔒 Ver Historial
+              </Link>
+            </div>
+          }
+        />
+      </div>
+
+      <div className="detail shell" style={{ marginBottom: "4rem" }}>
         <section className="resource-info">
           <div className="detail-title">
             <span className={`service-icon ${service.accent}`}>{service.kind === "mcp" ? "M" : "↗"}</span>
@@ -74,6 +122,8 @@ export default async function ResourcePage({ params }: { params: Promise<{ id: s
           {service.id === "swap-risk-quote" && <TestnetPaymentDemo />}
         </div>
       </div>
+
+      <Footer />
     </main>
   );
 }

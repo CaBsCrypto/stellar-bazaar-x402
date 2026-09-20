@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Catalog } from "@/components/Catalog";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Footer } from "@/components/Footer";
 
 export default function CatalogoPage() {
   return (
@@ -11,8 +13,48 @@ export default function CatalogoPage() {
 
       <Navbar />
 
-      <div className="shell" style={{ marginTop: "2rem", marginBottom: "4rem" }}>
-        <div className="section-heading" style={{ marginBottom: "2rem" }}>
+      <div className="shell" style={{ marginTop: "1.5rem", marginBottom: "4rem" }}>
+        <Breadcrumbs
+          items={[{ label: "Catálogo de Servicios" }]}
+          backHref="/"
+          backLabel="← Inicio"
+          actions={
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Link
+                href="/agent-chat"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(112, 87, 232, 0.2)",
+                  border: "1px solid rgba(112, 87, 232, 0.4)",
+                  color: "#c4b5fd",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                💬 Probar en Chat
+              </Link>
+              <Link
+                href="/publish"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(54, 185, 144, 0.2)",
+                  border: "1px solid rgba(54, 185, 144, 0.4)",
+                  color: "#6ee7b7",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                🚀 Publicar Skill
+              </Link>
+            </div>
+          }
+        />
+
+        <div className="section-heading" style={{ marginBottom: "1.5rem" }}>
           <div>
             <span className="kicker">EXPLORADOR DE APIS Y ORÁCULOS</span>
             <h1 style={{ fontSize: "2.2rem", fontWeight: 700, margin: "0.4rem 0" }}>Catálogo Completo de Servicios</h1>
@@ -25,14 +67,7 @@ export default function CatalogoPage() {
         <Catalog />
       </div>
 
-      <footer className="shell" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)", paddingTop: "2rem", paddingBottom: "3rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-          <div className="brand"><span>✦</span> Stellar Bazaar <sup>x402</sup></div>
-          <p style={{ margin: 0, color: "#64748b", fontSize: "0.85rem" }}>
-            Stellar Agentic Infrastructure · Discovery Layer & x402 Micropayments
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </main>
   );
 }

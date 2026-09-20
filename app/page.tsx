@@ -4,6 +4,7 @@ import { Catalog } from "@/components/Catalog";
 import { AgentDirectConnectCard } from "@/components/AgentDirectConnectCard";
 import { WorkflowShowcase } from "@/components/WorkflowShowcase";
 import { LandingClientWrapper } from "@/components/LandingClientWrapper";
+import { Footer } from "@/components/Footer";
 
 export default function Home() {
   return (
@@ -91,14 +92,7 @@ export default function Home() {
         </div>
       </section>
 
-      <footer className="shell" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)", paddingTop: "2rem", paddingBottom: "3rem" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "1rem" }}>
-          <div className="brand"><span>✦</span> Stellar Bazaar <sup>x402</sup></div>
-          <p style={{ margin: 0, color: "#64748b", fontSize: "0.85rem" }}>
-            Stellar Agentic Infrastructure · Discovery Layer & x402 Micropayments
-          </p>
-        </div>
-      </footer>
+      <Footer />
     </main>
   );
 }

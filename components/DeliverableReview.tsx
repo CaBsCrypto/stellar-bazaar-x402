@@ -24,7 +24,10 @@ const icons = {
   report: "≡",
   other: "↓",
 };
+import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Footer } from "@/components/Footer";
 
 export function DeliverableReview() {
   const [selected, setSelected] = useState(0),
@@ -56,8 +59,36 @@ export function DeliverableReview() {
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <Navbar />
-      <main className="delivery-library shell" style={{ flex: 1 }}>
-        <header className="library-header" style={{ paddingTop: "1rem" }}>
+      <main className="delivery-library shell" style={{ flex: 1, paddingBottom: "4rem" }}>
+        <Breadcrumbs
+          items={[
+            { label: "Historial", href: "/history" },
+            { label: "Demo de Entregables" },
+          ]}
+          backHref="/history"
+          backLabel="← Volver a Mi Historial"
+          actions={
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Link
+                href="/catalogo"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(112, 87, 232, 0.2)",
+                  border: "1px solid rgba(112, 87, 232, 0.4)",
+                  color: "#c4b5fd",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                📂 Explorar Catálogo
+              </Link>
+            </div>
+          }
+        />
+
+        <header className="library-header" style={{ paddingTop: "0.5rem" }}>
         <p className="library-eyebrow">TU AGENTE CREA. TÚ EXPLORAS.</p>
         <h1>
           Tu biblioteca de entregas<span>.</span>
@@ -124,6 +155,7 @@ export function DeliverableReview() {
         />
       </div>
     </main>
+    <Footer />
   </div>
   );
 }

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { Navbar } from "@/components/Navbar";
+import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { Footer } from "@/components/Footer";
 import { WebMCPPlayground } from "@/components/WebMCPPlayground";
 
 export const metadata: Metadata = {
@@ -15,15 +17,49 @@ export default function WebMCPPlaygroundPage() {
         WEBMCP INTERFACE · BROWSER AGENT RUNTIME · MODEL CONTEXT PROTOCOL · CLIENT ADAPTER
       </div>
       <Navbar />
-      <div className="shell">
+      <div className="shell" style={{ marginTop: "1rem", marginBottom: "4rem" }}>
+        <Breadcrumbs
+          items={[{ label: "WebMCP Playground" }]}
+          backHref="/catalogo"
+          backLabel="← Volver al Catálogo"
+          actions={
+            <div style={{ display: "flex", gap: "8px" }}>
+              <Link
+                href="/agent-chat"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(112, 87, 232, 0.2)",
+                  border: "1px solid rgba(112, 87, 232, 0.4)",
+                  color: "#c4b5fd",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                💬 Agent Chat Live
+              </Link>
+              <Link
+                href="/docs"
+                style={{
+                  fontSize: "0.8rem",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
+                  background: "rgba(56, 189, 248, 0.2)",
+                  border: "1px solid rgba(56, 189, 248, 0.4)",
+                  color: "#38bdf8",
+                  textDecoration: "none",
+                  fontWeight: 600,
+                }}
+              >
+                📚 Docs de Integración
+              </Link>
+            </div>
+          }
+        />
         <WebMCPPlayground />
       </div>
-      <footer className="shell">
-        <div className="brand">
-          <span>✦</span> Stellar Bazaar x402
-        </div>
-        <p>WebMCP Client Adapter · Standards-compliant Model Context Protocol · Zero-Knowledge</p>
-      </footer>
+      <Footer />
     </main>
   );
 }
