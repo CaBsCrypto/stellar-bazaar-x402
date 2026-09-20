@@ -117,10 +117,12 @@ function useFile(
     if (file && available)
       access(file, false, controller.signal)
         .then((result) => {
-          if (active) setUrl(result.url);
+          if (active && !controller.signal.aborted) setUrl(result.url);
         })
-        .catch(() => {
-          if (active) setError(true);
+        .catch((err) => {
+          if (active && !controller.signal.aborted && !(err instanceof DOMException && err.name === "AbortError")) {
+            setError(true);
+          }
         });
     return () => {
       active = false;
@@ -249,15 +251,15 @@ function VideoFile({
         controls
         playsInline
         preload="metadata"
-        crossOrigin="anonymous"
         onError={() => {
           position.current = video.current?.currentTime ?? 0;
           media.renew();
         }}
         onLoadedMetadata={() => {
           media.loaded();
-          if (video.current && position.current)
+          if (video.current && position.current) {
             video.current.currentTime = position.current;
+          }
         }}
       >
         {subtitles.url && (
@@ -707,7 +709,7 @@ export function PurchaseWorkspace({
           <span>{record.service.provider}</span>
           <span>·</span>
           <time dateTime={record.recordedAt}>
-            {new Date(record.recordedAt).toLocaleDateString()}
+            {record.recordedAt.slice(0, 10)}
           </time>
           {manifest && (
             <span className="version-badge">{manifest.versionLabel}</span>

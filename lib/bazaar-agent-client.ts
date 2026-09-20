@@ -125,6 +125,16 @@ export class BazaarAgentClient {
     return { status: this.activityFailed ? "failed" : this.history?.taskId ? "recorded" : "disabled" };
   }
 
+  /**
+   * Generates a personalized magic-link for the human to view their private history and deliverables.
+   * Format: https://bazaar-origin/history#token=bz_read_...
+   */
+  getHumanHistoryLink(customBaseUrl?: string): string | null {
+    if (!this.history?.readToken) return null;
+    const base = (customBaseUrl ?? this.baseUrl).replace(/\/$/, "");
+    return `${base}/history#token=${encodeURIComponent(this.history.readToken.trim())}`;
+  }
+
   private baseUrl: string;
   private payerSecretKey?: string;
   private maxPriceAllowedUsdc: number;
