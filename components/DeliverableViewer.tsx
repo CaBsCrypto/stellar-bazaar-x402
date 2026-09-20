@@ -249,15 +249,15 @@ function VideoFile({
         controls
         playsInline
         preload="metadata"
-        crossOrigin="anonymous"
         onError={() => {
           position.current = video.current?.currentTime ?? 0;
           media.renew();
         }}
         onLoadedMetadata={() => {
           media.loaded();
-          if (video.current && position.current)
+          if (video.current && position.current) {
             video.current.currentTime = position.current;
+          }
         }}
       >
         {subtitles.url && (
