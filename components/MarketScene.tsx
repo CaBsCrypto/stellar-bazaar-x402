@@ -59,19 +59,19 @@ export default function MarketScene(props:Props){
   const visitorParcel=parcel.clone(true);scene.add(visitorParcel);visitorParcel.traverse(object=>{if(object instanceof T.Mesh){object.material=(object.material as T.MeshStandardMaterial).clone();}});(visitorParcel.children[0] as T.Mesh<T.BoxGeometry,T.MeshStandardMaterial>).material.color.set("#97c8af");
   let visitorState=createVisitor(),lastAmbient=props.ambient;
   let frame=0,disposed=false,lost=false,mobile=false;
-  function resize(){const width=element.clientWidth,height=element.clientHeight;mobile=window.innerWidth<700;renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1.5:2));renderer.setSize(width,height);const span=mobile?3.8:6.1;camera.left=-span;camera.right=span;camera.top=span*height/width;camera.bottom=-camera.top;camera.position.set(mobile?4:8,mobile?4.8:8,mobile?6:10);camera.lookAt(0,.65,mobile?.65:1);camera.updateProjectionMatrix();wake.current();}
+  function resize(){const width=element.clientWidth,height=element.clientHeight;mobile=window.innerWidth<700;renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1.5:2));renderer.setSize(width,height);const span=mobile?Math.max(6.1,4.4*width/height):6.1;camera.left=-span;camera.right=span;camera.top=span*height/width;camera.bottom=-camera.top;camera.position.set(8,8,10);camera.lookAt(0,.65,1);camera.updateProjectionMatrix();wake.current();}
   // Distance-weighted interpolation keeps walking speed constant through the aisle.
   function walk(points:T.Vector3[],progress:number){const lengths=points.slice(1).map((point,i)=>point.distanceTo(points[i]));let distance=lengths.reduce((sum,value)=>sum+value,0)*Math.max(0,Math.min(1,progress));for(let i=0;i<lengths.length;i++){if(distance<=lengths[i]||i===lengths.length-1){const direction=points[i+1].clone().sub(points[i]);return{position:points[i].clone().lerp(points[i+1],lengths[i]?distance/lengths[i]:0),heading:Math.atan2(direction.x,direction.z)};}distance-=lengths[i];}return{position:points[0],heading:0};}
   function draw(){frame=0;if(disposed||lost)return;const p=latest.current,t=p.elapsed,collect=t>=6&&t<8,result=t>=11,walking=t>=3&&t<6||t>=8&&t<11;
-   const stallX=mobile?.45:positions[p.selected][0],stallZ=mobile?-.9:positions[p.selected][1];
-   booths.forEach(({group,glow},i)=>{group.visible=!mobile||i===p.selected;group.position.set(mobile?.45:positions[i][0],0,mobile?-.9:positions[i][1]);glow.visible=i===p.selected;glow.material.opacity=collect?.7+.3*Math.sin((t-6)*Math.PI):1;glow.material.transparent=true;});
-   platform.scale.set(mobile?.59:1,1,mobile?.56:1);platformTop.scale.copy(platform.scale);platform.position.z=mobile?.55:1;platformTop.position.z=platform.position.z;
-   desk.position.set(mobile?-.8:-1.15,0,mobile?1.65:3.95);desk.scale.setScalar(mobile?.83:1);
+   const stallX=positions[p.selected][0],stallZ=positions[p.selected][1];
+   booths.forEach(({group,glow},i)=>{group.visible=true;group.position.set(positions[i][0],0,positions[i][1]);glow.visible=i===p.selected;glow.material.opacity=collect?.7+.3*Math.sin((t-6)*Math.PI):1;glow.material.transparent=true;});
+
+   desk.position.set(-1.15,0,3.95);
    human.group.position.set(desk.position.x,.06,desk.position.z+.6);human.group.rotation.y=Math.PI;chair.position.set(desk.position.x,0,desk.position.z+.63);
    human.arms.forEach((arm,i)=>arm.rotation.x=-.85+(result&&!p.reduced?Math.sin(Math.min(1,(t-11)/1.2)*Math.PI)*.4:0));
    screenSamples.forEach((sample,i)=>sample.visible=result&&i===p.selected);requestDots.visible=!result;
-   const origin=new T.Vector3(mobile?.55:.3,0,mobile?1.8:3.95),destination=new T.Vector3(stallX,0,stallZ+1.17);
-   const route=mobile?[origin,new T.Vector3(.8,0,1),destination]:[origin,new T.Vector3(0,0,3.12),new T.Vector3(0,0,stallZ+1.17),destination];
+   const origin=new T.Vector3(.3,0,3.95),destination=new T.Vector3(stallX,0,stallZ+1.17);
+   const route=[origin,new T.Vector3(0,0,3.12),new T.Vector3(0,0,stallZ+1.17),destination];
    const fraction=t<3?0:t<6?(t-3)/3:t<8?1:t<11?1-(t-8)/3:0;
    const pose=walk(route,fraction);robot.group.position.copy(pose.position);robot.group.rotation.y=walking?pose.heading+(t>=8?Math.PI:0):result||t<3?-Math.PI/2:Math.PI;
    robot.legs.forEach((leg,i)=>leg.rotation.x=walking&&!p.reduced?Math.sin(t*10+i*Math.PI)*.4:0);
@@ -82,16 +82,19 @@ export default function MarketScene(props:Props){
    else if(result){parcel.position.lerpVectors(carry,new T.Vector3(desk.position.x,1.2,desk.position.z),Math.min(1,(t-11)/.5));}
    else parcel.position.copy(carry);
    const delta=Math.max(0,p.ambient-lastAmbient);lastAmbient=p.ambient;
-   if(!mobile&&!p.reduced)visitorState=advanceVisitor(visitorState,delta,p.selected,t);
-   visitor.group.visible=!mobile;visitor.group.position.set(visitorState.x,0,visitorState.z);visitor.group.rotation.y=visitorState.heading;
+   if(!p.reduced)visitorState=advanceVisitor(visitorState,delta,p.selected,t);
+   visitor.group.visible=true;visitor.group.position.set(visitorState.x,0,visitorState.z);visitor.group.rotation.y=visitorState.heading;
    const visitorWalking=["travel","approach","exit"].includes(visitorState.phase);
    visitor.legs.forEach((leg,i)=>leg.rotation.x=!p.reduced&&visitorWalking?Math.sin(p.ambient*9+i*Math.PI)*.35:0);
    visitor.arms.forEach((arm,i)=>arm.rotation.x=!p.reduced&&visitorWalking?Math.sin(p.ambient*9+i*Math.PI)*-.25:visitorState.phase==="collect"?-.6:0);
-   visitorParcel.visible=!mobile&&(visitorState.carrying||visitorState.phase==="collect");
+   visitorParcel.visible=(visitorState.carrying||visitorState.phase==="collect");
    const visitorCarry=new T.Vector3(visitorState.x,.67,visitorState.z+.23);
    if(visitorState.phase==="collect")visitorParcel.position.lerpVectors(new T.Vector3(2.8,1.2,visitorState.z-.37),visitorCarry,Math.min(1,visitorState.elapsed/.8));else visitorParcel.position.copy(visitorCarry);
    renderer.render(scene,camera);
-   const buttons=element.parentElement?.querySelectorAll<HTMLElement>(".market-booth");buttons?.forEach((button,i)=>{const point=new T.Vector3(mobile?.45:positions[i][0],2.5,mobile?-.9:positions[i][1]).project(camera);button.style.setProperty("--label-x",`${(point.x+1)*50}%`);button.style.setProperty("--label-y",`${(1-point.y)*50}%`);});
+   const buttons=element.parentElement?.querySelectorAll<HTMLElement>(".market-booth");
+   const anchors=positions.map(([x,z])=>new T.Vector3(x,2.5,z).project(camera));
+   const middleY=((1-anchors[1].y)+(1-anchors[2].y))*element.clientHeight/4;
+   buttons?.forEach((button,i)=>{const point=anchors[i];const halfWidth=button.offsetWidth/2;const x=mobile?Math.max(halfWidth+4,Math.min(element.clientWidth-halfWidth-4,(point.x+1)*element.clientWidth/2)):(point.x+1)*element.clientWidth/2;const y=mobile?middleY+(i===0?-52:i===3?52:0):(1-point.y)*element.clientHeight/2;button.style.setProperty("--label-x",`${x}px`);button.style.setProperty("--label-y",`${y}px`);});
   }
   // Render on shared-clock updates only: there is no independent animation loop.
   wake.current=()=>{if(!disposed&&!lost&&!frame)frame=requestAnimationFrame(draw);};
