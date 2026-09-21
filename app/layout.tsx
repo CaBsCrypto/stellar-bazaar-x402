@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { WebMCPProvider } from "@/components/WebMCPProvider";
+import "@/styles/tokens.css";
 import "./globals.css";
 import "./reference.css";
 import "./product.css";
@@ -12,6 +13,7 @@ import "./payment-flow.css";
 import "./payment-receipt.css";
 import "./buyer-execution.css";
 import "./buyer-execution-additions.css";
+import "@/styles/ui.css";
 
 export const metadata: Metadata = {
   title: "Stellar Bazaar x402 — Marketplace de Servicios de IA para Agentes Autónomos",

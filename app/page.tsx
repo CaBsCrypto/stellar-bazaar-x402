@@ -1,98 +1,10 @@
-import Link from "next/link";
-import { Navbar } from "@/components/Navbar";
-import { Catalog } from "@/components/Catalog";
-import { AgentDirectConnectCard } from "@/components/AgentDirectConnectCard";
-import { WorkflowShowcase } from "@/components/WorkflowShowcase";
-import { LandingClientWrapper } from "@/components/LandingClientWrapper";
-import { Footer } from "@/components/Footer";
-
-export default function Home() {
-  return (
-    <main>
-      <div className="mock-banner">
-        ⚡ <strong>W3C WebMCP & x402 EN VIVO</strong> · STELLAR TESTNET · LIQUIDACIÓN DIRECTA EN USDC · <Link href="/publish">Publicar un Servicio de IA →</Link>
-      </div>
-
-      <Navbar />
-
-      <header className="hero shell" style={{ paddingBottom: "1.5rem" }}>
-        <div className="hero-copy">
-          <span className="kicker">STELLAR AGENTIC DISCOVERY & x402 PAYMENTS</span>
-          <h1>Marketplace de Servicios de IA para Agentes Autónomos.</h1>
-          <p>
-            Descubre, invoca y monetiza APIs mediante <strong>W3C WebMCP</strong> y pagos <strong>x402 en USDC sobre Stellar</strong>.
-          </p>
-          <LandingClientWrapper>
-            <div className="trust-line">
-              <span>🤖 Tools WebMCP & APIs</span>
-              <span>⚡ Pagos x402 USDC</span>
-              <span>🛡️ Stellar Testnet</span>
-            </div>
-          </LandingClientWrapper>
-        </div>
-        <div className="orbital" aria-label="Flujo conceptual de discovery">
-          <div className="orbit orbit-one"><span>WebMCP</span></div>
-          <div className="orbit orbit-two"><span>x402</span></div>
-          <div className="core"><small>STELLAR</small><strong>✦</strong><span>BAZAAR</span></div>
-          <div className="floating quote">CONEXIÓN DE AGENTES<br /><b>MCP + WebMCP</b></div>
-          <div className="floating settle">USDC TESTNET<br /><b>RED DE PRUEBAS</b></div>
-        </div>
-      </header>
-
-      <div id="conectar-agente">
-        <AgentDirectConnectCard />
-      </div>
-
-      <section className="shell" id="catalogo" style={{ marginTop: "1rem" }}>
-        <div className="section-heading" style={{ marginBottom: "1.5rem" }}>
-          <div>
-            <span className="kicker">MARKETPLACE INDEX</span>
-            <h2>Servicios y Oráculos Listados</h2>
-          </div>
-          <p>Servicios listados para explorar con tu agente. Revisa sus condiciones antes de ejecutar una compra.</p>
-        </div>
-        <Catalog />
-      </section>
-
-      <WorkflowShowcase />
-
-      <section className="shell" style={{ margin: "4rem auto 2rem auto" }}>
-        <div
-          style={{
-            background: "linear-gradient(135deg, rgba(20, 24, 38, 0.6) 0%, rgba(13, 15, 23, 0.8) 100%)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
-            borderRadius: "16px",
-            padding: "2.5rem 2rem",
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
-            gap: "2rem",
-          }}
-        >
-          <div>
-            <span style={{ color: "#36b990", fontWeight: 700, fontSize: "1.1rem" }}>01. Descubre</span>
-            <h3 style={{ margin: "0.4rem 0 0.6rem 0", fontSize: "1.2rem" }}>Por MCP o Web</h3>
-            <p style={{ color: "#94a3b8", fontSize: "0.9rem", lineHeight: 1.5, margin: 0 }}>
-              Tu agente consulta el servidor MCP y obtiene schemas de inputs, outputs y precios en USDC.
-            </p>
-          </div>
-          <div>
-            <span style={{ color: "#7057e8", fontWeight: 700, fontSize: "1.1rem" }}>02. Paga con x402</span>
-            <h3 style={{ margin: "0.4rem 0 0.6rem 0", fontSize: "1.2rem" }}>Sin Fricción ni Custodia</h3>
-            <p style={{ color: "#94a3b8", fontSize: "0.9rem", lineHeight: 1.5, margin: 0 }}>
-              El agente solicita el servicio y valida las condiciones antes de pagar en USDC de Stellar Testnet.
-            </p>
-          </div>
-          <div>
-            <span style={{ color: "#38bdf8", fontWeight: 700, fontSize: "1.1rem" }}>03. Consulta tu entrega</span>
-            <h3 style={{ margin: "0.4rem 0 0.6rem 0", fontSize: "1.2rem" }}>Resultado y actividad</h3>
-            <p style={{ color: "#94a3b8", fontSize: "0.9rem", lineHeight: 1.5, margin: 0 }}>
-              Consulta el contenido conservado y el estado del pago por separado en tu biblioteca privada.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <Footer />
-    </main>
-  );
-}
+import {Navbar} from "@/components/Navbar";
+import {Footer} from "@/components/Footer";
+import {Catalog} from "@/components/Catalog";
+import {AgentDirectConnectCard} from "@/components/AgentDirectConnectCard";
+import {WorkflowShowcase} from "@/components/WorkflowShowcase";
+import {ButtonLink, Card, PageShell, Pill, SectionHeading} from "@/components/ui";
+export default function Home() { return <main><Navbar />
+ <header className="shell ui-hero"><div><Pill tone="info">Marketplace para agentes · Stellar Testnet</Pill><h1>Tu agente encuentra el servicio.<br />Tú exploras el resultado.</h1><p className="ui-lead">Descubre servicios, conecta tu agente y consulta lo que recibiste en una biblioteca privada.</p><div className="ui-actions"><ButtonLink href="/#conectar-agente">Conectar mi agente</ButtonLink><ButtonLink href="/catalogo" variant="secondary">Explorar servicios</ButtonLink><ButtonLink href="/publish" variant="quiet">Publicar un servicio →</ButtonLink></div><p className="ui-muted">Pagos en USDC de Testnet. Revisa las condiciones antes de cada compra.</p></div><aside className="ui-hero-aside" aria-label="Cómo funciona"><span className="kicker">DE LA INTENCIÓN AL RESULTADO</span><ol><li><strong>Encuentra un servicio</strong><small>Consulta sus inputs, precio y proveedor.</small></li><li><strong>Conecta tu agente</strong><small>Tu agente comprueba las condiciones del servicio.</small></li><li><strong>Explora tu entrega</strong><small>Resultado, actividad y pago en una misma vista privada.</small></li></ol></aside></header>
+ <div id="conectar-agente"><AgentDirectConnectCard /></div>
+ <PageShell><Catalog /><section className="ui-how"><SectionHeading title="Un lugar para cada paso" /><div className="ui-grid"><Card><Pill>01 · Explorar</Pill><h3>Elige con contexto</h3><p className="ui-muted">Compara las condiciones declaradas del servicio. El catálogo no certifica una compra ni garantiza disponibilidad.</p></Card><Card><Pill>02 · Solicitar</Pill><h3>Instrucciones para tu agente</h3><p className="ui-muted">Conecta por MCP y conserva tus decisiones en el chat. Comprueba precio y red antes de pagar.</p></Card><Card><Pill>03 · Consultar</Pill><h3>Tu biblioteca privada</h3><p className="ui-muted">Abre el contenido conservado y consulta por separado el estado del pago y de la entrega.</p><ButtonLink href="/history" variant="quiet">Abrir historial →</ButtonLink></Card></div></section></PageShell><WorkflowShowcase /><Footer /></main>; }
