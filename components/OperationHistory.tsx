@@ -57,7 +57,7 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Footer } from "@/components/Footer";
 
-export function OperationHistory() {
+export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {initialAccess?: string; onLocked?: () => void; onExploreDemo?: () => void} = {}) {
   const [locale, setLocale] = useState<Locale>("es");
   const [token, setToken] = useState("");
   const [state, setState] = useState<ViewState>("locked");
@@ -80,7 +80,8 @@ export function OperationHistory() {
     try {
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
       const searchParams = new URLSearchParams(window.location.search);
-      const urlToken = hashParams.get("token") || searchParams.get("token");
+      const urlToken = initialAccess ?? hashParams.get("token") ?? searchParams.get("token");
+      if (initialAccess !== undefined && !/^[a-zA-Z0-9_-]{32,128}$/.test(initialAccess.trim())) setState("unauthorized");
       if (urlToken && /^[a-zA-Z0-9_-]{32,128}$/.test(urlToken.trim())) {
         const clean = urlToken.trim();
         setToken(clean);
@@ -146,8 +147,8 @@ export function OperationHistory() {
   const lock = useCallback(() => {
     generation.current += 1;
     pending.current?.abort();
-    setAgentAccess(false); setToken(""); setEntries([]); setState("locked");
-  }, []);
+    setAgentAccess(false); setToken(""); setEntries([]); setState("locked"); onLocked?.();
+  }, [onLocked]);
 
   async function readHistory() {
     if (!token.trim()) return;
@@ -190,6 +191,7 @@ export function OperationHistory() {
       <Navbar />
 
       <main className="operation-history shell" lang={locale} style={{ flex: 1, paddingBottom: "4rem" }}>
+        {onExploreDemo && ["unauthorized","unavailable","error"].includes(state) && <button onClick={onExploreDemo}>Explorar demostración</button>}
         <Breadcrumbs
           items={[{ label: "Mi Historial Privado" }]}
           backHref="/catalogo"

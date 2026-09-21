@@ -639,8 +639,8 @@ export function DeliverableViewer({
         </p>
       )}
       {!!manifest.files.length && (
-        <section className="delivery-files">
-          <h3>Archivos de la entrega</h3>
+        <details className="delivery-files">
+          <summary>Archivos de la entrega</summary>
           {manifest.files.map((f) => (
             <div className="delivery-file" key={f.id}>
               <span className="file-icon">↓</span>
@@ -659,7 +659,7 @@ export function DeliverableViewer({
               </button>
             </div>
           ))}
-        </section>
+        </details>
       )}
       <p role="status" aria-live="polite">
         {notice}
@@ -670,6 +670,7 @@ export function DeliverableViewer({
 }
 
 export function PurchaseWorkspace({
+  publicExample = false,
   record,
   versions,
   selected,
@@ -680,6 +681,7 @@ export function PurchaseWorkspace({
   legacy,
   notice,
 }: {
+  publicExample?: boolean;
   record: PurchaseRecord;
   versions: SavedDeliverable[];
   selected: number;
@@ -696,18 +698,19 @@ export function PurchaseWorkspace({
     manifest = saved?.manifest;
   return (
     <article className="purchase-workspace">
+      {publicExample && tab !== 0 && <p className="ui-notice">Demostración · actividad simulada, ningún pago realizado ni comprobante real.</p>}
       <header className="delivery-header">
         <div className="delivery-kicker">
           {manifest ? kinds[manifest.content.kind] : "Entrega registrada"}
           <span>·</span>
-          {manifest && <span>{reportOriginal(manifest).mode === "live" ? "Contenido real" : reportOriginal(manifest).mode === "fixture" ? "Datos de prueba" : "Contenido del proveedor"}</span>}
+          {manifest && <span>{publicExample ? "Ejemplo de Bazaar" : reportOriginal(manifest).mode === "live" ? "Contenido real" : reportOriginal(manifest).mode === "fixture" ? "Datos de prueba" : "Contenido del proveedor"}</span>}
           <span>{record.payment.status === "not-requested" ? "Sin pago" : record.mode === "testnet" ? "Pago de prueba · Testnet" : "Pago reportado"}</span>
         </div>
-        <h2>{manifest ? reportTitle(manifest) : record.service.title}</h2>
+        <h2 tabIndex={-1}>{manifest ? reportTitle(manifest) : record.service.title}</h2>
         {manifest?.summary && (
           <p className="delivery-summary">{manifest.summary}</p>
         )}
-        <div className="delivery-meta">
+        <details className="delivery-meta"><summary>Detalles de la entrega</summary>
           <span>{record.service.provider}</span>
           <span>·</span>
           <time dateTime={record.recordedAt}>
@@ -731,7 +734,7 @@ export function PurchaseWorkspace({
               </select>
             </label>
           )}
-        </div>
+        </details>
       </header>
       <RecoveryStatus events={events} record={record} available={!!manifest} />
       <div
@@ -787,6 +790,7 @@ export function PurchaseWorkspace({
             )}
             {saved ? (
               <DeliverableViewer
+                publicExample={publicExample}
                 key={manifest!.versionId}
                 saved={saved}
                 access={access}
