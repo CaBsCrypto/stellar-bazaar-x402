@@ -118,7 +118,7 @@ export default async function ResourcePage({ params }: { params: Promise<{ id: s
           </aside>
         </section>
         <div>
-          {service.id === "swap-risk-quote" ? <PaymentDemo service={service} /> : <aside className="disclaimer"><strong>Servicio listado en Testnet.</strong><p>Esta ficha no ejecuta una compra ni simula un guion. Conecta tu agente para comprobar la disponibilidad, los inputs y las condiciones actuales del proveedor.</p><Link href="/#conectar-agente">Conectar agente</Link></aside>}
+          {service.id === "swap-risk-quote" ? <PaymentDemo service={service} /> : <aside className="disclaimer"><strong>Servicio listado en Testnet.</strong><p>Esta ficha no ejecuta una compra ni simula un guion. Conecta tu agente para comprobar la disponibilidad, los inputs y las condiciones actuales del proveedor.</p><Link href="/hub">Conectar agente</Link></aside>}
           {service.id === "swap-risk-quote" && <TestnetPaymentDemo />}
         </div>
       </div>

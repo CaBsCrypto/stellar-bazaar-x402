@@ -200,7 +200,8 @@ export function WebMCPProvider() {
       JSON.stringify(l.input).toLowerCase().includes(activityFilter.toLowerCase())
   );
 
-  if (pathname === "/history" || pathname?.startsWith("/history/")) return null;
+  // Only the technical console is restricted; registration/effects above remain active on every route.
+  if (pathname !== "/webmcp-playground") return null;
 
   return (
     <>

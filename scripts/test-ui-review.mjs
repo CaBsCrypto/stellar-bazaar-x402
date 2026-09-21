@@ -36,6 +36,13 @@ try {
    await page.goto(`${base}/hub`,{waitUntil:"networkidle"});
    await page.getByRole("tab",{name:"MCP",exact:true}).click();
    await page.getByLabel("Configuración MCP",{exact:true}).waitFor();
+   await page.evaluate(()=>Object.defineProperty(navigator,"clipboard",{configurable:true,value:{writeText:async text=>{window.__qaCopied=text;}}}));
+   await page.getByRole("button",{name:"Copiar configuración mcp",exact:true}).click();
+   assert.match(await page.evaluate(()=>window.__qaCopied),/mcpServers/);
+   await page.evaluate(()=>Object.defineProperty(navigator,"clipboard",{configurable:true,value:{writeText:async()=>{throw Error("denied");}}}));
+   await page.getByRole("button",{name:"Copiar configuración mcp",exact:true}).click();
+   await page.getByText("No se pudo copiar. Selecciona el texto y cópialo manualmente.",{exact:true}).waitFor();
+   assert.ok(await page.getByLabel("Configuración MCP",{exact:true}).evaluate(el=>el.selectionEnd>el.selectionStart));
    await page.getByRole("tab",{name:"Publicar",exact:true}).click();
    await page.getByRole("tabpanel").getByRole("link",{name:"Publicar API",exact:false}).waitFor();
    await page.getByRole("tab",{name:"Publicar",exact:true}).press("ArrowLeft");
@@ -45,6 +52,10 @@ try {
    await page.getByRole("heading",{level:1,name:"Laboratorio"}).waitFor();
    await page.screenshot({path:`docs/ui-evidence/lab-${name}.png`,fullPage:true});
   }
+  await page.goto(`${base}/publish`,{waitUntil:"networkidle"});
+  await page.getByLabel("Precio / Price",{exact:true}).fill("-1");
+  assert.equal(await page.getByRole("button",{name:/Solicitar revisión manual/}).isEnabled(),false);
+  assert.equal(await page.locator(".staking-section").count(),0);
   const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);
   assert.equal(overflow,false,`${name}: horizontal overflow`);
   await context.close();

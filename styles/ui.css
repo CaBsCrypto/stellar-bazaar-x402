@@ -74,3 +74,10 @@ body { font-family: var(--font-ui); }
 
 .ui-breadcrumbs {display:flex; flex-wrap:wrap; justify-content:space-between; gap:var(--space-4); padding-block:var(--space-4); border-bottom:1px solid var(--line); margin-bottom:var(--space-6); color:var(--muted); font-size:var(--text-sm);}
 .ui-breadcrumbs a {color:var(--violet);}
+
+.ui-tabs {display:flex;gap:var(--space-2);margin-block:var(--space-6);border-bottom:1px solid var(--line);padding-bottom:var(--space-2);}
+.ui-tabs button {border:0;min-height:44px;padding:var(--space-3) var(--space-6);font:600 var(--text-base)/1.4 var(--font-ui);background:transparent;color:var(--muted);border-radius:var(--radius-sm);cursor:pointer;}
+.ui-tabs button[aria-selected=true] {color:var(--violet);background:var(--surface-violet);}
+.ui-copy-label {display:grid;gap:var(--space-3);font-weight:600;margin-top:var(--space-6);}
+.ui-copy textarea {resize:vertical;width:100%;max-width:100%;min-height:220px;padding:var(--space-4);border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink);font:400 var(--text-sm)/1.6 var(--font-mono);}
+@media(max-width:700px){.ui-tabs button{flex:1;padding-inline:var(--space-2);} }
