@@ -6,7 +6,7 @@ import { services } from "@/lib/catalog";
 import { filterServices, rankServices } from "@/lib/discovery";
 import type { PaymentScheme, ServiceKind } from "@/lib/types";
 
-export function Catalog() {
+export function Catalog({standalone = false}: {standalone?: boolean}) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<"all" | ServiceKind>("all");
   const [scheme, setScheme] = useState<"all" | PaymentScheme>("all");
@@ -68,7 +68,7 @@ export function Catalog() {
   function resetFilters() { setQuery(""); setKind("all"); setScheme("all"); setMaxPrice(""); }
   return <section className="ui-catalog" aria-label="Servicios del mercado">
     {agentToast && <p className="ui-notice" role="status">{agentToast}</p>}
-    <SectionHeading eyebrow="SERVICIOS LISTADOS · STELLAR TESTNET" title="Encuentra lo que tu agente necesita"><p role="status">{results.length} {results.length === 1 ? "resultado" : "resultados"}</p></SectionHeading>
+    <SectionHeading headingLevel={standalone ? 1 : 2} eyebrow="SERVICIOS LISTADOS · STELLAR TESTNET" title="Encuentra lo que tu agente necesita"><p role="status">{results.length} {results.length === 1 ? "resultado" : "resultados"}</p></SectionHeading>
     <div className="ui-chips" aria-label="Filtros rápidos">
       <button type="button" className="ui-chip" onClick={resetFilters} aria-pressed={!query && kind === "all" && scheme === "all" && !maxPrice}>Todos</button>
       <button type="button" className="ui-chip" onClick={() => {setQuery("video");setKind("all");}} aria-pressed={query === "video"}>Guiones de video</button>

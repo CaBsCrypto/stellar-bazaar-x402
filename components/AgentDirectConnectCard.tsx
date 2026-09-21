@@ -12,7 +12,7 @@ type ActiveTab = "buyer" | "seller";
 export function AgentDirectConnectCard({role = "buyer"}: {role?: ActiveTab}) {
   const [buyerFormat, setBuyerFormat] = useState<BuyerFormat>("prompt");
   const [sellerFormat, setSellerFormat] = useState<SellerFormat>("prompt");
-  const [sellerExample, setSellerExample] = useState<SellerExample>("scriptwriter");
+  const [sellerExample, setSellerExample] = useState<SellerExample>("custom");
 
   // Quick MCP Config
   const quickMcpJson = `{
@@ -147,12 +147,12 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
   };
 
   const buyer = role === "buyer";
-  return <section aria-label={buyer?"Conexión del comprador":"Preparación del proveedor"}>
+  return <section className="connect-instructions" aria-label={buyer?"Conexión del comprador":"Preparación del proveedor"}>
    <h2>{buyer?"Prepara las instrucciones para tu agente":"Prepara tu servicio para revisión"}</h2>
-   <p className="ui-muted">{buyer?"Copia una plantilla o la configuración MCP. Conectar permite descubrir herramientas; para ver acciones externas en el historial, tu agente debe integrar su reporte.":"Estas plantillas son ejemplos para desarrollar un proveedor, no servicios ya disponibles. Publicar requiere validación, prueba de control y revisión manual."}</p>
+
    <div className="ui-chips" aria-label="Formato de instrucciones">{buyer ? (["prompt","mcp_json","sdk"] as BuyerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={buyerFormat===fmt} onClick={()=>setBuyerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="mcp_json"?"MCP JSON":"Ejemplo SDK"}</button>):(["prompt","cli","sdk"] as SellerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={sellerFormat===fmt} onClick={()=>setSellerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="cli"?"Bazaar CLI":"Provider Kit"}</button>)}</div>
-   {!buyer && sellerFormat==="prompt" && <div className="ui-actions" aria-label="Ejemplos de proveedor">{(["scriptwriter","auditor","oracle","custom"] as SellerExample[]).map(ex=><button type="button" className="ui-chip" key={ex} aria-pressed={sellerExample===ex} onClick={()=>setSellerExample(ex)}>{ex==="scriptwriter"?"Guiones":ex==="auditor"?"Auditoría":ex==="oracle"?"Oráculo":"Personalizado"}</button>)}</div>}
-   <p className="ui-notice">Copiar no envía mensajes, no publica un servicio ni ejecuta pagos. Revisa la plantilla antes de usarla; los ejemplos SDK requieren el entorno del repositorio.</p>
+   {!buyer && sellerFormat==="prompt" && <div className="ui-actions" aria-label="Ejemplos de proveedor">{(["custom","scriptwriter","auditor","oracle"] as SellerExample[]).map(ex=><button type="button" className="ui-chip" key={ex} aria-pressed={sellerExample===ex} onClick={()=>setSellerExample(ex)}>{ex==="scriptwriter"?"Guiones":ex==="auditor"?"Auditoría":ex==="oracle"?"Oráculo":"Personalizado"}</button>)}</div>}
+   <details className="connect-help"><summary>Cómo usar estas instrucciones</summary><p>{buyer ? "Copia una plantilla o la configuración MCP. Conectar permite descubrir herramientas; para ver acciones externas en el historial, tu agente debe integrar su reporte." : "Estas plantillas son ejemplos para desarrollar un proveedor, no servicios ya disponibles. Publicar requiere validación, prueba de control y revisión manual."}</p><p>Copiar no envía mensajes, no publica un servicio ni ejecuta pagos. Revisa la plantilla antes de usarla; los ejemplos SDK requieren el entorno del repositorio.</p></details>
    <CopyText key={buyer?buyerFormat:sellerFormat+sellerExample} text={buyer?getBuyerText():getSellerText()} label="Instrucciones" />
    <div className="ui-actions">{buyer?<><ButtonLink href="/agent-chat" variant="secondary">Abrir chat existente</ButtonLink><ButtonLink href="/buyer-execution" variant="quiet">Abrir workspace</ButtonLink></>:<ButtonLink href="/publish" variant="secondary">Publicar API</ButtonLink>}</div>
   </section>;

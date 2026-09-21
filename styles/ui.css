@@ -19,7 +19,7 @@ body { font-family: var(--font-ui); }
 .ui-pill--warning { color:var(--amber); background:var(--surface-amber); }
 .ui-pill--info { color:var(--blue); background:var(--surface-blue); }
 .ui-section-heading { display:flex; justify-content:space-between; gap:var(--space-6); align-items:center; margin-bottom:var(--space-6); }
-.ui-section-heading h2 { margin:.4rem 0; font:700 var(--text-title)/1.2 var(--font-ui); }
+.ui-section-heading :is(h1,h2) { margin:.4rem 0; font:700 var(--text-title)/1.2 var(--font-ui); }
 .ui-section-heading .ui-muted { max-width:34rem; }
 .ui-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:var(--space-6); }
 .ui-service-card { display:flex; flex-direction:column; gap:var(--space-3); transition:box-shadow .15s; }
@@ -118,3 +118,21 @@ a.ui-service-card:hover {border-color:var(--violet);}
 a.ui-service-card:focus-visible {outline:3px solid var(--violet);outline-offset:4px;}
 a.ui-service-card .ui-chip {cursor:inherit;}
 a.ui-service-card .ui-detail-link {text-decoration:underline;}
+
+/* Compact connection workspace: keep instructions and copy actions in view. */
+.connect-page {padding-block:20px 32px;}
+.connect-heading {display:flex;align-items:center;gap:32px;margin-bottom:16px;}
+.connect-heading .ui-page-title {flex-shrink:0;font-size:30px;margin:0;}
+.connect-heading .ui-muted {margin:0;max-width:440px;font-size:14px;}
+.connect-page .ui-tabs {margin-block:12px 16px;}
+.connect-page .ui-card {padding:20px 24px;}
+.connect-instructions h2 {margin-bottom:12px;}
+.connect-help {margin-block:12px;color:var(--muted);font-size:13px;line-height:1.6;}
+.connect-help summary {cursor:pointer;color:var(--violet);padding-block:4px;}
+:is(.connect-page,.ui-modal--wide) .ui-copy-label {margin-top:12px;margin-bottom:6px;}
+:is(.connect-page,.ui-modal--wide) .ui-copy textarea {height:clamp(160px,25vh,220px);min-height:160px;}
+:is(.connect-page,.ui-modal--wide) .ui-actions {margin-block:12px;}
+:is(.connect-page,.ui-modal--wide) .ui-copy [role=status]:empty {display:none;}
+@media(max-width:700px){.connect-heading {display:block;}.connect-heading .ui-muted {margin-top:8px;}.connect-heading .ui-page-title {font-size:28px;}.connect-page .ui-card {padding:18px;}}
+
+@media(min-width:701px) and (max-height:800px){.connect-page .ui-copy textarea{height:160px;}.connect-page .ui-card{padding-block:16px;}.connect-page .ui-actions{margin-block:8px;}}
