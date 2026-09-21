@@ -3,7 +3,7 @@
   max-width: 1200px;
   margin: auto;
   padding: clamp(16px, 3vw, 32px);
-  color: #f0f0fa;
+  color: var(--ink);
   min-height: 100vh;
   box-sizing: border-box;
 }
@@ -27,7 +27,7 @@
   align-items: center;
   gap: 8px;
   font-size: 0.85rem;
-  color: #94a3b8;
+  color: var(--muted);
 }
 
 .operation-history header {
@@ -38,7 +38,7 @@
   font-size: clamp(1.8rem, 4vw, 2.8rem);
   line-height: 1.15;
   letter-spacing: -0.02em;
-  color: #f8fafc;
+  color: var(--ink);
 }
 
 .operation-history p {
@@ -47,19 +47,19 @@
 
 .history-access,
 .history-record {
-  border: 1px solid rgba(112, 87, 232, 0.25);
-  background: linear-gradient(135deg, rgba(20, 24, 38, 0.85) 0%, rgba(13, 16, 26, 0.95) 100%);
+  border: 1px solid var(--line);
+  background: var(--white);
   padding: clamp(16px, 2.5vw, 24px);
   border-radius: 16px;
   margin-block: 20px;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow);
 }
 
 .history-access form > label {
   display: block;
   font-weight: 700;
   margin-bottom: 10px;
-  color: #f8fafc;
+  color: var(--ink);
 }
 
 .history-access input {
@@ -84,10 +84,10 @@
 
 .operation-history input,
 .operation-history select {
-  background: rgba(8, 10, 16, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--white);
+  border: 1px solid var(--line);
   border-radius: 10px;
-  color: #ffffff;
+  color: var(--ink);
   padding: 10px 14px;
   font: inherit;
   font-size: 0.9rem;
@@ -96,7 +96,7 @@
 
 .operation-history input:focus,
 .operation-history select:focus {
-  border-color: #7057e8;
+  border-color: var(--line);
   outline: none;
 }
 
@@ -104,9 +104,9 @@
   padding: 10px 18px;
   min-height: 44px;
   border-radius: 10px;
-  border: 1px solid rgba(112, 87, 232, 0.4);
-  background: linear-gradient(135deg, #7057e8 0%, #583ec9 100%);
-  color: #ffffff;
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--ink);
   font: inherit;
   font-weight: 700;
   font-size: 0.88rem;
@@ -130,13 +130,13 @@
 }
 
 .operation-history a {
-  color: #c4b5fd;
+  color: var(--violet);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .history-evidence-note {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.88rem;
 }
 
@@ -147,13 +147,13 @@
 .history-record-heading h2 {
   font-size: 1.25rem;
   margin: 0;
-  color: #f8fafc;
+  color: var(--ink);
 }
 
 .history-badge {
-  background: rgba(112, 87, 232, 0.2);
-  color: #c4b5fd;
-  border: 1px solid rgba(112, 87, 232, 0.4);
+  background: var(--white);
+  color: var(--violet);
+  border: 1px solid var(--line);
   padding: 4px 12px;
   border-radius: 999px;
   font-size: 0.78rem;
@@ -173,14 +173,14 @@
 }
 
 .operation-history dt {
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.85rem;
 }
 
 .operation-history dd {
   margin: 0;
   overflow-wrap: anywhere;
-  color: #e2e8f0;
+  color: var(--ink);
   font-size: 0.88rem;
 }
 
@@ -188,7 +188,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--line);
   padding-top: 16px;
 }
 
@@ -199,7 +199,7 @@
 .history-outcomes summary {
   cursor: pointer;
   padding-block: 12px;
-  color: #c4b5fd;
+  color: var(--violet);
   font-weight: 600;
 }
 
@@ -209,11 +209,11 @@
   max-height: 420px;
   overflow: auto;
   padding: 14px;
-  background: #080a10;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--white);
+  border: 1px solid var(--line);
   border-radius: 10px;
   font-size: 0.82rem;
-  color: #d8b4fe;
+  color: var(--violet);
 }
 
 /* History Filters Bar */
@@ -222,10 +222,10 @@
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
   margin: 20px 0;
-  background: rgba(16, 19, 30, 0.7);
+  background: var(--white);
   padding: 16px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
 }
 
 .history-filters label,
@@ -233,7 +233,7 @@
   display: grid;
   gap: 6px;
   font-size: 0.82rem;
-  color: #94a3b8;
+  color: var(--muted);
   font-weight: 600;
 }
 
@@ -259,48 +259,48 @@
   flex-direction: column;
   gap: 8px;
   text-align: left;
-  background: rgba(16, 19, 30, 0.9);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--white);
+  border: 1px solid var(--line);
   border-radius: 12px;
   padding: 16px;
-  color: #f1f5f9;
+  color: var(--ink);
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: auto;
 }
 
 .task-grid button:hover {
-  border-color: #7057e8;
-  background: rgba(26, 31, 48, 0.95);
+  border-color: var(--line);
+  background: var(--white);
   transform: translateY(-2px);
 }
 
 .task-grid button[aria-pressed="true"] {
   outline: none;
-  border-color: #a78bfa;
-  background: linear-gradient(135deg, rgba(112, 87, 232, 0.3) 0%, rgba(88, 62, 201, 0.2) 100%);
-  box-shadow: 0 0 20px rgba(112, 87, 232, 0.25);
+  border-color: var(--line);
+  background: var(--white);
+  box-shadow: var(--shadow);
 }
 
 .task-grid strong {
   font-size: 0.95rem;
-  color: #ffffff;
+  color: var(--ink);
 }
 
 .task-grid span {
   font-size: 0.82rem;
-  color: #c4b5fd;
+  color: var(--violet);
 }
 
 .task-grid small,
 .activity-timeline small {
   display: block;
-  color: #94a3b8;
+  color: var(--muted);
   font-size: 0.78rem;
 }
 
 .activity-timeline {
-  border-left: 2px solid #7057e8;
+  border-left: 2px solid var(--line);
   padding-left: 20px;
   margin: 16px 0;
   list-style: none;
@@ -319,8 +319,8 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #a78bfa;
-  box-shadow: 0 0 8px #a78bfa;
+  background: var(--white);
+  box-shadow: var(--shadow);
 }
 
 .activity-dashboard pre {
@@ -328,22 +328,22 @@
   max-height: 400px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: #080a10;
+  background: var(--white);
   padding: 14px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--line);
   font-size: 0.82rem;
-  color: #d8b4fe;
+  color: var(--violet);
 }
 
 .activity-dashboard .result-text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: rgba(8, 10, 16, 0.6);
+  background: var(--white);
   padding: 14px;
   border-radius: 10px;
-  border-left: 3px solid #7057e8;
-  color: #e2e8f0;
+  border-left: 3px solid var(--line);
+  color: var(--ink);
 }
 
 .activity-dashboard details {
@@ -352,7 +352,7 @@
 
 .activity-dashboard summary {
   cursor: pointer;
-  color: #c4b5fd;
+  color: var(--violet);
   padding: 8px 0;
   font-weight: 600;
 }
@@ -365,8 +365,8 @@
 }
 
 body:has(.operation-history) {
-  background: #080a10;
-  color: #f0f0fa;
+  background: var(--white);
+  color: var(--ink);
 }
 
 /* Mobile Responsiveness */
@@ -396,3 +396,18 @@ body:has(.operation-history) {
     width: 100%;
   }
 }
+
+body:has(.operation-history) {background:var(--paper);color:var(--ink);}
+.operation-history {max-width:1180px;padding:var(--space-8) 0;min-height:0;}
+.operation-history h1 {font:700 var(--text-title)/1.2 var(--font-ui);}
+.operation-history button {background:var(--surface-violet);color:var(--violet);border-color:var(--line);box-shadow:none;}
+.operation-history button[type=submit] {background:var(--violet);color:var(--white);}
+.operation-history input,.operation-history select {background:var(--white);color:var(--ink);}
+.history-access,.history-record,.history-filters {box-shadow:none;border-radius:var(--radius);}
+.task-grid button[aria-pressed=true] {background:var(--surface-violet);border-color:var(--violet);box-shadow:none;}
+.task-grid button:hover {background:var(--paper);}
+.task-grid strong {color:var(--ink);}
+.history-badge {background:var(--surface-violet);}
+.operation-history .history-actions {position:relative;}
+.operation-history :is(button,input,select,summary,a):focus-visible {outline:3px solid var(--violet);outline-offset:3px;}
+@media(max-width:680px){.operation-history{padding-block:var(--space-6);}.operation-history dl>div{flex-wrap:wrap;}}

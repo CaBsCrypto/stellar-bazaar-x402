@@ -2,7 +2,7 @@
 import {useEffect, useRef, type ReactNode} from "react";
 import {Button} from "./index";
 /** Native modal supplies focus containment, inert background and Escape handling. */
-export function Modal({open, onClose, title, children}: {open: boolean; onClose: () => void; title: string; children: ReactNode}) {
+export function Modal({open, onClose, title, children, wide = false}: {open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean}) {
  const ref = useRef<HTMLDialogElement>(null);
  useEffect(() => {
   const dialog = ref.current;
@@ -12,5 +12,11 @@ export function Modal({open, onClose, title, children}: {open: boolean; onClose:
   dialog.showModal(); document.body.style.overflow = "hidden";
   return () => { dialog.close(); document.body.style.overflow = overflow; previous?.focus(); };
  }, [open]);
- return <dialog ref={ref} className="ui-modal" aria-label={title} onCancel={event => {event.preventDefault(); onClose();}} onClick={event => {if(event.target === ref.current) onClose();}}><div className="ui-modal-content"><header className="ui-section-heading"><h2>{title}</h2><Button variant="quiet" onClick={onClose} aria-label="Cerrar menú">Cerrar ×</Button></header>{children}</div></dialog>;
+ return <dialog ref={ref} className={`ui-modal ${wide ? "ui-modal--wide" : ""}`} aria-label={title} onKeyDown={event => {
+  if(event.key !== "Tab") return;
+  const nodes = Array.from(ref.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]') ?? []).filter(el => el.getClientRects().length > 0);
+  const first = nodes[0], last = nodes[nodes.length - 1];
+  if(event.shiftKey && document.activeElement === first){event.preventDefault(); last?.focus();}
+  else if(!event.shiftKey && document.activeElement === last){event.preventDefault(); first?.focus();}
+ }} onCancel={event => {event.preventDefault(); onClose();}} onClick={event => {if(event.target === ref.current) onClose();}}><div className="ui-modal-content"><header className="ui-section-heading"><h2>{title}</h2><Button variant="quiet" onClick={onClose} aria-label={`Cerrar ${title.toLowerCase()}`}>Cerrar ×</Button></header>{children}</div></dialog>;
 }

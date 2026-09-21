@@ -81,3 +81,33 @@ body { font-family: var(--font-ui); }
 .ui-copy-label {display:grid;gap:var(--space-3);font-weight:600;margin-top:var(--space-6);}
 .ui-copy textarea {resize:vertical;width:100%;max-width:100%;min-height:220px;padding:var(--space-4);border:1px solid var(--line);border-radius:var(--radius-sm);background:var(--paper);color:var(--ink);font:400 var(--text-sm)/1.6 var(--font-mono);}
 @media(max-width:700px){.ui-tabs button{flex:1;padding-inline:var(--space-2);} }
+
+/* Orbit illustration: reuse the original CSS universe, never an activity indicator. */
+.universe {min-width:0; text-align:center;}
+.universe .orbital {width:100%;height:400px;isolation:isolate;}
+.universe .orbital::before {content:"";position:absolute;inset:12%;border-radius:50%;background:radial-gradient(circle,var(--surface-violet),transparent 70%);z-index:-1;}
+.universe .orbit {border-color:var(--line);}
+.universe .orbit-one {width:72%;height:auto;aspect-ratio:1;animation:spin 36s linear infinite;}
+.universe .orbit-two {width:96%;height:54%;animation:spin 48s linear infinite reverse;}
+.universe .orbit span {color:var(--violet);font:700 var(--text-xs)/1.4 var(--font-ui);animation:counter-spin 36s linear infinite;}
+.universe .orbit-two span {animation:spin 48s linear infinite;}
+.universe .core {background:var(--ink);box-shadow:0 20px 70px rgb(99 70 204 / 20%);}
+.universe .core span {color:var(--on-dark);}
+.universe .floating {display:block;color:var(--ink);letter-spacing:.07em;animation:universe-float 7s ease-in-out infinite;max-width:70%;}
+.universe .settle {animation-delay:-3.5s;bottom:25px;left:0;}
+.universe .quote {right:0;top:15px;}
+.universe-caption {font-size:var(--text-xs);line-height:1.6;color:var(--muted);margin:var(--space-6) auto 0;}
+@keyframes counter-spin {to {transform:rotate(-360deg);}}
+@keyframes universe-float {50% {transform:translateY(-8px);}}
+.ui-modal--wide {width:min(920px,calc(100% - 40px));max-height:90dvh;}
+.ui-modal--wide .ui-modal-content {padding:clamp(18px,3vw,32px);}
+.ui-modal--wide .ui-modal-content>header {position:sticky;top:0;background:var(--white);z-index:2;}
+.ui-modal--wide .ui-modal-content>header h2 {font-size:var(--text-lg);}
+.ui-modal--wide .ui-card {border:0;padding:0;}
+.ui-modal--wide .ui-tabs {margin-block:var(--space-3) var(--space-6);}
+.connect-page {max-width:960px;}
+.connect-page>p {max-width:44rem;}
+.connect-page .ui-card h2,.ui-modal--wide .ui-card h2 {font-size:var(--text-lg);margin-top:0;}
+.connect-page .ui-copy textarea,.ui-modal--wide .ui-copy textarea {height:240px;min-height:160px;}
+@media(max-width:700px){.universe {max-width:420px;width:100%;margin-inline:auto;}.universe .orbital{height:340px;}.universe .core{width:112px;height:112px;}.universe .floating{font-size:9px;}.ui-modal--wide{width:100%;max-height:94dvh;}.connect-page{padding-block:var(--space-6);}}
+@media(prefers-reduced-motion:reduce){.universe .orbit,.universe .orbit span,.universe .floating{animation:none;}}

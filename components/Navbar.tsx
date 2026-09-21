@@ -4,7 +4,7 @@ import {useEffect, useState} from "react";
 import {usePathname} from "next/navigation";
 import {Button, Pill} from "@/components/ui";
 import {Modal} from "@/components/ui/Modal";
-const links = [{href:"/catalogo",label:"Mercado"},{href:"/hub",label:"Hub"},{href:"/publish",label:"Publicar"},{href:"/history",label:"Historial"},{href:"/docs",label:"Docs"}];
+const links = [{href:"/catalogo",label:"Mercado"},{href:"/hub",label:"Conectar"},{href:"/publish",label:"Publicar"},{href:"/history",label:"Historial"},{href:"/docs",label:"Docs"}];
 export function Navbar() {
  const pathname=usePathname(); const [open,setOpen]=useState(false);
  useEffect(()=>setOpen(false),[pathname]);

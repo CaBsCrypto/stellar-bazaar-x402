@@ -13,8 +13,28 @@ try {
   const page=await context.newPage(); page.on("pageerror",e=>errors.push(e.message));
   await page.goto(base,{waitUntil:"networkidle"});
   await page.getByRole("heading",{level:1}).waitFor();
-  assert.equal(await page.getByRole("link",{name:"Conectar mi agente",exact:true}).count(),1);
+  assert.equal(await page.getByRole("button",{name:"Conectar mi agente",exact:true}).count(),1);
   await page.screenshot({path:`docs/ui-evidence/${stage}-${name}.png`,fullPage:true});
+  const connect=page.getByRole("button",{name:"Conectar mi agente",exact:true});
+  await connect.click();
+  const dialog=page.getByRole("dialog",{name:"Conectar tu agente",exact:true});
+  await dialog.waitFor();
+  await dialog.getByRole("tab",{name:"MCP",exact:true}).click();
+  await dialog.getByLabel("Configuración MCP",{exact:true}).waitFor();
+  await page.screenshot({path:`docs/ui-evidence/connect-dialog-${name}.png`,fullPage:true});
+  for(let i=0;i<15;i++){await page.keyboard.press("Tab"); assert.ok(await dialog.evaluate(el=>el.contains(document.activeElement)));}
+  await page.keyboard.press("Escape");
+  assert.equal(await connect.evaluate(el=>el===document.activeElement),true);
+  await connect.click();
+  assert.equal(await dialog.getByRole("tab",{name:"Comprar",exact:true}).getAttribute("aria-selected"),"true");
+  await dialog.getByRole("button",{name:"Cerrar conectar tu agente",exact:true}).click();
+  await page.emulateMedia({reducedMotion:"reduce"});
+  assert.equal(await page.locator(".orbit-one").evaluate(el=>getComputedStyle(el).animationName),"none");
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.goto(`${base}/docs`,{waitUntil:"networkidle"});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.screenshot({path:`docs/ui-evidence/docs-${name}.png`,fullPage:true});
+  await page.goto(base,{waitUntil:"networkidle"});
   if(width<700){
    const trigger=page.getByRole("button",{name:"Menú",exact:true}); await trigger.focus(); await trigger.press("Enter");
    assert.equal(await page.getByRole("dialog",{name:"Navegación"}).isVisible(),true);
@@ -32,7 +52,7 @@ try {
   await page.getByRole("link",{name:"Ver condiciones y detalle"}).click();
   await page.getByRole("heading",{level:1,name:"AI Video Scriptwriter & Creative Director"}).waitFor();
   assert.equal(await page.getByRole("button",{name:"Configurar consulta"}).count(),0);
-  if(stage==="hub"){
+  if(stage==="hub" || stage==="universe"){
    await page.goto(`${base}/hub`,{waitUntil:"networkidle"});
    await page.getByRole("tab",{name:"MCP",exact:true}).click();
    await page.getByLabel("Configuración MCP",{exact:true}).waitFor();

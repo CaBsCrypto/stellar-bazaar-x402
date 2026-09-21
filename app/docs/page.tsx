@@ -12,7 +12,7 @@ export const metadata = {
 
 export default function DocsPage() {
   return (
-    <main>
+    <main className="docs-page">
       <div className="mock-banner">
         DEVELOPER HUB · MCP STREAMABLE HTTP READ-ONLY · x402 TESTNET EVIDENCE
       </div>
@@ -34,7 +34,7 @@ export default function DocsPage() {
                   borderRadius: "6px",
                   background: "rgba(54, 185, 144, 0.2)",
                   border: "1px solid rgba(54, 185, 144, 0.4)",
-                  color: "#6ee7b7",
+                  color: "var(--violet)",
                   textDecoration: "none",
                   fontWeight: 600,
                 }}
@@ -51,7 +51,7 @@ export default function DocsPage() {
                   borderRadius: "6px",
                   background: "rgba(112, 87, 232, 0.2)",
                   border: "1px solid rgba(112, 87, 232, 0.4)",
-                  color: "#c4b5fd",
+                  color: "var(--violet)",
                   textDecoration: "none",
                   fontWeight: 600,
                 }}
@@ -76,7 +76,8 @@ export default function DocsPage() {
         </p>
       </header>
 
-      <section className="docs-shell docs-section">
+      <nav className="docs-shell docs-index" aria-label="Índice de documentación"><a href="#inicio-rapido">Inicio rápido</a><a href="#entornos">Entornos compatibles</a><a href="#proveedores">Para proveedores</a><a href="#endpoints">Endpoints</a></nav>
+      <section className="docs-shell docs-section" id="inicio-rapido">
         <h2>⚡ Quickstart para Agentes de IA</h2>
         <p className="subtitle">
           Elige tu framework o entorno para conectar tu agente a Stellar Bazaar con copiado en 1 clic.
@@ -84,7 +85,7 @@ export default function DocsPage() {
         <DocsCodeTabs />
       </section>
 
-      <section className="docs-shell docs-section">
+      <section className="docs-shell docs-section" id="entornos">
         <h2>🤖 Modelos y Asistentes Soportados</h2>
         <p className="subtitle">
           Stellar Bazaar expone un servidor MCP nativo compatible con los principales entornos de IA agéntica.
@@ -108,7 +109,7 @@ export default function DocsPage() {
         </div>
       </section>
 
-      <section className="docs-shell docs-section">
+      <section className="docs-shell docs-section" id="proveedores">
         <h2>💰 Para Proveedores: Monetiza tu API en 3 Pasos</h2>
         <p className="subtitle">
           Cualquier desarrollador puede envolver una función o microservicio existente y recibir micropagos en USDC directamente en su wallet de Stellar.
@@ -132,12 +133,12 @@ export default function DocsPage() {
         </div>
       </section>
 
-      <section className="docs-shell docs-section" style={{ marginBottom: "4rem" }}>
+      <section className="docs-shell docs-section" id="endpoints" style={{ marginBottom: "4rem" }}>
         <h2>📡 Endpoints Machine-Readable de Stellar Bazaar</h2>
         <p className="subtitle">
           Especificaciones estructuradas para descubrimiento algorítmico e inspección de capacidades.
         </p>
-        <table className="docs-table">
+        <div className="docs-table-scroll" role="region" aria-label="Endpoints" tabIndex={0}><table className="docs-table">
           <thead>
             <tr>
               <th>Endpoint</th>
@@ -177,7 +178,7 @@ export default function DocsPage() {
               <td>Especificación canónica OpenAPI 3.1 del Bazaar para agentes y parsers.</td>
             </tr>
           </tbody>
-        </table>
+        </table></div>
       </section>
 
       <Footer />
