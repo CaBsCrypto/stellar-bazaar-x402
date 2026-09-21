@@ -63,7 +63,8 @@
     "pilot:website-report": "node scripts/website-report-pilot.mjs",
     "test:website-report": "node scripts/test-website-intelligence-history.mjs && node scripts/test-website-report-pilot.mjs && node scripts/test-website-report-challenge.mjs",
     "test:private-report:redis": "node scripts/test-private-report-redis.mjs --run-isolated-test",
-    "test:pilot:saved-report": "node scripts/test-pilot-saved-report.mjs"
+    "test:pilot:saved-report": "node scripts/test-pilot-saved-report.mjs",
+    "test:market:visitor": "node scripts/test-market-visitor.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1127.0",
