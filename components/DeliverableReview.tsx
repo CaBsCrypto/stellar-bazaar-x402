@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef, useEffect, type ReactNode } from "react";
 import {
   reviewDeliveries,
   reviewEvents,
@@ -24,14 +24,20 @@ const icons = {
   report: "≡",
   other: "↓",
 };
-import Link from "next/link";
+import {Modal} from "./ui/Modal";
+import {Button} from "./ui";
 import { Navbar } from "@/components/Navbar";
-import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Footer } from "@/components/Footer";
 
-export function DeliverableReview() {
+export function DeliverableReview({accessEntry}: {accessEntry?: ReactNode} = {}) {
   const [selected, setSelected] = useState(0),
     delivery = reviewDeliveries[selected];
+  const [selectorOpen,setSelectorOpen]=useState(false);
+  const [selectionKey,setSelectionKey]=useState(0);
+  const workspace=useRef<HTMLDivElement>(null);
+  function choose(index:number){setSelected(index);setSelectionKey(n=>n+1);setSelectorOpen(false);}
+  useEffect(()=>{if(selectionKey>0){const frame=requestAnimationFrame(()=>workspace.current?.querySelector<HTMLElement>(".delivery-header h2")?.focus());return ()=>cancelAnimationFrame(frame);}},[selectionKey]);
+  const cards=<div className="library-cards">{reviewDeliveries.map((item,i)=><button key={item.manifest.versionId} aria-pressed={selected===i} onClick={()=>choose(i)}><span className={"type-icon "+item.manifest.content.kind}>{icons[item.manifest.content.kind]}</span><span><small>{labels[item.manifest.content.kind]}</small><strong>{item.manifest.title}</strong></span></button>)}</div>;
   const access: FileAccess = useCallback(async (file) => {
     const url = reviewFilePaths[file.id] || "";
     return { url };
@@ -60,85 +66,20 @@ export function DeliverableReview() {
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
       <Navbar />
       <main className="delivery-library shell" style={{ flex: 1, paddingBottom: "4rem" }}>
-        <Breadcrumbs
-          items={[
-            { label: "Historial", href: "/history" },
-            { label: "Demo de Entregables" },
-          ]}
-          backHref="/history"
-          backLabel="← Volver a Mi Historial"
-          actions={
-            <div style={{ display: "flex", gap: "8px" }}>
-              <Link
-                href="/catalogo"
-                style={{
-                  fontSize: "0.8rem",
-                  padding: "5px 12px",
-                  borderRadius: "6px",
-                  background: "rgba(112, 87, 232, 0.2)",
-                  border: "1px solid rgba(112, 87, 232, 0.4)",
-                  color: "#c4b5fd",
-                  textDecoration: "none",
-                  fontWeight: 600,
-                }}
-              >
-                📂 Explorar Catálogo
-              </Link>
-            </div>
-          }
-        />
-
         <header className="library-header" style={{ paddingTop: "0.5rem" }}>
-        <p className="library-eyebrow">TU AGENTE CREA. TÚ EXPLORAS.</p>
-        <h1>
-          Tu biblioteca de entregas<span>.</span>
-        </h1>
-        <p>
-          Guiones que puedes recorrer. Videos que puedes reproducir.
-          <br />
-          Ideas que ya tienen forma.
-        </p>
-        <div className="review-banner">
-          <span className="review-dot" /> Espacio de revisión · cuatro ejemplos
-          ficticios · ningún pago realizado
-        </div>
+        <span className="ui-pill ui-pill--warning">Demostración · datos de ejemplo</span>
+        <h1>Así se verá tu biblioteca</h1>
+        <p>Tu agente te compartirá un enlace privado para abrir tus propias entregas.</p>
+        {accessEntry}
       </header>
       <div className="library-layout">
-        <aside className="library-sidebar">
-          <h2>
-            Entregas <span>04</span>
-          </h2>
-          <div className="library-cards">
-            {reviewDeliveries.map((item, i) => (
-              <button
-                key={item.manifest.versionId}
-                className={selected === i ? "selected" : ""}
-                aria-pressed={selected === i}
-                onClick={() => setSelected(i)}
-              >
-                <span className={"type-icon " + item.manifest.content.kind}>
-                  {icons[item.manifest.content.kind]}
-                </span>
-                <span>
-                  <small>{labels[item.manifest.content.kind]} · V1</small>
-                  <strong>{item.manifest.title}</strong>
-                  <em>
-                    {item.manifest.files.length
-                      ? item.manifest.files.length + " archivos"
-                      : "Contenido estructurado"}
-                  </em>
-                </span>
-                <b>↗</b>
-              </button>
-            ))}
-          </div>
-          <p className="library-footnote">
-            Las entregas reales se guardan en tu biblioteca privada. Estos
-            ejemplos son públicos y solo sirven para revisar la experiencia.
-          </p>
-        </aside>
+        <aside className="library-sidebar"><h2>Entregas <span>04</span></h2>{cards}</aside>
+        <div className="library-mobile-selector"><div><small>Entrega actual</small><strong>{delivery.manifest.title}</strong></div><Button variant="secondary" onClick={()=>setSelectorOpen(true)}>Cambiar entrega</Button></div>
+        <Modal open={selectorOpen} onClose={()=>setSelectorOpen(false)} title="Cambiar entrega">{cards}</Modal>
+        <div ref={workspace} className="library-workspace">
         <PurchaseWorkspace
-          key={delivery.manifest.versionId}
+          publicExample
+          key={delivery.manifest.versionId+selectionKey}
           record={record}
           versions={[delivery]}
           selected={0}
@@ -153,6 +94,7 @@ export function DeliverableReview() {
           events={reviewEvents(delivery)}
           legacy={null}
         />
+        </div>
       </div>
     </main>
     <Footer />

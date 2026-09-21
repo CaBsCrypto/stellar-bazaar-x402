@@ -20,3 +20,6 @@ Desde b8b88a1: almacenamiento privado S3/R2 y sus pruebas, enlaces de historial,
 
 ## Límites
 Sin cambios en app/api, contratos, pagos o validaciones. Sin transacciones, credenciales ni despliegue a producción. No se considera la existencia de una prueba como prueba de almacenamiento remoto real en esta sesión.
+
+## Cierre
+El arnés VM del historial se adaptó en ui/agent-hub y vuelve a pasar. Ver docs/UI_REVIEW_QA.md para evidencia final, recuperación real de solo lectura y límites.

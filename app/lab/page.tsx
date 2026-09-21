@@ -1,0 +1,5 @@
+import {Navbar} from "@/components/Navbar";
+import {Footer} from "@/components/Footer";
+import {WorkflowShowcase} from "@/components/WorkflowShowcase";
+import {ButtonLink,Card,PageShell,Pill} from "@/components/ui";
+export default function LabPage(){return <main><Navbar/><PageShell><Pill tone="warning">Demo · Experimental</Pill><h1 className="ui-page-title">Laboratorio</h1><p className="ui-muted">Ejemplos de entregas y conceptos en exploración. No son compras, resultados de tu agente ni servicios disponibles en el mercado.</p><div className="ui-grid"><Card><h2>Biblioteca de ejemplo</h2><p className="ui-muted">Explora guiones, informes, afiches y video con datos identificados como demostraciones.</p><ButtonLink href="/history/review" variant="secondary">Ver entregas de ejemplo</ButtonLink></Card><Card><h2>Fee split experimental</h2><p className="ui-muted">Consulta el diseño de reparto. Su presentación no implica que esté activo en los pagos del mercado.</p><ButtonLink href="/fee-split" variant="secondary">Consultar experimento</ButtonLink></Card></div></PageShell><WorkflowShowcase/><Footer/></main>;}

@@ -63,7 +63,8 @@
     "pilot:website-report": "node scripts/website-report-pilot.mjs",
     "test:website-report": "node scripts/test-website-intelligence-history.mjs && node scripts/test-website-report-pilot.mjs && node scripts/test-website-report-challenge.mjs",
     "test:private-report:redis": "node scripts/test-private-report-redis.mjs --run-isolated-test",
-    "test:pilot:saved-report": "node scripts/test-pilot-saved-report.mjs"
+    "test:pilot:saved-report": "node scripts/test-pilot-saved-report.mjs",
+    "test:market:visitor": "node scripts/test-market-visitor.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1127.0",
@@ -78,12 +79,14 @@
     "next": "16.3.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "three": "^0.186.0",
     "zod": "4.1.12"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
+    "@types/three": "^0.186.0",
     "typescript": "^5.7.0"
   }
 }

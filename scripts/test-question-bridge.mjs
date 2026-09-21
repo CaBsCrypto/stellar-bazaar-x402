@@ -32,9 +32,7 @@ if (process.argv.includes('--browser')) {
       const page = await browser.newPage({ viewport });
       const writes = [];
       page.on('request', request => { if (request.method() !== 'GET') writes.push(request.method() + ' ' + request.url()); });
-      await page.goto('http://127.0.0.1:3214/history');
-      await page.locator('#history-access-token').fill(access.readToken);
-      await page.getByRole('button', {name:'Consultar historial',exact:true}).click();
+      await page.goto('http://127.0.0.1:3214/history#token=' + encodeURIComponent(access.readToken));
       await page.getByRole('button').filter({hasText: 'Informe · contenido real'}).first().click();
       await page.getByRole('heading', {name:'Análisis de example.com',exact:true}).waitFor();
       assert.equal(await page.getByText('Pasos de la tarea', {exact:true}).count(), 0);
@@ -61,11 +59,10 @@ if (process.argv.includes('--browser')) {
       assert.doesNotMatch(await textarea.inputValue(), /Mi pregunta adicional/);
       assert.ok(await dialog.evaluate(el => el.getBoundingClientRect().width <= innerWidth));
       // Simulate an authorization-driven lock while a modal is open.
-      await page.getByRole('button', {name:'Bloquear y borrar vista',exact:true}).evaluate(el => el.click());
+      await page.getByRole('button', {name:/Bloquear y borrar vista/}).evaluate(el => el.click());
       await dialog.waitFor({state:'detached'});
       assert.equal(await page.getByRole('heading', {name:'Análisis de example.com',exact:true}).count(), 0);
-      await page.locator('#history-access-token').fill(access.readToken);
-      await page.getByRole('button', {name:'Consultar historial',exact:true}).click();
+      await page.goto('http://127.0.0.1:3214/history#token=' + encodeURIComponent(access.readToken));
       await page.getByRole('button').filter({hasText: 'Informe · contenido real'}).first().click();
       await page.getByRole('heading', {name:'Análisis de example.com',exact:true}).waitFor();
       assert.equal(writes.length, 0, JSON.stringify(writes));

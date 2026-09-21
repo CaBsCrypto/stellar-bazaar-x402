@@ -1,6 +1,6 @@
 import "./deliveries.css";
 import type { Metadata } from "next";
-import { OperationHistory } from "@/components/OperationHistory";
+import { HistoryEntry } from "@/components/HistoryEntry";
 import "./history.css";
 
 export const metadata: Metadata = {
@@ -9,6 +9,6 @@ export const metadata: Metadata = {
 };
 
 export default function HistoryPage() {
-  return <OperationHistory />;
+  return <HistoryEntry />;
 }
 

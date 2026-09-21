@@ -6,7 +6,7 @@ import { services } from "@/lib/catalog";
 import { filterServices, rankServices } from "@/lib/discovery";
 import type { PaymentScheme, ServiceKind } from "@/lib/types";
 
-export function Catalog() {
+export function Catalog({standalone = false}: {standalone?: boolean}) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<"all" | ServiceKind>("all");
   const [scheme, setScheme] = useState<"all" | PaymentScheme>("all");
@@ -68,7 +68,7 @@ export function Catalog() {
   function resetFilters() { setQuery(""); setKind("all"); setScheme("all"); setMaxPrice(""); }
   return <section className="ui-catalog" aria-label="Servicios del mercado">
     {agentToast && <p className="ui-notice" role="status">{agentToast}</p>}
-    <SectionHeading eyebrow="SERVICIOS LISTADOS · STELLAR TESTNET" title="Encuentra lo que tu agente necesita"><p role="status">{results.length} {results.length === 1 ? "resultado" : "resultados"}</p></SectionHeading>
+    <SectionHeading headingLevel={standalone ? 1 : 2} eyebrow="SERVICIOS LISTADOS · STELLAR TESTNET" title="Encuentra lo que tu agente necesita"><p role="status">{results.length} {results.length === 1 ? "resultado" : "resultados"}</p></SectionHeading>
     <div className="ui-chips" aria-label="Filtros rápidos">
       <button type="button" className="ui-chip" onClick={resetFilters} aria-pressed={!query && kind === "all" && scheme === "all" && !maxPrice}>Todos</button>
       <button type="button" className="ui-chip" onClick={() => {setQuery("video");setKind("all");}} aria-pressed={query === "video"}>Guiones de video</button>
@@ -81,7 +81,7 @@ export function Catalog() {
       <label>Precio máximo<input type="number" min="0" step="0.001" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} placeholder="USDC de Testnet" {...({toolparamdescription:"Precio máximo del servicio"} as Record<string,unknown>)} /></label>
     </form>
     <p className="ui-notice">El precio y las condiciones son declarados por el proveedor. Estar listado no acredita una compra ni garantiza disponibilidad. Tu agente debe comprobarlos antes de pagar.</p>
-    <div className="ui-grid">{results.map(result => <ServiceCard key={result.service.id} {...result} showScore={Boolean(query)} highlighted={highlightedServiceId === result.service.id} onTag={setQuery} />)}</div>
+    <div className="ui-grid">{results.map(result => <ServiceCard key={result.service.id} {...result} showScore={Boolean(query)} highlighted={highlightedServiceId === result.service.id} />)}</div>
     {!results.length && <div className="ui-empty"><h3>No encontramos servicios</h3><p>Prueba otras palabras o restablece los filtros.</p><Button variant="secondary" onClick={resetFilters}>Restablecer filtros</Button></div>}
   </section>;
 }

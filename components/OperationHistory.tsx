@@ -57,7 +57,7 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Footer } from "@/components/Footer";
 
-export function OperationHistory() {
+export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {initialAccess?: string; onLocked?: () => void; onExploreDemo?: () => void} = {}) {
   const [locale, setLocale] = useState<Locale>("es");
   const [token, setToken] = useState("");
   const [state, setState] = useState<ViewState>("locked");
@@ -80,7 +80,8 @@ export function OperationHistory() {
     try {
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
       const searchParams = new URLSearchParams(window.location.search);
-      const urlToken = hashParams.get("token") || searchParams.get("token");
+      const urlToken = initialAccess ?? hashParams.get("token") ?? searchParams.get("token");
+      if (initialAccess !== undefined && !/^[a-zA-Z0-9_-]{32,128}$/.test(initialAccess.trim())) setState("unauthorized");
       if (urlToken && /^[a-zA-Z0-9_-]{32,128}$/.test(urlToken.trim())) {
         const clean = urlToken.trim();
         setToken(clean);
@@ -146,8 +147,8 @@ export function OperationHistory() {
   const lock = useCallback(() => {
     generation.current += 1;
     pending.current?.abort();
-    setAgentAccess(false); setToken(""); setEntries([]); setState("locked");
-  }, []);
+    setAgentAccess(false); setToken(""); setEntries([]); setState("locked"); onLocked?.();
+  }, [onLocked]);
 
   async function readHistory() {
     if (!token.trim()) return;
@@ -190,6 +191,7 @@ export function OperationHistory() {
       <Navbar />
 
       <main className="operation-history shell" lang={locale} style={{ flex: 1, paddingBottom: "4rem" }}>
+        {onExploreDemo && ["unauthorized","unavailable","error"].includes(state) && <button onClick={onExploreDemo}>Explorar demostración</button>}
         <Breadcrumbs
           items={[{ label: "Mi Historial Privado" }]}
           backHref="/catalogo"
@@ -202,9 +204,9 @@ export function OperationHistory() {
                   fontSize: "0.8rem",
                   padding: "5px 12px",
                   borderRadius: "6px",
-                  background: "rgba(112, 87, 232, 0.2)",
-                  border: "1px solid rgba(112, 87, 232, 0.4)",
-                  color: "#c4b5fd",
+                  background: "var(--white)",
+                  border: "1px solid var(--line)",
+                  color: "var(--violet)",
                   textDecoration: "none",
                   fontWeight: 600,
                 }}
@@ -217,9 +219,9 @@ export function OperationHistory() {
                   fontSize: "0.8rem",
                   padding: "5px 12px",
                   borderRadius: "6px",
-                  background: "rgba(54, 185, 144, 0.2)",
-                  border: "1px solid rgba(54, 185, 144, 0.4)",
-                  color: "#6ee7b7",
+                  background: "var(--white)",
+                  border: "1px solid var(--line)",
+                  color: "var(--mint)",
                   textDecoration: "none",
                   fontWeight: 600,
                 }}
@@ -236,16 +238,16 @@ export function OperationHistory() {
               🔒 {c.heading.toUpperCase()} · CLOUDFLARE R2 & STELLAR TESTNET
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <label style={{ fontSize: "0.82rem", color: "#94a3b8" }}>Idioma:</label>
+              <label style={{ fontSize: "0.82rem", color: "var(--muted)" }}>Idioma:</label>
               <select
                 value={locale}
                 onChange={(event) => setLocale(event.target.value as Locale)}
                 style={{
                   padding: "4px 10px",
                   borderRadius: "8px",
-                  background: "rgba(255,255,255,0.06)",
-                  color: "#f8fafc",
-                  border: "1px solid rgba(255,255,255,0.15)",
+                  background: "var(--white)",
+                  color: "var(--ink)",
+                  border: "1px solid var(--line)",
                   fontSize: "0.8rem",
                   cursor: "pointer",
                 }}
@@ -257,7 +259,7 @@ export function OperationHistory() {
           </div>
 
           <h1 style={{ marginTop: "12px", marginBottom: "8px" }}>{c.title}</h1>
-          <p style={{ color: "#94a3b8", fontSize: "1.05rem", maxWidth: "750px", margin: 0 }}>
+          <p style={{ color: "var(--muted)", fontSize: "1.05rem", maxWidth: "750px", margin: 0 }}>
             {c.subtitle}
           </p>
         </header>
@@ -266,11 +268,11 @@ export function OperationHistory() {
         <section
           className="history-access"
           style={{
-            background: "linear-gradient(135deg, rgba(20, 24, 38, 0.85) 0%, rgba(13, 16, 26, 0.95) 100%)",
-            border: "1px solid rgba(112, 87, 232, 0.3)",
+            background: "var(--surface-violet)",
+            border: "1px solid var(--line)",
             borderRadius: "16px",
             padding: "clamp(1.2rem, 3vw, 2rem)",
-            boxShadow: "0 8px 30px rgba(0,0,0,0.35)",
+            boxShadow: "none",
             marginBottom: "2rem",
           }}
         >
@@ -281,16 +283,16 @@ export function OperationHistory() {
             }}
           >
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px", flexWrap: "wrap", gap: "8px" }}>
-              <label htmlFor="history-access-token" style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.95rem" }}>
+              <label htmlFor="history-access-token" style={{ fontWeight: 700, color: "var(--ink)", fontSize: "0.95rem" }}>
                 🔑 {c.token}
               </label>
               <button
                 type="button"
                 onClick={pasteToken}
                 style={{
-                  background: "rgba(112, 87, 232, 0.15)",
-                  border: "1px solid rgba(112, 87, 232, 0.4)",
-                  color: "#c4b5fd",
+                  background: "var(--white)",
+                  border: "1px solid var(--line)",
+                  color: "var(--violet)",
                   padding: "4px 10px",
                   borderRadius: "6px",
                   fontSize: "0.78rem",
@@ -322,18 +324,18 @@ export function OperationHistory() {
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
-                  background: "rgba(8, 10, 16, 0.8)",
-                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  background: "var(--white)",
+                  border: "1px solid var(--line)",
                   borderRadius: "10px",
                   padding: "12px 16px",
-                  color: "#ffffff",
+                  color: "var(--ink)",
                   fontSize: "0.95rem",
                   fontFamily: "monospace",
                 }}
               />
             </div>
 
-            <p style={{ fontSize: "0.82rem", color: "#94a3b8", lineHeight: 1.5, margin: "0 0 16px 0" }}>
+            <p style={{ fontSize: "0.82rem", color: "var(--muted)", lineHeight: 1.5, margin: "0 0 16px 0" }}>
               💡 {c.access}
             </p>
 
@@ -344,13 +346,13 @@ export function OperationHistory() {
                 style={{
                   padding: "10px 22px",
                   borderRadius: "10px",
-                  background: "linear-gradient(135deg, #7057e8 0%, #583ec9 100%)",
-                  color: "#ffffff",
+                  background: "var(--violet)",
+                  color: "var(--white)",
                   border: "none",
                   fontWeight: 700,
                   fontSize: "0.9rem",
                   cursor: "pointer",
-                  boxShadow: "0 4px 14px rgba(112, 87, 232, 0.4)",
+                  boxShadow: "none",
                   display: "flex",
                   alignItems: "center",
                   gap: "8px",
@@ -366,9 +368,9 @@ export function OperationHistory() {
                   style={{
                     padding: "10px 18px",
                     borderRadius: "10px",
-                    background: "rgba(239, 68, 68, 0.15)",
-                    color: "#fca5a5",
-                    border: "1px solid rgba(239, 68, 68, 0.35)",
+                    background: "var(--white)",
+                    color: "var(--amber)",
+                    border: "1px solid var(--line)",
                     fontWeight: 600,
                     fontSize: "0.88rem",
                     cursor: "pointer",
@@ -380,13 +382,13 @@ export function OperationHistory() {
             </div>
           </form>
 
-          <details style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-            <summary style={{ cursor: "pointer", color: "#c4b5fd", fontSize: "0.85rem", fontWeight: 600 }}>
+          <details style={{ marginTop: "16px", paddingTop: "12px", borderTop: "1px solid var(--line)" }}>
+            <summary style={{ cursor: "pointer", color: "var(--violet)", fontSize: "0.85rem", fontWeight: 600 }}>
               ⚙️ Conexión nativa del navegador (WebMCP)
             </summary>
             <div style={{ marginTop: "10px" }}>
               {nativeAvailable ? (
-                <label className="history-agent-access" style={{ display: "flex", gap: "10px", alignItems: "center", color: "#e2e8f0", fontSize: "0.88rem" }}>
+                <label className="history-agent-access" style={{ display: "flex", gap: "10px", alignItems: "center", color: "var(--ink)", fontSize: "0.88rem" }}>
                   <input
                     type="checkbox"
                     checked={agentAccess}
@@ -398,14 +400,14 @@ export function OperationHistory() {
                     : "Connect private history to the browser agent (read-only)"}
                 </label>
               ) : (
-                <p style={{ color: "#94a3b8", fontSize: "0.85rem", margin: 0 }}>
+                <p style={{ color: "var(--muted)", fontSize: "0.85rem", margin: 0 }}>
                   {locale === "es"
                     ? "WebMCP nativo no detectado en este navegador. El historial web funciona de forma totalmente segura e independiente vía REST."
                     : "Native WebMCP is unavailable in this browser. Web history works independently."}
                 </p>
               )}
               {agentAccess && (
-                <p role="status" style={{ color: "#36b990", fontSize: "0.85rem", marginTop: "8px" }}>
+                <p role="status" style={{ color: "var(--mint)", fontSize: "0.85rem", marginTop: "8px" }}>
                   ✓ {locale === "es" ? "Agente conectado: puede leer este historial privado hasta bloquear la vista." : "Agent connected: it can read this private history until you lock the view."}
                 </p>
               )}
@@ -417,17 +419,17 @@ export function OperationHistory() {
         <details
           className="history-evidence-note"
           style={{
-            background: "rgba(255, 255, 255, 0.03)",
-            border: "1px solid rgba(255, 255, 255, 0.08)",
+            background: "var(--white)",
+            border: "1px solid var(--line)",
             borderRadius: "12px",
             padding: "12px 18px",
             marginBottom: "1.5rem",
           }}
         >
-          <summary style={{ cursor: "pointer", color: "#94a3b8", fontSize: "0.88rem", fontWeight: 600 }}>
+          <summary style={{ cursor: "pointer", color: "var(--muted)", fontSize: "0.88rem", fontWeight: 600 }}>
             ℹ️ Cómo interpretar este registro y la privacidad de tus entregas
           </summary>
-          <p style={{ color: "#cbd5e1", fontSize: "0.85rem", margin: "8px 0 0 0", lineHeight: 1.6 }}>
+          <p style={{ color: "var(--ink)", fontSize: "0.85rem", margin: "8px 0 0 0", lineHeight: 1.6 }}>
             {c.note}
           </p>
         </details>
@@ -440,9 +442,9 @@ export function OperationHistory() {
             marginBottom: "1.5rem",
             padding: "12px 18px",
             borderRadius: "10px",
-            background: state === "ready" ? "rgba(16, 185, 129, 0.1)" : state === "loading" ? "rgba(56, 189, 248, 0.1)" : "rgba(255,255,255,0.03)",
-            border: state === "ready" ? "1px solid rgba(16, 185, 129, 0.3)" : state === "loading" ? "1px solid rgba(56, 189, 248, 0.3)" : "1px solid rgba(255,255,255,0.06)",
-            color: state === "ready" ? "#6ee7b7" : state === "loading" ? "#38bdf8" : "#94a3b8",
+            background: state === "ready" ? "var(--white)" : state === "loading" ? "var(--white)" : "var(--white)",
+            border: state === "ready" ? "1px solid var(--line)" : state === "loading" ? "1px solid var(--line)" : "1px solid var(--line)",
+            color: state === "ready" ? "var(--mint)" : state === "loading" ? "var(--blue)" : "var(--muted)",
             fontSize: "0.9rem",
             fontWeight: 600,
           }}
@@ -454,7 +456,7 @@ export function OperationHistory() {
 
         {state === "ready" && entries.length > 0 && (
           <details style={{ marginTop: "2rem" }}>
-            <summary style={{ cursor: "pointer", color: "#c4b5fd", fontWeight: 700, fontSize: "1rem", padding: "10px 0" }}>
+            <summary style={{ cursor: "pointer", color: "var(--violet)", fontWeight: 700, fontSize: "1rem", padding: "10px 0" }}>
               🔍 Últimas operaciones · vista técnica detallada
             </summary>
             <section aria-label={c.heading} className="history-records" style={{ marginTop: "1rem" }}>
@@ -463,43 +465,43 @@ export function OperationHistory() {
                   key={entry.id}
                   className="history-record"
                   style={{
-                    background: "rgba(16, 19, 30, 0.9)",
-                    border: "1px solid rgba(112, 87, 232, 0.25)",
+                    background: "var(--white)",
+                    border: "1px solid var(--line)",
                     borderRadius: "14px",
                     padding: "1.5rem",
                     marginBottom: "1.2rem",
                   }}
                 >
                   <div className="history-record-heading" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "10px" }}>
-                    <h2 style={{ fontSize: "1.15rem", margin: 0, color: "#f8fafc" }}>{entry.service.title}</h2>
-                    <span className="history-badge" style={{ background: "rgba(112, 87, 232, 0.2)", color: "#c4b5fd", border: "1px solid rgba(112, 87, 232, 0.4)", borderRadius: "20px", padding: "4px 12px", fontSize: "0.75rem", fontWeight: 700 }}>
+                    <h2 style={{ fontSize: "1.15rem", margin: 0, color: "var(--ink)" }}>{entry.service.title}</h2>
+                    <span className="history-badge" style={{ background: "var(--white)", color: "var(--violet)", border: "1px solid var(--line)", borderRadius: "20px", padding: "4px 12px", fontSize: "0.75rem", fontWeight: 700 }}>
                       {c.modes[entry.mode]}
                     </span>
                   </div>
-                  <p className="history-evidence-note" style={{ color: "#94a3b8", fontSize: "0.82rem", margin: "6px 0 16px 0" }}>
+                  <p className="history-evidence-note" style={{ color: "var(--muted)", fontSize: "0.82rem", margin: "6px 0 16px 0" }}>
                     {c.evidence}
                   </p>
                   <dl style={{ display: "grid", gap: "8px", margin: "16px 0" }}>
                     <div style={{ display: "flex", gap: "12px" }}>
-                      <dt style={{ color: "#94a3b8", minWidth: "120px", fontSize: "0.85rem" }}>{c.provider}:</dt>
-                      <dd style={{ margin: 0, color: "#e2e8f0", fontSize: "0.85rem" }}>{entry.service.provider}</dd>
+                      <dt style={{ color: "var(--muted)", minWidth: "120px", fontSize: "0.85rem" }}>{c.provider}:</dt>
+                      <dd style={{ margin: 0, color: "var(--ink)", fontSize: "0.85rem" }}>{entry.service.provider}</dd>
                     </div>
                     <div style={{ display: "flex", gap: "12px" }}>
-                      <dt style={{ color: "#94a3b8", minWidth: "120px", fontSize: "0.85rem" }}>{c.agent}:</dt>
-                      <dd style={{ margin: 0, color: "#e2e8f0", fontSize: "0.85rem" }}>{entry.agentId || c.unidentified}</dd>
+                      <dt style={{ color: "var(--muted)", minWidth: "120px", fontSize: "0.85rem" }}>{c.agent}:</dt>
+                      <dd style={{ margin: 0, color: "var(--ink)", fontSize: "0.85rem" }}>{entry.agentId || c.unidentified}</dd>
                     </div>
                     <div style={{ display: "flex", gap: "12px" }}>
-                      <dt style={{ color: "#94a3b8", minWidth: "120px", fontSize: "0.85rem" }}>{c.recorded}:</dt>
-                      <dd style={{ margin: 0, color: "#e2e8f0", fontSize: "0.85rem" }}>
+                      <dt style={{ color: "var(--muted)", minWidth: "120px", fontSize: "0.85rem" }}>{c.recorded}:</dt>
+                      <dd style={{ margin: 0, color: "var(--ink)", fontSize: "0.85rem" }}>
                         <time dateTime={entry.recordedAt}>{entry.recordedAt}</time>
                       </dd>
                     </div>
                   </dl>
-                  <div className="history-outcomes" style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "14px", marginTop: "14px" }}>
+                  <div className="history-outcomes" style={{ borderTop: "1px solid var(--line)", paddingTop: "14px", marginTop: "14px" }}>
                     <section>
-                      <h3 style={{ fontSize: "0.95rem", color: "#f8fafc", margin: "0 0 6px 0" }}>{c.payment}</h3>
-                      <strong style={{ color: "#6ee7b7", fontSize: "0.85rem" }}>{c.statuses[entry.payment.status]}</strong>
-                      <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "#cbd5e1" }}>
+                      <h3 style={{ fontSize: "0.95rem", color: "var(--ink)", margin: "0 0 6px 0" }}>{c.payment}</h3>
+                      <strong style={{ color: "var(--mint)", fontSize: "0.85rem" }}>{c.statuses[entry.payment.status]}</strong>
+                      <div style={{ marginTop: "8px", fontSize: "0.85rem", color: "var(--ink)" }}>
                         <HistoryAmount atomic={entry.payment.amountAtomic} asset={entry.payment.asset} /> · {entry.payment.network}
                       </div>
                       {entry.mode === "testnet" && entry.payment.network === "stellar:testnet" && /^[a-fA-F0-9]{64}$/.test(entry.payment.transactionHash || "") && (
@@ -507,16 +509,16 @@ export function OperationHistory() {
                           href={`https://stellar.expert/explorer/testnet/tx/${entry.payment.transactionHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ color: "#c4b5fd", fontSize: "0.82rem", display: "inline-block", marginTop: "6px" }}
+                          style={{ color: "var(--violet)", fontSize: "0.82rem", display: "inline-block", marginTop: "6px" }}
                         >
                           {c.transaction} ↗
                         </a>
                       )}
                     </section>
                     <section>
-                      <h3 style={{ fontSize: "0.95rem", color: "#f8fafc", margin: "0 0 6px 0" }}>{c.delivery}</h3>
-                      <strong style={{ color: "#38bdf8", fontSize: "0.85rem" }}>{c.statuses[entry.delivery.status]}</strong>
-                      {entry.delivery.result !== undefined ? <HistoryResult value={entry.delivery.result} label={c.result} /> : <p style={{ color: "#94a3b8", fontSize: "0.85rem" }}>{c.absent}</p>}
+                      <h3 style={{ fontSize: "0.95rem", color: "var(--ink)", margin: "0 0 6px 0" }}>{c.delivery}</h3>
+                      <strong style={{ color: "var(--blue)", fontSize: "0.85rem" }}>{c.statuses[entry.delivery.status]}</strong>
+                      {entry.delivery.result !== undefined ? <HistoryResult value={entry.delivery.result} label={c.result} /> : <p style={{ color: "var(--muted)", fontSize: "0.85rem" }}>{c.absent}</p>}
                     </section>
                   </div>
                 </article>
