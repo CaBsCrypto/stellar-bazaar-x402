@@ -285,10 +285,12 @@ function VideoFile({
 }
 
 export function DeliverableViewer({
+  publicExample = false,
   saved,
   access,
   onDownload,
 }: {
+  publicExample?: boolean;
   saved: SavedDeliverable;
   access: FileAccess;
   onDownload: (file: DeliveryFile) => void;
@@ -339,7 +341,7 @@ export function DeliverableViewer({
   return (
     <div className="deliverable-content">
       <div className={"delivery-state " + availability}>
-        {availability === "available"
+        {publicExample ? "Muestra pública · no guardada en tu biblioteca" : availability === "available"
           ? "Disponible en tu biblioteca"
           : availability === "partial"
             ? "Entrega parcial · algunos archivos siguen pendientes"
