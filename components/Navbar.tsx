@@ -44,7 +44,7 @@ export function Navbar() {
     { href: "/webmcp-playground", label: "WebMCP", badge: null },
     { href: "/buyer-execution", label: "Workspace", badge: null },
     { href: "/publish", label: "Publicar API", badge: null },
-    { href: "/history", label: "Historial", badge: "R2" },
+    { href: "/history", label: "Historial", badge: null },
     { href: "/docs", label: "Docs", badge: null },
   ];
 
@@ -68,7 +68,6 @@ export function Navbar() {
       title: "Desarrolladores & Protocolo",
       links: [
         { href: "/publish", label: "Publicar & Validar API", icon: "🚀" },
-        { href: "/fee-split", label: "Fee Split Autónomo (99/1)", icon: "💰" },
         { href: "/docs", label: "Documentación & SDKs", icon: "📚" },
         { href: "/llms.txt", label: "Especificación llms.txt", icon: "📄", external: true },
       ],
@@ -76,7 +75,7 @@ export function Navbar() {
     {
       title: "Tu Espacio Privado",
       links: [
-        { href: "/history", label: "Mi Historial Privado (R2)", icon: "🔒" },
+        { href: "/history", label: "Mi Historial Privado", icon: "🔒" },
         { href: "/history/review", label: "Demo de Entregables", icon: "👁️" },
       ],
     },
