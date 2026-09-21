@@ -49,7 +49,7 @@ try {
   assert.equal(await page.locator(".ui-service-card").count(),2);
   await page.getByRole("button",{name:"Guiones de video",exact:true}).click();
   assert.equal(await page.locator(".ui-service-card").count(),1);
-  await page.getByRole("link",{name:"Ver condiciones y detalle"}).click();
+  await page.getByRole("link",{name:/Ver condiciones y detalle de/}).click();
   await page.getByRole("heading",{level:1,name:"AI Video Scriptwriter & Creative Director"}).waitFor();
   assert.equal(await page.getByRole("button",{name:"Configurar consulta"}).count(),0);
   if(stage==="hub" || stage==="universe"){

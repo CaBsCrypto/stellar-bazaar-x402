@@ -111,3 +111,10 @@ body { font-family: var(--font-ui); }
 .connect-page .ui-copy textarea,.ui-modal--wide .ui-copy textarea {height:240px;min-height:160px;}
 @media(max-width:700px){.universe {max-width:420px;width:100%;margin-inline:auto;}.universe .orbital{height:340px;}.universe .core{width:112px;height:112px;}.universe .floating{font-size:9px;}.ui-modal--wide{width:100%;max-height:94dvh;}.connect-page{padding-block:var(--space-6);}}
 @media(prefers-reduced-motion:reduce){.universe .orbit,.universe .orbit span,.universe .floating{animation:none;}}
+
+/* A service card is one native link, including its labels and empty space. */
+a.ui-service-card {color:var(--ink);text-decoration:none;cursor:pointer;}
+a.ui-service-card:hover {border-color:var(--violet);}
+a.ui-service-card:focus-visible {outline:3px solid var(--violet);outline-offset:4px;}
+a.ui-service-card .ui-chip {cursor:inherit;}
+a.ui-service-card .ui-detail-link {text-decoration:underline;}

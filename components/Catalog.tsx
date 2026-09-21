@@ -81,7 +81,7 @@ export function Catalog() {
       <label>Precio máximo<input type="number" min="0" step="0.001" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} placeholder="USDC de Testnet" {...({toolparamdescription:"Precio máximo del servicio"} as Record<string,unknown>)} /></label>
     </form>
     <p className="ui-notice">El precio y las condiciones son declarados por el proveedor. Estar listado no acredita una compra ni garantiza disponibilidad. Tu agente debe comprobarlos antes de pagar.</p>
-    <div className="ui-grid">{results.map(result => <ServiceCard key={result.service.id} {...result} showScore={Boolean(query)} highlighted={highlightedServiceId === result.service.id} onTag={setQuery} />)}</div>
+    <div className="ui-grid">{results.map(result => <ServiceCard key={result.service.id} {...result} showScore={Boolean(query)} highlighted={highlightedServiceId === result.service.id} />)}</div>
     {!results.length && <div className="ui-empty"><h3>No encontramos servicios</h3><p>Prueba otras palabras o restablece los filtros.</p><Button variant="secondary" onClick={resetFilters}>Restablecer filtros</Button></div>}
   </section>;
 }
