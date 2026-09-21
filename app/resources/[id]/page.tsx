@@ -19,7 +19,7 @@ export default async function ResourcePage({ params }: { params: Promise<{ id: s
   return (
     <main>
       <div className="mock-banner">
-        ⚡ <strong>PAGO x402 EXACT EN VIVO</strong> · STELLAR TESTNET · LIQUIDACIÓN DIRECTA EN USDC · ENTREGABLES VERIFICADOS
+        ⚡ <strong>PAGO x402 EXACT EN VIVO</strong> · STELLAR TESTNET · LIQUIDACIÓN DIRECTA EN USDC · CONDICIONES DECLARADAS POR EL PROVEEDOR
       </div>
       <Navbar />
 
@@ -95,7 +95,7 @@ export default async function ResourcePage({ params }: { params: Promise<{ id: s
               <dd>{service.network}</dd>
             </div>
             <div>
-              <dt>Latencia</dt>
+              <dt>Latencia declarada · no garantizada</dt>
               <dd>{service.latency}</dd>
             </div>
           </dl>
@@ -118,7 +118,7 @@ export default async function ResourcePage({ params }: { params: Promise<{ id: s
           </aside>
         </section>
         <div>
-          <PaymentDemo service={service} />
+          {service.id === "swap-risk-quote" ? <PaymentDemo service={service} /> : <aside className="disclaimer"><strong>Servicio listado en Testnet.</strong><p>Esta ficha no ejecuta una compra ni simula un guion. Conecta tu agente para comprobar la disponibilidad, los inputs y las condiciones actuales del proveedor.</p><Link href="/#conectar-agente">Conectar agente</Link></aside>}
           {service.id === "swap-risk-quote" && <TestnetPaymentDemo />}
         </div>
       </div>

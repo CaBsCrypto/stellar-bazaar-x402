@@ -28,7 +28,7 @@ export function Footer() {
               <span>✦</span> Stellar Bazaar <sup>x402</sup>
             </Link>
             <p style={{ color: "#94a3b8", fontSize: "0.85rem", lineHeight: 1.6, margin: "0 0 1.2rem 0" }}>
-              Capa de descubrimiento determinista y liquidación instantánea de micropagos x402 sobre Stellar Testnet.
+              Capa de descubrimiento determinista y pagos x402 sobre Stellar Testnet.
             </p>
             <span
               style={{
@@ -120,7 +120,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/fee-split" style={{ color: "#94a3b8", fontSize: "0.85rem", textDecoration: "none" }}>
-                  💰 Fee Split 99% / 1%
+                  Fee split · Experimental
                 </Link>
               </li>
               <li>

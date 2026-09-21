@@ -105,7 +105,7 @@ export function Catalog() {
 
       <div className="section-heading">
         <div>
-          <span className="kicker">DISCOVERY DETERMINISTA · SERVICIOS VALIDADOS EN STELLAR TESTNET</span>
+          <span className="kicker">SERVICIOS LISTADOS · STELLAR TESTNET</span>
           <h2>Busca por intención y verifica por qué.</h2>
         </div>
         <p>{results.length} resultados · lexical-v1</p>
@@ -287,7 +287,7 @@ export function Catalog() {
       </form>
 
       <div className="ranking-note">
-        <strong>Discovery determinista:</strong> ranking explicable por tokens y tags. Ejecución nativa x402 con liquidación instantánea en Stellar Testnet.
+        <strong>Discovery determinista:</strong> resultados ordenados por coincidencia de palabras y etiquetas. Estar listado no acredita una compra ni garantiza disponibilidad. Antes de pagar, el agente debe comprobar el servicio.
       </div>
 
       <div className="card-grid">
@@ -312,7 +312,7 @@ export function Catalog() {
             >
               <div className="card-top">
                 <span className="service-icon">{service.kind === "mcp" ? "M" : "↗"}</span>
-                <span className="type-pill">{service.kind.toUpperCase()}</span>
+                <span className="type-pill">{service.kind.toUpperCase()} · Listado en Testnet</span>
               </div>
               <p className="eyebrow">{service.eyebrow}</p>
               <h3>{service.name}</h3>
@@ -345,7 +345,7 @@ export function Catalog() {
                 </strong>
                 <span>
                   {service.payment.scheme === "exact"
-                    ? "x402 exact · liquidación Testnet en vivo"
+                    ? "x402 exact · USDC de Testnet"
                     : `${service.payment.scheme} · liquidación Testnet`}
                 </span>
               </div>
@@ -353,7 +353,7 @@ export function Catalog() {
           );
         })}
       </div>
-      {!results.length && <div className="empty">Sin coincidencias verificables. Ajusta intención o filtros.</div>}
+      {!results.length && <div className="empty">No encontramos servicios con estos filtros. Prueba otras palabras o restablece los filtros.</div>}
     </section>
   );
 }

@@ -46,7 +46,7 @@ export default function Publish() {
                   fontWeight: 600,
                 }}
               >
-                💰 Fee Split 99/1
+                Fee split · Experimental
               </Link>
             </div>
           }
@@ -73,7 +73,7 @@ export default function Publish() {
       </header>
 
       {/* Seccion de Listing & Staking DeFindex */}
-      <ListingStakingSection />
+      {process.env.BAZAAR_UI_SHOW_EXPERIMENTAL_STAKING === "true" && <ListingStakingSection />}
 
       <section className="shell publish-section" id="formulario" style={{ marginBottom: "4rem" }}>
         <div className="section-heading">
