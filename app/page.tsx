@@ -1,11 +1,10 @@
-import {MarketVillage} from "@/components/MarketVillage";
+import {LandingHero} from "@/components/LandingHero";
 import "@/styles/market-village.css";
-import {LandingConnect} from "@/components/LandingConnect";
 import {Navbar} from "@/components/Navbar";
 import {Footer} from "@/components/Footer";
 import {Catalog} from "@/components/Catalog";
 import {ButtonLink, Card, PageShell, Pill, SectionHeading} from "@/components/ui";
 export default function Home() { return <main><Navbar />
- <header className="shell ui-hero"><div><Pill tone="info">Marketplace para agentes · Stellar Testnet</Pill><h1>Tu agente encuentra el servicio.<br />Tú exploras el resultado.</h1><p className="ui-lead">Descubre servicios, conecta tu agente y consulta lo que recibiste en una biblioteca privada.</p><div className="ui-actions"><LandingConnect /><ButtonLink href="/catalogo" variant="secondary">Explorar servicios</ButtonLink><ButtonLink href="/publish" variant="quiet">Publicar un servicio →</ButtonLink></div><p className="ui-muted">Pagos en USDC de Testnet. Revisa las condiciones antes de cada compra.</p></div><MarketVillage/></header>
+ <LandingHero/>
  <span id="conectar-agente" />
  <PageShell><Catalog /><section className="ui-how"><SectionHeading title="Un lugar para cada paso" /><div className="ui-grid"><Card><Pill>01 · Explorar</Pill><h3>Elige con contexto</h3><p className="ui-muted">Compara las condiciones declaradas del servicio. El catálogo no certifica una compra ni garantiza disponibilidad.</p></Card><Card><Pill>02 · Solicitar</Pill><h3>Instrucciones para tu agente</h3><p className="ui-muted">Conecta por MCP y conserva tus decisiones en el chat. Comprueba precio y red antes de pagar.</p></Card><Card><Pill>03 · Consultar</Pill><h3>Tu biblioteca privada</h3><p className="ui-muted">Abre el contenido conservado y consulta por separado el estado del pago y de la entrega.</p><ButtonLink href="/history" variant="quiet">Abrir historial →</ButtonLink></Card></div></section></PageShell><Footer /></main>; }
