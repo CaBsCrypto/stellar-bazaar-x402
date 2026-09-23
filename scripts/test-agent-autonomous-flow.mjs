@@ -31,6 +31,7 @@ console.log("  ✓ Valid card passed agent policy checks");
 console.log("▶ [TC-03] Testing Budget Overrun Rejection...");
 const expensiveCard = {
   ...target,
+  paymentOptions: target.paymentOptions?.map(o => o.asset === target.payment.asset ? {...o,amount:"500.00"} : o),
   payment: { ...target.payment, amount: "500.00" }, // 500 USDC exceeds 0.05 max
 };
 const policyOverrun = agent.validatePaymentPolicy(expensiveCard);
@@ -51,6 +52,7 @@ console.log("  ✓ Unsupported network rejected before signing");
 
 const wrongAssetCard = {
   ...target,
+  paymentOptions: undefined, // Isolate the legacy asset allowlist from option consistency.
   payment: { ...target.payment, asset: "EURC" },
 };
 const policyAsset = agent.validatePaymentPolicy(wrongAssetCard);

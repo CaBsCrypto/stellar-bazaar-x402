@@ -1,8 +1,10 @@
+import { sandboxOptions, xlmPilotEnabled } from "./payment-options.ts";
 import type { PaidService } from "./types";
 
 export const services: PaidService[] = [
   {
     id: "swap-risk-quote",
+    ...(xlmPilotEnabled() ? {paymentOptions: sandboxOptions(process.env.NEXT_PUBLIC_X402_PILOT_SELLER ?? "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ")} : {}),
     name: "Swap Risk Quote (Sandbox)",
     eyebrow: "🧪 Testnet Sandbox",
     description: "Servicio oficial de prueba para que agentes de IA validen conectividad, handshake x402 y liquidación en Stellar Testnet.",
@@ -15,7 +17,7 @@ export const services: PaidService[] = [
       scheme: "exact",
       asset: "USDC",
       amount: "0.001",
-      destination: "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ"
+      destination: process.env.NEXT_PUBLIC_X402_PILOT_SELLER ?? "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ"
     },
     latency: "~250 ms live",
     input: ["pair", "amount", "side"],

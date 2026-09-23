@@ -1,3 +1,4 @@
+import { assertPaymentOptions } from "./payment-options.ts";
 import * as z from "zod/v4";
 import type { ServiceCard } from "./types.ts";
 
@@ -67,6 +68,7 @@ const serviceCardSchema = z.object({
       .refine((value) => Number(value) > 0, "amount debe ser mayor que cero."),
     destination: z.string().regex(/^G[A-Z2-7]{55}$/, "destination debe ser una cuenta Stellar pública G… de 56 caracteres."),
   }),
+  paymentOptions: z.array(z.object({scheme:z.literal("exact"), asset:z.enum(["USDC","XLM"]), contract:z.string(), amount:z.string(), destination:z.string()})).min(1).max(2).optional(),
   provider: z.object({
     name: z.string().min(1, "provider.name es obligatorio."),
   }),
@@ -81,7 +83,10 @@ export interface ShapeIssue {
 
 export function parseServiceCardShape(data: unknown): { ok: true; card: ServiceCard } | { ok: false; issues: ShapeIssue[] } {
   const parsed = serviceCardSchema.safeParse(data);
-  if (parsed.success) return { ok: true, card: parsed.data as ServiceCard };
+  if (parsed.success) {
+    try { assertPaymentOptions(parsed.data as ServiceCard); } catch { return {ok:false,issues:[{field:"paymentOptions",reason:"Opciones de pago inválidas."}]}; }
+    return { ok: true, card: parsed.data as ServiceCard };
+  }
   const issues: ShapeIssue[] = parsed.error.issues.map((issue) => ({
     field: issue.path.join(".") || "(raíz)",
     reason: issue.message,

@@ -2,7 +2,10 @@ export type ServiceKind = "http" | "mcp";
 export type PaymentScheme = "exact" | "upto" | "split-exact";
 export type SupportedSep41Asset = "USDC" | "XLM" | "EURC";
 
+export interface PaymentOption { scheme: "exact"; asset: "USDC" | "XLM"; contract: string; amount: string; destination: string }
+
 export interface PaidService {
+  paymentOptions?: PaymentOption[];
   /** Preserve the authoritative provider card through ranking/view conversions. */
   sourceCard?: ServiceCard;
   id: string;
@@ -23,6 +26,7 @@ export interface PaidService {
 }
 
 export interface ServiceCard {
+  paymentOptions?: PaymentOption[];
   version: "bazaar.service-card/v0";
   id: string;
   name: string;

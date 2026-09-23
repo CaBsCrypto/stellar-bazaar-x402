@@ -1,9 +1,9 @@
 import type { ServiceCard } from "./types.ts";
 
 /** Resolve a provider route against its card, never against Bazaar's origin. */
-export function providerRequestUrl(card: ServiceCard, params: Record<string, string | number | boolean>): string {
+export function providerRequestUrl(card: ServiceCard, params: Record<string, string | number | boolean>, allowLocalPilot = false): string {
   const base = new URL(card.url);
-  if (base.protocol !== "https:" || base.username || base.password) throw new Error("INVALID_PROVIDER_ORIGIN");
+  if ((base.protocol !== "https:" && !(allowLocalPilot && base.protocol === "http:" && ["localhost","127.0.0.1"].includes(base.hostname))) || base.username || base.password) throw new Error("INVALID_PROVIDER_ORIGIN");
   const route = card.routeTemplate.replace(/\{([^}]+)\}/g, (_match, key: string, offset: number) => {
     if (!Object.hasOwn(params, key)) throw new Error("MISSING_PROVIDER_INPUT");
     const value = String(params[key]);

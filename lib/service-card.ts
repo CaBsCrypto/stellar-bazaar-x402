@@ -4,6 +4,7 @@ import { syncDeliveryContract } from "./delivery-contract.ts";
 export function toServiceCard(s: PaidService): ServiceCard {
   if (s.sourceCard) return structuredClone(s.sourceCard);
   return {
+    ...(s.paymentOptions ? {paymentOptions: structuredClone(s.paymentOptions)} : {}),
     version: "bazaar.service-card/v0",
     id: s.id,
     name: s.name,
@@ -28,6 +29,7 @@ export function toServiceCard(s: PaidService): ServiceCard {
 export function toPaidService(card: ServiceCard): PaidService {
   return {
     sourceCard: structuredClone(card),
+    ...(card.paymentOptions ? {paymentOptions: structuredClone(card.paymentOptions)} : {}),
     id: card.id,
     name: card.name,
     eyebrow: card.tags[0] ? card.tags[0].toUpperCase() : "DYNAMIC",

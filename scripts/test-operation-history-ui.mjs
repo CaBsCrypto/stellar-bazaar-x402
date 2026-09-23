@@ -15,6 +15,8 @@ const { HistoryAmount, HistoryResult, OperationHistory } = module.exports;
 const render = (component, props) => renderToStaticMarkup(React.createElement(component, props));
 assert.match(render(HistoryAmount, { atomic: "10000", asset: "USDC" }), /0\.001 USDC/);
 assert.match(render(HistoryAmount, { atomic: "1", asset: "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA" }), /0\.0000001 USDC/);
+assert.match(render(HistoryAmount, { atomic:"100000", asset:"XLM" }), /0\.01 XLM/);
+assert.match(render(HistoryAmount, { atomic:"100000", asset:"CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC" }), /0\.01 XLM/);
 assert.equal(render(HistoryAmount, { atomic: "10000", asset: "OTHER" }), "<span>10000 atomic</span>");
 for (const label of ["Ver resultado reportado", "View reported result"]) {
   const result = render(HistoryResult, { label, value: { output: '<img src=x onerror="alert(1)">', url: "javascript:alert(1)" } });
