@@ -10,9 +10,9 @@ export const testnetFundingInstructions = `Antes de pagar, comprueba la red Stel
 Para XLM de Testnet, Friendbot (https://friendbot.stellar.org) puede financiar una cuenta de prueba G…; reutiliza la existente y verifica su saldo gastable, descontando reservas y obligaciones. No cambies de activo después de iniciar un pago.
 Recibir fondos de prueba no autoriza una compra: respeta el presupuesto y las condiciones de la tarea.`;
 
-export const buyerConnectionPrompt = `Exploremos Bazaar: según lo que necesito, compara servicios, recomiéndame uno y comprémoslo dentro del presupuesto y activo que te autorice. Si falta esa información, pregúntame. Revisa la entrega y muéstrame el resultado.
+export const buyerConnectionPrompt = `Ayúdame a comprar en Bazaar. Lee la guía y revisa todas las herramientas disponibles. Según lo que necesito, compara servicios, recomiéndame uno y cómpralo solo dentro del presupuesto y activo que te autorice. Pregunta lo que falte, comprueba la configuración y revisa la entrega conmigo.
 
-Lee la guía y revisa todas las herramientas disponibles, incluida la paginación del listado si existe. Identifica cuáles sirven para mi objetivo y comprueba qué configuración falta antes de comprar; revisar herramientas no autoriza ejecutarlas. Sigue la guía de pagos Testnet y, si un pago queda incierto, recupera su estado sin repetirlo. Nunca compartas claves privadas.
+Usa Stellar Testnet. Si un pago queda incierto, recupera su estado sin repetirlo. Nunca compartas claves privadas.
 
 Guía: https://bazaar.browns.studio/llms.txt
 MCP: https://bazaar.browns.studio/api/mcp`;
