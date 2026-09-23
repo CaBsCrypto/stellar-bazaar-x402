@@ -51,19 +51,11 @@ console.log("Historial privado:", historyUrl);`;
     auditor: "Me interesa ofrecer análisis de contratos Soroban. Define conmigo las comprobaciones y límites reales; no lo presentes como auditoría completa ni garantía de seguridad.",
     oracle: "Me interesa ofrecer consultas sobre pares y liquidez. Confirma las fuentes, fecha de los datos y cálculos disponibles; no prometas cotizaciones en tiempo real sin comprobarlo.",
   };
-  const sellerPrompt = `Ayúdame a preparar un servicio para Stellar Bazaar.
+  const sellerPrompt = `Ayúdame a ofrecer mi servicio en Bazaar. Lee la guía y revisa todas las herramientas disponibles. Aclara conmigo qué entregaré y su precio; prepara la integración reutilizando mi API si ya existe. Valida lo necesario y dime qué falta para solicitar revisión manual.${sellerExample === "custom" ? "" : "\n\n" + sellerScopes[sellerExample]}
 
-${sellerScopes[sellerExample]}
+Validar no equivale a publicar. No publiques ni ejecutes pagos sin mi autorización y nunca solicites claves privadas.
 
-Pregunta solo lo que falte para definir qué ofrece, qué recibe el cliente y el precio previsto en USDC de Testnet. Si ya tengo una API, reutilízala; si es una idea, ayúdame a concretarla sin inventar capacidades.
-
-Prepara la integración y la ficha según la guía. Comprueba que entrega lo prometido y distingue muestras simuladas. Confirma conmigo las condiciones y el destinatario público antes de solicitar revisión manual. Si una validación falla, corrígela antes de avanzar.
-
-Dime qué está listo y qué falta. Validar no equivale a publicar: no publiques ni ejecutes pagos automáticamente, y nunca solicites claves privadas.
-
-Referencias para el agente:
-https://bazaar.browns.studio/docs
-https://bazaar.browns.studio/llms.txt
+Guía: https://bazaar.browns.studio/llms.txt
 MCP: https://bazaar.browns.studio/api/mcp`;
 
   const sellerCliCode = `# 1. Inicializar plantilla de servicio
