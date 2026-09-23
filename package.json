@@ -66,7 +66,8 @@
     "test:pilot:saved-report": "node scripts/test-pilot-saved-report.mjs",
     "test:market:visitor": "node scripts/test-market-visitor.mjs",
     "test:xlm:pilot": "node scripts/test-xlm-pilot.mjs && node scripts/test-testnet-transfer.mjs",
-    "xlm:preflight": "node scripts/prepare-xlm-pilot.mjs"
+    "xlm:preflight": "node scripts/prepare-xlm-pilot.mjs",
+    "test:payments:shared": "node scripts/test-shared-settlement.mjs && node scripts/test-shared-http.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1127.0",
