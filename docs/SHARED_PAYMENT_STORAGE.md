@@ -33,3 +33,7 @@ Sin push, merge, despliegue ni habilitación de pagos. La revisión demuestra ex
 ## Ampliación de revisión — 23 septiembre 2026
 
 Se añadió validación del formato del marcador y comprobante antes de recuperarlo y una prueba HTTP entre procesos con Redis real y facilitador simulado. La inyección solo funciona con NODE_ENV=test, sin VERCEL y callback directo; el endpoint desplegable conserva el bloqueo. Ver PREVIEW_REVIEW.md para destino, configuración y evidencia administrativa pendiente. El código se consolida ahora en commits locales; las menciones previas a ausencia de commits corresponden al cierre anterior.
+
+## Comprobación administrativa posterior — 23 septiembre 2026
+
+Se identificó x402-bazaar en su cuenta administrativa y se confirmó Eviction desactivado. Backups no contiene respaldos y Daily Backup está deshabilitado. La segunda base gratuita necesaria para aislar Preview fue rechazada por el límite de una base Free Tier de la cuenta; no se contrataron recursos ni se desplegó. Ver PREVIEW_REVIEW.md para evidencia y condición de reanudación. Persistencia declarada por el proveedor no sustituye una prueba de restauración ni resuelve el riesgo de perder marcadores.
