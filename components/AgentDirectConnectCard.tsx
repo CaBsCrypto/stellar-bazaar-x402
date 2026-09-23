@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { buyerConnectionPrompt } from "@/lib/testnet-funding";
 import {ButtonLink} from "@/components/ui";
 import {CopyText} from "@/components/ui/CopyText";
 
@@ -24,14 +25,7 @@ export function AgentDirectConnectCard({role = "buyer"}: {role?: ActiveTab}) {
 }`;
 
   // Buyer Snippets
-  const buyerPrompt = `Actúa como Agente Comprador de IA y conéctate a Stellar Bazaar x402:
-👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
-👉 Especificación: https://bazaar.browns.studio/llms.txt
-
-Tus tareas:
-1. Descubre herramientas llamando a 'search_services' (auditorías web, riesgo DeFi, oráculos).
-2. Valida la ServiceCard y ejecuta pagos en USDC sobre Stellar Testnet.
-3. Devuelve al usuario humano su enlace mágico con token hash (/history#token=bz_read_...) para acceder a sus reportes en Cloudflare R2.`;
+  const buyerPrompt = buyerConnectionPrompt;
 
   const buyerMcpJson = quickMcpJson;
 
@@ -50,66 +44,27 @@ const services = await agent.searchServicesREST("video");
 const historyUrl = agent.getHumanHistoryLink();
 console.log("Historial privado:", historyUrl);`;
 
-  // Seller Prompt Examples
-  const sellerPrompts: Record<SellerExample, string> = {
-    scriptwriter: `Actúa como Agente Desarrollador y crea la Skill 'AI Video Scriptwriter' para Stellar Bazaar x402:
-👉 Especificación: https://bazaar.browns.studio/llms.txt
-👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
-👉 Kit: @stellar-bazaar/provider-kit (o npm run bazaar-cli)
-
-🎯 SKILL: "AI Video Scriptwriter & Creative Director"
-- Rol: Guionista profesional de videos cortos (YouTube Shorts, TikTok, Reels).
-- Inputs: 'topic' (string), 'durationSeconds' (number), 'tone' (string).
-- Precio: 0.02 USDC en Stellar Testnet.
-- Wallet de Cobro: [Tu clave pública Stellar G...]
-
-Tus 2 entregables:
-1. 'server.ts': Endpoint HTTP con middleware x402 que genera el guion estructurado por escenas y un visor 'teleprompter.html' bajo el estándar 'bazaarDelivery' (con hashes SHA-256).
-2. 'service-card.json': Ficha oficial de catálogo validada para indexación MCP.`,
-
-    auditor: `Actúa como Agente Desarrollador y crea la Skill 'Soroban Smart Contract Auditor' para Stellar Bazaar x402:
-👉 Especificación: https://bazaar.browns.studio/llms.txt
-👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
-
-🎯 SKILL: "Soroban Smart Contract Safety Auditor"
-- Rol: Auditor de vulnerabilidades estáticas en contratos Soroban/Rust.
-- Inputs: 'contractAddress' (string), 'sourceCode' (string opcional).
-- Precio: 0.05 USDC en Stellar Testnet.
-- Wallet de Cobro: [Tu clave pública Stellar G...]
-
-Tus 2 entregables:
-1. 'server.ts': Endpoint x402 que analiza seguridad y emite 'audit-report.html' bajo el estándar 'bazaarDelivery'.
-2. 'service-card.json': Ficha oficial del catálogo validada para indexación MCP.`,
-
-    oracle: `Actúa como Agente Desarrollador y crea la Skill 'DeFi Arbitrage & Oracle' para Stellar Bazaar x402:
-👉 Especificación: https://bazaar.browns.studio/llms.txt
-👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
-
-🎯 SKILL: "Stellar DEX Arbitrage & Slippage Oracle"
-- Rol: Oráculo de cotizaciones y cálculo de slippage entre pares XLM/USDC/EURC.
-- Inputs: 'pair' (string), 'amount' (number), 'side' (string: buy/sell).
-- Precio: 0.01 USDC en Stellar Testnet.
-- Wallet de Cobro: [Tu clave pública Stellar G...]
-
-Tus 2 entregables:
-1. 'server.ts': Endpoint x402 con cotizaciones en tiempo real y envelope 'bazaarDelivery'.
-2. 'service-card.json': Ficha oficial de catálogo validada para indexación MCP.`,
-
-    custom: `Actúa como Agente Desarrollador y crea una Skill personalizada para Stellar Bazaar x402:
-👉 Especificación: https://bazaar.browns.studio/llms.txt
-👉 Servidor MCP: https://bazaar.browns.studio/api/mcp
-
-🎯 DATOS DE LA SKILL:
-- Nombre: "[Nombre de tu Servicio]"
-- Descripción: "[Qué hace la herramienta]"
-- Inputs: "[parámetros requeridos]"
-- Precio: "[Monto]" USDC en Stellar Testnet
-- Wallet de Cobro: "[Tu wallet pública Stellar G...]"
-
-Tus 2 entregables:
-1. 'server.ts': Endpoint HTTP con middleware x402 y estándar 'bazaarDelivery'.
-2. 'service-card.json': Ficha oficial del catálogo validada para indexación MCP.`,
+  // Examples describe possible scope, not existing implementations or fixed prices.
+  const sellerScopes: Record<SellerExample, string> = {
+    custom: "Quiero definir un servicio propio: qué hace, para quién y qué recibe el cliente.",
+    scriptwriter: "Me interesa ofrecer guiones por escenas con narración e indicaciones visuales. Es una idea de alcance: confirma conmigo qué puedo entregar realmente.",
+    auditor: "Me interesa ofrecer análisis de contratos Soroban. Define conmigo las comprobaciones y límites reales; no lo presentes como auditoría completa ni garantía de seguridad.",
+    oracle: "Me interesa ofrecer consultas sobre pares y liquidez. Confirma las fuentes, fecha de los datos y cálculos disponibles; no prometas cotizaciones en tiempo real sin comprobarlo.",
   };
+  const sellerPrompt = `Ayúdame a preparar un servicio para Stellar Bazaar.
+
+${sellerScopes[sellerExample]}
+
+Pregunta solo lo que falte para definir qué ofrece, qué recibe el cliente y el precio previsto en USDC de Testnet. Si ya tengo una API, reutilízala; si es una idea, ayúdame a concretarla sin inventar capacidades.
+
+Prepara la integración y la ficha según la guía. Comprueba que entrega lo prometido y distingue muestras simuladas. Confirma conmigo las condiciones y el destinatario público antes de solicitar revisión manual. Si una validación falla, corrígela antes de avanzar.
+
+Dime qué está listo y qué falta. Validar no equivale a publicar: no publiques ni ejecutes pagos automáticamente, y nunca solicites claves privadas.
+
+Referencias para el agente:
+https://bazaar.browns.studio/docs
+https://bazaar.browns.studio/llms.txt
+MCP: https://bazaar.browns.studio/api/mcp`;
 
   const sellerCliCode = `# 1. Inicializar plantilla de servicio
 npm run bazaar-cli init mi-servicio.json
@@ -141,19 +96,20 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
   };
 
   const getSellerText = () => {
-    if (sellerFormat === "prompt") return sellerPrompts[sellerExample];
+    if (sellerFormat === "prompt") return sellerPrompt;
     if (sellerFormat === "cli") return sellerCliCode;
     return sellerSdkCode;
   };
 
   const buyer = role === "buyer";
   return <section className="connect-instructions" aria-label={buyer?"Conexión del comprador":"Preparación del proveedor"}>
-   <h2>{buyer?"Prepara las instrucciones para tu agente":"Prepara tu servicio para revisión"}</h2>
+   <h2>{buyer?"Encuentra un servicio con tu agente":"Prepara tu servicio con tu agente"}</h2>
 
+   <p className="ui-muted">{buyer?"Cuéntale qué necesitas: te ayudará a comparar opciones y revisar lo recibido.":"Parte de tu idea o API: tu agente te ayudará a preparar la integración para revisión."}</p>
    <div className="ui-chips" aria-label="Formato de instrucciones">{buyer ? (["prompt","mcp_json","sdk"] as BuyerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={buyerFormat===fmt} onClick={()=>setBuyerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="mcp_json"?"MCP JSON":"Ejemplo SDK"}</button>):(["prompt","cli","sdk"] as SellerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={sellerFormat===fmt} onClick={()=>setSellerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="cli"?"Bazaar CLI":"Provider Kit"}</button>)}</div>
    {!buyer && sellerFormat==="prompt" && <div className="ui-actions" aria-label="Ejemplos de proveedor">{(["custom","scriptwriter","auditor","oracle"] as SellerExample[]).map(ex=><button type="button" className="ui-chip" key={ex} aria-pressed={sellerExample===ex} onClick={()=>setSellerExample(ex)}>{ex==="scriptwriter"?"Guiones":ex==="auditor"?"Auditoría":ex==="oracle"?"Oráculo":"Personalizado"}</button>)}</div>}
    <details className="connect-help"><summary>Cómo usar estas instrucciones</summary><p>{buyer ? "Copia una plantilla o la configuración MCP. Conectar permite descubrir herramientas; para ver acciones externas en el historial, tu agente debe integrar su reporte." : "Estas plantillas son ejemplos para desarrollar un proveedor, no servicios ya disponibles. Publicar requiere validación, prueba de control y revisión manual."}</p><p>Copiar no envía mensajes, no publica un servicio ni ejecuta pagos. Revisa la plantilla antes de usarla; los ejemplos SDK requieren el entorno del repositorio.</p></details>
-   <CopyText key={buyer?buyerFormat:sellerFormat+sellerExample} text={buyer?getBuyerText():getSellerText()} label="Instrucciones" />
-   <div className="ui-actions">{buyer?<><ButtonLink href="/agent-chat" variant="secondary">Abrir chat existente</ButtonLink><ButtonLink href="/buyer-execution" variant="quiet">Abrir workspace</ButtonLink></>:<ButtonLink href="/publish" variant="secondary">Publicar API</ButtonLink>}</div>
+   {buyer && <details className="connect-help"><summary>¿Tu agente necesita fondos de prueba?</summary><p>Si ya tiene saldo, puede continuar. Sozu permite financiar su wallet de Testnet existente o crear una de pruebas si todavía no tiene. Para XLM, la guía explica cómo financiar una cuenta de pruebas con Friendbot. El agente necesita un firmante compatible y el servicio debe aceptar ese activo. No compartas claves secretas.</p><a href="https://faucet.sozu.capital/" target="_blank" rel="noopener noreferrer">Conocer Sozu Faucet ↗</a><p>El prompt enlaza la guía de fondos, que el agente consultará solo si la necesita.</p></details>}
+   <CopyText key={buyer?buyerFormat:sellerFormat+sellerExample} text={buyer?getBuyerText():getSellerText()} label="Instrucciones" compact extraActions={buyer?<><ButtonLink href="/agent-chat" variant="secondary">Abrir chat existente</ButtonLink><ButtonLink href="/buyer-execution" variant="quiet">Abrir workspace</ButtonLink></>:<ButtonLink href="/publish" variant="secondary">Preparar mi servicio</ButtonLink>} />
   </section>;
 }
