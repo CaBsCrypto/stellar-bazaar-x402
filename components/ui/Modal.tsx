@@ -2,7 +2,7 @@
 import {useEffect, useRef, type ReactNode} from "react";
 import {Button} from "./index";
 /** Native modal supplies focus containment, inert background and Escape handling. */
-export function Modal({open, onClose, title, children, wide = false}: {open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean}) {
+export function Modal({open, onClose, title, children, wide = false, className = ""}: {open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean; className?: string}) {
  const ref = useRef<HTMLDialogElement>(null);
  useEffect(() => {
   const dialog = ref.current;
@@ -12,9 +12,9 @@ export function Modal({open, onClose, title, children, wide = false}: {open: boo
   dialog.showModal(); document.body.style.overflow = "hidden";
   return () => { dialog.close(); document.body.style.overflow = overflow; previous?.focus(); };
  }, [open]);
- return <dialog ref={ref} className={`ui-modal ${wide ? "ui-modal--wide" : ""}`} aria-label={title} onKeyDown={event => {
+ return <dialog ref={ref} className={`ui-modal ${wide ? "ui-modal--wide" : ""} ${className}`} aria-label={title} onKeyDown={event => {
   if(event.key !== "Tab") return;
-  const nodes = Array.from(ref.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]') ?? []).filter(el => el.getClientRects().length > 0);
+  const nodes = Array.from(ref.current?.querySelectorAll<HTMLElement>('button:not([disabled]), summary, a[href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex="0"]') ?? []).filter(el => el.getClientRects().length > 0 && el.checkVisibility());
   const first = nodes[0], last = nodes[nodes.length - 1];
   if(event.shiftKey && document.activeElement === first){event.preventDefault(); last?.focus();}
   else if(!event.shiftKey && document.activeElement === last){event.preventDefault(); first?.focus();}
