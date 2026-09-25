@@ -59,7 +59,7 @@ export default function MarketScene(props:Props){
   const visitorParcel=parcel.clone(true);scene.add(visitorParcel);visitorParcel.traverse(object=>{if(object instanceof T.Mesh){object.material=(object.material as T.MeshStandardMaterial).clone();}});(visitorParcel.children[0] as T.Mesh<T.BoxGeometry,T.MeshStandardMaterial>).material.color.set("#97c8af");
   let visitorState=createVisitor(),lastAmbient=props.ambient;
   let frame=0,disposed=false,lost=false,mobile=false;
-  function resize(){const width=element.clientWidth,height=element.clientHeight;mobile=window.innerWidth<700;renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1.5:2));renderer.setSize(width,height);const span=mobile?Math.max(6.1,4.4*width/height):6.1;camera.left=-span;camera.right=span;camera.top=span*height/width;camera.bottom=-camera.top;camera.position.set(8,8,10);camera.lookAt(0,.65,1);camera.updateProjectionMatrix();wake.current();}
+  function resize(){const width=element.clientWidth,height=element.clientHeight;mobile=window.innerWidth<700;renderer.setPixelRatio(Math.min(devicePixelRatio,mobile?1.5:2));renderer.setSize(width,height);const span=mobile?Math.max(5.65,4.4*width/height):6.1;camera.left=-span;camera.right=span;camera.top=span*height/width;camera.bottom=-camera.top;camera.position.set(8,8,10);camera.lookAt(0,.65,1);camera.updateProjectionMatrix();wake.current();}
   // Distance-weighted interpolation keeps walking speed constant through the aisle.
   function walk(points:T.Vector3[],progress:number){const lengths=points.slice(1).map((point,i)=>point.distanceTo(points[i]));let distance=lengths.reduce((sum,value)=>sum+value,0)*Math.max(0,Math.min(1,progress));for(let i=0;i<lengths.length;i++){if(distance<=lengths[i]||i===lengths.length-1){const direction=points[i+1].clone().sub(points[i]);return{position:points[i].clone().lerp(points[i+1],lengths[i]?distance/lengths[i]:0),heading:Math.atan2(direction.x,direction.z)};}distance-=lengths[i];}return{position:points[0],heading:0};}
   function draw(){frame=0;if(disposed||lost)return;const p=latest.current,t=p.elapsed,collect=t>=6&&t<8,result=t>=11,walking=t>=3&&t<6||t>=8&&t<11;
@@ -92,9 +92,8 @@ export default function MarketScene(props:Props){
    if(visitorState.phase==="collect")visitorParcel.position.lerpVectors(new T.Vector3(2.8,1.2,visitorState.z-.37),visitorCarry,Math.min(1,visitorState.elapsed/.8));else visitorParcel.position.copy(visitorCarry);
    renderer.render(scene,camera);
    const buttons=element.parentElement?.querySelectorAll<HTMLElement>(".market-booth");
-   const anchors=positions.map(([x,z])=>new T.Vector3(x,2.5,z).project(camera));
-   const middleY=((1-anchors[1].y)+(1-anchors[2].y))*element.clientHeight/4;
-   buttons?.forEach((button,i)=>{const point=anchors[i];const halfWidth=button.offsetWidth/2;const x=mobile?Math.max(halfWidth+4,Math.min(element.clientWidth-halfWidth-4,(point.x+1)*element.clientWidth/2)):(point.x+1)*element.clientWidth/2;const y=mobile?middleY+(i===0?-52:i===3?52:0):(1-point.y)*element.clientHeight/2;button.style.setProperty("--label-x",`${x}px`);button.style.setProperty("--label-y",`${y}px`);});
+   const anchors=positions.map(([x,z])=>new T.Vector3(x,mobile?2.95:2.5,z).project(camera));
+   buttons?.forEach((button,i)=>{const point=anchors[i];const halfWidth=button.offsetWidth/2;const x=mobile?Math.max(halfWidth+4,Math.min(element.clientWidth-halfWidth-4,(point.x+1)*element.clientWidth/2)):(point.x+1)*element.clientWidth/2;const y=(1-point.y)*element.clientHeight/2;button.style.setProperty("--label-x",`${x}px`);button.style.setProperty("--label-y",`${y}px`);});
   }
   // Render on shared-clock updates only: there is no independent animation loop.
   wake.current=()=>{if(!disposed&&!lost&&!frame)frame=requestAnimationFrame(draw);};

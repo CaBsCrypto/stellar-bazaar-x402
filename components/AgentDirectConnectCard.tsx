@@ -10,7 +10,7 @@ type SellerFormat = "prompt" | "cli" | "sdk";
 type SellerExample = "scriptwriter" | "auditor" | "oracle" | "custom";
 type ActiveTab = "buyer" | "seller";
 
-export function AgentDirectConnectCard({role = "buyer"}: {role?: ActiveTab}) {
+export function AgentDirectConnectCard({role = "buyer", compact=false}: {role?: ActiveTab; compact?:boolean}) {
   const [buyerFormat, setBuyerFormat] = useState<BuyerFormat>("prompt");
   const [sellerFormat, setSellerFormat] = useState<SellerFormat>("prompt");
   const [sellerExample, setSellerExample] = useState<SellerExample>("custom");
@@ -94,14 +94,18 @@ const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
   };
 
   const buyer = role === "buyer";
-  return <section className="connect-instructions" aria-label={buyer?"Conexión del comprador":"Preparación del proveedor"}>
-   <h2>{buyer?"Encuentra un servicio con tu agente":"Prepara tu servicio con tu agente"}</h2>
-
-   <p className="ui-muted">{buyer?"Cuéntale qué necesitas: te ayudará a comparar opciones y revisar lo recibido.":"Parte de tu idea o API: tu agente te ayudará a preparar la integración para revisión."}</p>
+  const advanced=<>
    <div className="ui-chips" aria-label="Formato de instrucciones">{buyer ? (["prompt","mcp_json","sdk"] as BuyerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={buyerFormat===fmt} onClick={()=>setBuyerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="mcp_json"?"MCP JSON":"Ejemplo SDK"}</button>):(["prompt","cli","sdk"] as SellerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={sellerFormat===fmt} onClick={()=>setSellerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="cli"?"Bazaar CLI":"Provider Kit"}</button>)}</div>
    {!buyer && sellerFormat==="prompt" && <div className="ui-actions" aria-label="Ejemplos de proveedor">{(["custom","scriptwriter","auditor","oracle"] as SellerExample[]).map(ex=><button type="button" className="ui-chip" key={ex} aria-pressed={sellerExample===ex} onClick={()=>setSellerExample(ex)}>{ex==="scriptwriter"?"Guiones":ex==="auditor"?"Auditoría":ex==="oracle"?"Oráculo":"Personalizado"}</button>)}</div>}
    <details className="connect-help"><summary>Cómo usar estas instrucciones</summary><p>{buyer ? "Copia una plantilla o la configuración MCP. Conectar permite descubrir herramientas; para ver acciones externas en el historial, tu agente debe integrar su reporte." : "Estas plantillas son ejemplos para desarrollar un proveedor, no servicios ya disponibles. Publicar requiere validación, prueba de control y revisión manual."}</p><p>Copiar no envía mensajes, no publica un servicio ni ejecuta pagos. Revisa la plantilla antes de usarla; los ejemplos SDK requieren el entorno del repositorio.</p></details>
    {buyer && <details className="connect-help"><summary>¿Tu agente necesita fondos de prueba?</summary><p>Si ya tiene saldo, puede continuar. Sozu permite financiar su wallet de Testnet existente o crear una de pruebas si todavía no tiene. Para XLM, la guía explica cómo financiar una cuenta de pruebas con Friendbot. El agente necesita un firmante compatible y el servicio debe aceptar ese activo. No compartas claves secretas.</p><a href="https://faucet.sozu.capital/" target="_blank" rel="noopener noreferrer">Conocer Sozu Faucet ↗</a><p>El prompt enlaza la guía de fondos, que el agente consultará solo si la necesita.</p></details>}
+  </>;
+  return <section className="connect-instructions" aria-label={buyer?"Conexión del comprador":"Preparación del proveedor"}>
+   {!compact && <h2>{buyer?"Encuentra un servicio con tu agente":"Prepara tu servicio con tu agente"}</h2>}
+
+   <p className="ui-muted">{buyer?"Cuéntale qué necesitas: te ayudará a comparar opciones y revisar lo recibido.":"Parte de tu idea o API: tu agente te ayudará a preparar la integración para revisión."}</p>
+   {!compact && advanced}
    <CopyText key={buyer?buyerFormat:sellerFormat+sellerExample} text={buyer?getBuyerText():getSellerText()} label="Instrucciones" compact extraActions={buyer?<><ButtonLink href="/agent-chat" variant="secondary">Abrir chat existente</ButtonLink><ButtonLink href="/buyer-execution" variant="quiet">Abrir workspace</ButtonLink></>:<ButtonLink href="/publish" variant="secondary">Preparar mi servicio</ButtonLink>} />
+   {compact && <details className="connect-help"><summary>Formatos, ejemplos y ayuda</summary>{advanced}</details>}
   </section>;
 }

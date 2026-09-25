@@ -6,7 +6,7 @@ import {Modal} from "./ui/Modal";
 export function LandingConnect() {
   const [open,setOpen]=useState(false);
   return <><Button onClick={()=>setOpen(true)} aria-haspopup="dialog">Conectar mi agente</Button>
-    <Modal open={open} onClose={()=>setOpen(false)} title="Conectar tu agente" wide>
-      {open && <AgentHub />}
+    <Modal open={open} onClose={()=>setOpen(false)} title="Conectar tu agente" wide className="connection-modal">
+      {open && <AgentHub compact />}
     </Modal></>;
 }

@@ -69,11 +69,6 @@ export function Catalog({standalone = false}: {standalone?: boolean}) {
   return <section className="ui-catalog" aria-label="Servicios del mercado">
     {agentToast && <p className="ui-notice" role="status">{agentToast}</p>}
     <SectionHeading headingLevel={standalone ? 1 : 2} eyebrow="SERVICIOS LISTADOS · STELLAR TESTNET" title="Encuentra lo que tu agente necesita"><p role="status">{results.length} {results.length === 1 ? "resultado" : "resultados"}</p></SectionHeading>
-    <div className="ui-chips" aria-label="Filtros rápidos">
-      <button type="button" className="ui-chip" onClick={resetFilters} aria-pressed={!query && kind === "all" && scheme === "all" && !maxPrice}>Todos</button>
-      <button type="button" className="ui-chip" onClick={() => {setQuery("video");setKind("all");}} aria-pressed={query === "video"}>Guiones de video</button>
-      <button type="button" className="ui-chip" onClick={() => {setQuery("swap");setKind("all");}} aria-pressed={query === "swap"}>Sandbox de pagos</button>
-    </div>
     <form className="ui-filter-grid" onSubmit={e => e.preventDefault()} {...({toolname:"bazaar_catalog_filter_form",tooldescription:"Filtrar y buscar servicios del catálogo de Stellar Bazaar"} as Record<string,unknown>)}>
       <label>Buscar servicio<input value={query} onChange={e => setQuery(e.target.value)} placeholder="Guiones, video, swap…" {...({toolparamdescription:"Palabras clave de búsqueda"} as Record<string,unknown>)} /></label>
       <label>Tipo<select value={kind} onChange={e=>setKind(e.target.value as typeof kind)}><option value="all">Todos</option><option value="http">HTTP x402</option><option value="mcp">MCP</option></select></label>
