@@ -1,1 +1,12 @@
-{"git":{"deploymentEnabled":{"review/base-webmcp":false,"review/history-identity":false}}}
+{
+  "git": {
+    "deploymentEnabled": {
+      "review/base-webmcp": false,
+      "review/history-identity": false,
+      "review/usdc-xlm-recovery": false,
+      "review/shared-payment-control": false,
+      "review/consistent-discovery": false,
+      "review/buyer-entry-validation": false
+    }
+  }
+}
