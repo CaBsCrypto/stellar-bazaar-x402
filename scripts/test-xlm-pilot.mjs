@@ -13,6 +13,9 @@ import { BazaarAgentClient } from '../lib/bazaar-agent-client.ts';
 import { parseServiceCardShape } from '../lib/service-card-schema.ts';
 import { toPaidService,toServiceCard } from '../lib/service-card.ts';
 import { filterServices } from '../lib/discovery.ts';
+import { generateHistoryKeypair, authenticateHistory } from '../lib/operation-history-auth.ts';
+import { createHistoryHandlers } from '../lib/operation-history-http.ts';
+import { createHistoryStore } from '../lib/operation-history-store.ts';
 const directory=await mkdtemp(join(tmpdir(),'bazaar-xlm-'));
 const payer=Keypair.random(),seller=Keypair.random().publicKey(); // Ephemeral, unfunded test keys. Never printed.
 const card={version:'bazaar.service-card/v0',id:'swap-risk-quote',name:'Sandbox',description:'Deterministic sandbox result for isolated tests.',kind:'http',url:'http://127.0.0.1:3215',routeTemplate:'/api/x402/swap-risk?pair={pair}&amount={amount}&side={side}',input:['pair','amount','side'].map(name=>({name,type:name==='amount'?'number':'string',required:true})),network:'stellar:testnet',payment:{scheme:'exact',asset:'USDC',amount:'0.001',destination:seller},paymentOptions:sandboxOptions(seller),provider:{name:'Test'},tags:['sandbox']};
@@ -106,5 +109,46 @@ try {
  const signatureCount=signatures, settlementCount=settleCalls;
  await assert.rejects(()=>new BazaarAgentClient(opts).executeService(card,params,{operationId:'integrated-lost'}),/PAYMENT_PENDING/);
  assert.equal(signatures,signatureCount);assert.equal(settleCalls,settlementCount);
+ // Full local chain: real credential association and HTTP handlers, simulated storage/payment only.
+ const alice=generateHistoryKeypair('combined-alice'),bob=generateHistoryKeypair('combined-bob');
+ const config=JSON.stringify([alice,bob].map(({ownerId,readTokenHash,writeTokenHash})=>({ownerId,readTokenHash,writeTokenHash})));
+ assert.equal(authenticateHistory(`Bearer ${alice.readToken}`,false,config).ownerId,authenticateHistory(`Bearer ${alice.writeToken}`,true,config).ownerId);
+ const hashes=new Map(),indexes=new Map();let storageAvailable=false;
+ const historyRedis={
+  async eval(_script,[key,index],[id,digest,entry]){
+   if(!storageAvailable)throw Error('simulated history outage');
+   const records=hashes.get(key)??new Map();
+   if(records.has(id))return [JSON.parse(records.get(id)).digest===digest?'existing':'conflict',records.get(id)];
+   records.set(id,entry);hashes.set(key,records);indexes.set(index,[id,...(indexes.get(index)??[])]);return ['created',entry];
+  },
+  async lrange(key,start,stop){return(indexes.get(key)??[]).slice(start,stop+1)},
+  async hmget(key,...fields){return Object.fromEntries(fields.map(field=>[field,hashes.get(key)?.get(field)]))},
+ };
+ const handlers=()=>createHistoryHandlers({authenticate:(authorization,write)=>authenticateHistory(authorization,write,config),store:()=>createHistoryStore(historyRedis)});
+ globalThis.fetch=async(url,init)=>{
+  const request=new Request(url,init),pathname=new URL(request.url).pathname;
+  if(pathname==='/api/operations')return handlers()[request.method](request);
+  if(pathname==='/api/x402/swap-risk')return handleSandboxPayment(request,deps);
+  throw Error('UNEXPECTED_OUTBOUND_REQUEST');
+ };
+ const combinedCard={...card,url:'https://localhost:3215'};
+ const combinedOptions={...opts,baseUrl:combinedCard.url,history:{writeToken:alice.writeToken,includeResult:true,mode:'fixture'}};
+ const firstCombined=await new BazaarAgentClient(combinedOptions).executeService(combinedCard,params,{operationId:'combined-history',preferredAsset:'XLM'});
+ assert.equal(firstCombined.history.status,'failed');
+ const combinedSignatures=signatures,combinedSettlements=settleCalls;storageAvailable=true;
+ const recovered=await new BazaarAgentClient(combinedOptions).executeService(combinedCard,params,{operationId:'combined-history',preferredAsset:'XLM'});
+ assert.equal(recovered.history.status,'recorded');assert.deepEqual(recovered.data,firstCombined.data);
+ assert.equal(recovered.payment.transactionHash,firstCombined.payment.transactionHash);
+ const ownRequest=()=>new Request(card.url+'/api/operations',{headers:{Authorization:`Bearer ${alice.readToken}`}});
+ const saved=(await (await handlers().GET(ownRequest())).json()).records;
+ assert.equal(saved.length,1);assert.equal(saved[0].clientOperationId,'combined-history');
+ assert.equal(saved[0].payment.asset,'XLM');assert.equal(saved[0].payment.amountAtomic,'100000');
+ assert.deepEqual(saved[0].delivery.result,firstCombined.data);assert.equal(saved[0].payment.transactionHash,firstCombined.payment.transactionHash);
+ await new BazaarAgentClient(combinedOptions).executeService(combinedCard,params,{operationId:'combined-history',preferredAsset:'XLM'});
+ assert.deepEqual((await (await handlers().GET(ownRequest())).json()).records,saved);
+ assert.deepEqual((await (await handlers().GET(new Request(card.url+'/api/operations',{headers:{Authorization:`Bearer ${bob.readToken}`}}))).json()).records,[]);
+ assert.equal((await handlers().POST(new Request(card.url+'/api/operations',{method:'POST',headers:{Authorization:`Bearer ${alice.readToken}`,'Content-Type':'application/json'},body:'{}'}))).status,403);
+ assert.equal(signatures,combinedSignatures);assert.equal(settleCalls,combinedSettlements);
+ console.log('PASS combined buyer -> simulated 402 settlement -> persisted response -> authenticated history -> owner read -> fresh client recovery; no duplicate payment');
  console.log('PASS integrated buyer, selected challenge, raw response recovery; signatures/facilitator simulated only');
 } finally {globalThis.fetch=originalFetch;ExactStellarScheme.prototype.createPaymentPayload=originalSign;}
