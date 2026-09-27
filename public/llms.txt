@@ -1,56 +1,37 @@
-# Stellar Bazaar x402 — Agent Ecosystem Guide
+# Stellar Bazaar x402 — guía para agentes
 
-> Agent-native discovery, conformance validation, and HTTP 402 payment settlement on Stellar Testnet.
+Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibilidad, propiedad certificada ni entrega; respeta availability, partialResults y dynamicRegistry y comunica sus límites.
 
-## 🌟 Overview for AI Agents
-Stellar Bazaar is an open decentralized service marketplace where AI agents can autonomously:
-1. Discover verified Oracles, APIs, and AI workflow bundles.
-2. Inspect deterministic ServiceCards with complete parameter, pricing, and destination wallet schemas.
-3. Validate and publish new services via 11 deterministic conformance rules.
-4. Settle micropayments (USDC/XLM) using standard HTTP 402 Payment Required via OpenZeppelin/Stellar Testnet Facilitators.
-5. Reconcile on-chain receipts and cryptographic Proof of Delivery envelopes (`bazaar.delivery-envelope/v1`).
+## Conexión y límites
+- MCP Streamable HTTP: POST /api/mcp, JSON-RPC 2.0. GET /api/mcp describe capacidades; no sustituye initialize + tools/list + tools/call.
+- El MCP HTTP es de solo lectura: no ejecuta servicios, no firma, no crea wallets ni autoriza compras. No expone execute_service.
+- WebMCP es la interfaz del navegador; GET /api/webmcp/spec describe esa interfaz distinta, no las herramientas del servidor MCP HTTP.
+- Búsqueda REST: GET /api/discovery/search?query={query}.
+- Catálogo REST: GET /api/discovery/resources.
+- Detalle por ID: herramienta MCP get_service con {"id":"ID_REAL"}. La página humana es /resources/{id}; no existe una API REST de detalle por ID.
+- Validación sin publicación: POST /api/conformance/service-card.
+- Registro de proveedor: POST /api/publisher/ingest requiere credencial de proveedor y revisión del flujo de publicación; validar no equivale a publicar.
 
----
+## Las ocho herramientas del MCP HTTP
+1. get_bazaar_capabilities: capacidades, políticas y límites.
+2. list_services: fichas del catálogo; inspecciona disponibilidad.
+3. search_services: búsqueda léxica por query y paginación.
+4. get_service: ficha por id.
+5. list_workflow_bundles: workflows declarados.
+6. get_workflow_bundle: detalle de un workflow por id.
+7. validate_service_card: validar una ficha sin publicarla.
+8. get_operation_history: historial privado con Authorization: Bearer configurado en el transporte HTTP. No pongas credenciales en argumentos, prompts ni logs; sin autenticación debe denegar acceso.
 
-## 🔌 Connection Endpoints
-- **MCP Streamable HTTP Server:** `POST /api/mcp` (JSON-RPC 2.0)
-- **WebMCP JSON Specification:** `GET /api/webmcp/spec`
-- **Discovery REST Search:** `GET /api/discovery/search?query={query}`
-- **Service Details:** `GET /api/discovery/resources/{id}`
-- **Card Conformance Validator:** `POST /api/conformance/service-card`
-- **Provider Registration / Ingestion:** `POST /api/publisher/ingest` (Headers: `X-Bazaar-Provider-Key: {secret}`)
+## Flujo comprador
+1. Aclara necesidad y compara opciones con search_services y get_service.
+2. Inspecciona inputs, disponibilidad, ruta, red, activo exacto, importe y destinatario. No confundas fixtures con servicios activos.
+3. Conectar MCP no instala un ejecutor. Para comprar necesitas un host con terminal/HTTP y cliente de ejecución, firmante local compatible, saldo, política de presupuesto y verificador independiente del recibo.
+4. Solo con autorización suficiente, comprueba el desafío 402 contra la ficha antes de firmar. Si falta configuración, detente y describe qué falta. No solicites claves privadas al humano.
+5. Verifica recibo y entrega antes de declarar éxito. Un hash de transacción por sí solo no prueba conciliación. Si el pago queda incierto, recupera su estado sin repetirlo.
+6. El historial requiere integración y autenticación propias; conectarse al MCP no registra automáticamente compras externas. Consulta /HISTORY_CONNECTION.md.
 
----
-
-## 🛠️ MCP Tools Exposed
-1. `get_bazaar_capabilities`: Inspect registry policies, payment flows, and safety boundaries.
-2. `list_services`: List all static and dynamically indexed AI agent services.
-3. `search_services`: Bilingual lexical search and ranking by query, tag, or budget.
-4. `get_service`: Fetch complete technical specifications and payment terms for a service ID.
-5. `list_workflow_bundles`: Discover multi-step composite workflows with dependencies.
-6. `get_workflow_bundle`: Audit stage breakdown and aggregated price estimations.
-7. `validate_service_card`: Audit custom JSON ServiceCards against all 11 conformance rules.
-8. `execute_service`: Run reference fixtures or invoke x402 services with buyer-controlled authorization.
-
----
-
-## 💳 The 7-Stage x402 Payment Lifecycle
-1. **Discover:** Query Bazaar index for candidate services.
-2. **Quote Inspection:** Agent parses route template, parameter types, price, network, and `payTo` address.
-3. **HTTP 402 Challenge:** Target endpoint returns `402 Payment Required` with `accepts` requirements and sponsored fee details.
-4. **Policy Guard:** Buyer agent checks internal safety limits (e.g. max 0.05 USDC per call, network `stellar:testnet`, asset `USDC`).
-5. **Settlement:** Buyer signs payment authorization; facilitator settles on-chain to provider wallet.
-6. **Delivery:** Provider verifies settlement and returns payload with `PAYMENT-RESPONSE` header.
-7. **Reconciliation:** Buyer validates transaction hash, ledger number, and result hash.
-
----
-
-## 🧪 Testnet Configuration
-- **Network:** `stellar:testnet`
-- **USDC Asset Address:** `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`
-- **Facilitator Endpoint:** `https://channels.openzeppelin.com/x402/testnet`
-- **Stellar Explorer:** `https://stellar.expert/explorer/testnet`
-
+## Prueba local reproducible, sin pagos
+Desde una copia del repositorio, sigue docs/BUYER_HANDOFF.md. Incluye un cliente MCP HTTP real y una simulación local determinista. Los módulos lib/bazaar-agent-client.ts y lib/provider-kit.ts son internos del repositorio; no son paquetes publicados que debas instalar. El alias @/ solo funciona con la configuración de este proyecto.
 
 ## Fondos de prueba antes de comprar
 
