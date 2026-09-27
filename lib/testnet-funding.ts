@@ -10,7 +10,7 @@ export const testnetFundingInstructions = `Antes de pagar, comprueba la red Stel
 Para XLM de Testnet, Friendbot (https://friendbot.stellar.org) puede financiar una cuenta de prueba G…; reutiliza la existente y verifica su saldo gastable, descontando reservas y obligaciones. No cambies de activo después de iniciar un pago.
 Recibir fondos de prueba no autoriza una compra: respeta el presupuesto y las condiciones de la tarea.`;
 
-export const buyerConnectionPrompt = `Ayúdame a elegir un servicio de Bazaar. Lee la guía, descubre las herramientas MCP y compara opciones según mi necesidad. El MCP HTTP es de solo lectura: no compra, no firma ni configura una wallet. Antes de cualquier compra, verifica servicio, activo, presupuesto autorizado y ejecutor compatible; si falta algo, informa el bloqueo. Nunca compartas claves privadas ni repitas un pago incierto.
+export const buyerConnectionPrompt = `Ayúdame a comprar un servicio de Bazaar. Lee la guía y compara opciones según mi necesidad. El MCP HTTP es de solo lectura: no compra, no firma ni configura una wallet. Verifica servicio, activo, presupuesto autorizado y ejecutor compatible. Con autorización y configuración completas, ejecuta la compra mediante el comprador local y revisa la entrega conmigo; si falta algo, detente e informa el bloqueo. Nunca compartas claves privadas ni repitas un pago incierto.
 
 Guía: https://bazaar.browns.studio/llms.txt
 MCP: https://bazaar.browns.studio/api/mcp`;

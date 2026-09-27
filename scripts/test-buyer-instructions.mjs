@@ -18,6 +18,8 @@ assert.match(card, /Descubrimiento REST/);
 const prompt = read('lib/testnet-funding.ts').split('export const buyerConnectionPrompt')[1];
 assert.match(prompt, /solo lectura/);
 assert.match(prompt, /ejecutor compatible/);
+assert.match(prompt, /Ayúdame a comprar/);
+assert.match(prompt, /Con autorización y configuración completas, ejecuta la compra mediante el comprador local/);
 const handoff = read('docs/BUYER_HANDOFF.md');
 for (const command of ['serve-buyer-mcp-review.mjs','buyer-mcp-review.mjs','test-buyer-mcp.mjs','buyer-acceptance.mjs prepare','buyer-acceptance.mjs buy','buyer-acceptance.mjs recover']) assert(handoff.includes(command));
 assert.match(handoff, /realPayments: 0/);
