@@ -20,8 +20,41 @@ try {
     scope.registry.registerTool(definition("own"));
     assert.equal(registry.getTools().find(tool => tool.name === "own").execute instanceof Function, true);
     scope.dispose();
-    assert.deepEqual([...tools.keys()], ["foreign"]);
+    assert.deepEqual([...tools.keys()], kind === "object" ? ["foreign"] : ["foreign", "own"]);
     assert.equal(window.__WEBMCP_EMULATOR__.tools.size, 0);
+  }
+  // A cached discovery result must never authorize deletion of a later owner.
+  for (const kind of ["async-array", "async-object", "metadata", "missing", "throws"]) {
+    const own = definition("own");
+    const tools = new Map();
+    let cleanup = false;
+    let removals = 0;
+    const native = {
+      registerTool: tool => tools.set(tool.name, tool),
+      unregisterTool: name => { removals++; return tools.delete(name); },
+      getTools: () => {
+        if (cleanup && kind === "throws") throw new Error("discovery unavailable");
+        if (cleanup && kind === "missing") return undefined;
+        const list = [...tools.values()];
+        if (kind === "metadata") return list.map(({ name, description }) => ({ name, description }));
+        if (kind === "async-array") return Promise.resolve(list);
+        if (kind === "async-object") return Promise.resolve({ tools: list });
+        return list;
+      },
+    };
+    globalThis.window = {}; globalThis.document = {};
+    Object.defineProperty(globalThis, "navigator", { configurable: true, value: { modelContext: native } });
+    const registry = await initWebMCPAsync();
+    const scope = createOwnedRegistration(registry);
+    scope.registry.registerTool(own);
+    await initWebMCPAsync(); // The snapshot now contains the old owner's tool.
+    const replacement = definition("own");
+    tools.set("own", replacement);
+    cleanup = true;
+    scope.dispose(); scope.dispose();
+    assert.equal(tools.get("own"), replacement, `${kind}: preserves replacement`);
+    assert.equal(removals, 0, `${kind}: no native deletion without current identity`);
+    assert.equal(window.__WEBMCP_EMULATOR__.tools.size, 0, `${kind}: local mirror cleaned`);
   }
   for (const invalid of [{}, { tools: null }, { tools: [null] }]) {
     globalThis.window = {}; globalThis.document = {};
