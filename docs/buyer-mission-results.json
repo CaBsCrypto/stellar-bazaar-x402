@@ -1,7 +1,7 @@
 {
-  "date": "2026-09-27T23:16:22.804Z",
-  "sha": "674bfcabc16e7883aee690247d9b450d39b16205",
-  "dirty": "?? docs/FULL_FLOW_VALIDATION.md\n?? docs/buyer-mission-results.json\n?? docs/review/full-mission/",
+  "date": "2026-09-27T23:55:48.564Z",
+  "sha": "669e716f7ddedde3fd64f9547adb12274b2b6ad0",
+  "dirty": "M .github/workflows/ci.yml",
   "runtime": "v22.18.0",
   "environment": "Local doubles and loopback MCP only; allowlisted environment. No transfers or external storage.",
   "results": [

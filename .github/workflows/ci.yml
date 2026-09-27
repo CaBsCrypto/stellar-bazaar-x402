@@ -49,6 +49,9 @@ jobs:
       - name: Protocol & Payment Flow Tests
         run: npm run test:payment-flow
 
+      - name: Complete Local Buyer Acceptance (synthetic data only)
+        run: node scripts/test-buyer-mission.mjs
+
       - name: Next.js Production Build
         run: npm run build
         env:
