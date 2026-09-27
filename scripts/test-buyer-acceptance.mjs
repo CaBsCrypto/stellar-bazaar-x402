@@ -3,8 +3,9 @@ import { mkdtemp, open, unlink, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn, spawnSync } from 'node:child_process';
+const hostileEnv={...process.env,X402_SETTLEMENT_STORE:'redis',X402_PILOT_STATE_DIR:'never-used',X402_PILOT_PAYMENTS_ENABLED:'false',STELLAR_X402_FACILITATOR_URL:'https://unreachable.invalid',UPSTASH_REDIS_REST_URL:'https://unreachable.invalid',UPSTASH_REDIS_REST_TOKEN:'synthetic-hostile-token',BAZAAR_HISTORY_ACCOUNTS_JSON:'invalid',VERCEL:'1'};
 const root=await mkdtemp(join(tmpdir(),'buyer-acceptance-')),dir=join(root,'isolated');
-function run(command,extras=[],ok=true){const p=spawnSync(process.execPath,['scripts/buyer-acceptance.mjs',command,'--dir',dir,...extras],{encoding:'utf8'});assert.equal(p.status,ok?0:1,p.stderr+p.stdout);return JSON.parse(p.stdout.trim())}
+function run(command,extras=[],ok=true){const p=spawnSync(process.execPath,['scripts/buyer-acceptance.mjs',command,'--dir',dir,...extras],{encoding:'utf8',env:hostileEnv});assert.equal(p.status,ok?0:1,p.stderr+p.stdout);return JSON.parse(p.stdout.trim())}
 const args=(id,extra=[])=>['--operation',id,'--asset','XLM','--budget','0.01',...extra];
 run('prepare');
 let r=run('buy',['--operation','missing-budget','--asset','XLM'],false);assert.match(r.error,/BUDGET/);
@@ -26,10 +27,8 @@ const lock=await open(join(dir,'session.lock'),'wx');try{r=run('buy',args('concu
 r=run('buy',['--operation','low-budget-op','--asset','XLM','--budget','0.001'],false);assert.match(r.error,/NO_AUTHORIZED/);assert.equal(r.counters.signatures,3);
 r=run('buy',['--operation','usdc-success-op','--asset','USDC','--budget','0.001']);assert.equal(r.outcome.payment.asset,'USDC');assert.equal(r.counters.signatures,4);assert.equal(r.counters.settlements,4);
 const raced=await Promise.all([1,2].map(()=>new Promise((resolve,reject)=>{
- const p=spawn(process.execPath,['scripts/buyer-acceptance.mjs','buy','--dir',dir,...args('process-race-op')],{stdio:['ignore','pipe','pipe']});let out='',err='';p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);p.on('error',reject);p.on('close',code=>{try{const result=JSON.parse(out.trim());if(code!==0)assert.match(result.error,/PAYMENT_PENDING/);resolve(result)}catch(e){reject(new Error(err+out+e.message))}});
+ const p=spawn(process.execPath,['scripts/buyer-acceptance.mjs','buy','--dir',dir,...args('process-race-op')],{stdio:['ignore','pipe','pipe'],env:hostileEnv});let out='',err='';p.stdout.on('data',x=>out+=x);p.stderr.on('data',x=>err+=x);p.on('error',reject);p.on('close',code=>{try{const result=JSON.parse(out.trim());if(code!==0)assert.match(result.error,/PAYMENT_PENDING/);resolve(result)}catch(e){reject(new Error(err+out+e.message))}});
 })));
 assert.ok(raced.some(r=>r.ok));
 const state=JSON.parse(await readFile(join(dir,'simulation.json'),'utf8'));assert.deepEqual(state.counters,{signatures:5,settlements:5});
 console.log(JSON.stringify({ok:true,simulation:true,realPayments:0,newProcessRecovery:true,historyRetryOnly:true,uncertaintyBlocked:true,concurrencyBlocked:true,explicitPolicy:true,ownerIsolation:true}));
-
-

@@ -3,13 +3,20 @@ import { resolve, join } from 'node:path';
 import { Keypair } from '@stellar/stellar-sdk';
 import { ExactStellarScheme } from '@x402/stellar/exact/client';
 import { encodePaymentRequiredHeader } from '@x402/core/http';
-import { BazaarAgentClient } from '../lib/bazaar-agent-client.ts';
-import { FilePaymentJournal, paymentBinding } from '../lib/pilot-payment-store.ts';
-import { buyerAcceptanceCard } from './buyer-acceptance-fixture.mjs';
-import { handleSandboxPayment } from '../lib/sandbox-payment-handler.ts';
-import { generateHistoryKeypair, authenticateHistory } from '../lib/operation-history-auth.ts';
-import { createHistoryHandlers } from '../lib/operation-history-http.ts';
-import { createHistoryStore } from '../lib/operation-history-store.ts';
+// Remove inherited service credentials/configuration before importing application code.
+// Enumerate names only: never inspect or print the inherited values.
+for (const key of Object.keys(process.env)) {
+ if (/^(X402_|STELLAR_|BAZAAR_|UPSTASH_|KV_|NEXT_PUBLIC_X402_)/.test(key) || key === 'VERCEL') delete process.env[key];
+}
+process.env.NODE_ENV = 'test';
+globalThis.fetch = async () => { throw Error('OUTBOUND_NETWORK_DISABLED'); };
+const { BazaarAgentClient } = await import('../lib/bazaar-agent-client.ts');
+const { FilePaymentJournal, paymentBinding } = await import('../lib/pilot-payment-store.ts');
+const { buyerAcceptanceCard } = await import('./buyer-acceptance-fixture.mjs');
+const { handleSandboxPayment } = await import('../lib/sandbox-payment-handler.ts');
+const { generateHistoryKeypair, authenticateHistory } = await import('../lib/operation-history-auth.ts');
+const { createHistoryHandlers } = await import('../lib/operation-history-http.ts');
+const { createHistoryStore } = await import('../lib/operation-history-store.ts');
 
 // This executable has no live mode. Never load dotenv, wallet files or a network client.
 globalThis.fetch = async () => { throw Error('OUTBOUND_NETWORK_DISABLED'); };
@@ -81,4 +88,3 @@ try {
   }
  }
 } catch(e){emit({ok:false,error:e.message});process.exitCode=1}
-
