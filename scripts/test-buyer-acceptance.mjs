@@ -11,6 +11,7 @@ run('prepare');
 let r=run('buy',['--operation','missing-budget','--asset','XLM'],false);assert.match(r.error,/BUDGET/);
 r=run('buy',['--operation','missing-asset','--budget','0.01'],false);assert.match(r.error,/ASSET/);
 r=run('buy',args('missing-signer',['--fault','signer']),false);assert.match(r.error,/PAYER/);assert.equal(r.counters.signatures,0);
+r=run('buy',args('missing-funds',['--fault','funds']),false);assert.match(r.error,/NO_AUTHORIZED/);assert.deepEqual(r.counters,{signatures:0,settlements:0});
 r=run('buy',args('tampered-terms',['--fault','tamper']),false);assert.match(r.error,/REQUIREMENTS_MISMATCH/);assert.equal(r.counters.signatures,0);
 r=run('buy',args('history-retry',['--fault','history']));assert.equal(r.outcome.history.status,'failed');assert.equal(r.outcome.delivery.resultAvailable,true);assert.equal(r.counters.signatures,1);assert.equal(r.counters.settlements,1);
 const delivered=r.outcome.data;

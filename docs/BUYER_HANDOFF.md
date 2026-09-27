@@ -38,6 +38,8 @@ Finaliza terminal A con Ctrl+C cuando acabes. Para inspeccionar un servicio del 
 
 Los siguientes bloques usan PowerShell en Windows. Usa una carpeta temporal nueva, fuera del checkout, por escenario. El ejecutor prepara su estado sintético; no lee credenciales reales.
 
+El identificador `--operation` debe tener entre 8 y 128 caracteres: letras, números, guion o guion bajo. Consérvalo durante toda la recuperación de esa compra.
+
 ```powershell
 $buyerDemo = Join-Path $env:TEMP ("bazaar-buyer-" + [guid]::NewGuid())
 node scripts/buyer-acceptance.mjs prepare --dir "$buyerDemo"
@@ -59,6 +61,8 @@ node scripts/buyer-acceptance.mjs recover --dir "$buyerUncertain" --operation co
 En este escenario se espera un fallo controlado: `recover` devuelve `PAYMENT_PENDING` y conserva los contadores en una firma y una liquidación (1/1). La recuperación no termina la operación: queda bloqueada hasta contar con evidencia independiente. Este simulador no ofrece un comando de conciliación (`reconcile`), por lo que repetir `recover` seguirá mostrando ese bloqueo. Conserva el mismo ID y estado; no borres la carpeta ni repitas `buy` con otro ID para resolver incertidumbre. Los escenarios `--fault history`, `--fault tamper` y `--fault signer` permiten comprobar fallos; usa una carpeta nueva para cada uno. `--no-history` desactiva historial y debe conservarse entre buy y recover: no se debe prometer un enlace privado.
 
 ## 3. Informe que debe entregar el agente
+
+Para comprobar saldo ausente sin consultar una wallet real, usa `buy` en otra carpeta preparada con `--fault funds`: debe rechazar la compra con `NO_AUTHORIZED_FUNDED_OPTION`, cero firmas y cero liquidaciones. `--fault signer` representa un firmante ausente. Ambos son dobles; no prueban conexión a una wallet externa. No ejecutes faucets para resolverlos.
 
 Incluye comando ejecutado, servicio/activo/presupuesto elegido, resultado, evidencia de entrega y contadores antes/después de recuperar. Identifica si el historial quedó registrado, falló o estaba desactivado. Indica siempre que es simulación local y que se realizaron cero pagos reales. No copies tokens, claves ni archivos de estado completos.
 

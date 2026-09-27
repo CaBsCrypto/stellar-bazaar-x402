@@ -41,7 +41,7 @@ try {
   if(!/^[a-zA-Z0-9_-]{8,128}$/.test(flags['--operation']??''))throw Error('OPERATION_ID_REQUIRED: 8-128 safe characters');
   if(!['USDC','XLM'].includes(flags['--asset']))throw Error('EXPLICIT_ASSET_REQUIRED');
   if(!/^\d+(\.\d{1,7})?$/.test(flags['--budget']??''))throw Error('EXPLICIT_BUDGET_REQUIRED');
-  if(flags['--fault']&&!['history','uncertain','tamper','signer'].includes(flags['--fault']))throw Error('UNKNOWN_FAULT');
+  if(flags['--fault']&&!['history','uncertain','tamper','signer','funds'].includes(flags['--fault']))throw Error('UNKNOWN_FAULT');
   const lockPath=join(dir,'session.lock');
   let lock;try{lock=await open(lockPath,'wx',0o600)}catch(e){if(e.code==='EEXIST')throw Error('PAYMENT_PENDING: session locked; never remove automatically');throw e}
   let state;
@@ -77,7 +77,7 @@ try {
     if(response.status===402&&flags['--fault']==='tamper'){const body=await response.json();body.accepts.forEach(o=>o.amount='999999');return Response.json(body,{status:402,headers:{'payment-required':encodePaymentRequiredHeader(body)}})}
     return response;
    };
-   const client=new BazaarAgentClient({baseUrl:card.url,payerSecretKey:flags['--fault']==='signer'?undefined:payer.secret(),allowedAssets:[flags['--asset']],maxAmountByAsset:{[flags['--asset']]:flags['--budget']},paymentJournal:new FilePaymentJournal(join(dir,'buyer')),readBalances:async()=>({USDC:'100000',XLM:'1000000'}),receiptVerifier:()=>true,...(flags['--no-history']?{}:{history:{writeToken:state.alice.writeToken,includeResult:true,mode:'fixture'}})});
+   const client=new BazaarAgentClient({baseUrl:card.url,payerSecretKey:flags['--fault']==='signer'?undefined:payer.secret(),allowedAssets:[flags['--asset']],maxAmountByAsset:{[flags['--asset']]:flags['--budget']},paymentJournal:new FilePaymentJournal(join(dir,'buyer')),readBalances:async()=>flags['--fault']==='funds'?({USDC:'0',XLM:'0'}):({USDC:'100000',XLM:'1000000'}),receiptVerifier:()=>true,...(flags['--no-history']?{}:{history:{writeToken:state.alice.writeToken,includeResult:true,mode:'fixture'}})});
    const outcome=await client.executeService(card,{pair:'XLM/USDC',amount:2500,side:'buy'},{operationId,preferredAsset:flags['--asset']});
    const own=await (await handlers.GET(new Request(card.url+'/api/operations',{headers:{Authorization:`Bearer ${state.alice.readToken}`}}))).json();
    const other=await (await handlers.GET(new Request(card.url+'/api/operations',{headers:{Authorization:`Bearer ${state.bob.readToken}`}}))).json();
