@@ -8,6 +8,7 @@ import {
   type DynamicEntry,
 } from "./dynamic-registry.ts";
 import type { ServiceCard } from "./types.ts";
+import { getService } from "./catalog.ts";
 
 export type IngestErrorCode =
   | "UNAUTHORIZED"
@@ -120,6 +121,10 @@ export async function createService(rawCard: unknown, providerKey: string | unde
   if (!authorizeProviderKey(providerKey)) return { ok: false, error: unauthorizedError() };
   const shape = await validateCardShape(rawCard);
   if (!shape.ok) return { ok: false, error: shape.error };
+  if (getService(shape.card.id)) return { ok: false, error: {
+    code: "CARD_EXISTS", message: "El identificador pertenece al catálogo estático; usa uno distinto.",
+    retryable: false, stage: "discover", field: "id",
+  } };
   const { outcomes, failedOutcomes } = validateCardRules(shape.card);
   if (failedOutcomes.length > 0) {
     return {

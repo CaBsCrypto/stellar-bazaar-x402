@@ -1,6 +1,8 @@
 import { Redis } from "@upstash/redis";
 import { computeCanonicalServiceCardHash } from "./canonical-service-card.ts";
 import type { ServiceCard } from "./types.ts";
+import { getService } from "./catalog.ts";
+import { parseServiceCardShape } from "./service-card-schema.ts";
 
 export interface DynamicEntry {
   id: string;
@@ -58,6 +60,7 @@ export async function getDynamicServiceCard(id: string): Promise<DynamicEntry | 
 }
 
 export async function createDynamicServiceCard(card: ServiceCard, providerKeyHash: string): Promise<{ entry: DynamicEntry } | { exists: true }> {
+  if (getService(card.id)) return { exists: true };
   const now = new Date().toISOString();
   const entry = toEntry(card, providerKeyHash, now, now, 1);
 
@@ -81,14 +84,31 @@ export async function createDynamicServiceCard(card: ServiceCard, providerKeyHas
 }
 
 export async function readDynamicServiceCards(): Promise<{ entries: DynamicEntry[]; available: boolean }> {
+  const checked = (ids: string[], values: unknown[]) => {
+    let available = ids.length === values.length;
+    const entries: DynamicEntry[] = [];
+    const seen = new Set<string>();
+    ids.forEach((id, index) => {
+      const value = values[index] as Partial<DynamicEntry> | null;
+      if (typeof id !== "string" || seen.has(id) || getService(id) || !value || value.id !== id) {
+        available = false;
+        return;
+      }
+      seen.add(id);
+      const parsed = parseServiceCardShape(value.card);
+      if (!parsed.ok || parsed.card.id !== id) { available = false; return; }
+      entries.push({ ...value, card: parsed.card } as DynamicEntry);
+    });
+    return { entries, available };
+  };
   try {
     if (redis) {
       const ids = await redis.smembers(INDEX_KEY);
       if (ids.length === 0) return { entries: [], available: true };
       const entries = await redis.mget<DynamicEntry[]>(...ids.map((id) => CARD_KEY_PREFIX + id));
-      return { entries: entries.filter((entry): entry is DynamicEntry => Boolean(entry)), available: true };
+      return checked(ids, entries);
     }
-    return { entries: Array.from(memoryRegistry.values()), available: true };
+    return checked(Array.from(memoryRegistry.keys()), Array.from(memoryRegistry.values()));
   } catch {
     return { entries: [], available: false };
   }
