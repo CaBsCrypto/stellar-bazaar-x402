@@ -2,7 +2,7 @@
 
 ## Alcance y requisitos
 
-Necesitas una copia de este repositorio, Node.js 24 y sus dependencias (`npm ci` si no existe `node_modules`). Ejecuta los comandos desde la raíz del repositorio. No necesitas wallet, saldo, archivos .env, tokens ni servicios desplegados para esta aceptación. No ejecutes faucets ni scripts de pagos reales. Los datos de compra son sintéticos; no prueban liquidación Stellar ni disponibilidad de proveedores.
+Necesitas una copia de este repositorio, Node.js 22.18.0 (runtime comprobado, también usado como versión mayor en CI) y sus dependencias (`npm ci` si no existe `node_modules`). Ejecuta los comandos desde la raíz del repositorio. No necesitas wallet, saldo, archivos .env, tokens ni servicios desplegados para esta aceptación. No ejecutes faucets ni scripts de pagos reales. Los datos de compra son sintéticos; no prueban liquidación Stellar ni disponibilidad de proveedores.
 
 El prompt compartido por landing y hub está en `lib/testnet-funding.ts`: enlaza `public/llms.txt` y el MCP público. Para esta prueba sustituye el endpoint por el servidor local indicado abajo. Un cliente MCP permite descubrir e inspeccionar; la terminal ejecuta la simulación por separado. El servidor MCP HTTP no tiene herramientas de compra ni firma. WebMCP pertenece al navegador y tiene otra superficie.
 
