@@ -141,7 +141,7 @@ export async function handleSandboxPayment(req: Request, deps = {
     );
   }
 
-  if(pilot && !deps.payments()) return structured("PILOT_PAYMENTS_DISABLED","Piloto local: compras deshabilitadas hasta autorización de la prueba Testnet.",503);
+  if(!deps.payments()) return structured("PILOT_PAYMENTS_DISABLED","Compras deshabilitadas hasta autorización explícita de la prueba Testnet.",503);
   const facilitator = deps.facilitator();
   let verified;
   try {

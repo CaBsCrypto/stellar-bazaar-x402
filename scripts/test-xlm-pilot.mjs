@@ -28,6 +28,9 @@ assert.equal(filterServices(items,{asset:'XLM',maxPrice:0.005}).length,0);
 assert.equal(filterServices(items,{asset:'XLM',maxPrice:0.01}).length,1);
 assert.equal(filterServices(items,{maxPrice:0.001}).length,1);
 assert.equal(filterServices(items,{maxPrice:NaN}).length,0);
+const xlmOnly={...items[0],payment:{...items[0].payment,asset:'XLM',amount:'0.0001'},paymentOptions:undefined};
+assert.equal(filterServices([xlmOnly],{maxPrice:0.001}).length,0,'implicit price limit compares USDC only');
+assert.equal(filterServices([xlmOnly],{asset:'XLM',maxPrice:0.001}).length,1);
 const policy={allowedAssets:['USDC','XLM'],budgets:{USDC:'0.001',XLM:'0.01'},balances:{USDC:'10000',XLM:'100000'}};
 assert.equal(selectPaymentOption(card,policy).asset,'USDC');
 assert.equal(selectPaymentOption(card,{...policy,balances:{USDC:'0',XLM:'100000'}}).asset,'XLM');
@@ -35,6 +38,8 @@ assert.throws(()=>selectPaymentOption(card,{...policy,balances:{USDC:'0',XLM:'10
 assert.throws(()=>selectPaymentOption(card,{...policy,preferredAsset:'USDC',balances:{USDC:'0',XLM:'100000'}}),/NO_AUTHORIZED/);
 assert.throws(()=>selectPaymentOption(card,{...policy,allowedAssets:['USDC'],balances:{USDC:'0',XLM:'100000'}}),/NO_AUTHORIZED/);
 assert.throws(()=>selectPaymentOption({...card,paymentOptions:[{...card.paymentOptions[0],contract:TESTNET_ASSETS.XLM}]},policy),/INVALID/);
+assert.throws(()=>selectPaymentOption({...card,paymentOptions:card.paymentOptions.map(o=>({...o,amount:'0.00000001'}))},policy));
+assert.throws(()=>selectPaymentOption(card,{...policy,budgets:{USDC:'0.0001',XLM:'0.001'}}),/NO_AUTHORIZED/);
 assert.equal(spendableTestnetBalances({subentry_count:0,balances:[{asset_type:'native',balance:'1.0050000',selling_liabilities:'0'}]},'5000000').XLM,'50000');
 assert.throws(()=>selectPaymentOption(card,{...policy,balances:{USDC:'0',XLM:'50000'}}),/NO_AUTHORIZED/);
 let settleCalls=0,verifyCalls=0,settleThrows=false;

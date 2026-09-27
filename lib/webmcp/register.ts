@@ -1,7 +1,7 @@
 import { historyConnection } from "../history-connection.ts";
 import type { ModelContextRegistry, WebMCPToolDefinition } from "./types.ts";
 import { services } from "../catalog.ts";
-import { rankServices, validateServiceCard } from "../discovery.ts";
+import { filterServices, rankServices, validateServiceCard } from "../discovery.ts";
 import { workflowBundles } from "../workflow-bundles.ts";
 import { getPaymentFlow, paymentFlowCapability } from "../payment-flow.ts";
 import { pilotCards, pilotSearchServices } from "../pilot-cards.ts";
@@ -74,7 +74,7 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
       properties: {
         query: { type: "string", description: "Search query string (e.g. 'finance', 'nlp', 'image')" },
         tag: { type: "string", description: "Filter by tag or category (e.g. 'data', 'finance', 'ai')" },
-        maxPrice: { type: "number", description: "Maximum price filter in USD/XLM" },
+        maxPrice: { type: "number", description: "Maximum price in USDC only; other assets are not converted or compared." },
       },
     },
     execute: async (input) => {
@@ -85,7 +85,8 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
         ranked = ranked.filter((r) => r.service.tags.includes(input.tag!));
       }
       if (input.maxPrice !== undefined) {
-        ranked = ranked.filter((r) => Number(r.service.payment.amount) <= input.maxPrice!);
+        const matching = new Set(filterServices(ranked.map(r => r.service), {asset: "USDC", maxPrice: input.maxPrice}).map(service => service.id));
+        ranked = ranked.filter(r => matching.has(r.service.id));
       }
 
       // Broadcast visual filter event to the page UI
