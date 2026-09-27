@@ -10,7 +10,7 @@ Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibili
 - Catálogo REST: GET /api/discovery/resources.
 - Detalle por ID: herramienta MCP get_service con {"id":"ID_REAL"}. La página humana es /resources/{id}; no existe una API REST de detalle por ID.
 - Validación sin publicación: POST /api/conformance/service-card.
-- Registro de proveedor: POST /api/publisher/ingest requiere credencial de proveedor y revisión del flujo de publicación; validar no equivale a publicar.
+- Registro público: POST /api/publisher/ingest es una acción administrativa separada, habilitada por el operador con su credencial y almacenamiento durable. Esa credencial no se entrega al proveedor. Preparar, validar o solicitar revisión no publica ni aprueba un servicio. Consulta docs/PROVIDER_ONBOARDING.md antes de preparar el alta.
 
 ## Las ocho herramientas del MCP HTTP
 1. get_bazaar_capabilities: capacidades, políticas y límites.
