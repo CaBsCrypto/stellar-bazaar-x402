@@ -7,20 +7,20 @@ import { AgentChatDemo } from "@/components/AgentChatDemo";
 
 export const metadata: Metadata = {
   title: "Chat Humano ↔ Agente — Stellar Bazaar x402",
-  description: "Interfaz interactiva de comunicación con tu agente autónomo con compras x402 y auto-desbloqueo de historial.",
+  description: "Demostración de cómo colaborar con tu agente. Respuestas ilustrativas, sin compras ni creación de accesos privados.",
 };
 
 export default function AgentChatPage() {
   return (
     <main>
       <div className="mock-banner">
-        AI AGENT ASSISTANT · TESTNET x402 PURCHASES · CLOUDFLARE R2 DELIVERABLES · ZERO-KNOWLEDGE
+        DEMOSTRACIÓN · RESPUESTAS DE EJEMPLO · SIN COMPRAS
       </div>
       <Navbar />
 
       <div className="shell" style={{ marginTop: "1rem", marginBottom: "4rem" }}>
         <Breadcrumbs
-          items={[{ label: "Agent Chat Live" }]}
+          items={[{ label: "Chat de demostración" }]}
           backHref="/catalogo"
           backLabel="← Volver al Catálogo"
           actions={
