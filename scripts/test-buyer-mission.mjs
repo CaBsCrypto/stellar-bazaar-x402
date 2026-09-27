@@ -6,7 +6,7 @@ const tests=[
  'test-agent-chat-flow','test-history-provisioning','test-operation-history','test-operation-history-client','test-operation-history-ui','test-private-webmcp',
  'test-activity-panel','test-provider-self-listing','test-deliverables','test-deliverable-viewers','test-delivery-recovery-client','test-automatic-recovery',
  'test-xlm-pilot','test-testnet-transfer','test-shared-settlement-local',
- 'test-buyer-instructions','test-buyer-mcp','test-buyer-acceptance','test-buyer-copy','test-publisher-brief','test-provider-card-preservation'
+ 'test-buyer-instructions','test-buyer-mcp','test-buyer-acceptance','test-buyer-copy','test-publisher-brief','test-provider-card-preservation','test-review-proxies'
 ];
 const git=args=>spawnSync('git',args,{encoding:'utf8'}).stdout.trim();
 const env=Object.fromEntries(Object.entries(process.env).filter(([key])=>/^(PATH|SystemRoot|WINDIR|COMSPEC|PATHEXT|TEMP|TMP|HOME|USERPROFILE|APPDATA|LOCALAPPDATA|NUMBER_OF_PROCESSORS)$/i.test(key)));
