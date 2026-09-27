@@ -12,7 +12,7 @@ http.createServer(async(req,res)=>{
  try{
   if(!['GET','HEAD'].includes(req.method)){res.writeHead(403);res.end('Read-only review');return;}
   const url=new URL(req.url,'http://127.0.0.1:'+port);
-  if(url.pathname.includes('%')){res.writeHead(400);res.end();return;}
+  if(url.pathname.includes('%')||url.pathname==='/api'||(url.pathname.startsWith('/api/')&&!['/api/discovery/resources','/api/discovery/search'].includes(url.pathname))){res.writeHead(403);res.end('Review route disabled');return;}
   const response=await fetch('http://127.0.0.1:'+upstreamPort+url.pathname+url.search,{redirect:'manual',headers:{accept:req.headers.accept??'*/*'}});
   const headers=Object.fromEntries([...response.headers].filter(([key])=>!['content-encoding','content-length','transfer-encoding'].includes(key)));
   const body=Buffer.from(await response.arrayBuffer());

@@ -20,6 +20,6 @@ if(process.env.UPSTASH_REDIS_REST_URL||process.env.KV_REST_API_URL||process.env.
 const handle=app.getRequestHandler();
 http.createServer((req,res)=>{
   const path=new URL(req.url,`http://127.0.0.1:${port}`).pathname;
-  if(!['GET','HEAD'].includes(req.method)||(path.startsWith('/api/')&&!['/api/discovery/resources','/api/discovery/search'].includes(path))) {res.writeHead(403);res.end('Review only');return;}
+  if(!['GET','HEAD'].includes(req.method)||path==='/api'||path.includes('%')||(path.startsWith('/api/')&&!['/api/discovery/resources','/api/discovery/search'].includes(path))) {res.writeHead(403);res.end('Review only');return;}
   return handle(req,res);
 }).listen(port,'127.0.0.1',()=>console.log(`Synthetic discovery review at http://127.0.0.1:${port}; no public writes, payments or provider calls.`));
