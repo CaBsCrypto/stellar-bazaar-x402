@@ -7,13 +7,24 @@ import { LandingConnect } from "@/components/LandingConnect";
 import { ServicePortfolioSample } from "@/components/ServicePortfolioSample";
 import { ServicePortfolioTools } from "@/components/ServicePortfolioTools";
 import { Pill } from "@/components/ui";
+import { readDynamicServiceCards } from "@/lib/dynamic-registry";
+import { toPaidService } from "@/lib/service-card";
+import { parseServiceCardShape } from "@/lib/service-card-schema";
 import { getService, services } from "@/lib/catalog";
 import { getServicePortfolio } from "@/lib/service-portfolio";
 import "../../history/deliveries.css";
 import "../portfolio.css";
+export const dynamic = "force-dynamic";
 export function generateStaticParams() { return services.map(({id})=>({id})); }
 export default async function ResourcePage({params}: {params: Promise<{id:string}>}) {
- const {id}=await params; const service=getService(id); if(!service) notFound();
+ const {id}=await params; let service=getService(id);
+ if (!service) {
+  const registry=await readDynamicServiceCards();
+  if (!registry.available) throw new Error("DISCOVERY_UNAVAILABLE");
+  const found=registry.entries.find(entry=>entry.id===id);
+  if (found) { const parsed=parseServiceCardShape(found.card); if (!parsed.ok) throw new Error("DISCOVERY_INVALID_RESPONSE"); service=toPaidService(parsed.card); }
+ }
+ if(!service) notFound();
  const portfolio=getServicePortfolio(id);
  return <main><Navbar/><div className="shell portfolio-page"><Breadcrumbs items={[{label:"Catálogo",href:"/catalogo"},{label:service.name}]} backHref="/catalogo" backLabel="← Volver al Catálogo"/>
  <header className="portfolio-header"><Pill tone="info">{id === "swap-risk-quote" ? "Sandbox · datos de ejemplo" : "Listado en Testnet"}</Pill><p className="kicker">{service.provider}</p><h1>{service.name}</h1><p className="portfolio-lead">{portfolio?.intro ?? service.description}</p></header>
