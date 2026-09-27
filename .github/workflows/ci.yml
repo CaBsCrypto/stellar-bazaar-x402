@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "review/base-webmcp"]
 
 permissions:
   contents: read
@@ -42,6 +42,9 @@ jobs:
 
       - name: WebMCP Client Conformance Tests
         run: npm run test:webmcp:conformance
+
+      - name: WebMCP Registration Lifecycle Tests
+        run: node scripts/test-webmcp-lifecycle.mjs
 
       - name: Protocol & Payment Flow Tests
         run: npm run test:payment-flow
