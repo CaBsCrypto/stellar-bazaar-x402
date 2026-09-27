@@ -4,6 +4,39 @@ export const initWebMCPPolyfill = initWebMCP;
 
 const activityLogs: WebMCPActivityLog[] = [];
 const browserRegistries = new WeakMap<object, ModelContextRegistry>();
+const nativeSnapshots = new WeakMap<object, WebMCPToolDefinition[]>();
+
+function nativeToolList(value: unknown): WebMCPToolDefinition[] {
+  const list = Array.isArray(value) ? value : value && typeof value === "object" && "tools" in value ? value.tools : undefined;
+  if (!Array.isArray(list) || list.some(tool => !tool || typeof tool.name !== "string")) {
+    throw new Error("Unsupported native WebMCP tool list");
+  }
+  return list;
+}
+
+function readNativeTools(context: ModelContextRegistry): WebMCPToolDefinition[] {
+  if (!context.getTools) return [];
+  const result: unknown = context.getTools();
+  if (result && typeof result === "object" && "then" in result) {
+    // The browser provider awaits discovery before any registration. Do not
+    // interpret an unresolved list as an empty registry.
+    void Promise.resolve(result).catch(() => undefined);
+    const snapshot = nativeSnapshots.get(context);
+    if (!snapshot) throw new Error("Native WebMCP discovery requires asynchronous initialization");
+    return snapshot;
+  }
+  const tools = nativeToolList(result);
+  nativeSnapshots.set(context, tools);
+  return tools;
+}
+
+export async function initWebMCPAsync(): Promise<ModelContextRegistry> {
+  if (typeof window !== "undefined") {
+    const context = navigator.modelContext ?? document.modelContext;
+    if (context?.getTools) nativeSnapshots.set(context, nativeToolList(await context.getTools()));
+  }
+  return initWebMCP();
+}
 
 export function recordWebMCPActivity(log: WebMCPActivityLog) {
   activityLogs.unshift(log);
@@ -130,7 +163,7 @@ export function initWebMCP(): ModelContextRegistry {
     const registry: ModelContextRegistry = {
       registerTool: (tool) => {
         if (!tool?.name || typeof tool.execute !== "function") throw new Error("Invalid WebMCP tool definition");
-        if (owned.has(tool.name) || nativeContext.getTools?.().some(existing => existing.name === tool.name)) {
+        if (owned.has(tool.name) || readNativeTools(nativeContext).some(existing => existing.name === tool.name)) {
           throw new Error(`Tool already registered: ${tool.name}`);
         }
         // A rejected native registration must never appear in the emulator.
@@ -141,16 +174,16 @@ export function initWebMCP(): ModelContextRegistry {
       unregisterTool: (name) => {
         const ownTool = owned.get(name);
         if (!ownTool) return false;
-        const current = nativeContext.getTools?.().find(tool => tool.name === name);
-        const replaced = current && current !== ownTool;
+        const current = readNativeTools(nativeContext).find(tool => tool.name === name);
+        const replaced = current && typeof current.execute === "function" && current.execute !== ownTool.execute;
         if (!replaced && nativeContext.unregisterTool) nativeContext.unregisterTool(name);
         owned.delete(name);
         polyfill.unregisterTool(name);
         return !replaced;
       },
       getTools: () => {
-        const combined = new Map((nativeContext.getTools?.() ?? []).map(tool => [tool.name, tool]));
-        for (const tool of polyfill.getTools()) if (!combined.has(tool.name)) combined.set(tool.name, tool);
+        const combined = new Map(readNativeTools(nativeContext).map(tool => [tool.name, tool]));
+        for (const tool of polyfill.getTools()) combined.set(tool.name, tool);
         return [...combined.values()];
       },
       // Context replacement may only replace this wrapper's own tools.

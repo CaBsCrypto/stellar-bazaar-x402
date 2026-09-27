@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { WebMCPClientAdapter } from "@/lib/webmcp-client-adapter";
+import { initWebMCPAsync } from "@/lib/webmcp/polyfill";
 import type { WebMCPToolDefinition, WebMCPActivityLog } from "@/lib/webmcp/types";
 
 export function WebMCPPlayground() {
@@ -16,19 +17,41 @@ export function WebMCPPlayground() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const client = new WebMCPClientAdapter({
-      onActivityLog: (log) => {
-        setLogs((prev) => [log, ...prev].slice(0, 20));
-      },
-    });
-
-    const { tools: registered } = client.init();
-    setAdapter(client);
-    setTools(registered);
-    if (registered.length > 0) {
-      setSelectedTool(registered[0]);
-      setDefaultInputForTool(registered[0]);
-    }
+    let cancelled = false;
+    let releaseActivity: (() => void) | undefined;
+    const onActivity = (log: WebMCPActivityLog) => {
+      if (!cancelled) setLogs(prev => [log, ...prev].slice(0, 20));
+    };
+    const refresh = async () => {
+      try {
+        await initWebMCPAsync();
+        if (cancelled) return;
+        // The layout provider owns registration; this screen only consumes it.
+        releaseActivity?.();
+        const emulator = window.__WEBMCP_EMULATOR__;
+        const previousActivity = emulator?.onActivityLog;
+        const client = new WebMCPClientAdapter({ autoRegister: false, onActivityLog: onActivity });
+        const { tools: registered } = client.init();
+        releaseActivity = () => {
+          if (emulator?.onActivityLog === onActivity) emulator.onActivityLog = previousActivity;
+        };
+        setAdapter(client);
+        setTools(registered);
+        if (registered.length > 0) {
+          setSelectedTool(registered[0]);
+          setDefaultInputForTool(registered[0]);
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : String(err));
+      }
+    };
+    window.addEventListener("webmcp-ready", refresh);
+    void refresh();
+    return () => {
+      cancelled = true;
+      window.removeEventListener("webmcp-ready", refresh);
+      releaseActivity?.();
+    };
   }, []);
 
   const setDefaultInputForTool = (tool: WebMCPToolDefinition) => {

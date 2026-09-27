@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { initWebMCP } from "@/lib/webmcp/polyfill";
+import { initWebMCPAsync } from "@/lib/webmcp/polyfill";
 import { registerBazaarTools } from "@/lib/webmcp/register";
 import { createOwnedRegistration } from "@/lib/webmcp/owned-registration";
 import { ModelContextRegistry, WebMCPActivityLog, WebMCPToolDefinition, AgentPolicyConfig } from "@/lib/webmcp/types";
@@ -51,7 +51,7 @@ export function WebMCPProvider() {
     let cancelled = false;
     let dispose: (() => void) | undefined;
     // Strict Mode's discarded mount must not register native tools.
-    queueMicrotask(() => {
+    queueMicrotask(async () => {
     if (cancelled) return;
     try {
       const nativeDetected = Boolean(
@@ -60,7 +60,8 @@ export function WebMCPProvider() {
       );
       setIsNative(nativeDetected);
 
-      const registry: ModelContextRegistry = initWebMCP();
+      const registry: ModelContextRegistry = await initWebMCPAsync();
+      if (cancelled) return;
       registryRef.current = registry;
       const owned = createOwnedRegistration(registry);
       dispose = () => {
@@ -72,6 +73,7 @@ export function WebMCPProvider() {
       const toolList = registry.getTools?.() || [];
       setTools(toolList);
       setStatus("ready");
+      window.dispatchEvent(new Event("webmcp-ready"));
 
       const handleActivity = (e: Event) => {
         const customEvent = e as CustomEvent<WebMCPActivityLog>;
