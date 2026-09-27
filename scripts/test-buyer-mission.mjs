@@ -2,7 +2,7 @@
 import { spawnSync } from 'node:child_process';
 import { writeFileSync } from 'node:fs';
 const tests=[
- 'test-webmcp-lifecycle','test-webmcp-native-lifecycle','test-webmcp-async-discovery','test-webmcp-conformance','test-webmcp-payment-options','test-webmcp-public-discovery','test-public-resource-render',
+ 'test-webmcp-lifecycle','test-webmcp-native-lifecycle','test-webmcp-async-discovery','test-webmcp-conformance','test-webmcp-payment-options','test-webmcp-public-discovery','test-public-resource-render','test-discovery-conflicts',
  'test-agent-chat-flow','test-history-provisioning','test-operation-history','test-operation-history-client','test-operation-history-ui','test-private-webmcp',
  'test-activity-panel','test-provider-self-listing','test-deliverables','test-deliverable-viewers','test-delivery-recovery-client','test-automatic-recovery',
  'test-xlm-pilot','test-testnet-transfer','test-shared-settlement-local',
