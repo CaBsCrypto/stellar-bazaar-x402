@@ -47,6 +47,11 @@ export function WebMCPProvider() {
   });
 
   useEffect(() => {
+    let cancelled = false;
+    let dispose: (() => void) | undefined;
+    // Strict Mode's discarded mount must not register native tools.
+    queueMicrotask(() => {
+    if (cancelled) return;
     try {
       const nativeDetected = Boolean(
         (typeof navigator !== "undefined" && navigator.modelContext) ||
@@ -70,13 +75,17 @@ export function WebMCPProvider() {
       };
 
       window.addEventListener("webmcp-activity", handleActivity);
-      return () => {
+      dispose = () => {
         window.removeEventListener("webmcp-activity", handleActivity);
+        for (const tool of toolList) registry.unregisterTool?.(tool.name);
+        if (registryRef.current === registry) registryRef.current = null;
       };
     } catch (err) {
       console.error("[WebMCP] Initialization error:", err);
       setStatus("error");
     }
+    });
+    return () => { cancelled = true; dispose?.(); };
   }, []);
 
   const handleToolChange = (toolName: string) => {
