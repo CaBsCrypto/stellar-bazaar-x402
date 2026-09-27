@@ -174,12 +174,26 @@ export function initWebMCP(): ModelContextRegistry {
       unregisterTool: (name) => {
         const ownTool = owned.get(name);
         if (!ownTool) return false;
-        const current = readNativeTools(nativeContext).find(tool => tool.name === name);
-        const replaced = current && typeof current.execute === "function" && current.execute !== ownTool.execute;
-        if (!replaced && nativeContext.unregisterTool) nativeContext.unregisterTool(name);
-        owned.delete(name);
-        polyfill.unregisterTool(name);
-        return !replaced;
+        try {
+          // A discovery snapshot only proves past ownership. Never delete by
+          // name after an asynchronous or metadata-only ownership check.
+          const result: unknown = nativeContext.getTools?.();
+          if (result && typeof result === "object" && "then" in result) {
+            void Promise.resolve(result).catch(() => undefined);
+            return false;
+          }
+          if (!result || !nativeContext.unregisterTool) return false;
+          const current = nativeToolList(result).find(tool => tool.name === name);
+          if (!current || current.execute !== ownTool.execute) return false;
+          nativeContext.unregisterTool(name);
+          return true;
+        } catch {
+          // A failed ownership read cannot authorize native removal.
+          return false;
+        } finally {
+          owned.delete(name);
+          polyfill.unregisterTool(name);
+        }
       },
       getTools: () => {
         const combined = new Map(readNativeTools(nativeContext).map(tool => [tool.name, tool]));
