@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync, realpathSync, existsSync } from 'node:fs';
-import { resolve, dirname, relative, isAbsolute } from 'node:path';
+import { resolve, dirname, relative, isAbsolute, sep } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { generateHistoryKeypair } from '../lib/operation-history-auth.ts';
@@ -10,7 +10,7 @@ const output = resolve(process.argv[3]);
 const repo = realpathSync(fileURLToPath(new URL('..', import.meta.url)));
 const parent = realpathSync(dirname(output));
 const parentRelative = relative(repo, parent);
-if (parentRelative === '' || (!parentRelative.startsWith('..') && !isAbsolute(parentRelative))) throw new Error('Output must be outside the repository');
+if (parentRelative === '' || (parentRelative !== '..' && !parentRelative.startsWith(`..${sep}`) && !isAbsolute(parentRelative))) throw new Error('Output must be outside the repository');
 if (existsSync(output)) throw new Error('Output already exists; refusing to overwrite');
 mkdirSync(output, { mode: 0o700 });
 if (process.platform === 'win32') {

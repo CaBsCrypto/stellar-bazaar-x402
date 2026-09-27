@@ -2,6 +2,8 @@
 
 Solo un operador con acceso administrativo a la configuración del servidor puede registrar cuentas. No existe un endpoint público de aprovisionamiento. Conocer un ownerId no otorga permisos.
 
+Runtime: Node.js 22.18 o posterior (incluido Node 24), con soporte nativo de eliminación de tipos para los imports locales `.ts`. CI usa Node 22. `npm run test:agent-chat` comprueba tanto el acceso HTTP como el aprovisionamiento offline, sin transferencias ni almacenamiento externo.
+
 El operador ejecuta `node scripts/provision-history-account.mjs --out <directorio-privado-nuevo>` desde un equipo confiable. El comando crea un propietario aleatorio y guarda un archivo con las credenciales y una propuesta de hashes. No imprime secretos ni modifica variables del despliegue. El directorio se crea sin sobrescribir rutas existentes, con permisos de usuario (0700/0600 en POSIX; ACL exclusiva del usuario actual en Windows).
 
 Registrar manualmente la entrada de `account.json` en BAZAAR_HISTORY_ACCOUNTS_JSON, preservando todas las entradas existentes. Revisar el propietario antes de guardar y distribuir cada credencial por un canal privado: escritura al agente y lectura al humano. No subir archivos a Git ni pegar secretos en logs. El directorio debe estar fuera del repositorio.
