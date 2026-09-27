@@ -30,7 +30,7 @@ vm.runInNewContext(compiled,{module,exports:module.exports,require:name=>{
 const render=async(id)=>renderToStaticMarkup(await module.exports.default({params:Promise.resolve({id})}));
 const html=await render(fixture.id);assert.match(html,/Dynamic render fixture/);assert.match(html,/No declarada/);assert.match(html,/Formato no declarado/);assert(!html.includes('&lt;500ms'));assert(!html.includes('<li>result</li>'));assert(!html.includes('<li>data</li>'));
 await assert.rejects(()=>render('pending-submission'),/NOT_FOUND/);
-registry={entries:[],available:false};await assert.rejects(()=>render(fixture.id),/UNAVAILABLE/);
+registry={entries:[],available:false};const unavailable=await render(fixture.id);assert.match(unavailable,/No se pudo consultar el registro/);assert.match(unavailable,/No podemos confirmar/);assert.match(unavailable,/href="\/catalogo"/);assert(!unavailable.includes('Dynamic render fixture'));assert(!unavailable.includes('Precio declarado'));
 // Static entry remains renderable even while the external registry is unavailable.
 assert.match(await render(services[0].id),/Swap Risk/);
 console.log('PASS actual detail component rendered with synthetic public entry, no invented latency/output; missing/pending absent; unavailable explicit; static preserved. No network.');

@@ -20,7 +20,7 @@ export default async function ResourcePage({params}: {params: Promise<{id:string
  const {id}=await params; let service=getService(id);
  if (!service) {
   const registry=await readDynamicServiceCards();
-  if (!registry.available) throw new Error("DISCOVERY_UNAVAILABLE");
+  if (!registry.available) return <main><Navbar/><section className="shell portfolio-page" role="status"><h1>No se pudo consultar el registro</h1><p>No podemos confirmar los datos de este servicio en este momento. Vuelve a cargar la página para reintentar o regresa al catálogo.</p><a href="/catalogo">Volver al catálogo</a></section><Footer/></main>;
   const found=registry.entries.find(entry=>entry.id===id);
   if (found) { const parsed=parseServiceCardShape(found.card); if (!parsed.ok) throw new Error("DISCOVERY_INVALID_RESPONSE"); service={...toPaidService(parsed.card), latency:"No declarada", output:["Formato no declarado en la ficha"]}; }
  }
