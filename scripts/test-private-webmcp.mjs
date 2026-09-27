@@ -51,6 +51,7 @@ function load(file) {
       require: req,
       window: browser,
       console,
+      process: { env: {} }, // Explicit test configuration; never inherit local credentials.
       crypto: globalThis.crypto,
       fetch: (...args) => globalThis.fetch(...args),
       URL,
