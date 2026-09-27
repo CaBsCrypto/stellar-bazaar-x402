@@ -22,7 +22,7 @@ export default async function ResourcePage({params}: {params: Promise<{id:string
   const registry=await readDynamicServiceCards();
   if (!registry.available) throw new Error("DISCOVERY_UNAVAILABLE");
   const found=registry.entries.find(entry=>entry.id===id);
-  if (found) { const parsed=parseServiceCardShape(found.card); if (!parsed.ok) throw new Error("DISCOVERY_INVALID_RESPONSE"); service=toPaidService(parsed.card); }
+  if (found) { const parsed=parseServiceCardShape(found.card); if (!parsed.ok) throw new Error("DISCOVERY_INVALID_RESPONSE"); service={...toPaidService(parsed.card), latency:"No declarada", output:["Formato no declarado en la ficha"]}; }
  }
  if(!service) notFound();
  const portfolio=getServicePortfolio(id);

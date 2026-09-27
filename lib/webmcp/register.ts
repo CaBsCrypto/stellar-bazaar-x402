@@ -14,6 +14,7 @@ import { readPublicDiscovery, type DiscoverySnapshot } from "../public-discovery
  */
 export function registerBazaarTools(registry: ModelContextRegistry, options: {privateExecution?: boolean; discoverySource?: () => Promise<DiscoverySnapshot>} = {}): void {
   const discover = options.discoverySource ?? readPublicDiscovery;
+  const present = (card: ServiceCard) => ({ ...toPaidService(card), latency: "No declarada", output: ["Formato no declarado en la ficha"] });
   // 1. List Services Tool (Full Catalog & Registry)
   const listServicesTool: WebMCPToolDefinition<{ includePilots?: boolean }> = {
     name: "bazaar_list_services",
@@ -26,7 +27,7 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
     },
     execute: async (input) => {
       const snapshot = await discover();
-      const baseServices = snapshot.cards.map(toPaidService).map((s) => ({
+      const baseServices = snapshot.cards.map(present).map((s) => ({
         id: s.id,
         name: s.name,
         eyebrow: s.eyebrow,
@@ -86,7 +87,7 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
     execute: async (input) => {
       const searchParam = input.query || input.tag || "";
       const snapshot = await discover();
-      let ranked = rankServices([...snapshot.cards.map(toPaidService), ...pilotSearchServices], searchParam);
+      let ranked = rankServices([...snapshot.cards.map(present), ...pilotSearchServices], searchParam);
 
       if (input.tag) {
         ranked = ranked.filter((r) => r.service.tags.includes(input.tag!));
@@ -153,7 +154,7 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
     },
     execute: async (input) => {
       const snapshot = await discover();
-      const service = snapshot.cards.map(toPaidService).find((s) => s.id === input.serviceId)
+      const service = snapshot.cards.map(present).find((s) => s.id === input.serviceId)
         ?? pilotCards.find((card) => card.id === input.serviceId);
       if (!service) {
         return {
