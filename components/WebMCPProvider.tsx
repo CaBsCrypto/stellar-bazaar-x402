@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { initWebMCP } from "@/lib/webmcp/polyfill";
 import { registerBazaarTools } from "@/lib/webmcp/register";
+import { createOwnedRegistration } from "@/lib/webmcp/owned-registration";
 import { ModelContextRegistry, WebMCPActivityLog, WebMCPToolDefinition, AgentPolicyConfig } from "@/lib/webmcp/types";
 import { services } from "@/lib/catalog";
 
@@ -61,7 +62,12 @@ export function WebMCPProvider() {
 
       const registry: ModelContextRegistry = initWebMCP();
       registryRef.current = registry;
-      registerBazaarTools(registry);
+      const owned = createOwnedRegistration(registry);
+      dispose = () => {
+        owned.dispose();
+        if (registryRef.current === registry) registryRef.current = null;
+      };
+      registerBazaarTools(owned.registry);
 
       const toolList = registry.getTools?.() || [];
       setTools(toolList);
@@ -75,12 +81,14 @@ export function WebMCPProvider() {
       };
 
       window.addEventListener("webmcp-activity", handleActivity);
+      const disposeTools = dispose;
       dispose = () => {
         window.removeEventListener("webmcp-activity", handleActivity);
-        for (const tool of toolList) registry.unregisterTool?.(tool.name);
+        disposeTools();
         if (registryRef.current === registry) registryRef.current = null;
       };
     } catch (err) {
+      dispose?.();
       console.error("[WebMCP] Initialization error:", err);
       setStatus("error");
     }
