@@ -4,6 +4,7 @@ import {createRequire} from 'node:module';
 import vm from 'node:vm';
 import ts from 'typescript';
 import {services,getService} from '../lib/catalog.ts';
+import {pilotCards} from '../lib/pilot-cards.ts';
 import {toServiceCard,toPaidService} from '../lib/service-card.ts';
 import {parseServiceCardShape} from '../lib/service-card-schema.ts';
 import {filterServices} from '../lib/discovery.ts';
@@ -18,7 +19,7 @@ function load(file,deps){
  vm.runInNewContext(compiled,{module,exports:module.exports,process:{env:{UPSTASH_REDIS_REST_URL:'https://fixture.invalid',UPSTASH_REDIS_REST_TOKEN:'synthetic',BAZAAR_ENABLE_REGISTRY_MUTATIONS:'true',BAZAAR_PROVIDER_SECRET:'synthetic'}},Buffer,require:name=>deps[name]??require(name)});
  return module.exports;
 }
-const shared={'./catalog.ts':{getService},'./service-card-schema.ts':{parseServiceCardShape}};
+const shared={'./catalog.ts':{getService},'./pilot-cards.ts':{pilotCards},'./service-card-schema.ts':{parseServiceCardShape}};
 const registry=load('lib/dynamic-registry.ts',{...shared,'@upstash/redis':{Redis:FakeRedis},'./canonical-service-card.ts':{computeCanonicalServiceCardHash:()=> 'fixture'}});
 const card={...toServiceCard(services[0]),id:'valid-dynamic',name:'Valid dynamic'};
 const entry={id:card.id,card,hash:'fixture',revision:1};
@@ -35,6 +36,15 @@ assert.equal(values[1],collision,'old record is not mutated or deleted');
 assert.equal((await registry.createDynamicServiceCard(collision.card,'fixture')).exists,true);assert.equal(writes,0);
 const ingest=load('lib/service-ingest.ts',{...shared,'./dynamic-registry.ts':registry,'./discovery.ts':{validateServiceCard:()=>[]}});
 assert.equal((await ingest.createService(collision.card,'synthetic')).error.code,'CARD_EXISTS');assert.equal(writes,0);
+for (const pilot of pilotCards) {
+ const conflicting={...entry,id:pilot.id,card:{...card,id:pilot.id}};
+ await check([card.id,pilot.id],[entry,conflicting],false,1);
+ assert.equal(values[1],conflicting,'pilot collision is retained without mutation');
+ assert.equal((await registry.createDynamicServiceCard(conflicting.card,'fixture')).exists,true);
+ assert.equal((await ingest.createService(conflicting.card,'synthetic')).error.code,'CARD_EXISTS');
+ assert.equal(writes,0,'reserved pilot must be rejected before storage');
+}
+await check([card.id,collision.id],[entry,collision],false,1);
 const resources=load('app/api/discovery/resources/route.ts',{'next/server':{NextResponse:Response},'@/lib/catalog':{services},'@/lib/discovery':{filterServices},'@/lib/service-card':{toServiceCard,toPaidService},'@/lib/dynamic-registry':registry});
 const response=await resources.GET({nextUrl:new URL('http://127.0.0.1/api/discovery/resources')});const body=await response.json();
 assert.equal(body.partialResults,true);assert.equal(body.dynamicRegistry,'unavailable');
