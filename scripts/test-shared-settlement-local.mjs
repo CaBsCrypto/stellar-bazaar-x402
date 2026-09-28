@@ -10,7 +10,7 @@ import {encodePaymentSignatureHeader} from '@x402/core/http';
 const prefix='bazaar:local:simulated';
 const payload={fixture:true};
 const requirements={asset:'fixture-USDC',amount:'10000',network:'stellar:testnet',payTo:'fixture-seller',extra:{inputHash:'fixture-input'}};
-const outcome={success:true,transaction:'fixture-no-transfer',network:'stellar:testnet'};
+const outcome={success:true,transaction:'a'.repeat(64),network:'stellar:testnet'}; // Synthetic hash, no transfer.
 if(process.argv[2]==='worker') {
   const url=process.argv[3];
   const redis={eval:async(script,keys,args)=>(await fetch(url,{method:'POST',body:JSON.stringify({script,keys,args})})).json()};
@@ -57,6 +57,13 @@ if(process.argv[2]==='worker') {
     const finalCount=calls;assert.deepEqual(await run('lost-final'),outcome);assert.equal(calls,finalCount);
     for(const [i,raw]of ['broken-json','null','{}',JSON.stringify({version:1,binding:'a'.repeat(64),owner:'fixture',phase:'completed',createdAt:new Date().toISOString()})].entries()){
       const id='corrupt-'+i;records.set(prefix+':'+paymentBinding(id),raw);
+      await assert.rejects(run(id),/RECORD_INVALID/);
+    }
+    assert.equal(calls,finalCount);
+
+    for(const [i,invalid] of [{...outcome,transaction:'wrong'},{...outcome,payer:42}].entries()){
+      const id='invalid-evidence-'+i;
+      records.set(prefix+':'+paymentBinding(id),JSON.stringify({version:1,binding:paymentBinding({payload,requirements}),owner:'fixture',phase:'completed',createdAt:new Date().toISOString(),outcome:invalid}));
       await assert.rejects(run(id),/RECORD_INVALID/);
     }
     assert.equal(calls,finalCount);

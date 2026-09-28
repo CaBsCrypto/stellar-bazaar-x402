@@ -7,7 +7,7 @@ import { paymentBinding } from '../lib/pilot-payment-store.ts';
 Object.assign(process.env,selectedEnv('.env.local',['UPSTASH_REDIS_REST_URL','UPSTASH_REDIS_REST_TOKEN','KV_REST_API_URL','KV_REST_API_TOKEN']));
 const redis=configuredSettlementRedis(), prefix=process.env.SETTLEMENT_TEST_PREFIX??'bazaar:settlement:test:'+randomUUID();
 const payload={test:true}, requirements={asset:'fixture-USDC',amount:'10000',network:'stellar:testnet',payTo:'fixture-recipient',extra:{inputHash:'fixture-input'}};
-const settle=async()=>{await redis.incr(prefix+':calls');return {success:true,transaction:'fixture-only-no-transfer',network:'stellar:testnet'}};
+const settle=async()=>{await redis.incr(prefix+':calls');return {success:true,transaction:'a'.repeat(64),network:'stellar:testnet'}}; // Synthetic hash, no transfer.
 const run=(id,r=requirements,client=redis,fn=settle)=>settleRedisOnce(client,prefix,id,payload,r,fn);
 if(process.argv[2]==='child'){try{await run('concurrent');console.log('completed')}catch(e){if(e.message!=='PAYMENT_PENDING')throw e;console.log('pending')}process.exit(0)}
 const child=()=>new Promise((resolve,reject)=>{const p=spawn(process.execPath,[import.meta.filename,'child'],{env:{...process.env,SETTLEMENT_TEST_PREFIX:prefix},stdio:['ignore','pipe','pipe']});let err='';p.stderr.on('data',d=>err+=d);p.on('exit',code=>code?reject(Error(err)):resolve());});
