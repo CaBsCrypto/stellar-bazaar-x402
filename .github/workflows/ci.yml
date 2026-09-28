@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main", "review/base-webmcp", "review/history-identity", "review/usdc-xlm-recovery", "review/shared-payment-control", "review/consistent-discovery", "review/buyer-entry-validation"]
+    branches: ["main", "review/base-webmcp", "review/history-identity", "review/usdc-xlm-recovery", "review/shared-payment-control", "review/consistent-discovery", "review/buyer-entry-validation", "fix/operational-guards"]
 
 permissions:
   contents: read
@@ -54,6 +54,9 @@ jobs:
 
       - name: Administrative and legacy payment guards (doubles only)
         run: node scripts/test-operational-guards.mjs && node scripts/test-admin-ui-guards.mjs
+
+      - name: Identity rotation and private library (synthetic only)
+        run: npm run test:identity:pilot
 
       - name: USDC XLM journal and recovery (simulated)
         run: node scripts/test-xlm-pilot.mjs

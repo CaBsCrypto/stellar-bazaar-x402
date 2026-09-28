@@ -4,13 +4,14 @@ import { createRequire } from "node:module";
 import vm from "node:vm";
 import ts from "typescript";
 import React from "react";
+import { createOwnedRegistration } from "../lib/webmcp/owned-registration.ts";
 import { renderToStaticMarkup } from "react-dom/server";
 
 const require = createRequire(import.meta.url);
 const source = readFileSync(new URL("../components/OperationHistory.tsx", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText;
 const module = { exports: {} };
-vm.runInNewContext(compiled, { exports: module.exports, module, require: name => name === "./ActivityDashboard" ? { ActivityDashboard: () => null } : ["Navbar", "Breadcrumbs", "Footer"].some(component => name === `@/components/${component}`) ? { [name.split("/").at(-1)]: name.endsWith("/Breadcrumbs") ? ({backHref}) => React.createElement("a", {href:backHref}, "Volver") : () => null } : require(name) });
+vm.runInNewContext(compiled, { exports: module.exports, module, require: name => name === "@/lib/webmcp/owned-registration" ? { createOwnedRegistration } : name === "./ActivityDashboard" ? { ActivityDashboard: () => null } : ["Navbar", "Breadcrumbs", "Footer"].some(component => name === `@/components/${component}`) ? { [name.split("/").at(-1)]: name.endsWith("/Breadcrumbs") ? ({backHref}) => React.createElement("a", {href:backHref}, "Volver") : () => null } : require(name) });
 const { HistoryAmount, HistoryResult, OperationHistory } = module.exports;
 const render = (component, props) => renderToStaticMarkup(React.createElement(component, props));
 assert.match(render(HistoryAmount, { atomic: "10000", asset: "USDC" }), /0\.001 USDC/);
