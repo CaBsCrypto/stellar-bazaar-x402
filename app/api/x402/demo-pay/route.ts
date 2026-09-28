@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST() {
-  if (process.env.X402_ENABLE_LOCAL_PAYER !== "true") {
+  if (process.env.VERCEL || process.env.NODE_ENV === "production" || process.env.X402_ENABLE_LOCAL_PAYER !== "true") {
     return NextResponse.json(
       { ok: false, error: { code: "LOCAL_PAYER_DISABLED", message: "Demo payer sólo disponible en entorno local explícitamente habilitado.", retryable: false } },
       { status: 403 },

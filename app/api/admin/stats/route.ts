@@ -4,6 +4,7 @@ import { getAllDynamicServiceCards, storageMode } from "@/lib/dynamic-registry";
 import { verifyAdminAccessAsync } from "@/lib/admin-guard";
 
 export const dynamic = "force-dynamic";
+const privateHeaders = { "Cache-Control": "private, no-store", "Vary": "Authorization" };
 
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
         error: "UNAUTHORIZED",
         message: "Acceso denegado. Se requiere un Admin Access Key o Magic Link válido.",
       },
-      { status: 401 }
+      { status: 401, headers: privateHeaders }
     );
   }
 
@@ -108,11 +109,11 @@ export async function GET(request: NextRequest) {
       stats: mockStats,
       builtInServices: servicesHealth,
       dynamicServices: dynamicList,
-    });
+    }, { headers: privateHeaders });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Internal Error" },
-      { status: 500 }
+      { success: false, error: "ADMIN_STATS_UNAVAILABLE" },
+      { status: 500, headers: privateHeaders }
     );
   }
 }

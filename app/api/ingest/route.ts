@@ -1,74 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createDynamicServiceCard } from "@/lib/dynamic-registry";
-import { parseServiceCardShape } from "@/lib/service-card-schema";
-
+import { createService, registryMutationConfigured, authorizeProviderKey } from "@/lib/service-ingest";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-
 export async function POST(req: NextRequest) {
-  const authHeader = req.headers.get("authorization");
-  const providerKeyHeader = req.headers.get("x-bazaar-provider-key");
-  
-  const token = authHeader?.startsWith("Bearer ")
-    ? authHeader.slice(7).trim()
-    : providerKeyHeader?.trim();
-
-  const expectedSecret = (process.env.BAZAAR_PROVIDER_SECRET || "bazaar_provider_sec_2026").trim();
-
-  const isAuthorized = Boolean(
-    token && (
-      token === expectedSecret ||
-      token === "bazaar_provider_sec_2026" ||
-      token === "stellar-bazaar-default-key" ||
-      (process.env.BAZAAR_PROVIDER_SECRET && token === process.env.BAZAAR_PROVIDER_SECRET.trim())
-    )
-  );
-
-  if (!isAuthorized) {
-    return NextResponse.json(
-      { ok: false, error: { code: "UNAUTHORIZED", message: "Credenciales de proveedor inválidas o ausentes." } },
-      { status: 401 }
-    );
+  if (!registryMutationConfigured()) return NextResponse.json({ok:false,error:{code:"SERVICE_NOT_CONFIGURED"}},{status:503});
+  const auth = req.headers.get("authorization");
+  const token = auth?.startsWith("Bearer ") ? auth.slice(7).trim() : req.headers.get("x-bazaar-provider-key")?.trim();
+  if (!authorizeProviderKey(token)) return NextResponse.json({ok:false,error:{code:"UNAUTHORIZED"}},{status:401});
+  let card: unknown;
+  try { card = await req.json(); }
+  catch { return NextResponse.json({ok:false,error:{code:"MALFORMED_JSON"}},{status:400}); }
+  const result = await createService(card, token);
+  if (!result.ok) {
+    const status = result.error.code === "CARD_EXISTS" ? 409 : result.error.code === "UNAUTHORIZED" ? 401 : result.error.code === "VALIDATION_FAILED" ? 422 : result.error.code === "SERVICE_NOT_CONFIGURED" ? 503 : 500;
+    return NextResponse.json({ok:false,error:result.error},{status});
   }
-
-  let card: any;
-  try {
-    card = await req.json();
-  } catch {
-    return NextResponse.json(
-      { ok: false, error: { code: "MALFORMED_JSON", message: "El body no es un JSON válido." } },
-      { status: 400 }
-    );
-  }
-
-  const shape = parseServiceCardShape(card);
-  if (!shape.ok) {
-    return NextResponse.json(
-      { ok: false, error: { code: "INVALID_SHAPE", message: "Estructura de ServiceCard inválida.", issues: shape.issues } },
-      { status: 422 }
-    );
-  }
-
-  try {
-    const result = await createDynamicServiceCard(card, "authorized-provider");
-    
-    return NextResponse.json(
-      {
-        ok: true,
-        status: "indexed-dynamic",
-        id: card.id,
-        card: card,
-        registeredAt: new Date().toISOString(),
-        message: `Servicio '${card.id}' indexado exitosamente en el catálogo de Stellar Bazaar.`
-      },
-      { status: 201 }
-    );
-  } catch (err: any) {
-    return NextResponse.json(
-      { ok: false, error: { code: "STORAGE_ERROR", message: err.message || "Error al persistir la Service Card." } },
-      { status: 500 }
-    );
-  }
+  return NextResponse.json({ok:true,status:"indexed-dynamic",id:result.entry.id,card:result.entry.card,registeredAt:result.entry.registeredAt},{status:201});
 }
 
 export async function OPTIONS() {

@@ -1,6 +1,7 @@
 {
   "git": {
     "deploymentEnabled": {
+      "fix/operational-guards": false,
       "review/base-webmcp": false,
       "review/history-identity": false,
       "review/usdc-xlm-recovery": false,

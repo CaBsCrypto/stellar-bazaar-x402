@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 
 interface AdminStats {
@@ -33,7 +33,7 @@ const STORAGE_KEY = "bazaar_admin_access_token";
 export function AdminOperationsDashboard() {
   const [token, setToken] = useState<string>("");
   const [inputToken, setInputToken] = useState<string>("");
-  const [emailInput, setEmailInput] = useState<string>("cristian@browns.studio");
+  const [emailInput, setEmailInput] = useState<string>("");
   const [magicLinkSent, setMagicLinkSent] = useState<boolean>(false);
   const [magicLinkMsg, setMagicLinkMsg] = useState<string>("");
   const [requestingMagic, setRequestingMagic] = useState<boolean>(false);
@@ -49,81 +49,67 @@ export function AdminOperationsDashboard() {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>("");
 
-  // Check URL hash (#key=...) or localStorage on mount
-  useEffect(() => {
-    let activeToken = "";
-    if (typeof window !== "undefined") {
-      const hash = window.location.hash;
-      const match = /#key=([a-zA-Z0-9_\-.~]+)/.exec(hash);
-      if (match && match[1]) {
-        activeToken = match[1];
-        localStorage.setItem(STORAGE_KEY, activeToken);
-        // Clean URL hash without reload for privacy
-        window.history.replaceState(null, "", window.location.pathname);
-      } else {
-        activeToken = localStorage.getItem(STORAGE_KEY) || "";
-      }
-    }
-
-    if (activeToken) {
-      setToken(activeToken);
-    } else {
-      setLoading(false);
-    }
-  }, []);
+  const screenTitle = useRef<HTMLHeadingElement | null>(null);
+  useEffect(() => { if (!loading) screenTitle.current?.focus(); }, [isAuthenticated, loading]);
+  const requestVersion = useRef(0);
+  const activeRequest = useRef<AbortController | null>(null);
+  const mounted = useRef(false);
+  const initialRead = useRef(false);
 
   const loadData = useCallback(async (tokenToUse: string) => {
-    if (!tokenToUse) {
-      setLoading(false);
-      return;
-    }
+    if (!tokenToUse || activeRequest.current) return;
+    const version = ++requestVersion.current;
+    const controller = new AbortController();
+    activeRequest.current = controller;
+    const current = () => mounted.current && version === requestVersion.current;
+    const oneUse = tokenToUse.startsWith("bz_magic_");
+    if (oneUse) setToken("");
+    setRefreshing(true);
     try {
-      setRefreshing(true);
-      const res = await fetch("/api/admin/stats", {
-        headers: {
-          Authorization: `Bearer ${tokenToUse}`,
-        },
-        cache: "no-store",
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data.stats);
-        setBuiltIn(data.builtInServices || []);
-        setDynamicServices(data.dynamicServices || []);
-        setLastUpdated(new Date().toLocaleTimeString());
-        setIsAuthenticated(true);
-        setAuthError("");
-        localStorage.setItem(STORAGE_KEY, tokenToUse);
-      } else if (res.status === 401) {
-        setIsAuthenticated(false);
-        setAuthError("Clave o Magic Link no válido o expirado.");
-        localStorage.removeItem(STORAGE_KEY);
-      } else {
-        setAuthError("Error al consultar el servidor.");
-      }
-    } catch (e) {
-      console.error("Failed to load admin stats", e);
-      setAuthError("No se pudo conectar con el servidor.");
+      const res = await fetch("/api/admin/stats", {headers:{Authorization: "Bearer " + tokenToUse},cache:"no-store",signal:controller.signal});
+      tokenToUse = "";
+      if (!current()) return;
+      if (!res.ok) throw new Error("ADMIN_ACCESS_FAILED");
+      const data = await res.json();
+      if (!current()) return;
+      setStats(data.stats);
+      setBuiltIn(data.builtInServices || []);
+      setDynamicServices(data.dynamicServices || []);
+      setLastUpdated(new Date().toLocaleTimeString());
+      setIsAuthenticated(true);
+      setAuthError("");
+    } catch {
+      if (!current()) return;
+      setIsAuthenticated(false); setStats(null); setBuiltIn([]); setDynamicServices([]); setToken("");
+      setAuthError(oneUse ? "No se pudo recuperar esta consulta. Solicita un enlace nuevo; no se reintentará el anterior." : "No se pudo abrir el panel. Revisa tu acceso.");
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      tokenToUse = "";
+      if (current()) { activeRequest.current = null; setLoading(false); setRefreshing(false); }
     }
   }, []);
 
   useEffect(() => {
-    if (token) {
-      loadData(token);
-      const interval = setInterval(() => loadData(token), 10000);
-      return () => clearInterval(interval);
+    mounted.current = true;
+    if (!initialRead.current) {
+      initialRead.current = true;
+      try { localStorage.removeItem(STORAGE_KEY); } catch { /* No stored credentials are read. */ }
+      const key = new URLSearchParams(window.location.hash.slice(1)).get("key");
+      if (key) {
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        if (!key.startsWith("bz_magic_")) setToken(key);
+        void loadData(key);
+      } else setLoading(false);
     }
-  }, [token, loadData]);
+    return () => { mounted.current = false; };
+  }, [loadData]);
 
   function handleLoginKey(e: React.FormEvent) {
     e.preventDefault();
-    if (!inputToken.trim()) return;
-    setToken(inputToken.trim());
-    loadData(inputToken.trim());
+    const key = inputToken.trim();
+    if (!key || activeRequest.current) return;
+    setInputToken("");
+    setToken(key.startsWith("bz_magic_") ? "" : key);
+    void loadData(key);
   }
 
   async function handleRequestMagicLink(e: React.FormEvent) {
@@ -138,11 +124,10 @@ export function AdminOperationsDashboard() {
         body: JSON.stringify({ email: emailInput.trim() }),
       });
       const data = await res.json();
+      if (!res.ok) throw new Error("ADMIN_LINK_FAILED");
       setMagicLinkSent(true);
       setMagicLinkMsg(data.message || "Enlace de acceso enviado.");
-      if (data.devMagicLink) {
-        console.log("Dev Magic Link:", data.devMagicLink);
-      }
+
     } catch (err) {
       setMagicLinkMsg("Error al solicitar el enlace. Intenta nuevamente.");
     } finally {
@@ -151,11 +136,12 @@ export function AdminOperationsDashboard() {
   }
 
   function handleLogout() {
-    localStorage.removeItem(STORAGE_KEY);
+    ++requestVersion.current; activeRequest.current?.abort(); activeRequest.current = null;
+    try { localStorage.removeItem(STORAGE_KEY); } catch {}
     setToken("");
     setInputToken("");
     setIsAuthenticated(false);
-    setStats(null);
+    setStats(null); setBuiltIn([]); setDynamicServices([]); setLastUpdated(""); setAuthError(""); setLoading(false); setRefreshing(false);
   }
 
   // --- LOCKED STATE (AUTH FORM) ---
@@ -173,7 +159,7 @@ export function AdminOperationsDashboard() {
           }}
         >
           <div style={{ fontSize: "2.5rem", marginBottom: "0.5rem" }}>🛡️</div>
-          <h1 style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0 0 0.5rem 0" }}>
+          <h1 ref={screenTitle} tabIndex={-1} style={{ fontSize: "1.5rem", fontWeight: 700, margin: "0 0 0.5rem 0" }}>
             Bazaar Admin Center
           </h1>
           <p style={{ color: "#94a3b8", fontSize: "0.88rem", marginBottom: "1.75rem", lineHeight: 1.4 }}>
@@ -396,7 +382,7 @@ export function AdminOperationsDashboard() {
         <div>
           <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
             <span style={{ fontSize: "1.5rem" }}>🛡️</span>
-            <h1 style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0 }}>Operations & Admin Center</h1>
+            <h1 ref={screenTitle} tabIndex={-1} style={{ fontSize: "1.8rem", fontWeight: 700, margin: 0 }}>Operations & Admin Center</h1>
             <span
               style={{
                 background: "rgba(56, 189, 248, 0.15)",
@@ -424,7 +410,7 @@ export function AdminOperationsDashboard() {
           )}
           <button
             onClick={() => void loadData(token)}
-            disabled={refreshing}
+            disabled={refreshing || !token}
             style={{
               background: "rgba(255, 255, 255, 0.06)",
               border: "1px solid rgba(255, 255, 255, 0.15)",
@@ -436,7 +422,7 @@ export function AdminOperationsDashboard() {
               fontWeight: 600,
             }}
           >
-            {refreshing ? "Actualizando..." : "🔄 Refrescar"}
+            {refreshing ? "Actualizando..." : !token ? "Consulta de un solo uso" : "🔄 Refrescar"}
           </button>
           <button
             onClick={handleLogout}
