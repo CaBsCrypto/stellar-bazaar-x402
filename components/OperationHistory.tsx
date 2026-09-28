@@ -4,6 +4,7 @@ import { ActivityDashboard } from "./ActivityDashboard";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ModelContextRegistry } from "@/lib/webmcp/types";
+import { createOwnedRegistration } from "@/lib/webmcp/owned-registration";
 
 type Locale = "es" | "en";
 type Entry = {
@@ -21,7 +22,7 @@ const copy = {
     catalog: "Catálogo", heading: "Biblioteca privada", token: "Acceso de lectura al historial", unlock: "Consultar historial", lock: "Bloquear y borrar vista", refresh: "Actualizar",
     access: "Introduce únicamente el token de lectura que te proporcionó el operador para tu historial. Se mantiene en memoria durante esta vista. Nunca introduzcas una clave de wallet ni un token de escritura.",
     note: "Este registro muestra lo reportado por tu agente. Un hash declarado no verifica el pago ni la calidad de la entrega. Consultarlo no solicita aprobaciones ni interrumpe al agente.",
-    locked: "Historial bloqueado. Introduce tu acceso de lectura para consultar tus operaciones.", loading: "Consultando tus operaciones…", unauthorized: "El acceso de lectura no es válido o ha caducado. Solicita uno válido al operador.", unavailable: "El historial no está habilitado o su almacenamiento no está disponible. El operador debe revisar la configuración; no se muestran datos de ejemplo como compras.", error: "No pudimos consultar el historial. Inténtalo nuevamente.", empty: "Aún no hay operaciones registradas para este acceso. No se reconstruyen compras a partir de transferencias antiguas.",
+    locked: "Historial bloqueado. Introduce tu acceso de lectura para consultar tus operaciones.", loading: "Consultando tus operaciones…", unauthorized: "El acceso de lectura no es válido o fue revocado. Solicita uno válido al operador.", unavailable: "El historial no está habilitado o su almacenamiento no está disponible. El operador debe revisar la configuración; no se muestran datos de ejemplo como compras.", error: "No pudimos consultar el historial. Inténtalo nuevamente.", empty: "Aún no hay operaciones registradas para este acceso. No se reconstruyen compras a partir de transferencias antiguas.",
     provider: "Proveedor", agent: "Agente declarado", unidentified: "No identificado", recorded: "Registrado", payment: "Pago", delivery: "Entrega", recipient: "Destinatario declarado", amount: "Importe declarado (unidades atómicas)", asset: "Activo", network: "Red", result: "Ver resultado reportado", absent: "Sin resultado almacenado", transaction: "Ver transacción declarada en Testnet", evidence: "Reportado por agente · sin verificación independiente", latest: "Últimas 20 operaciones registradas", origin: "Origen declarado", op: "Referencia de operación",
     statuses: { "not-requested": "No solicitado", "reported-unverified": "Reportado · pago no verificado", failed: "Fallo reportado", pending: "Pendiente", unknown: "Desconocido · requiere conciliación", "reported-delivered": "Entrega reportada · no verificada" },
     modes: { fixture: "Fixture de prueba", mock: "Simulación", testnet: "Testnet" },
@@ -31,7 +32,7 @@ const copy = {
     catalog: "Catalogue", heading: "Operation history", token: "Read-only history access", unlock: "View history", lock: "Lock and clear view", refresh: "Refresh",
     access: "Enter only the read token supplied by the operator for your history. It stays in memory while this view is open. Never enter a wallet key or write token.",
     note: "This journal shows what your agent reported. A declared hash does not verify payment or delivery quality. Reading it requires no purchase approvals and does not interrupt the agent.",
-    locked: "History locked. Enter your read access to view your operations.", loading: "Loading your operations…", unauthorized: "Read access is invalid or expired. Request valid access from the operator.", unavailable: "History is disabled or storage is unavailable. The operator must check configuration; example data is not shown as purchases.", error: "History could not be loaded. Please try again.", empty: "No operations have been recorded for this access yet. Purchases are not reconstructed from old transfers.",
+    locked: "History locked. Enter your read access to view your operations.", loading: "Loading your operations…", unauthorized: "Read access is invalid or revoked. Request valid access from the operator.", unavailable: "History is disabled or storage is unavailable. The operator must check configuration; example data is not shown as purchases.", error: "History could not be loaded. Please try again.", empty: "No operations have been recorded for this access yet. Purchases are not reconstructed from old transfers.",
     provider: "Provider", agent: "Declared agent", unidentified: "Not identified", recorded: "Recorded", payment: "Payment", delivery: "Delivery", recipient: "Declared recipient", amount: "Declared amount (atomic units)", asset: "Asset", network: "Network", result: "View reported result", absent: "No stored result", transaction: "View declared Testnet transaction", evidence: "Agent-reported · not independently verified", latest: "Latest 20 recorded operations", origin: "Declared origin", op: "Operation reference",
     statuses: { "not-requested": "Not requested", "reported-unverified": "Reported · payment unverified", failed: "Reported failure", pending: "Pending", unknown: "Unknown · reconciliation needed", "reported-delivered": "Reported delivery · unverified" },
     modes: { fixture: "Test fixture", mock: "Simulation", testnet: "Testnet" },
@@ -118,10 +119,11 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
   useEffect(() => {
     if (!agentAccess || !token.trim() || !native.current) return;
     const context = native.current;
+    const owned = createOwnedRegistration(context);
     let connected = true;
     const requests = new Set<AbortController>();
     try {
-      context.registerTool({
+      owned.registry.registerTool({
         name: "bazaar_get_operation_history",
         description: "Read the connected private agent-reported journal. No payment or delivery verification. No token arguments.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -141,7 +143,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
     } catch { setAgentAccess(false); setNativeAvailable(false); }
     return () => {
       connected = false; requests.forEach(request => request.abort());
-      try { context.unregisterTool?.("bazaar_get_operation_history"); } catch { /* The disconnected closure cannot return data. */ }
+      owned.dispose();
     };
   }, [agentAccess, token]);
 

@@ -5,6 +5,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
+    "test:identity:pilot": "node scripts/test-history-rotation.mjs && node scripts/test-history-identity-pilot.mjs && node scripts/test-private-history-lifecycle.mjs",
     "test:history": "node scripts/test-operation-history.mjs && node scripts/test-operation-history-client.mjs && node scripts/test-operation-history-ui.mjs",
     "test:agent-chat": "node scripts/test-agent-chat-flow.mjs && node scripts/test-history-provisioning.mjs",
     "test:webmcp:conformance": "node scripts/test-webmcp-conformance.mjs",
