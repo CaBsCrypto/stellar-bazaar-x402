@@ -1,3 +1,4 @@
+import { configuredSettlementRedis, settleRedisOnce } from "./redis-payment-settlement.ts";
 import { TESTNET_ASSETS, xlmPilotEnabled } from "./payment-options.ts";
 import { FilePaymentJournal } from "./pilot-payment-store.ts";
 import { settlePilotOnce } from "./pilot-settlement.ts";
@@ -47,7 +48,7 @@ export async function handleSandboxPayment(req: Request, deps = {
   config:requireServerX402Config, facilitator:getFacilitatorClient,
   pilot:xlmPilotEnabled, directory:()=>process.env.X402_PILOT_STATE_DIR,
   payments:()=>process.env.X402_PILOT_PAYMENTS_ENABLED === "true",
-}) {
+}, testSharedSettlement?: (operationId:string, payload: Parameters<typeof settleRedisOnce>[3], requirements: Parameters<typeof settleRedisOnce>[4], settle: Parameters<typeof settleRedisOnce>[5])=>ReturnType<typeof settleRedisOnce>) {
   const requestUrl=new URL(req.url);
   const pair = (requestUrl.searchParams.get("pair") ?? "").toUpperCase();
   const amount = Number(requestUrl.searchParams.get("amount"));
@@ -93,7 +94,11 @@ export async function handleSandboxPayment(req: Request, deps = {
   };
 
   const pilot=deps.pilot();
-  if(pilot && (!deps.directory() || !["127.0.0.1","localhost"].includes(requestUrl.hostname))) return structured("PILOT_LOCAL_STORAGE_REQUIRED","El piloto XLM requiere almacenamiento privado local y origen localhost.",503);
+  const shared=process.env.X402_SETTLEMENT_STORE === "redis";
+  // Shared storage is review-only until operational durability is independently approved.
+  const testShared = process.env.NODE_ENV === "test" && !process.env.VERCEL && testSharedSettlement;
+  if(shared && !testShared && req.headers.has("payment-signature")) return structured("SHARED_PAYMENTS_NOT_ENABLED","Almacenamiento compartido en revisión; pagos deshabilitados.",503);
+  if(pilot && !shared && (!deps.directory() || !["127.0.0.1","localhost"].includes(requestUrl.hostname))) return structured("PILOT_LOCAL_STORAGE_REQUIRED","El piloto XLM requiere almacenamiento privado local y origen localhost.",503);
   const options:PaymentRequirements[]=pilot ? [requirements,{...requirements,asset:TESTNET_ASSETS.XLM,amount:"100000"}] : [requirements];
   const signature = req.headers.get("payment-signature");
   if (!signature) {
@@ -173,7 +178,9 @@ export async function handleSandboxPayment(req: Request, deps = {
     if(pilot){
       const operationId=req.headers.get("idempotency-key");
       if(!operationId || !/^[a-zA-Z0-9_-]{8,128}$/.test(operationId))return structured("OPERATION_ID_REQUIRED","El piloto requiere Idempotency-Key estable.",400);
-      settled=await settlePilotOnce(new FilePaymentJournal(deps.directory()!),operationId,payload,requirements,()=>facilitator.settle(payload,requirements));
+      settled=shared
+        ? await (testShared ? testShared(operationId,payload,requirements,()=>facilitator.settle(payload,requirements)) : settleRedisOnce(configuredSettlementRedis(),"bazaar:settlement:v1:testnet:swap-risk",operationId,payload,requirements,()=>facilitator.settle(payload,requirements)))
+        : await settlePilotOnce(new FilePaymentJournal(deps.directory()!),operationId,payload,requirements,()=>facilitator.settle(payload,requirements));
     }else settled = await facilitator.settle(payload, requirements);
   } catch (error) {
     if (error instanceof SettleError) {
