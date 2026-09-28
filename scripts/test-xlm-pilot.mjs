@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -7,7 +7,8 @@ import { Keypair, Asset, Networks } from '@stellar/stellar-sdk';
 import { encodePaymentSignatureHeader, decodePaymentRequiredHeader, encodePaymentResponseHeader } from '@x402/core/http';
 import { TESTNET_ASSETS,sandboxOptions,selectPaymentOption } from '../lib/payment-options.ts';
 import { spendableTestnetBalances } from '../lib/testnet-balances.ts';
-import { FilePaymentJournal } from '../lib/pilot-payment-store.ts';
+import { FilePaymentJournal, paymentBinding } from '../lib/pilot-payment-store.ts';
+import { settlePilotOnce } from '../lib/pilot-settlement.ts';
 import { handleSandboxPayment } from '../lib/sandbox-payment-handler.ts';
 import { BazaarAgentClient } from '../lib/bazaar-agent-client.ts';
 import { parseServiceCardShape } from '../lib/service-card-schema.ts';
@@ -20,6 +21,21 @@ const directory=await mkdtemp(join(tmpdir(),'bazaar-xlm-'));
 const payer=Keypair.random(),seller=Keypair.random().publicKey(); // Ephemeral, unfunded test keys. Never printed.
 const card={version:'bazaar.service-card/v0',id:'swap-risk-quote',name:'Sandbox',description:'Deterministic sandbox result for isolated tests.',kind:'http',url:'http://127.0.0.1:3215',routeTemplate:'/api/x402/swap-risk?pair={pair}&amount={amount}&side={side}',input:['pair','amount','side'].map(name=>({name,type:name==='amount'?'number':'string',required:true})),network:'stellar:testnet',payment:{scheme:'exact',asset:'USDC',amount:'0.001',destination:seller},paymentOptions:sandboxOptions(seller),provider:{name:'Test'},tags:['sandbox']};
 const params={pair:'XLM/USDC',amount:2500,side:'buy'};
+// Existing malformed records are never absence and can never authorize another attempt.
+const corruptDir=join(directory,'corrupt');await mkdir(corruptDir);
+const corruptStore=new FilePaymentJournal(corruptDir);let corruptSettlements=0;
+const corruptRequirements={network:'stellar:testnet'},corruptPayload={fixture:true};
+for(const [i,raw] of ['null','false','0','""','[]','{}','broken-json',JSON.stringify({binding:paymentBinding({payload:corruptPayload,requirements:corruptRequirements}),phase:'completed',outcome:{success:true,network:'wrong',transaction:'wrong'}})].entries()) {
+ const id='corrupt-'+i;await writeFile(join(corruptDir,paymentBinding(id)+'.json'),raw);
+ for(let attempt=0;attempt<2;attempt++)await assert.rejects(()=>settlePilotOnce(corruptStore,id,corruptPayload,corruptRequirements,async()=>{corruptSettlements++;return {success:true,network:'stellar:testnet',transaction:'fixture'}}));
+}
+assert.equal(corruptSettlements,0);
+for(const [i,outcome] of [{success:true,network:'stellar:testnet',transaction:'wrong'}, {success:true,network:'stellar:testnet',transaction:'a'.repeat(64),payer:42}].entries()) {
+ const id='invalid-receipt-'+i;
+ await writeFile(join(corruptDir,paymentBinding(id)+'.json'),JSON.stringify({binding:paymentBinding({payload:corruptPayload,requirements:corruptRequirements}),phase:'completed',outcome}));
+ await assert.rejects(()=>settlePilotOnce(corruptStore,id,corruptPayload,corruptRequirements,async()=>{corruptSettlements++;throw Error('MUST NOT SETTLE')}),/JOURNAL_INVALID/);
+}
+assert.equal(corruptSettlements,0);
 assert.equal(Asset.native().contractId(Networks.TESTNET),TESTNET_ASSETS.XLM);
 assert.ok(parseServiceCardShape(card).ok);
 assert.deepEqual(toServiceCard(toPaidService(card)),card);
@@ -69,10 +85,10 @@ let purchaseCalls=0;
 const store=new FilePaymentJournal(join(directory,'buyer'));
 const opts={baseUrl:card.url,payerSecretKey:payer.secret(),allowedAssets:['USDC','XLM'],maxAmountByAsset:{USDC:'0.001',XLM:'0.01'},paymentJournal:store,readBalances:async()=>({USDC:'0',XLM:'100000'}),receiptVerifier:()=>true};
 const client=new BazaarAgentClient(opts);
-client.executeServiceCore=async(selected)=>{purchaseCalls++;assert.equal(selected.payment.asset,'XLM');return {ok:true,data:{example:true},status:200,serviceCard:selected,payment:{asset:selected.payment.asset,transactionHash:'b'.repeat(64)},delivery:{resultAvailable:true}}};
+client.executeServiceCore=async(selected,_params,durable)=>{if(!durable.response){purchaseCalls++;await durable.saveResponse({status:200,body:'{"example":true}',headers:{}})}assert.equal(selected.payment.asset,'XLM');return {ok:true,data:{example:true},status:200,serviceCard:selected,payment:{asset:selected.payment.asset,transactionHash:'b'.repeat(64)},delivery:{resultAvailable:true}}};
 await client.executeService(card,params,{operationId:'durable-test'});await client.executeService(card,params,{operationId:'durable-test'});assert.equal(purchaseCalls,1);
 await assert.rejects(()=>client.executeService(card,params,{operationId:'durable-test',preferredAsset:'USDC'}),/CONFLICT/);
-const fresh=new BazaarAgentClient(opts);fresh.executeServiceCore=()=>{throw Error('MUST NOT PAY')};assert.equal((await fresh.executeService(card,params,{operationId:'durable-test'})).data.example,true);
+const fresh=new BazaarAgentClient(opts);fresh.executeServiceCore=client.executeServiceCore;assert.equal((await fresh.executeService(card,params,{operationId:'durable-test'})).data.example,true);assert.equal(purchaseCalls,1);
 const concurrentClient=await Promise.allSettled([1,2].map(()=>client.executeService(card,params,{operationId:'concurrent-client'})));assert.equal(purchaseCalls,2);assert.ok(concurrentClient.some(r=>r.status==='fulfilled'));
 const pending=new BazaarAgentClient(opts);let lost=0;pending.executeServiceCore=async()=>{lost++;throw Error('lost network response')};await assert.rejects(()=>pending.executeService(card,params,{operationId:'pending-client'}),/lost network/);await assert.rejects(()=>pending.executeService(card,params,{operationId:'pending-client'}),/PAYMENT_PENDING/);assert.equal(lost,1);
 const failedStore=new BazaarAgentClient({...opts,paymentJournal:{exclusive:async(_key,fn)=>fn(async()=>undefined,async()=>{throw Error('disk failed')})}});failedStore.executeServiceCore=()=>{throw Error('SHOULD NOT PAY')};await assert.rejects(()=>failedStore.executeService(card,params,{operationId:'disk-failure'}),/disk failed/);
@@ -97,6 +113,17 @@ try {
   assert.equal(result.payment.asset,asset);assert.equal(result.delivery.resultAvailable,true);
   const count=signatures;await actual.executeService(card,params,{operationId:'integrated-'+asset,preferredAsset:asset});assert.equal(signatures,count);
  }
+ const completedFile=join(directory,'buyer',paymentBinding('integrated-XLM')+'.json');
+ const conserved=JSON.parse(await readFile(completedFile,'utf8'));
+ const safeSignatures=signatures,safeSettlements=settleCalls;
+ for(const mutate of [s=>({...s,phase:'started'}),s=>({...s,card:{...s.card,payment:{...s.card.payment,amount:'0.0001'}}}),s=>({...s,response:undefined}),s=>({...s,outcome:{...s.outcome,data:{injected:true}}})]) {
+  await writeFile(completedFile,JSON.stringify(mutate(structuredClone(conserved))));
+  await assert.rejects(()=>new BazaarAgentClient({...opts,readBalances:async()=>policy.balances}).executeService(card,params,{operationId:'integrated-XLM',preferredAsset:'XLM'}),/JOURNAL_INVALID/);
+ }
+ await writeFile(completedFile,JSON.stringify(conserved));
+ await assert.rejects(()=>new BazaarAgentClient({...opts,receiptVerifier:()=>false}).executeService(card,params,{operationId:'integrated-XLM',preferredAsset:'XLM'}),/PAYMENT_RECEIPT_MISMATCH/);
+ assert.equal(signatures,safeSignatures);assert.equal(settleCalls,safeSettlements);
+ console.log('PASS malformed journals, changed selected card/outcome and completed receipt revalidation: no additional effects');
  const tampered=new BazaarAgentClient(opts);
  globalThis.fetch=async(url,init)=>{const r=await handleSandboxPayment(new Request(url,init),deps);if(r.status!==402)return r;const body=await r.json();body.accepts.forEach(o=>o.amount='999999');const {encodePaymentRequiredHeader}=await import('@x402/core/http');return Response.json(body,{status:402,headers:{'payment-required':encodePaymentRequiredHeader(body)}})};
  const count=signatures;await assert.rejects(()=>tampered.executeService(card,params,{operationId:'tampered-challenge'}),/PAYMENT_REQUIREMENTS_MISMATCH/);assert.equal(signatures,count);
