@@ -8,7 +8,11 @@ Preparar una nueva pareja de accesos para el propietario principal del piloto hi
 
 La propuesta contendrá únicamente `ownerId`, `readTokenHash` y `writeTokenHash` en `BAZAAR_HISTORY_ACCOUNTS_JSON`. Los tokens nuevos se entregarán privadamente: lectura al humano; lectura/escritura al agente. Excluir cuentas negativas y sintéticas. No modificar archivos históricos ni copiar respuestas de compras. Aplicar la propuesta invalidará los accesos anteriores de esa pareja, por lo que distribución y aplicación deben coordinarse; generar el paquete no los revoca.
 
-Estado del paquete privado: **pendiente de autorización explícita**. La revisión automática rechazó la lectura de archivos históricos y generación offline antes de su ejecución. Se solicitó autorización al operador; no se buscará otra vía de acceso. Esta condición no impide comprobar la contingencia con cuentas sintéticas.
+Estado del paquete privado: **preparado offline, no aplicado**. Tras el rechazo inicial de la revisión automática, el operador autorizó explícitamente leer los archivos privados del piloto histórico y preparar nuevos accesos para su mismo propietario. Se comprobó la coincidencia de propietario entre acceso y diario, los hashes y permisos originales; se generó una pareja nueva conservando el propietario. Los archivos históricos permanecen intactos.
+
+El paquete reside en `review-release/identity-update-private`, fuera del repositorio, con ACL exclusiva del operador: `credentials.json` contiene los accesos privados, `account.json` y `proposed-accounts.json` contienen únicamente propietario/hashes, y `proposal-audit.json` conserva comprobaciones sin respuestas de compras. No se incorporan esos archivos al commit ni se publican enlaces con tokens.
+
+Una segunda ejecución local comprobó ACL, integridad del archivo de configuración, una única cuenta, correspondencia de hashes y permisos de ambos roles, rechazo de escritura con lectura y rechazo de credencial desconocida. Las credenciales anteriores se rechazan bajo la propuesta, pero **siguen sin rotarse en el servidor**: ninguna configuración remota fue modificada. Cero consultas Redis y cero pagos. Esta verificación no es una segunda prueba remota ni certifica la seguridad de otras credenciales históricas.
 
 Antes de una futura aplicación, consultar otra vez el registro de cuentas del destino. Si existen otras cuentas legítimas, conservarlas y reemplazar solo la entrada correspondiente al propietario verificado. No sobrescribir el registro completo con una propuesta de una sola cuenta. Sin prueba de asociación, detener la preparación de esa cuenta.
 
@@ -34,4 +38,4 @@ Prueba aprobada en Node 22.18 y 24.14, con revisión independiente de identity_p
 
 No prueba de nuevo Redis, esquemas de registro ni propagación remota. Complementa las 141 solicitudes Redis del ejercicio anterior; no consume presupuesto externo nuevo.
 
-El cierre de preparación queda condicionado al paquete privado autorizado. Publicar sigue requiriendo elegir entorno, autorizar cambios concretos, verificar configuración efectiva y ensayar allí la contingencia. No se autoriza push, merge, compras ni despliegues con este documento.
+**Preparación local cerrada:** paquete privado verificado y contingencia local aprobada. Publicar sigue requiriendo elegir entorno, autorizar cambios concretos, verificar configuración efectiva y ensayar allí la contingencia. Antes de aplicar, distribuir privadamente los accesos nuevos y comprobar que no se sobrescriben otras cuentas legítimas. No se autoriza push, merge, compras ni despliegues con este documento.
