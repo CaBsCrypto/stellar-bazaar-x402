@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main", "review/base-webmcp", "review/history-identity", "review/usdc-xlm-recovery", "review/shared-payment-control", "review/consistent-discovery"]
+    branches: ["main", "review/base-webmcp", "review/history-identity", "review/usdc-xlm-recovery", "review/shared-payment-control", "review/consistent-discovery", "review/buyer-entry-validation"]
 
 permissions:
   contents: read
@@ -51,6 +51,9 @@ jobs:
 
       - name: Complete Local Buyer Acceptance (synthetic data only)
         run: node scripts/test-buyer-mission.mjs
+
+      - name: Administrative and legacy payment guards (doubles only)
+        run: node scripts/test-operational-guards.mjs && node scripts/test-admin-ui-guards.mjs
 
       - name: USDC XLM journal and recovery (simulated)
         run: node scripts/test-xlm-pilot.mjs

@@ -16,11 +16,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+    const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL;
+    if (!resendApiKey || !configuredOrigin) return NextResponse.json({success:false,error:"ADMIN_DELIVERY_NOT_CONFIGURED"},{status:503});
+    const origin = new URL(configuredOrigin);
+    if (origin.protocol !== "https:" || origin.username || origin.password || origin.pathname !== "/" || origin.search || origin.hash) return NextResponse.json({success:false,error:"ADMIN_ORIGIN_INVALID"},{status:503});
     const token = await createMagicLinkToken(email);
-    const origin = request.nextUrl.origin || "https://bazaar.browns.studio";
-    const magicLink = `${origin}/admin#key=${token}`;
-
-    const resendApiKey = process.env.RESEND_API_KEY;
+    const magicLink = origin.origin + "/admin#key=" + token;
 
     if (resendApiKey) {
       const emailRes = await fetch("https://api.resend.com/emails", {
@@ -53,22 +55,17 @@ export async function POST(request: NextRequest) {
       });
 
       if (!emailRes.ok) {
-        console.warn("[MAGIC_LINK_RESEND_ERROR]", await emailRes.text());
+        return NextResponse.json({success:false,error:"ADMIN_DELIVERY_FAILED"},{status:503});
       }
-    } else {
-      // In local dev without RESEND_API_KEY, log the link to console
-      console.log(`\n========================================\n[DEV MAGIC LINK for ${email}]\n${magicLink}\n========================================\n`);
     }
 
     return NextResponse.json({
       success: true,
       message: "Si tu correo está autorizado, recibirás un enlace de acceso en breve.",
-      // Include dev link in response only when in development
-      ...(process.env.NODE_ENV !== "production" ? { devMagicLink: magicLink } : {}),
     });
   } catch (error) {
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Internal Error" },
+      { success: false, error: "ADMIN_LINK_UNAVAILABLE" },
       { status: 500 }
     );
   }

@@ -77,6 +77,7 @@ export async function GET(req: NextRequest) {
   };
 
   const signature = req.headers.get("payment-signature");
+  if (signature && process.env.X402_LEGACY_PAYMENTS_ENABLED !== "true") return structured("PAYMENTS_DISABLED", "Pagos de esta ruta deshabilitados.", 503);
   if (!signature) {
     const required = { x402Version: 2, error: "Payment required", resource, accepts: [requirements] };
     return NextResponse.json(required, {
