@@ -1,3 +1,4 @@
+import { testnetFundingInstructions } from "./testnet-funding";
 import { historyConnection } from "./history-connection";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as z from "zod/v4";
@@ -62,6 +63,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
       result({
         ...pilotCapabilityCard,
         historyConnection,
+        testnetFunding: { instructions: testnetFundingInstructions, automatic: false },
         writes: [],
         registry: {
           discovery: "read-only",
@@ -104,7 +106,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
           ...toServiceCard(service),
           availability: {
             execution: service.id === "swap-risk-quote" ? "active-local" : "fixture-only",
-            payment: service.id === "swap-risk-quote" ? "testnet-validated" : "not-active",
+            payment: service.paymentOptions ? "pilot-unvalidated" : service.id === "swap-risk-quote" ? "testnet-validated" : "not-active",
           },
         })),
         pilots: includePilots ? pilotCards : [],
@@ -188,7 +190,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
           resource: toServiceCard(service),
           availability: {
             execution: id === "swap-risk-quote" ? "active-local" : "fixture-only",
-            payment: id === "swap-risk-quote" ? "testnet-validated" : "not-active",
+            payment: service.paymentOptions ? "pilot-unvalidated" : id === "swap-risk-quote" ? "testnet-validated" : "not-active",
           },
           paymentFlow: getPaymentFlow(id),
         });

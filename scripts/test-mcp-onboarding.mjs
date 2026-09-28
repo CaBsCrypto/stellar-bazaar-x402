@@ -17,6 +17,7 @@ const readTools = [
   "get_operation_history",
 ];
 const pilotIds = [
+  "ai-video-scriptwriter-pilot",
   "website-intelligence-pilot",
   "campaign-creator-pilot",
   "research-scout-pilot",
@@ -76,14 +77,14 @@ assert.deepEqual(pilotText.pilots.map((card) => card.id), pilotIds);
 assert.ok(pilotText.pilots.every((card) => card.indexing.status === "pilot-indexed"));
 assert.deepEqual(
   pilotText.pilots.filter((card) => card.payment.status === "active-testnet").map((card) => card.id),
-  ["website-intelligence-pilot"],
+  ["ai-video-scriptwriter-pilot", "website-intelligence-pilot"],
 );
-assert.ok(pilotText.pilots.filter((card) => card.id !== "website-intelligence-pilot").every((card) => card.payment.status === "not-active"));
+assert.ok(pilotText.pilots.filter((card) => !["ai-video-scriptwriter-pilot", "website-intelligence-pilot"].includes(card.id)).every((card) => card.payment.status === "not-active"));
 assert.equal(pilotText.partialResults, false);
 
 const firstPage = await rpc(5, "tools/call", {
   name: "search_services",
-  arguments: { query: "riesgo", limit: 1 },
+  arguments: { query: "USDC", limit: 1 },
 });
 const firstText = JSON.parse(firstPage.result.content[0].text);
 assert.equal(firstText.partialResults, true);
@@ -91,11 +92,14 @@ assert.ok(firstText.nextCursor);
 
 const secondPage = await rpc(6, "tools/call", {
   name: "search_services",
-  arguments: { query: "riesgo", limit: 1, cursor: firstText.nextCursor },
+  arguments: { query: "USDC", limit: 1, cursor: firstText.nextCursor },
 });
 const secondText = JSON.parse(secondPage.result.content[0].text);
 assert.ok(secondText.results.length >= 1);
-assert.ok(!secondText.results.some((result) => result.resource.id === firstText.results[0].resource.id));
+const fullPage = await rpc(60, "tools/call", {name:"search_services",arguments:{query:"USDC",limit:50}});
+const fullText = JSON.parse(fullPage.result.content[0].text);
+assert.deepEqual(firstText.results, fullText.results.slice(0,1));
+assert.deepEqual(secondText.results, fullText.results.slice(1,2)); // Static and dynamic sources may repeat an id.
 
 for (const query of ["website intelligence", "auditoría", "inteligencia"]) {
   const pilotSearch = await rpc(61, "tools/call", {

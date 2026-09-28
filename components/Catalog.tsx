@@ -10,6 +10,7 @@ export function Catalog({standalone = false}: {standalone?: boolean}) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<"all" | ServiceKind>("all");
   const [scheme, setScheme] = useState<"all" | PaymentScheme>("all");
+  const [asset, setAsset] = useState("all");
   const [maxPrice, setMaxPrice] = useState("");
   const [highlightedServiceId, setHighlightedServiceId] = useState<string | null>(null);
   const [agentToast, setAgentToast] = useState<string | null>(null);
@@ -60,12 +61,13 @@ export function Catalog({standalone = false}: {standalone?: boolean}) {
     const filtered = filterServices(services, {
       kind: kind === "all" ? undefined : kind,
       scheme: scheme === "all" ? undefined : scheme,
+      asset: asset === "all" ? undefined : asset,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
     });
     return rankServices(filtered, query);
-  }, [query, kind, scheme, maxPrice]);
+  }, [query, kind, scheme, maxPrice, asset]);
 
-  function resetFilters() { setQuery(""); setKind("all"); setScheme("all"); setMaxPrice(""); }
+  function resetFilters() { setQuery(""); setKind("all"); setScheme("all"); setMaxPrice(""); setAsset("all"); }
   return <section className="ui-catalog" aria-label="Servicios del mercado">
     {agentToast && <p className="ui-notice" role="status">{agentToast}</p>}
     <SectionHeading headingLevel={standalone ? 1 : 2} eyebrow="SERVICIOS LISTADOS · STELLAR TESTNET" title="Encuentra lo que tu agente necesita"><p role="status">{results.length} {results.length === 1 ? "resultado" : "resultados"}</p></SectionHeading>
@@ -73,7 +75,8 @@ export function Catalog({standalone = false}: {standalone?: boolean}) {
       <label>Buscar servicio<input value={query} onChange={e => setQuery(e.target.value)} placeholder="Guiones, video, swap…" {...({toolparamdescription:"Palabras clave de búsqueda"} as Record<string,unknown>)} /></label>
       <label>Tipo<select value={kind} onChange={e=>setKind(e.target.value as typeof kind)}><option value="all">Todos</option><option value="http">HTTP x402</option><option value="mcp">MCP</option></select></label>
       <label>Esquema<select value={scheme} onChange={e=>setScheme(e.target.value as typeof scheme)}><option value="all">Todos</option><option value="exact">exact</option><option value="upto">upto</option></select></label>
-      <label>Precio máximo<input type="number" min="0" step="0.001" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} placeholder="USDC de Testnet" {...({toolparamdescription:"Precio máximo del servicio"} as Record<string,unknown>)} /></label>
+      <label>Activo<select value={asset} onChange={e=>{setAsset(e.target.value);setMaxPrice("");}}><option value="all">Todos</option><option value="USDC">USDC</option><option value="XLM">XLM</option></select></label>
+      <label>Precio máximo ({asset === "all" ? "USDC" : asset})<input type="number" min="0" step="0.001" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} placeholder={`${asset === "all" ? "USDC" : asset} de Testnet`} {...({toolparamdescription:"Precio máximo del servicio"} as Record<string,unknown>)} /></label>
     </form>
     <p className="ui-notice">El precio y las condiciones son declarados por el proveedor. Estar listado no acredita una compra ni garantiza disponibilidad. Tu agente debe comprobarlos antes de pagar.</p>
     <div className="ui-grid">{results.map(result => <ServiceCard key={result.service.id} {...result} showScore={Boolean(query)} highlighted={highlightedServiceId === result.service.id} />)}</div>

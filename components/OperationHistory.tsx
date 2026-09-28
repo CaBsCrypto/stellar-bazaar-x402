@@ -41,10 +41,11 @@ const copy = {
 const short = (value: string) => value.length > 20 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
 
 export function HistoryAmount({ atomic, asset }: { atomic: string; asset: string }) {
-  if ((asset === "USDC" || asset === "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA") && /^\d{1,40}$/.test(atomic)) {
+  const symbol = asset === "XLM" || asset === "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC" ? "XLM" : asset === "USDC" || asset === "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA" ? "USDC" : undefined;
+  if (symbol && /^\d{1,40}$/.test(atomic)) {
     const value = BigInt(atomic);
     const fraction = (value % 10000000n).toString().padStart(7, "0").replace(/0+$/, "");
-    return <span>{`${value / 10000000n}${fraction ? `.${fraction}` : ""} USDC`} <small>({atomic} atomic)</small></span>;
+    return <span>{`${value / 10000000n}${fraction ? `.${fraction}` : ""} ${symbol}`} <small>({atomic} atomic)</small></span>;
   }
   return <span>{atomic} atomic</span>;
 }

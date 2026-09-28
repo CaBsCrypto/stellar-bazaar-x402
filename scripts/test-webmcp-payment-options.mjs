@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+process.env.NEXT_PUBLIC_X402_XLM_PILOT='true';
+const {WebMCPClientAdapter}=await import('../lib/webmcp-client-adapter.ts');
+const {sandboxOptions}=await import('../lib/payment-options.ts');
+const adapter=new WebMCPClientAdapter();adapter.init();
+const listed=(await adapter.executeTool('bazaar_list_services',{})).data.services.find(s=>s.id==='swap-risk-quote');
+const searched=(await adapter.executeTool('bazaar_search_services',{query:'XLM'})).data.services.find(s=>s.id==='swap-risk-quote');
+const detail=(await adapter.executeTool('bazaar_get_service',{serviceId:'swap-risk-quote'})).data;
+assert.ok(listed);assert.ok(searched);assert.ok(detail.paymentOptions);
+assert.deepEqual(detail.paymentOptions,sandboxOptions(detail.payment.destination));
+assert.deepEqual(listed.paymentOptions,detail.paymentOptions);
+assert.deepEqual(searched.paymentOptions,detail.paymentOptions);
+assert.equal(listed.payment.asset,'USDC');assert.equal(searched.asset,'USDC');
+console.log('PASS WebMCP list/search/get retain identical USDC/XLM options; no provider or payment calls');
