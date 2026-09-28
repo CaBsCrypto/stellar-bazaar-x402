@@ -1,0 +1,159 @@
+{
+  "date": "2026-09-27T23:55:48.564Z",
+  "sha": "669e716f7ddedde3fd64f9547adb12274b2b6ad0",
+  "dirty": "M .github/workflows/ci.yml",
+  "runtime": "v22.18.0",
+  "environment": "Local doubles and loopback MCP only; allowlisted environment. No transfers or external storage.",
+  "results": [
+    {
+      "command": "node scripts/test-webmcp-lifecycle.mjs",
+      "exitCode": 0,
+      "output": "PASS: partial registration, unmount, repeat cleanup and foreign-tool preservation"
+    },
+    {
+      "command": "node scripts/test-webmcp-native-lifecycle.mjs",
+      "exitCode": 0,
+      "output": "[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: replaced\n[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: replaced\nPASS: native navigator/document failure, collision, remount, replacement and emulator cleanup"
+    },
+    {
+      "command": "node scripts/test-webmcp-async-discovery.mjs",
+      "exitCode": 0,
+      "output": "[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: own\n[WebMCP] 🛠️ Registered tool: own\nPASS: object/async native discovery preserves foreign tools; malformed lists fail before registration"
+    },
+    {
+      "command": "node scripts/test-webmcp-conformance.mjs",
+      "exitCode": 0,
+      "output": "Starting WebMCP Client Adapter & Tool Conformance verification...\n[WebMCP] 🛠️ Registered tool: bazaar_list_services\n[WebMCP] 🛠️ Registered tool: bazaar_search_services\n[WebMCP] 🛠️ Registered tool: bazaar_get_service\n[WebMCP] 🛠️ Registered tool: bazaar_list_workflow_bundles\n[WebMCP] 🛠️ Registered tool: bazaar_validate_service_card\n[WebMCP] 🛠️ Registered tool: bazaar_get_payment_flow\n[WebMCP] 🛠️ Registered tool: bazaar_execute_service\nRegistered WebMCP tools count: 7\nExecuting 'bazaar_list_services'...\nExecuting 'bazaar_search_services' for 'swap'...\nVerifying fail-safe for non-existent tool...\nAll WebMCP Client Conformance tests passed successfully! (100% Compliant)"
+    },
+    {
+      "command": "node scripts/test-webmcp-payment-options.mjs",
+      "exitCode": 0,
+      "output": "[WebMCP] 🛠️ Registered tool: bazaar_list_services\n[WebMCP] 🛠️ Registered tool: bazaar_search_services\n[WebMCP] 🛠️ Registered tool: bazaar_get_service\n[WebMCP] 🛠️ Registered tool: bazaar_list_workflow_bundles\n[WebMCP] 🛠️ Registered tool: bazaar_validate_service_card\n[WebMCP] 🛠️ Registered tool: bazaar_get_payment_flow\n[WebMCP] 🛠️ Registered tool: bazaar_execute_service\nPASS WebMCP list/search/get retain identical USDC/XLM options; no provider or payment calls"
+    },
+    {
+      "command": "node scripts/test-webmcp-public-discovery.mjs",
+      "exitCode": 0,
+      "output": "PASS public registry parity list/search/get, payment alternatives, incomplete/error states, unknown execution rejected; HTTP mocked, no writes or payments. Pending submissions are not imported."
+    },
+    {
+      "command": "node scripts/test-public-resource-render.mjs",
+      "exitCode": 0,
+      "output": "PASS actual detail component rendered with synthetic public entry, no invented latency/output; missing/pending absent; unavailable explicit; static preserved. No network."
+    },
+    {
+      "command": "node scripts/test-discovery-conflicts.mjs",
+      "exitCode": 0,
+      "output": "PASS reserved IDs rejected before storage, existing collisions retained but excluded, null/malformed/duplicate index is partial, REST/browser/WebMCP static precedence matches; Redis double only"
+    },
+    {
+      "command": "node scripts/test-agent-chat-flow.mjs",
+      "exitCode": 0,
+      "output": "PASS registered pair -> authenticated write -> read -> fresh handlers recovery, least privilege, owner isolation, idempotency and unknown-token rejection. Local Redis double; no payments or network."
+    },
+    {
+      "command": "node scripts/test-history-provisioning.mjs",
+      "exitCode": 0,
+      "output": "PASS offline provisioning, linked hashes, no secret stdout, overwrite/repository/junction refusal and effective private OS permissions. Synthetic files only."
+    },
+    {
+      "command": "node scripts/test-operation-history.mjs",
+      "exitCode": 0,
+      "output": "Operation history: validation, private auth, least privilege, owner isolation, atomic idempotency model, restart persistence, result retrieval and fail-closed storage passed. No network or payments."
+    },
+    {
+      "command": "node scripts/test-operation-history-client.mjs",
+      "exitCode": 0,
+      "output": "Agent history integration: success reporting, private result opt-in, interruption uncertainty, no payment retry passed. Simulated outcomes only."
+    },
+    {
+      "command": "node scripts/test-operation-history-ui.mjs",
+      "exitCode": 0,
+      "output": "Operation history UI: safe result rendering, exact amount, locked view PASS"
+    },
+    {
+      "command": "node scripts/test-private-webmcp.mjs",
+      "exitCode": 0,
+      "output": "Private native-registry harness: scoped tools, step reporting, no public UI leak, disconnect races, finished task guard, inert results and provider links PASS. Native browser interoperability is not asserted."
+    },
+    {
+      "command": "node scripts/test-activity-panel.mjs",
+      "exitCode": 0,
+      "output": "Activity panel: owner isolation, immutable/idempotent events, pagination, legacy records, private results/files, unavailable delivery, SDK telemetry failure without repay PASS. Redis here is a model, not a real server."
+    },
+    {
+      "command": "node scripts/test-provider-self-listing.mjs",
+      "exitCode": 0,
+      "output": "{\n  \"ok\": true,\n  \"negativeCases\": 8,\n  \"lifecycle\": [\n    \"draft\",\n    \"control-proof\",\n    \"manual-review\",\n    \"staged-not-public\"\n  ],\n  \"automaticActivation\": false\n}"
+    },
+    {
+      "command": "node scripts/test-deliverables.mjs",
+      "exitCode": 0,
+      "output": "Deliverables: manifest validation, owner isolation, quota race/idempotency model, immutable versions, checksum/size rejection, pending uploads, renewed access and buyer storage-only retry PASS. Real Redis/S3 not claimed."
+    },
+    {
+      "command": "node scripts/test-deliverable-viewers.mjs",
+      "exitCode": 0,
+      "output": "Deliverable viewer safety, missing content, pending media, S3 signatures/expiry/immutable keys, HEAD size/checksum and storage failure after one purchase PASS. Network S3 not claimed."
+    },
+    {
+      "command": "node scripts/test-delivery-recovery-client.mjs",
+      "exitCode": 0,
+      "output": "{\n  \"ok\": true,\n  \"durableRecovery\": true,\n  \"receiptReconciled\": true,\n  \"paymentAttempted\": false,\n  \"redirects\": \"error\",\n  \"origin\": \"pinned\"\n}"
+    },
+    {
+      "command": "node scripts/test-automatic-recovery.mjs",
+      "exitCode": 0,
+      "output": "PASS automatic recovery: three bounded queries, 2/5 second waits, backup-first, storage-only retries, permanent payment marker, unchanged completed operation and truthful states. No payment dependency."
+    },
+    {
+      "command": "node scripts/test-xlm-pilot.mjs",
+      "exitCode": 0,
+      "output": "{\"ok\":true,\"simulation\":true,\"realPayments\":0,\"selection\":true,\"reserves\":true,\"tamperRejected\":true,\"singleSettlement\":true,\"durableBuyer\":true,\"newProcess\":true,\"historyRetryOnly\":true,\"oldUSDCChallenge\":true}\nPASS combined buyer -> simulated 402 settlement -> persisted response -> authenticated history -> owner read -> fresh client recovery; no duplicate payment\nPASS integrated buyer, selected challenge, raw response recovery; signatures/facilitator simulated only"
+    },
+    {
+      "command": "node scripts/test-testnet-transfer.mjs",
+      "exitCode": 0,
+      "output": "PASS receipt evidence matching, unsigned synthetic envelopes only; no transactions"
+    },
+    {
+      "command": "node scripts/test-shared-settlement-local.mjs",
+      "exitCode": 0,
+      "output": "{\"ok\":true,\"storage\":\"simulated atomic eval, not Redis\",\"facilitator\":\"simulated\",\"transfers\":0,\"concurrentProcesses\":3,\"newProcessRecovery\":true,\"tampering\":true,\"uncertaintyBlocked\":true,\"corruptionRejected\":true,\"httpPaymentsDisabled\":true}"
+    },
+    {
+      "command": "node scripts/test-buyer-instructions.mjs",
+      "exitCode": 0,
+      "output": "PASS buyer instruction contracts: tools, boundaries, shared prompt and local handoff"
+    },
+    {
+      "command": "node scripts/test-buyer-mcp.mjs",
+      "exitCode": 0,
+      "output": "PASS authenticated MCP owner read, concurrent owner isolation, unknown credential rejection and fresh-client recovery; synthetic in-memory history only\nPASS real SDK StreamableHTTP initialize/list/search/get: registry available; missing RESOURCE_NOT_FOUND; paymentOptions preserved; no payments\nPASS authenticated MCP owner read, concurrent owner isolation, unknown credential rejection and fresh-client recovery; synthetic in-memory history only\nPASS real SDK StreamableHTTP initialize/list/search/get: registry unavailable; missing REGISTRY_UNAVAILABLE; paymentOptions preserved; no payments\nPASS public endpoint rejected"
+    },
+    {
+      "command": "node scripts/test-buyer-acceptance.mjs",
+      "exitCode": 0,
+      "output": "{\"ok\":true,\"simulation\":true,\"realPayments\":0,\"newProcessRecovery\":true,\"historyRetryOnly\":true,\"uncertaintyBlocked\":true,\"concurrencyBlocked\":true,\"explicitPolicy\":true,\"ownerIsolation\":true}"
+    },
+    {
+      "command": "node scripts/test-buyer-copy.mjs",
+      "exitCode": 0,
+      "output": "PASS actual CopyText handler: exact text, accessible success, denied clipboard opens manual selection and focuses text. Clipboard API mocked."
+    },
+    {
+      "command": "node scripts/test-publisher-brief.mjs",
+      "exitCode": 0,
+      "output": "PASS editorial idea/API drafts, preserved input, incomplete/invalid-price prevention, pending price, clipboard fallback and no publishing/network. Component double only."
+    },
+    {
+      "command": "node scripts/test-provider-card-preservation.mjs",
+      "exitCode": 0,
+      "output": "Provider card preservation and path binding assertions passed; no network/payment."
+    },
+    {
+      "command": "node scripts/test-review-proxies.mjs",
+      "exitCode": 0,
+      "output": "PASS loopback text proxy: blocked APIs, encoded paths and writes never reach upstream; public discovery works; auth/cookies not forwarded; text-enlargement injection present. Synthetic upstream only."
+    }
+  ]
+}

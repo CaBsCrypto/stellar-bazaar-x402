@@ -1,156 +1,47 @@
-﻿# ⚡ Fast Provider Start · Monetize Any API in Under 3 Minutes
+# Preparar un servicio para Bazaar
 
-Monetize existing REST APIs, microservices, and MCP tools with deterministic on-chain payments using **Stellar Bazaar x402** and **Soroban smart contracts**.
+Esta guía prepara un borrador y su revisión. No publica automáticamente, no ejecuta pagos y no garantiza ingresos, tiempos de liquidación, seguridad ni disponibilidad. El recorrido descrito es para Stellar Testnet; no demuestra soporte Mainnet.
 
----
+## 1. Define lo que entregarás
 
-## 🧭 Why Stellar Bazaar x402?
+En `/publish`, describe nombre, propósito, destinatarios y resultado. El precio puede quedar por definir. Copiar las instrucciones lleva ese borrador a tu agente; no envía una solicitud de revisión ni crea una ServiceCard válida.
 
-- **Zero-Custody Direct Payouts:** Funds settle directly from the buyer/agent wallet into your Stellar account (`G...`) in USDC. Neither Stellar Bazaar nor OpenZeppelin ever holds your funds.
-- **Pay-Per-Call Microtransactions:** Accept sub-cent micro-payments (e.g. `0.001 USDC` ≈ $0.001) with sub-second finality on Stellar Testnet and Pubnet.
-- **Automatic Agent Discovery:** Publishing a valid **ServiceCard** exposes your API to autonomous LLM agents via MCP (Model Context Protocol) and REST discovery endpoints.
-- **11-Rule Deterministic Conformance:** Standardized verification guarantees client interoperability, SSRF safety, and exact price/settlement predictability.
+- Si solo tienes una idea, concreta entradas, formato de entrega, límites y una muestra identificada como ilustrativa antes de implementar.
+- Si ya tienes una API, reutilízala y comprueba que produce el resultado declarado. No hace falta reemplazarla por una plantilla.
+- Confirma con el proveedor el precio, activo, red, destinatario público y condiciones. No uses una dirección de ejemplo como destinatario real.
 
----
+## 2. Prepara y valida la integración
 
-## 🚀 3 Simple Steps to Monetize
+El agente puede consultar las herramientas MCP disponibles y validar una ficha; el MCP no completa por sí solo el alta. Las herramientas del navegador WebMCP son una superficie distinta. Consulta la [guía para agentes](../public/llms.txt) y la documentación del repositorio correspondiente a la versión que revisas.
 
-```
-┌───────────────────┐      ┌────────────────────────┐      ┌─────────────────────┐
-│  1. Wrap Endpoint │ ---> │ 2. Define ServiceCard  │ ---> │ 3. Publish to Bazaar│
-│ (x402 Middleware) │      │  (USDC Price + Wallet) │      │ (Web Form / REST)   │
-└───────────────────┘      └────────────────────────┘      └─────────────────────┘
-```
+El desplegable **Ya tengo una integración técnica** de `/publish` permite preparar y copiar un manifest. Revisa que sus valores correspondan a tu servicio; los valores iniciales son ayudas, no condiciones aprobadas.
 
----
+Desde este repositorio, con sus dependencias instaladas y Node.js 22.18 o posterior, puedes validar el archivo que hayas preparado:
 
-### Step 1: Wrap Your Endpoint with x402
-
-Return an **HTTP 402 Payment Required** challenge when an unpaid request arrives, and verify/settle the payment signature via the x402 Facilitator.
-
-#### Node.js / Express Example
-
-```javascript
-import express from "express";
-import { decodePaymentSignatureHeader, encodePaymentRequiredHeader, encodePaymentResponseHeader } from "@x402/core/http";
-import { HTTPFacilitatorClient } from "@x402/core/server";
-import { USDC_TESTNET_ADDRESS } from "@x402/stellar";
-
-const app = express();
-app.use(express.json());
-
-const SELLER_WALLET = process.env.X402_SELLER_ADDRESS; // Your Stellar G... address
-const FACILITATOR_API_KEY = process.env.STELLAR_X402_FACILITATOR_API_KEY;
-const FACILITATOR_URL = "https://channels.openzeppelin.com/x402/testnet";
-
-const facilitator = new HTTPFacilitatorClient({
-  url: FACILITATOR_URL,
-  createAuthHeaders: async () => ({
-    verify: { Authorization: `Bearer ${FACILITATOR_API_KEY}` },
-    settle: { Authorization: `Bearer ${FACILITATOR_API_KEY}` },
-  }),
-});
-
-app.get("/v1/weather/:city", async (req, res) => {
-  const { city } = req.params;
-  const resourceUrl = `${req.protocol}://${req.get("host")}/v1/weather/${encodeURIComponent(city)}`;
-
-  const requirements = {
-    scheme: "exact",
-    network: "stellar:testnet",
-    payTo: SELLER_WALLET,
-    asset: USDC_TESTNET_ADDRESS,
-    amount: "10000", // 0.0010000 USDC (7 decimals)
-    maxTimeoutSeconds: 60,
-    extra: { areFeesSponsored: true, resourceUrl, method: "GET" },
-  };
-
-  const signature = req.headers["payment-signature"];
-  if (!signature) {
-    const required = {
-      x402Version: 2,
-      error: "Payment required",
-      resource: { url: resourceUrl, description: "Real-time weather data", mimeType: "application/json" },
-      accepts: [requirements],
-    };
-    return res.status(402)
-      .set("PAYMENT-REQUIRED", encodePaymentRequiredHeader(required))
-      .json(required);
-  }
-
-  // Verify and settle payment
-  const payload = decodePaymentSignatureHeader(signature);
-  const verified = await facilitator.verify(payload, requirements);
-  if (!verified.isValid) {
-    return res.status(402).json({ ok: false, error: verified.invalidMessage ?? "Invalid payment" });
-  }
-
-  const settled = await facilitator.settle(payload, requirements);
-  if (!settled.success) {
-    return res.status(402).json({ ok: false, error: settled.errorMessage ?? "Settlement failed" });
-  }
-
-  // Return your business logic with settlement receipt
-  res.set("PAYMENT-RESPONSE", encodePaymentResponseHeader(settled)).json({
-    ok: true,
-    data: { city, temperatureC: 21.5, conditions: "Clear", uvIndex: 4 },
-    payment: { transaction: settled.transaction, payer: settled.payer, amount: "0.001 USDC" },
-  });
-});
-
-app.listen(4020, () => console.log("Provider API live on port 4020"));
+```sh
+npm run bazaar-cli -- validate ruta/a/mi-service-card.json
 ```
 
----
+Este comando comprueba conformidad local. No publica, prueba el control del dominio ni verifica una transferencia. La conformidad tampoco garantiza seguridad SSRF de tu implementación, interoperabilidad con cualquier cliente ni cumplimiento de la entrega.
 
-### Step 2: Define your `bazaar-card.json`
+Para un proveedor x402, preparar el desafío 402 es solo una parte: antes de habilitar cobros se deben comprobar las condiciones completas, la autorización, el facilitador, la conservación del resultado y la recuperación sin repetir un pago incierto. No basta copiar un ejemplo que llama a `verify` y `settle`. Este recorrido de preparación no habilita pagos ni pide claves privadas.
 
-```json
-{
-  "version": "bazaar.service-card/v0",
-  "id": "fast-weather-oracle",
-  "name": "Fast Weather Oracle",
-  "description": "Deterministic weather conditions and climate risk score for global cities via x402 payment.",
-  "kind": "http",
-  "url": "http://127.0.0.1:4020",
-  "routeTemplate": "/v1/weather/{city}",
-  "input": [
-    {
-      "name": "city",
-      "type": "string",
-      "required": true
-    }
-  ],
-  "network": "stellar:testnet",
-  "payment": {
-    "scheme": "exact",
-    "asset": "USDC",
-    "amount": "0.001",
-    "destination": "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ"
-  },
-  "provider": {
-    "name": "Fast Weather Provider"
-  },
-  "tags": [
-    "weather",
-    "oracle",
-    "climate-risk",
-    "fast-start"
-  ]
-}
-```
+## 3. Solicita revisión cuando esté habilitada
 
----
+**Solicitar revisión manual** en el formulario técnico envía una propuesta a `/api/provider-self-listing`. La recepción está deshabilitada salvo configuración explícita del operador. Si devuelve `INTAKE_DISABLED`, conserva el borrador y coordina el siguiente paso con el operador; no intentes otro endpoint para saltar ese límite.
 
-### Step 3: Publish to Stellar Bazaar
+Una respuesta `202` significa **borrador en cola, no publicado**. Se requiere comprobar control del mismo hostname mediante DNS TXT o HTTP `.well-known` y revisión humana. La cola actual es temporal; conserva tu manifest y el identificador recibido. Que se emita un challenge no demuestra que ya se haya verificado.
 
-#### Option A: Web Form
-Visit **[/publish](https://stellar-bazaar-x402.vercel.app/publish)**, paste your JSON card, check real-time conformance checks, and click **Publish Service**.
+El recorrido interno distingue:
 
-#### Option B: Programmatic HTTP API
-```bash
-curl -X POST https://stellar-bazaar-x402.vercel.app/api/publisher/ingest \
-  -H "Content-Type: application/json" \
-  -H "X-Bazaar-Provider-Key: <YOUR_BAZAAR_PROVIDER_SECRET>" \
-  -d @bazaar-card.json
-```
+`awaiting-control-proof → pending-manual-review → approved-for-staging → staged-not-public`
+
+Una prueba de control fallida o una revisión rechazada detiene el recorrido. Incluso `staged-not-public` sigue sin activar la ficha en el catálogo.
+
+## Registro público y límites
+
+El registro público es un paso administrativo separado. `/api/publisher/ingest` no es un método de autopublicación para proveedores: requiere habilitación, almacenamiento configurado y una credencial del operador. No solicites ese secreto ni lo incluyas en el navegador, una ficha o un prompt. No hay herramientas MCP de escritura del registro.
+
+Cuando el operador incorpora metadatos aceptados al registro público, discovery puede exponerlos. Eso no certifica reputación, seguridad, disponibilidad ni una compra realizada. Consulta [Provider onboarding](PROVIDER_ONBOARDING.md) para las condiciones y errores del registro.
+
+No incluyas semillas, claves privadas, credenciales del facilitador, firmas de pago ni datos de clientes en el manifest. Las pruebas de preparación pueden usar dobles; cualquier compra Testnet debe revisarse y autorizarse aparte.

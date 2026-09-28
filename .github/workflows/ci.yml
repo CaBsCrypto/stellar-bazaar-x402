@@ -49,6 +49,9 @@ jobs:
       - name: Protocol & Payment Flow Tests
         run: npm run test:payment-flow
 
+      - name: Complete Local Buyer Acceptance (synthetic data only)
+        run: node scripts/test-buyer-mission.mjs
+
       - name: USDC XLM journal and recovery (simulated)
         run: node scripts/test-xlm-pilot.mjs
 

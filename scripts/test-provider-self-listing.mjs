@@ -58,4 +58,12 @@ const rejected = await submitProviderDraft(card("rejected-test"), { method: "htt
 recordControlProofResult(rejected.value.submissionId, { challengeId: rejected.value.control.challengeId, domain: rejected.value.control.domain, verified: true });
 assert.equal(recordManualReview(rejected.value.submissionId, { decision: "reject", reviewerId: "operator-2", reasons: ["Endpoint policy mismatch"] }).value.status, "rejected");
 
+const failedControl = await submitProviderDraft(card("failed-control-test"), { method: "dns-txt", domain: "api.provider.example.com" });
+const failed = recordControlProofResult(failedControl.value.submissionId, { challengeId: failedControl.value.control.challengeId, domain: failedControl.value.control.domain, verified: false });
+assert.equal(failed.value.status, "rejected");
+assert.equal(failed.value.control.status, "failed");
+assert.equal(failed.value.publiclyActive, false);
+assert.equal(recordManualReview(failed.value.submissionId, { decision: "approve", reviewerId: "operator-3", reasons: ["Cannot bypass failed control"] }).error.code, "INVALID_TRANSITION");
+assert.equal(stageApprovedSubmission(failed.value.submissionId).error.code, "INVALID_TRANSITION");
+
 console.log(JSON.stringify({ ok: true, negativeCases: 8, lifecycle: ["draft", "control-proof", "manual-review", "staged-not-public"], automaticActivation: false }, null, 2));
