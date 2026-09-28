@@ -1,4 +1,5 @@
 import type { ModelContextRegistry, WebMCPToolDefinition, WebMCPActivityLog } from "./types.ts";
+import { removeOwnedTool, type OwnedRegistry } from "./owned-registration.ts";
 
 export const initWebMCPPolyfill = initWebMCP;
 
@@ -160,7 +161,10 @@ export function initWebMCP(): ModelContextRegistry {
   const nativeContext = navigator.modelContext ?? document.modelContext;
   if (nativeContext && typeof nativeContext.registerTool === "function") {
     const owned = new Map<string, WebMCPToolDefinition>();
-    const registry: ModelContextRegistry = {
+    const registry: OwnedRegistry = {
+      [removeOwnedTool]: (tool) => {
+        if (owned.get(tool.name) === tool) registry.unregisterTool?.(tool.name);
+      },
       registerTool: (tool) => {
         if (!tool?.name || typeof tool.execute !== "function") throw new Error("Invalid WebMCP tool definition");
         if (owned.has(tool.name) || readNativeTools(nativeContext).some(existing => existing.name === tool.name)) {
