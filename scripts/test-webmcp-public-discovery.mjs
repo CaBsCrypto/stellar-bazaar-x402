@@ -1,0 +1,41 @@
+import assert from 'node:assert/strict';
+process.env.NEXT_PUBLIC_X402_XLM_PILOT='true';
+const {services}=await import('../lib/catalog.ts');
+const {toServiceCard}=await import('../lib/service-card.ts');
+const {readPublicDiscovery}=await import('../lib/public-discovery.ts');
+const {registerBazaarTools}=await import('../lib/webmcp/register.ts');
+const cards=services.map(toServiceCard);
+const dynamic={...structuredClone(cards[0]),id:'dynamic-example',name:'Dynamic service fixture'};
+let body={results:[...cards,dynamic],partialResults:false,dynamicRegistry:'available'};
+const originalFetch=globalThis.fetch, originalWindow=globalThis.window;
+let requests=0;
+globalThis.window={location:{origin:'http://127.0.0.1:3219'},dispatchEvent(){}};
+globalThis.fetch=async(url,init)=>{
+ requests++;
+ assert.equal(String(url),'http://127.0.0.1:3219/api/discovery/resources');
+ assert.equal(init.method,'GET'); assert.equal(init.credentials,'omit'); assert.equal(init.redirect,'error');
+ assert.equal(init.headers,undefined);
+ return Response.json(body);
+};
+try {
+ const tools=new Map();registerBazaarTools({registerTool:t=>tools.set(t.name,t)},{privateExecution:true});
+ const call=(name,input={})=>tools.get(name).execute(input);
+ const list=await call('bazaar_list_services');
+ assert.equal(list.data.partialResults,false);assert.equal(list.data.total,cards.length+1);
+ assert.equal(list.data.services.filter(s=>s.id==='dynamic-example').length,1);
+ assert(!list.data.services.some(s=>s.id==='pending-submission'));
+ const found=await call('bazaar_search_services',{query:'dynamic'});assert.equal(found.data.services[0].id,dynamic.id);
+ const get=await call('bazaar_get_service',{serviceId:dynamic.id});assert.equal(get.data.name,dynamic.name);
+ assert.deepEqual(get.data.paymentOptions,dynamic.paymentOptions);
+ assert.deepEqual(list.data.services.find(s=>s.id===dynamic.id).paymentOptions,dynamic.paymentOptions);
+ const unknown=await call('bazaar_execute_service',{serviceId:'unlisted-provider',input:{}});assert.equal(unknown.isError,true);assert.equal(unknown.data.paymentStatus,'not-performed');
+ const external=await call('bazaar_execute_service',{serviceId:dynamic.id,input:{}});assert.equal(external.isError,true);
+ body={results:cards,partialResults:true,dynamicRegistry:'unavailable'};
+ assert.equal((await call('bazaar_list_services')).data.partialResults,true);
+ assert.equal((await call('bazaar_get_service',{serviceId:dynamic.id})).data.error,'DISCOVERY_INCOMPLETE');
+ body={results:[{id:'malformed'}],partialResults:false,dynamicRegistry:'available'};await assert.rejects(readPublicDiscovery,/INVALID/);
+ globalThis.fetch=async()=>new Response(null,{status:503});await assert.rejects(readPublicDiscovery,/UNAVAILABLE/);
+ globalThis.fetch=async()=>{throw Error('offline')};await assert.rejects(readPublicDiscovery,/offline/);
+ assert(requests>=6);
+ console.log('PASS public registry parity list/search/get, payment alternatives, incomplete/error states, unknown execution rejected; HTTP mocked, no writes or payments. Pending submissions are not imported.');
+} finally {globalThis.fetch=originalFetch;if(originalWindow===undefined)delete globalThis.window;else globalThis.window=originalWindow;}

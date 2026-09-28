@@ -3,10 +3,19 @@ import { Button, SectionHeading } from "@/components/ui";
 import {ServiceCard} from "@/components/ui/ServiceCard";
 import { useEffect, useMemo, useState } from "react";
 import { services } from "@/lib/catalog";
+import { readPublicDiscovery } from "@/lib/public-discovery";
+import { toPaidService } from "@/lib/service-card";
 import { filterServices, rankServices } from "@/lib/discovery";
 import type { PaymentScheme, ServiceKind } from "@/lib/types";
 
 export function Catalog({standalone = false}: {standalone?: boolean}) {
+  const [catalog, setCatalog] = useState(services);
+  const [discoveryState, setDiscoveryState] = useState<"loading" | "complete" | "partial" | "error">("loading");
+  useEffect(() => {
+    let current = true;
+    readPublicDiscovery().then(snapshot => { if (current) { setCatalog(snapshot.cards.map(toPaidService)); setDiscoveryState(snapshot.partialResults ? "partial" : "complete"); } }).catch(() => { if(current) setDiscoveryState("error"); });
+    return () => { current = false; };
+  }, []);
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState<"all" | ServiceKind>("all");
   const [scheme, setScheme] = useState<"all" | PaymentScheme>("all");
@@ -58,19 +67,20 @@ export function Catalog({standalone = false}: {standalone?: boolean}) {
   }, []);
 
   const results = useMemo(() => {
-    const filtered = filterServices(services, {
+    const filtered = filterServices(catalog, {
       kind: kind === "all" ? undefined : kind,
       scheme: scheme === "all" ? undefined : scheme,
       asset: asset === "all" ? undefined : asset,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
     });
     return rankServices(filtered, query);
-  }, [query, kind, scheme, maxPrice, asset]);
+  }, [catalog, query, kind, scheme, maxPrice, asset]);
 
   function resetFilters() { setQuery(""); setKind("all"); setScheme("all"); setMaxPrice(""); setAsset("all"); }
   return <section className="ui-catalog" aria-label="Servicios del mercado">
     {agentToast && <p className="ui-notice" role="status">{agentToast}</p>}
     <SectionHeading headingLevel={standalone ? 1 : 2} eyebrow="SERVICIOS LISTADOS · STELLAR TESTNET" title="Encuentra lo que tu agente necesita"><p role="status">{results.length} {results.length === 1 ? "resultado" : "resultados"}</p></SectionHeading>
+    {discoveryState !== "complete" && <p role="status" className="ui-notice">{discoveryState === "loading" ? "Consultando el registro público…" : "Catálogo parcial: no se pudo consultar todo el registro. Se muestran los servicios disponibles; vuelve a cargar para reintentar."}</p>}
     <form className="ui-filter-grid" onSubmit={e => e.preventDefault()} {...({toolname:"bazaar_catalog_filter_form",tooldescription:"Filtrar y buscar servicios del catálogo de Stellar Bazaar"} as Record<string,unknown>)}>
       <label>Buscar servicio<input value={query} onChange={e => setQuery(e.target.value)} placeholder="Guiones, video, swap…" {...({toolparamdescription:"Palabras clave de búsqueda"} as Record<string,unknown>)} /></label>
       <label>Tipo<select value={kind} onChange={e=>setKind(e.target.value as typeof kind)}><option value="all">Todos</option><option value="http">HTTP x402</option><option value="mcp">MCP</option></select></label>
