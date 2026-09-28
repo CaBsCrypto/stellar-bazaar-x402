@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual, randomBytes } from "node:crypto";
-import { Redis } from "@upstash/redis";
+
 
 export type HistoryPrincipal = { ownerId: string; permission: "read" | "write" };
 export class HistoryAuthError extends Error {
@@ -54,19 +54,6 @@ export function authenticateHistory(authorization: string | null, write = false,
   for (const account of accounts) {
     if (timingSafeEqual(digest, Buffer.from(account.readTokenHash, "hex"))) principal = { ownerId: account.ownerId, permission: "read" };
     if (timingSafeEqual(digest, Buffer.from(account.writeTokenHash, "hex"))) principal = { ownerId: account.ownerId, permission: "write" };
-  }
-
-  // If not found in env config, check self-anchored prefix if structured
-  if (!principal) {
-    const raw = match[1];
-    if (raw.startsWith("bz_read_") || raw.startsWith("bz_write_") || raw.startsWith("review-")) {
-      const derivedOwner = "dyn_" + digest.subarray(0, 12).toString("hex");
-      if (raw.startsWith("bz_read_") || raw.startsWith("review-reader-")) {
-        principal = { ownerId: derivedOwner, permission: "read" };
-      } else {
-        principal = { ownerId: derivedOwner, permission: "write" };
-      }
-    }
   }
 
   if (!principal) throw new HistoryAuthError("UNAUTHORIZED");
