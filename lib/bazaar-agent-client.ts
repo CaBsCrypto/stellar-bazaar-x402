@@ -1,5 +1,5 @@
 import { TESTNET_ASSETS, selectPaymentOption, type AssetBalances } from "./payment-options.ts";
-import { paymentBinding, type PaymentJournalStore, type PaymentJournal } from "./pilot-payment-store.ts";
+import { assertPaymentJournal, paymentBinding, type PaymentJournalStore, type PaymentJournal } from "./pilot-payment-store.ts";
 import { readTestnetBalances } from "./testnet-balances.ts";
 import { paymentRequirementMismatches } from "./x402-requirements.ts";
 import { preserveDeliverable, type DeliveryCopyInput, type DeliveryCopyResult } from "./deliverable-client.ts";
@@ -355,6 +355,7 @@ export class BazaarAgentClient {
     const binding=paymentBinding({card,params,preferredAsset:options.preferredAsset ?? null,base:this.baseUrl,payer:createEd25519Signer(this.payerSecretKey,"stellar:testnet").address,owner:this.history?.writeToken ?? null,task:this.history?.taskId ?? null,agent:this.history?.agentId ?? null});
     return this.paymentJournal.exclusive(options.operationId,async(read,save)=>{
       let state=await read();
+      if(state !== undefined) assertPaymentJournal(state);
       if(state && state.binding !== binding) throw Error("OPERATION_CONFLICT");
       if(!state){
         const balances=await (this.readBalances?.() ?? readTestnetBalances(this.payerSecretKey!));
@@ -364,14 +365,21 @@ export class BazaarAgentClient {
         const policy=this.validatePaymentPolicy(selectedCard);if(!policy.allowed)throw Error(`AGENT_POLICY_VIOLATION: ${policy.reason}`);
         state={binding,phase:"started",card:selectedCard};
         await save(state); // Must succeed before any signing or payment request.
-      } else if(!state.response && !state.outcome) throw Error("PAYMENT_PENDING: reconcile this operation; do not pay again.");
+      } else {
+        const candidates = card.paymentOptions ?? [{...card.payment,scheme:"exact" as const,asset:card.payment.asset as "USDC"|"XLM",contract:TESTNET_ASSETS[card.payment.asset as "USDC"|"XLM"]}];
+        if (!candidates.some(payment => (!options.preferredAsset || payment.asset === options.preferredAsset) && paymentBinding({...card,payment}) === paymentBinding(state!.card))) throw Error("PAYMENT_JOURNAL_INVALID: selected card changed");
+        if(!state.response && !state.outcome) throw Error("PAYMENT_PENDING: reconcile this operation; do not pay again.");
+        if(state.phase === "completed" && !state.response) throw Error("PAYMENT_JOURNAL_INVALID: completed buyer response missing");
+      }
       const persisted=state as PaymentJournal;
       return this.executeServiceRecorded<T>(persisted.card!,params,options.operationId,async()=>{
-        if(persisted.outcome)return persisted.outcome as BazaarAgentExecutionResult<T>;
+        // Replay only the conserved response through receipt verification. Never
+        // trust a cached outcome or issue another request during recovery.
         const outcome=await this.executeServiceCore<T>(persisted.card!,params,{
           operationId:options.operationId, response:persisted.response,
           saveResponse:async response=>{persisted.response=response;persisted.phase="response";await save(persisted);}
         });
+        if(persisted.phase === "completed" && paymentBinding(persisted.outcome) !== paymentBinding(outcome)) throw Error("PAYMENT_JOURNAL_INVALID: conserved outcome differs from verified response");
         persisted.outcome=outcome;persisted.phase="completed";await save(persisted);
         return outcome;
       });

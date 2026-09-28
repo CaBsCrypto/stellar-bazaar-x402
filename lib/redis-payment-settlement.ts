@@ -2,6 +2,7 @@ import { Redis } from "@upstash/redis";
 import { randomUUID } from "node:crypto";
 import type { PaymentPayload, PaymentRequirements, SettleResponse } from "@x402/core/types";
 import { paymentBinding } from "./pilot-payment-store.ts";
+import { assertSettlementOutcome } from "./pilot-settlement.ts";
 export interface SettlementRedis { eval(script:string, keys:string[], args:string[]):Promise<unknown> }
 // Permanent marker, no lease and no expiry. Only its creator may call the facilitator.
 const CLAIM = `
@@ -27,11 +28,13 @@ export async function settleRedisOnce(redis:SettlementRedis, prefix:string, oper
  if(!previous || previous.version!==1 || typeof previous.binding!=='string' || !/^[a-f0-9]{64}$/.test(previous.binding) || typeof previous.owner!=='string' || !previous.owner || !['started','uncertain','completed'].includes(previous.phase) || typeof previous.createdAt!=='string' || !Number.isFinite(Date.parse(previous.createdAt)))throw Error('SETTLEMENT_RECORD_INVALID');
  if(previous.phase==='completed' && (!previous.outcome || typeof previous.outcome.success!=='boolean' || typeof previous.outcome.network!=='string' || typeof previous.outcome.transaction!=='string'))throw Error('SETTLEMENT_RECORD_INVALID');
  if(previous.binding!==binding)throw Error('OPERATION_CONFLICT');
+ if(previous.phase==='completed')try{assertSettlementOutcome(previous.outcome,requirements);}catch{throw Error('SETTLEMENT_RECORD_INVALID');}
  if(previous.phase==='completed' && previous.outcome.network!==requirements.network)throw Error('SETTLEMENT_RECORD_INVALID');
  if(answer[0]!==1){if(previous.phase==='completed'&&previous.outcome)return previous.outcome;throw Error('PAYMENT_PENDING');}
  if(previous.owner!==owner||previous.phase!=='started')throw Error('SETTLEMENT_STORAGE_UNCONFIRMED');
  try {
   const outcome=await settle();
+  assertSettlementOutcome(outcome,requirements);
   const saved=await redis.eval(UPDATE,[key],[owner,binding,JSON.stringify({...started,phase:'completed',outcome,updatedAt:new Date().toISOString()})]);
   if(saved!==1)throw Error('SETTLEMENT_FINALIZATION_UNCONFIRMED');
   return outcome;
