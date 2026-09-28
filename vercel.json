@@ -1,6 +1,7 @@
 {
   "git": {
     "deploymentEnabled": {
+      "mission/identity-pilot": false,
       "fix/operational-guards": false,
       "review/base-webmcp": false,
       "review/history-identity": false,

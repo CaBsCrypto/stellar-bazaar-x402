@@ -4,7 +4,7 @@ on:
   push:
     branches: ["main"]
   pull_request:
-    branches: ["main", "review/base-webmcp", "review/history-identity", "review/usdc-xlm-recovery", "review/shared-payment-control", "review/consistent-discovery", "review/buyer-entry-validation"]
+    branches: ["main", "review/base-webmcp", "review/history-identity", "review/usdc-xlm-recovery", "review/shared-payment-control", "review/consistent-discovery", "review/buyer-entry-validation", "fix/operational-guards"]
 
 permissions:
   contents: read
