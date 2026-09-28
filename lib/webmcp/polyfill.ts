@@ -1,8 +1,43 @@
 import type { ModelContextRegistry, WebMCPToolDefinition, WebMCPActivityLog } from "./types.ts";
+import { removeOwnedTool, type OwnedRegistry } from "./owned-registration.ts";
 
 export const initWebMCPPolyfill = initWebMCP;
 
 const activityLogs: WebMCPActivityLog[] = [];
+const browserRegistries = new WeakMap<object, ModelContextRegistry>();
+const nativeSnapshots = new WeakMap<object, WebMCPToolDefinition[]>();
+
+function nativeToolList(value: unknown): WebMCPToolDefinition[] {
+  const list = Array.isArray(value) ? value : value && typeof value === "object" && "tools" in value ? value.tools : undefined;
+  if (!Array.isArray(list) || list.some(tool => !tool || typeof tool.name !== "string")) {
+    throw new Error("Unsupported native WebMCP tool list");
+  }
+  return list;
+}
+
+function readNativeTools(context: ModelContextRegistry): WebMCPToolDefinition[] {
+  if (!context.getTools) return [];
+  const result: unknown = context.getTools();
+  if (result && typeof result === "object" && "then" in result) {
+    // The browser provider awaits discovery before any registration. Do not
+    // interpret an unresolved list as an empty registry.
+    void Promise.resolve(result).catch(() => undefined);
+    const snapshot = nativeSnapshots.get(context);
+    if (!snapshot) throw new Error("Native WebMCP discovery requires asynchronous initialization");
+    return snapshot;
+  }
+  const tools = nativeToolList(result);
+  nativeSnapshots.set(context, tools);
+  return tools;
+}
+
+export async function initWebMCPAsync(): Promise<ModelContextRegistry> {
+  if (typeof window !== "undefined") {
+    const context = navigator.modelContext ?? document.modelContext;
+    if (context?.getTools) nativeSnapshots.set(context, nativeToolList(await context.getTools()));
+  }
+  return initWebMCP();
+}
 
 export function recordWebMCPActivity(log: WebMCPActivityLog) {
   activityLogs.unshift(log);
@@ -117,48 +152,66 @@ export function initWebMCP(): ModelContextRegistry {
   if (typeof window === "undefined") {
     return new WebMCPPolyfill();
   }
+  const existingRegistry = browserRegistries.get(window);
+  if (existingRegistry) return existingRegistry;
 
   // Always create emulator instance to back UI simulation and logging
   const polyfill = new WebMCPPolyfill();
 
-  if (navigator.modelContext && typeof navigator.modelContext.registerTool === "function") {
-    console.info("[WebMCP] Using native navigator.modelContext with emulator instrumentation");
-    const nativeContext = navigator.modelContext;
-    return {
-      registerTool: (tool: WebMCPToolDefinition) => {
-        polyfill.registerTool(tool);
+  const nativeContext = navigator.modelContext ?? document.modelContext;
+  if (nativeContext && typeof nativeContext.registerTool === "function") {
+    const owned = new Map<string, WebMCPToolDefinition>();
+    const registry: OwnedRegistry = {
+      [removeOwnedTool]: (tool) => {
+        if (owned.get(tool.name) === tool) registry.unregisterTool?.(tool.name);
+      },
+      registerTool: (tool) => {
+        if (!tool?.name || typeof tool.execute !== "function") throw new Error("Invalid WebMCP tool definition");
+        if (owned.has(tool.name) || readNativeTools(nativeContext).some(existing => existing.name === tool.name)) {
+          throw new Error(`Tool already registered: ${tool.name}`);
+        }
+        // A rejected native registration must never appear in the emulator.
         nativeContext.registerTool(tool);
-      },
-      unregisterTool: (name: string) => {
-        polyfill.unregisterTool(name);
-        return nativeContext.unregisterTool ? nativeContext.unregisterTool(name) : true;
-      },
-      getTools: () => polyfill.getTools(),
-      provideContext: (ctx) => {
-        polyfill.provideContext(ctx);
-        if (nativeContext.provideContext) nativeContext.provideContext(ctx);
-      },
-    };
-  }
-
-  if (document.modelContext && typeof document.modelContext.registerTool === "function") {
-    console.info("[WebMCP] Using native document.modelContext with emulator instrumentation");
-    const docContext = document.modelContext;
-    return {
-      registerTool: (tool: WebMCPToolDefinition) => {
+        owned.set(tool.name, tool);
         polyfill.registerTool(tool);
-        docContext.registerTool(tool);
       },
-      unregisterTool: (name: string) => {
-        polyfill.unregisterTool(name);
-        return docContext.unregisterTool ? docContext.unregisterTool(name) : true;
+      unregisterTool: (name) => {
+        const ownTool = owned.get(name);
+        if (!ownTool) return false;
+        try {
+          // A discovery snapshot only proves past ownership. Never delete by
+          // name after an asynchronous or metadata-only ownership check.
+          const result: unknown = nativeContext.getTools?.();
+          if (result && typeof result === "object" && "then" in result) {
+            void Promise.resolve(result).catch(() => undefined);
+            return false;
+          }
+          if (!result || !nativeContext.unregisterTool) return false;
+          const current = nativeToolList(result).find(tool => tool.name === name);
+          if (!current || current.execute !== ownTool.execute) return false;
+          nativeContext.unregisterTool(name);
+          return true;
+        } catch {
+          // A failed ownership read cannot authorize native removal.
+          return false;
+        } finally {
+          owned.delete(name);
+          polyfill.unregisterTool(name);
+        }
       },
-      getTools: () => polyfill.getTools(),
+      getTools: () => {
+        const combined = new Map(readNativeTools(nativeContext).map(tool => [tool.name, tool]));
+        for (const tool of polyfill.getTools()) combined.set(tool.name, tool);
+        return [...combined.values()];
+      },
+      // Context replacement may only replace this wrapper's own tools.
       provideContext: (ctx) => {
-        polyfill.provideContext(ctx);
-        if (docContext.provideContext) docContext.provideContext(ctx);
+        for (const name of [...owned.keys()]) registry.unregisterTool?.(name);
+        for (const tool of ctx.tools ?? []) registry.registerTool(tool);
       },
     };
+    browserRegistries.set(window, registry);
+    return registry;
   }
 
   if (!window.modelContext) {
@@ -175,5 +228,6 @@ export function initWebMCP(): ModelContextRegistry {
     console.info("[WebMCP] Polyfill initialized on window.modelContext & navigator.modelContext");
   }
 
+  browserRegistries.set(window, window.modelContext);
   return window.modelContext;
 }

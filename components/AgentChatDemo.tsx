@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { generateHistoryKeypair } from "@/lib/operation-history-auth";
+import { generateDemoCredentials as generateHistoryKeypair } from "@/lib/demo-credentials";
 import { formatHumanHistoryUrl } from "@/lib/operation-history-client";
 
 interface Message {
