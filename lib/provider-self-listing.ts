@@ -1,5 +1,7 @@
 import { createHash, timingSafeEqual, randomBytes, randomUUID } from "node:crypto";
 import { createFileReviewStore, createMemoryReviewStoreForTests, type ProviderReviewStore, type ReviewState } from "./provider-review-store.ts";
+import { createRedisReviewStore } from "./provider-review-redis.ts";
+import { getReviewRedis, getReviewPrefix } from "./provider-review-runtime.ts";
 import type { ServiceCard, ValidationOutcome } from "./types.ts";
 import { parseServiceCardShape } from "./service-card-schema.ts";
 import { validateCardRules, validateCardShape } from "./service-ingest.ts";
@@ -98,10 +100,10 @@ export function validateReviewState(value:unknown): asserts value is ReviewState
  ids.add(s.submissionId);
  }
 }
-function store():ProviderReviewStore<ProviderSubmission> {if(process.env.VERCEL) throw Error("Unsupported deployment"); if(injectedStore)return injectedStore; if(!process.env.BAZAAR_PROVIDER_REVIEW_DIR)throw Error("Store missing"); return createFileReviewStore(process.env.BAZAAR_PROVIDER_REVIEW_DIR,validateReviewState);}
+function store():ProviderReviewStore<ProviderSubmission> { if(injectedStore)return injectedStore; const redis=getReviewRedis(); if(redis)return createRedisReviewStore(redis,getReviewPrefix(),validateReviewState); if(process.env.VERCEL)throw Error("File reviews are localhost only"); if(!process.env.BAZAAR_PROVIDER_REVIEW_DIR)throw Error("Store missing"); return createFileReviewStore(process.env.BAZAAR_PROVIDER_REVIEW_DIR,validateReviewState);}
 const failure=(code:SelfListingErrorCode,message:string):SelfListingResult<never>=>({ok:false,error:{code,message,retryable:code==="STORE_UNAVAILABLE"}});
 async function transaction<T>(op:(queue:Map<string,ProviderSubmission>,state:ReviewState<ProviderSubmission>)=>T|Promise<T>,expire=true):Promise<T>{return store().transact(async state=>{const queue=new Map(state.records.map(r=>[r.submission.submissionId,r.submission]));if(expire)expireOldSubmissions(queue);const result=await op(queue,state);for(const r of state.records)r.submission=queue.get(r.submission.submissionId)!;return result;});}
-async function safe<T>(op:()=>Promise<SelfListingResult<T>>):Promise<SelfListingResult<T>>{try{return await op();}catch{return failure("STORE_UNAVAILABLE","Local review store unavailable; no action confirmed.");}}
+async function safe<T>(op:()=>Promise<SelfListingResult<T>>):Promise<SelfListingResult<T>>{try{return await op();}catch{return failure("STORE_UNAVAILABLE","Review store unavailable; no action confirmed.");}}
 const clone = <T>(value: T): T => structuredClone(value);
 
 export function selfListingIntakeConfigured() {
@@ -295,6 +297,13 @@ export async function stageApprovedSubmission(submissionId: string): Promise<Sel
 }
 
 export async function listManualReviewQueue():Promise<ProviderSubmission[]>{return transaction(q=>[...q.values()].map(clone));}
+export async function listProviderSubmissionsForOperator(page = 1, pageSize = 20): Promise<SelfListingResult<{submissions:ProviderSubmission[];page:number;pageSize:number;total:number;totalPages:number}>> {
+  if (!Number.isSafeInteger(page) || page < 1 || !Number.isSafeInteger(pageSize) || pageSize < 1 || pageSize > 100) return failure("INVALID_SUBMISSION", "Invalid review pagination.");
+  return safe(() => transaction(queue => {
+    const submissions = [...queue.values()].sort((a,b) => b.submittedAt.localeCompare(a.submittedAt) || a.submissionId.localeCompare(b.submissionId));
+    return {ok:true as const,value:{submissions:submissions.slice((page-1)*pageSize,page*pageSize).map(clone),page,pageSize,total:submissions.length,totalPages:Math.ceil(submissions.length/pageSize)}};
+  }));
+}
 export async function listStagedNotPublic():Promise<ProviderSubmission[]>{return transaction(q=>[...q.values()].filter(s=>s.status==="staged-not-public").map(clone));}
 export async function resetSelfListingStateForTests(){injectedStore=createMemoryReviewStoreForTests(validateReviewState);}
 export async function useFileReviewStoreForTests(){injectedStore=undefined;}
