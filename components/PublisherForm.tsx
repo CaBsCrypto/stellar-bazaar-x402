@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { validateServiceCard } from "@/lib/discovery";
 import type { ServiceCard } from "@/lib/types";
+import { ProviderReviewControls } from "./ProviderReviewControls";
 
 const destination = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
 
@@ -17,10 +18,10 @@ export function PublisherForm() {
   const [amount, setAmount] = useState("0.01");
   const [dest, setDest] = useState(destination);
   const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
+  const manifestRef = useRef<HTMLTextAreaElement>(null);
   const [proofMethod, setProofMethod] = useState<"dns-txt" | "http-well-known">("dns-txt");
   const [proofDomain, setProofDomain] = useState("api.example.com");
-  const [submitting, setSubmitting] = useState(false);
-  const [intake, setIntake] = useState<{ ok: boolean; status: number; body: any } | null>(null);
 
   const card = useMemo<ServiceCard>(
     () => ({
@@ -48,24 +49,16 @@ export function PublisherForm() {
   const failures = outcomes.filter((outcome) => outcome.status === "fail").length;
 
   async function copyManifest() {
-    await navigator.clipboard?.writeText(JSON.stringify(card, null, 2));
-    setCopied(true);
-  }
-
-  async function requestReview() {
-    setSubmitting(true);
-    setIntake(null);
+    setCopied(false);
+    setCopyError(false);
     try {
-      const response = await fetch("/api/provider-self-listing", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ card, controlProof: { method: proofMethod, domain: proofDomain } }),
-      });
-      setIntake({ ok: response.ok, status: response.status, body: await response.json() });
+      if (!navigator.clipboard) throw new Error("Clipboard unavailable");
+      await navigator.clipboard.writeText(JSON.stringify(card, null, 2));
+      setCopied(true);
     } catch {
-      setIntake({ ok: false, status: 0, body: { error: { code: "NETWORK_ERROR", message: "No se pudo contactar la cola local. / Local queue unavailable." } } });
-    } finally {
-      setSubmitting(false);
+      setCopyError(true);
+      manifestRef.current?.focus();
+      manifestRef.current?.select();
     }
   }
 
@@ -76,7 +69,7 @@ export function PublisherForm() {
           BORRADOR LOCAL · LOCAL DRAFT · NO INDEXADO · NOT INDEXED
         </div>
         <p className="form-help">
-          Este formulario no solicita credenciales ni publica directamente. This form never asks for credentials and does not publish directly.
+          Prepara una ficha sin claves administrativas ni de wallet. La solicitud usa un acceso privado propio y no publica directamente.
         </p>
         <label>
           Nombre / Name
@@ -124,7 +117,7 @@ export function PublisherForm() {
         </button>
         <fieldset>
           <legend>Prueba de control / Control proof</legend>
-          <p className="form-help">El challenge demuestra control del mismo hostname de la tarjeta; no certifica seguridad ni reputación. / The challenge only demonstrates control of the exact card hostname.</p>
+          <p className="form-help">Recibir un challenge no verifica el dominio. El operador debe comprobar la prueba del mismo hostname antes de revisar el servicio.</p>
           <div className="field-row">
             <label>
               Método / Method
@@ -138,20 +131,11 @@ export function PublisherForm() {
               <input value={proofDomain} onChange={(event) => setProofDomain(event.target.value)} />
             </label>
           </div>
-          <button type="button" className="submit-button" disabled={failures > 0 || submitting} onClick={requestReview}>
-            {submitting ? "Enviando… / Submitting…" : "Solicitar revisión manual / Request manual review"}
-          </button>
         </fieldset>
-        {intake && (
-          <div className={`validation-summary ${intake.ok ? "ready" : "has-fails"}`} role="status" aria-live="polite">
-            <strong>{intake.ok ? "Borrador en cola; todavía no público / Draft queued; not public" : `${intake.body?.error?.code ?? "ERROR"} (${intake.status || "offline"})`}</strong>
-            <span>{intake.ok ? `Estado: ${intake.body.submission.status}. Challenge: ${intake.body.submission.control.expectedRecord}` : intake.body?.error?.message}</span>
-            <span>La activación automática no existe. / There is no automatic activation.</span>
-          </div>
-        )}
+        <ProviderReviewControls card={card} method={proofMethod} domain={proofDomain} disabled={failures > 0} />
         <p className="form-help">
           El alta real es append-only, revisada por el operador y sólo server-to-server. Bazaar no recibe fondos ni entrega resultados.
-          La cola es temporal, requiere prueba de control y revisión humana; jamás activa una tarjeta automáticamente. The queue is temporary and requires control proof plus human review; it never activates a card automatically.
+          El piloto local conserva solicitudes en disco y requiere prueba de control y revisión humana. La recepción pública permanece deshabilitada hasta validar su almacenamiento y operación.
         </p>
       </div>
 
@@ -176,7 +160,8 @@ export function PublisherForm() {
             <strong>service-card.json</strong>
             <button type="button" onClick={copyManifest}>Copiar / Copy</button>
           </div>
-          <pre>{JSON.stringify(card, null, 2)}</pre>
+          <textarea ref={manifestRef} aria-label="Manifest del servicio para copiar" readOnly value={JSON.stringify(card, null, 2)} rows={16} onFocus={(event) => event.currentTarget.select()} style={{ width: "100%", boxSizing: "border-box" }} />
+          <p role="status">{copyError ? "No se pudo copiar. El texto está seleccionado para copiarlo manualmente." : copied ? "Manifest copiado. Esto no envía ni publica el servicio." : ""}</p>
         </div>
       </div>
     </div>
