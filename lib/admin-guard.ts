@@ -37,8 +37,8 @@ export async function createMagicLinkToken(email: string): Promise<string> {
 /**
  * Validates and consumes an OTP magic link token.
  */
-export async function verifyAndConsumeMagicToken(token: string): Promise<boolean> {
-  if (!/^bz_magic_[a-f0-9]{48}$/.test(token)) return false;
+export async function consumeMagicTokenIdentity(token: string): Promise<string | null> {
+  if (!/^bz_magic_[a-f0-9]{48}$/.test(token)) return null;
   try {
     let record: unknown;
     if (redis) {
@@ -48,16 +48,18 @@ export async function verifyAndConsumeMagicToken(token: string): Promise<boolean
       );
       record = typeof raw === "string" ? JSON.parse(raw) : raw;
     } else {
-      if (process.env.VERCEL || !["test", "development"].includes(process.env.NODE_ENV ?? "")) return false;
+      if (process.env.VERCEL || !["test", "development"].includes(process.env.NODE_ENV ?? "")) return null;
       record = memoryOtps.get(token);
       memoryOtps.delete(token);
     }
-    if (!record || typeof record !== "object") return false;
+    if (!record || typeof record !== "object") return null;
     const value = record as { email?: unknown; expiresAt?: unknown };
     return typeof value.email === "string" && isAuthorizedAdminEmail(value.email)
-      && typeof value.expiresAt === "number" && Number.isFinite(value.expiresAt) && value.expiresAt > Date.now();
-  } catch { return false; }
+      && typeof value.expiresAt === "number" && Number.isFinite(value.expiresAt) && value.expiresAt > Date.now() ? value.email.trim().toLowerCase() : null;
+  } catch { return null; }
 }
+
+export async function verifyAndConsumeMagicToken(token: string): Promise<boolean> { return (await consumeMagicTokenIdentity(token)) !== null; }
 
 /**
  * Validates whether the incoming authorization token matches the authorized admin key

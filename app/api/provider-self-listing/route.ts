@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { submitProviderDraft, type SelfListingError } from "@/lib/provider-self-listing";
-import { localProviderReviewRequest, readBoundedSubmission, submissionAccess } from "@/lib/provider-submission-http";
+import { submitProviderDraft, selfListingIntakeConfigured, canonicalCardHash, getSubmissionStatus, type SelfListingError } from "@/lib/provider-self-listing";
+import { providerReviewRequestAllowed, readBoundedSubmission, submissionAccess } from "@/lib/provider-submission-http";
+import { reviewSharedConfigured } from "@/lib/provider-review-runtime";
+import { limitReviewRequest, limitNewReviewRequest } from "@/lib/provider-review-limits";
 
 const MAX_BODY_BYTES = 32 * 1024;
 
@@ -11,7 +13,9 @@ function errorResponse(error: SelfListingError) {
 }
 
 export async function POST(request: NextRequest) {
-  if (!localProviderReviewRequest(request)) return errorResponse({code:"INTAKE_DISABLED",message:"Persistent seller review is currently a loopback-only pilot.",retryable:false});
+  if (!selfListingIntakeConfigured() || !providerReviewRequestAllowed(request)) return errorResponse({code:"INTAKE_DISABLED",message:"Provider reception is not configured for this origin.",retryable:false});
+  const shared=reviewSharedConfigured();
+  if(shared){const limit=await limitReviewRequest(request,submissionAccess(request));if(!limit.ok)return NextResponse.json({ok:false,error:{code:limit.code}},{status:limit.status,headers:{'Cache-Control':'private, no-store','Retry-After':String(limit.retryAfter)}});}
   if (!request.headers.get("content-type")?.toLowerCase().includes("application/json")) {
     return NextResponse.json({ ok: false, error: { code: "UNSUPPORTED_MEDIA_TYPE", message: "Use application/json.", retryable: false, stage: "discover" } }, { status: 415 });
   }
@@ -27,6 +31,11 @@ export async function POST(request: NextRequest) {
   }
   const payload = body as { card?: unknown; controlProof?: unknown; submissionId?: unknown };
   if (typeof payload.submissionId !== "string") return errorResponse({code:"INVALID_SUBMISSION",message:"Create and save submissionId and a private submission token before sending.",retryable:false});
+  if(shared){
+    const existing=await getSubmissionStatus(payload.submissionId,submissionAccess(request));
+    if(!existing.ok&&existing.error.code==='STORE_UNAVAILABLE')return errorResponse(existing.error);
+    if(!existing.ok){const limit=await limitNewReviewRequest(request,canonicalCardHash({id:payload.submissionId,access:submissionAccess(request),card:payload.card,control:payload.controlProof}));if(!limit.ok)return NextResponse.json({ok:false,error:{code:limit.code}},{status:limit.status,headers:{'Cache-Control':'private, no-store','Retry-After':String(limit.retryAfter)}});}
+  }
   const result = await submitProviderDraft(payload.card, payload.controlProof, {submissionId:payload.submissionId,submissionToken:submissionAccess(request)});
   if (!result.ok) return errorResponse(result.error);
   const submission = result.value;

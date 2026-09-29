@@ -12,6 +12,8 @@ import { readDynamicServiceCards } from "./dynamic-registry";
 import { err, ok } from "./service-ingest";
 import { getPaymentFlow, paymentFlowCapability } from "./payment-flow";
 import { selfListingIntakeConfigured } from "./provider-self-listing";
+import { publicProviderReviewConfigured } from "./provider-submission-http";
+import { reviewSharedConfigured } from "./provider-review-runtime";
 
 const result = ok;
 
@@ -75,11 +77,11 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
           guide: "/PROVIDER_ONBOARDING.md",
           validationTool: "validate_service_card",
           submissionEndpoint: "/api/provider-self-listing",
-          intakeEnabled: selfListingIntakeConfigured() && !!process.env.BAZAAR_PROVIDER_REVIEW_DIR && !process.env.VERCEL,
-          submissionStorage: "local-file-pilot",
-          publicIntakeEnabled: false,
+          intakeEnabled: selfListingIntakeConfigured() && (publicProviderReviewConfigured() || (!process.env.VERCEL && (!!process.env.BAZAAR_PROVIDER_REVIEW_DIR || reviewSharedConfigured()))),
+          submissionStorage: reviewSharedConfigured()?"shared-redis":"local-file-pilot",
+          publicIntakeEnabled: selfListingIntakeConfigured() && publicProviderReviewConfigured(),
           submissionAccess: "Client saves a UUID and 32-byte token before POST; reuse the UUID and Authorization: Bearer token for recovery. Never put the token in a URL.",
-          controlVerification: "operator-cli-dns-or-pinned-https",
+          controlVerification: "authenticated-operator-dns-or-pinned-https",
           publicActivation: "separate-operator-action",
           automaticPublication: false,
           providerUsesOperatorSecret: false,

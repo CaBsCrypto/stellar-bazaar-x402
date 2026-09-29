@@ -1,0 +1,6 @@
+import { exchangeReviewSession, requireReviewOrigin, requireReviewSession, reviewJson, reviewCookie, revokeReviewSession, reviewResponse, reviewError } from "../../../../lib/provider-admin-session.ts";
+import { limitReviewAdminRequest } from "../../../../lib/provider-review-limits.ts";
+export const runtime = "nodejs";
+export async function GET(request: Request) { try { const s = await requireReviewSession(request); return reviewResponse({ ok: true, operator: { email: s.email }, csrfToken: s.csrfToken, expiresAt: s.expiresAt }); } catch (e) { return reviewError(e); } }
+export async function POST(request: Request) { try { requireReviewOrigin(request); const limit=await limitReviewAdminRequest(request,'session-exchange',50,60); if(!limit.ok)return Response.json({ok:false,error:{code:limit.code}},{status:limit.status,headers:{'Cache-Control':'no-store','Retry-After':String(limit.retryAfter)}}); const body = await reviewJson(request); const {session:s,cookie} = await exchangeReviewSession(body.token); return reviewResponse({ ok: true, operator: { email: s.email }, csrfToken: s.csrfToken, expiresAt: s.expiresAt }, 200, cookie); } catch (e) { return reviewError(e); } }
+export async function DELETE(request: Request) { try { await revokeReviewSession(request); return reviewResponse({ ok: true }, 200, reviewCookie()); } catch (e) { return reviewError(e); } }

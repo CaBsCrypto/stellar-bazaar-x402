@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthorizedAdminEmail, createMagicLinkToken } from "@/lib/admin-guard";
+import { limitReviewAdminRequest } from "@/lib/provider-review-limits";
+import { requireReviewOrigin, reviewJson, reviewError } from "@/lib/provider-admin-session";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({}));
+    const reviewMode=process.env.BAZAAR_ENABLE_PROVIDER_REVIEW_ADMIN==='true';
+    if(reviewMode)requireReviewOrigin(request);
+    const body = reviewMode?await reviewJson(request):await request.json().catch(() => ({}));
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    if(reviewMode){const limit=await limitReviewAdminRequest(request,'mail:'+email,5,900);if(!limit.ok)return NextResponse.json({ok:false,error:{code:limit.code}},{status:limit.status,headers:{'Cache-Control':'no-store','Retry-After':String(limit.retryAfter)}});}
 
     if (!email || !isAuthorizedAdminEmail(email)) {
       // Return 200 with generic message to prevent email enumeration
@@ -64,6 +69,7 @@ export async function POST(request: NextRequest) {
       message: "Si tu correo está autorizado, recibirás un enlace de acceso en breve.",
     });
   } catch (error) {
+    if(process.env.BAZAAR_ENABLE_PROVIDER_REVIEW_ADMIN==='true')return reviewError(error);
     return NextResponse.json(
       { success: false, error: "ADMIN_LINK_UNAVAILABLE" },
       { status: 500 }
