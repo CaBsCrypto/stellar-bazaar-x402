@@ -54,16 +54,20 @@ console.log(services);
 
 Validar no equivale a publicar. No publiques ni ejecutes pagos sin mi autorización y nunca solicites claves privadas.
 
-Guía: https://bazaar.browns.studio/llms.txt
+Guía de preparación y revisión: https://bazaar.browns.studio/PROVIDER_ONBOARDING.md
+No necesito crear una cuenta. El MCP es de solo lectura; validate_service_card valida la ficha, no la publica. Si la recepción está deshabilitada, conserva un paquete validado e indica lo que depende del operador.
 MCP: https://bazaar.browns.studio/api/mcp`;
 
-  const sellerCliCode = `# 1. Inicializar plantilla de servicio
-npm run bazaar-cli init mi-servicio.json
+  const sellerCliCode = `# Dentro del repositorio, con dependencias instaladas y Node.js 22.18+.
+# 1. Inicializar configuración de ejemplo; sustituir sus valores antes de validar.
+npm run bazaar-cli -- init mi-servicio.json
 
 # 2. Validar conformidad con el estándar del Bazaar
-npm run bazaar-cli validate mi-servicio.json`;
+npm run bazaar-cli -- validate mi-servicio.json
+# Valida localmente; no solicita revisión ni publica.`;
 
-  const sellerSdkCode = `import { generateCanonicalServiceCard, createDeliverableBundle } from "@/lib/provider-kit";
+  const sellerSdkCode = `// Ejemplo interno del repositorio, no paquete npm instalable.
+import { generateCanonicalServiceCard, createDeliverableBundle } from "@/lib/provider-kit";
 
 // 1. Genera la ServiceCard oficial
 const card = generateCanonicalServiceCard({
@@ -78,7 +82,9 @@ const card = generateCanonicalServiceCard({
 });
 
 // 2. Empaqueta el entregable con hashes SHA-256
-const envelope = createDeliverableBundle(card.id, { output: "OK" }, files);`;
+const files = [{ id: "result", path: "result.json", contentType: "application/json", content: JSON.stringify({ output: "Muestra ilustrativa" }), role: "data" as const }];
+const envelope = createDeliverableBundle(card.id, { output: "Muestra ilustrativa" }, files);
+// Sustituye el destino de ejemplo y valida la ficha; esto no publica ni cobra.`;
 
   const getBuyerText = () => {
     if (buyerFormat === "prompt") return buyerPrompt;

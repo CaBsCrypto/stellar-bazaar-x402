@@ -1,0 +1,81 @@
+# Prepara tu servicio para Bazaar
+
+Este recorrido no requiere crear una cuenta. Prepara un servicio para Stellar Testnet y un paquete para revisión; no garantiza publicación, ventas ni cobros. Puedes seguirlo sin una copia del repositorio.
+
+## 1. Idea o API existente
+
+Aclara qué hace el servicio, para quién, entradas, resultado, formato de entrega y límites. Si ya existe una API, reutilízala y prueba que produce lo declarado. Si solo existe una idea, prepara una muestra identificada como ilustrativa y enumera lo que falta implementar. No presentes una muestra simulada como servicio operativo.
+
+Confirma con el proveedor precio, activo exacto, red, destino público de cobro y condiciones. No uses direcciones de ejemplo para cobrar. No solicites semillas, claves privadas, credenciales de facilitador ni datos de clientes.
+
+## 2. Prepara y valida la ficha
+
+En https://bazaar.browns.studio/publish puedes describir el servicio y copiar instrucciones para tu agente. Ese borrador editorial no es una ServiceCard. El apartado «Ya tengo una integración técnica» permite preparar y copiar el manifest JSON; sustituye todos los valores de ejemplo por datos confirmados.
+
+Conecta el MCP Streamable HTTP en https://bazaar.browns.studio/api/mcp y usa `initialize`, `tools/list`, `tools/call`. `GET /api/mcp` solo describe capacidades. Comprueba las herramientas anunciadas por el servidor antes de usarlas.
+
+Las ocho herramientas actuales son `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `list_workflow_bundles`, `get_workflow_bundle`, `validate_service_card` y `get_operation_history`. El historial tiene autenticación propia y no es necesario para preparar un proveedor. Para validar, llama a `validate_service_card` con `{"card": TU_MANIFEST_JSON}`. Revisa `valid` y cada regla en `outcomes`; corrige los fallos antes de continuar.
+
+El MCP es de solo lectura. Para el alta solo ofrece validación: no crea la API, no envía solicitudes de revisión, no comprueba control, no publica y no firma pagos. WebMCP es otra interfaz del navegador. Como alternativa HTTP, envía el manifest JSON directamente con `Content-Type: application/json` a `POST https://bazaar.browns.studio/api/conformance/service-card`; comprueba `valid`, no solo que haya respuesta.
+
+La validación comprueba formato y reglas; no prueba disponibilidad, control del dominio, seguridad, liquidación ni entrega. Para x402, documenta el desafío 402, la autorización, la verificación y liquidación, la conservación del resultado y la recuperación sin repetir un pago incierto. Preparar este paquete no necesita compra ni fondos. Una prueba de pago requiere autorización y configuración independientes.
+
+### Ejemplo completo de ServiceCard mínima
+
+Este ejemplo es sintético: no existe una API operativa detrás ni autoriza pagos. Sustituye nombre, dominio, ruta, entradas, precio, destinatario y proveedor por valores confirmados. La dirección siguiente es solo un valor público de prueba, no el destino de tu servicio. Si falta un dato, pregunta al proveedor; no lo deduzcas de otro servicio del catálogo.
+
+```json
+{
+  "version": "bazaar.service-card/v0",
+  "id": "independent-report-example",
+  "name": "Independent Report — ejemplo",
+  "description": "Ejemplo sintético de informe de texto a partir de un tema; no es un servicio disponible.",
+  "kind": "http",
+  "url": "https://api.seller.example.com",
+  "routeTemplate": "/v1/report",
+  "input": [{ "name": "topic", "type": "string", "required": true }],
+  "network": "stellar:testnet",
+  "payment": {
+    "scheme": "exact",
+    "asset": "USDC",
+    "amount": "0.001",
+    "destination": "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ"
+  },
+  "provider": { "name": "Proveedor sintético" },
+  "tags": ["example", "report"]
+}
+```
+
+Todos los campos mostrados pertenecen a la ficha mínima actual, incluidos `version`, `routeTemplate`, `provider` y `tags`. `url` es el origen HTTPS y `routeTemplate` su ruta. `id` usa minúsculas, números y guiones. Las entradas admiten `string`, `number` o `boolean`; el importe es una cadena decimal positiva con hasta siete decimales. La ficha usa el nombre `USDC` en `payment.asset`; consulta capacidades y condiciones del servicio para comprobar su contrato exacto antes de cualquier pago. Este ejemplo no amplía activos ni sustituye una comprobación de integración.
+
+Envía el objeto completo en `{"card": ...}` a `validate_service_card`. Un catálogo vacío no impide preparar una ficha. Si la validación devuelve `schema.shape`, revisa primero estos campos y tipos; no envíes una solicitud inválida. Documenta también los límites y recuperación de la entrega, aunque el esquema mínimo no los exija.
+
+## 3. Conserva un paquete para revisión
+
+Guarda el manifest, el resultado de validación, una muestra identificada, las pruebas de funcionamiento realizadas y los puntos pendientes. Incluye el hostname exacto del endpoint y el método de control que puedes preparar: DNS TXT o HTTP `.well-known`. Informa «preparado para revisión», nunca «publicado» por haber validado.
+
+Opcional, solo con una copia de este repositorio, dependencias instaladas y Node.js 22.18 o posterior: ejecuta `node scripts/prepare-provider-review.mjs ruta/mi-service-card.json ruta/paquete-nuevo`. El primer archivo debe ser una ServiceCard completa, no el borrador editorial ni la configuración inicial del CLI. El directorio de salida no debe existir. Se generan `service-card.json`, `review-packet.json` con hash SHA-256 canónico y `REVIEW.md`. El comando valida localmente y no realiza solicitudes de red, pagos ni publicación; control, revisión e indexación siguen pendientes. Sin el repositorio, conserva los mismos datos y evidencias manualmente.
+
+La recepción pública permanece deshabilitada. El candidato actual permite una prueba local persistente cuando el operador configura un directorio de revisión y habilita la recepción. Consulta `get_bazaar_capabilities.providerOnboarding`; no presupongas disponibilidad por ver el formulario. Durante una prueba local usa exclusivamente el origen localhost que te entregue el operador, también para guía y MCP; no mezcles esta versión con la web pública.
+
+Antes de enviar, genera un UUID v4 `submissionId` y 32 bytes aleatorios expresados como 64 caracteres hexadecimales `submissionToken`. Conserva ambos junto a la ficha exacta y el método de control en un archivo privado fuera del repositorio. No imprimas el token en chats ni logs. El formulario técnico permite preparar y guardar ese acceso antes del envío; no lo persiste en el navegador.
+
+Envía `POST /api/provider-self-listing`, `Content-Type: application/json`, con `Authorization: Bearer SUBMISSION_TOKEN` y cuerpo `{"submissionId":"UUID_GUARDADO", "card": TU_MANIFEST_JSON, "controlProof": {"method": "dns-txt", "domain": "HOSTNAME_EXACTO"}}`. También admite `http-well-known`. El acceso es específico de esta solicitud: permite reenviar exactamente los mismos datos y consultar su estado, nunca revisar, aprobar ni publicar. No es una clave administrativa o de wallet.
+
+Si devuelve `INTAKE_DISABLED`, conserva el paquete. No existe aquí un canal público de contacto o alta alternativo documentado: hace falta que el operador proporcione un canal y confirme disponibilidad. No inventes un contacto ni pruebes otros endpoints para evitar el bloqueo.
+
+Si devuelve `202`, conserva `submissionId`, `expiresAt` y el challenge completo. En el piloto local la solicitud se guarda en disco y sobrevive al reinicio del proceso; no es aprobación ni certificación de respaldo o durabilidad de un servicio externo. La prueba tiene caducidad de 24 horas. Para DNS TXT, publica `control.expectedRecord` en el hostname exacto `control.domain`. Para HTTP, sirve exactamente ese texto, sin redirecciones ni contenido adicional, en `https://{control.domain}{control.verificationPath}`. El verificador local usa HTTPS:443 e IPv4 públicas, con límites de tiempo y tamaño; direcciones privadas, IPv6 y destinos mixtos se rechazan. Coordina la comprobación con el operador: emitir o alojar el challenge no significa que esté verificado.
+
+Consulta `GET /api/provider-self-listing/{submissionId}` en el mismo origen con el mismo `Authorization: Bearer SUBMISSION_TOKEN`. No pongas el token en la URL. Un identificador por sí solo no concede acceso; los identificadores de la antigua cola en memoria no se recuperan ni se reasignan automáticamente.
+
+Ante respuesta perdida, consulta el mismo identificador. Un reenvío debe conservar ficha, dominio, método, identificador y token; no crees otra solicitud automáticamente. Datos distintos con el mismo identificador producen conflicto. Al recibir un rechazo, lee los motivos, conserva esa decisión y prepara expresamente una nueva solicitud corregida: no sobrescribas la revisión anterior. Una cola llena o un almacenamiento inaccesible requiere intervención del operador.
+
+No hay una operación pública que ejecute la verificación o revisión. El recorrido es `awaiting-control-proof → pending-manual-review → approved-for-staging → staged-not-public → activation-pending → activated`. Hasta `activated` no se afirma publicación. `activation-uncertain` requiere que el operador reconcilie el mismo intento contra el registro; nunca otro alta automática. El operador verifica y revisa mediante su CLI local; tu token no permite esas operaciones.
+
+## 4. Publicación administrativa separada
+
+La incorporación al catálogo requiere una acción del operador con controles y almacenamiento durable configurados. `/api/publisher/ingest` no es autopublicación: nunca solicites ni uses su secreto compartido de operador. El MCP no ofrece escritura del registro. No crees cuentas ni solicites credenciales para sortear este límite.
+
+Antes de afirmar que está publicado, el operador debe confirmar el alta y debe comprobarse que discovery devuelve la ficha aceptada. Estar en discovery no certifica seguridad, disponibilidad ni una compra completada. Resume siempre qué está listo, qué se comprobó y qué depende del operador.
+
+Para comprobar el alta, consulta `list_services`, `search_services` y `get_service` por el identificador aceptado. La alternativa HTTP pública es `GET /api/discovery/resources` en el mismo origen; contrasta la ficha en `results` por su `id`, endpoint y condiciones. Si informa disponibilidad parcial o error del registro, conserva esa limitación. No confundas aparición en discovery con disponibilidad de pago.

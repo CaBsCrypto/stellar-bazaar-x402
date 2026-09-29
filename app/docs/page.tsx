@@ -39,7 +39,7 @@ export default function DocsPage() {
                   fontWeight: 600,
                 }}
               >
-                🚀 Publicar Skill
+                Preparar servicio
               </Link>
               <a
                 href="/llms.txt"
@@ -66,9 +66,9 @@ export default function DocsPage() {
       <header className="docs-shell docs-hero">
         <span className="kicker">DEVELOPER HUB & AGENT KIT</span>
         <h1>
-          Integra tu Agente o Monetiza tu API.
+          Conecta tu agente o prepara tu servicio.
           <br />
-          <em>En menos de 3 minutos.</em>
+          <em>Descubrimiento, validación y revisión.</em>
         </h1>
         <p>
           Conecta agentes para descubrir e inspeccionar servicios mediante MCP read-only. La ejecución pagada exige un
@@ -110,25 +110,25 @@ export default function DocsPage() {
       </section>
 
       <section className="docs-shell docs-section" id="proveedores">
-        <h2>💰 Para Proveedores: Monetiza tu API en 3 Pasos</h2>
+        <h2>Para proveedores: prepara tu servicio para revisión</h2>
         <p className="subtitle">
-          Cualquier desarrollador puede envolver una función o microservicio existente y recibir micropagos en USDC directamente en su wallet de Stellar.
+          Prepara una integración y valida su ficha antes de solicitar revisión manual. Este recorrido no publica automáticamente ni ejecuta pagos. Consulta la <a href="/PROVIDER_ONBOARDING.md">guía de preparación para proveedores</a>.
         </p>
         <div className="docs-grid-3">
           <div className="docs-card">
-            <h3>1. Envuelve tu Endpoint</h3>
-            <p>Agrega el middleware x402 que emite el desafío HTTP 402 y verifica la firma con el Facilitador.</p>
-            <code>Express / Next.js / FastAPI</code>
+            <h3>1. Prepara tu servicio</h3>
+            <p>Define entradas, resultado y límites. Reutiliza tu API si ya existe y comprueba que entrega lo declarado. Preparar un desafío x402 no habilita cobros.</p>
+            <code>Borrador e integración</code>
           </div>
           <div className="docs-card">
-            <h3>2. Define tu ServiceCard</h3>
-            <p>Establece tu precio en USDC (ej. <code>0.001</code>), tu dirección pública de Stellar (<code>G...</code>) y el schema de inputs.</p>
+            <h3>2. Valida tu ServiceCard</h3>
+            <p>Confirma precio, activo, red, destino público y entradas. La validación comprueba forma; no certifica control, disponibilidad ni entrega.</p>
             <code>bazaar-card.json</code>
           </div>
           <div className="docs-card">
-            <h3>3. Publica en el Bazaar</h3>
-            <p>Usa <code>/publish</code> para crear y validar un borrador sin secretos. El alta real es server-to-server y revisada.</p>
-            <code>Local Draft → Operator Review</code>
+            <h3>3. Solicita revisión manual</h3>
+            <p>Usa <code>/publish</code> cuando la recepción esté habilitada. Copiar o validar no envía el borrador. La prueba de control y la revisión preceden al registro público separado del operador.</p>
+            <code>Borrador → Revisión manual</code>
           </div>
         </div>
       </section>

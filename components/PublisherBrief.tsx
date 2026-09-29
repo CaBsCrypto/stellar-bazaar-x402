@@ -24,6 +24,7 @@ Prepara o adapta la integración y valida la ficha. Confirma disponibilidad, con
 Resume lo listo y lo pendiente. No inventes información ni solicites claves privadas. Validar la ficha no implica aprobación ni publicación. No ejecutes pagos ni publiques automáticamente.
 
 Referencias para el agente:
+https://bazaar.browns.studio/PROVIDER_ONBOARDING.md
 https://bazaar.browns.studio/docs
 https://bazaar.browns.studio/llms.txt
 MCP: https://bazaar.browns.studio/api/mcp (permite validar fichas; no completa por sí solo todo el alta).`;

@@ -19,7 +19,7 @@ const TABS: Tab[] = [
     label: "Claude Desktop & Cursor (MCP)",
     badge: "Read-only",
     language: "json",
-    description: "Conecta el endpoint MCP de discovery. Expone siete tools de lectura, sin firma, pago o escritura.",
+    description: "Conecta el endpoint MCP de discovery y consulta tools/list para conocer las herramientas disponibles. No firma, paga ni escribe en el registro.",
     code: `{
   "mcpServers": {
     "stellar-bazaar": {

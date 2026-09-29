@@ -11,6 +11,7 @@ import { validateWorkflowBundle, WORKFLOW_BUNDLE_VERSION } from "./workflow-bund
 import { readDynamicServiceCards } from "./dynamic-registry";
 import { err, ok } from "./service-ingest";
 import { getPaymentFlow, paymentFlowCapability } from "./payment-flow";
+import { selfListingIntakeConfigured } from "./provider-self-listing";
 
 const result = ok;
 
@@ -69,6 +70,20 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
           discovery: "read-only",
           mutationViaMcp: false,
           providerMetadataTrusted: false,
+        },
+        providerOnboarding: {
+          guide: "/PROVIDER_ONBOARDING.md",
+          validationTool: "validate_service_card",
+          submissionEndpoint: "/api/provider-self-listing",
+          intakeEnabled: selfListingIntakeConfigured() && !!process.env.BAZAAR_PROVIDER_REVIEW_DIR && !process.env.VERCEL,
+          submissionStorage: "local-file-pilot",
+          publicIntakeEnabled: false,
+          submissionAccess: "Client saves a UUID and 32-byte token before POST; reuse the UUID and Authorization: Bearer token for recovery. Never put the token in a URL.",
+          controlVerification: "operator-cli-dns-or-pinned-https",
+          publicActivation: "separate-operator-action",
+          automaticPublication: false,
+          providerUsesOperatorSecret: false,
+          whenUnavailable: "Keep the validated ServiceCard locally and ask the Bazaar operator for a review channel. Do not report it as submitted or published.",
         },
         architecture: {
           standard: "x402 (HTTP 402 Payment Required)",

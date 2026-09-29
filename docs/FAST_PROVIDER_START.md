@@ -1,5 +1,7 @@
 # Preparar un servicio para Bazaar
 
+Sin una copia del repositorio, sigue la [guía pública para proveedores](https://bazaar.browns.studio/PROVIDER_ONBOARDING.md). Preparar el paquete no requiere crear una cuenta.
+
 Esta guía prepara un borrador y su revisión. No publica automáticamente, no ejecuta pagos y no garantiza ingresos, tiempos de liquidación, seguridad ni disponibilidad. El recorrido descrito es para Stellar Testnet; no demuestra soporte Mainnet.
 
 ## 1. Define lo que entregarás
@@ -24,13 +26,23 @@ npm run bazaar-cli -- validate ruta/a/mi-service-card.json
 
 Este comando comprueba conformidad local. No publica, prueba el control del dominio ni verifica una transferencia. La conformidad tampoco garantiza seguridad SSRF de tu implementación, interoperabilidad con cualquier cliente ni cumplimiento de la entrega.
 
+Para conservar un paquete revisable a partir de una **ServiceCard completa** (no la configuración inicial del CLI), ejecuta:
+
+```sh
+node scripts/prepare-provider-review.mjs ruta/a/mi-service-card.json ruta/a/paquete-nuevo
+```
+
+El directorio de salida debe ser nuevo. Contendrá `service-card.json`, `review-packet.json` con hash SHA-256 canónico y `REVIEW.md`. No hay red, pagos ni envío: control, revisión e indexación siguen pendientes. Adjunta aparte una muestra identificada y las pruebas de funcionamiento realizadas.
+
 Para un proveedor x402, preparar el desafío 402 es solo una parte: antes de habilitar cobros se deben comprobar las condiciones completas, la autorización, el facilitador, la conservación del resultado y la recuperación sin repetir un pago incierto. No basta copiar un ejemplo que llama a `verify` y `settle`. Este recorrido de preparación no habilita pagos ni pide claves privadas.
 
 ## 3. Solicita revisión cuando esté habilitada
 
 **Solicitar revisión manual** en el formulario técnico envía una propuesta a `/api/provider-self-listing`. La recepción está deshabilitada salvo configuración explícita del operador. Si devuelve `INTAKE_DISABLED`, conserva el borrador y coordina el siguiente paso con el operador; no intentes otro endpoint para saltar ese límite.
 
-Una respuesta `202` significa **borrador en cola, no publicado**. Se requiere comprobar control del mismo hostname mediante DNS TXT o HTTP `.well-known` y revisión humana. La cola actual es temporal; conserva tu manifest y el identificador recibido. Que se emita un challenge no demuestra que ya se haya verificado.
+Una respuesta `202` significa **solicitud conservada, no aprobada**. El piloto local guarda la ficha en disco y requiere comprobar control del mismo hostname mediante DNS TXT o HTTP `.well-known` y revisión humana. Genera y guarda un UUID y token de solicitud antes de enviar, junto a tu manifest. Emitir un challenge no demuestra que ya esté verificado.
+
+Conserva `expiresAt` y el challenge completo: la prueba vence a las 24 horas, los registros no se borran automáticamente. Envía y consulta `GET /api/provider-self-listing/{submissionId}` con `Authorization: Bearer SUBMISSION_TOKEN`; nunca pongas el token en la URL. No hay operación pública de aprobación. Acuerda la verificación con el operador según [el procedimiento local](PROVIDER_REVIEW_PILOT.md). La recepción pública sigue deshabilitada; esta guía no documenta un canal público alternativo. Ante respuesta incierta, recupera el mismo identificador y no crees otro automáticamente.
 
 El recorrido interno distingue:
 
