@@ -91,5 +91,5 @@ export function configuredActivityStore() {
     process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
   if (!url?.startsWith("https://") || !token)
     throw new HistoryStoreError("HISTORY_UNAVAILABLE");
-  return createActivityStore(new Redis({ url, token }));
+  return createActivityStore(new Redis({ url, token, retry: { retries: 0 } }));
 }

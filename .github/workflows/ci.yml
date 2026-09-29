@@ -56,7 +56,7 @@ jobs:
         run: node scripts/test-operational-guards.mjs && node scripts/test-admin-ui-guards.mjs
 
       - name: Identity rotation and private library (synthetic only)
-        run: npm run test:identity:pilot
+        run: npm run test:identity:pilot && node scripts/test-history-redis-no-retry.mjs
 
       - name: USDC XLM journal and recovery (simulated)
         run: node scripts/test-xlm-pilot.mjs

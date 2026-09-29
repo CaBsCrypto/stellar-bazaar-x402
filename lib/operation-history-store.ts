@@ -80,5 +80,5 @@ export function configuredHistoryStore() {
   const url = process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
   if (!url || !token || !url.startsWith("https://")) throw new HistoryStoreError("HISTORY_UNAVAILABLE");
-  return createHistoryStore(new Redis({ url, token }));
+  return createHistoryStore(new Redis({ url, token, retry: { retries: 0 } }));
 }
