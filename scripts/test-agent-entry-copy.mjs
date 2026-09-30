@@ -17,7 +17,7 @@ function load(path) {
   const source = readFileSync(new URL('../' + path, import.meta.url), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const module = { exports: {} }; modules.set(path, module.exports);
-  new Function('require', 'module', 'exports', code)(name => name === 'react' ? hooks : name === '@/components/useBazaarOrigin' ? load('components/useBazaarOrigin.ts') : name === '@/lib/testnet-funding' ? load('lib/testnet-funding.ts') : name === './bazaar-skills' || name === '@/lib/bazaar-skills' ? load('lib/bazaar-skills.ts') : name === '@/components/ui/CopyText' ? { CopyText: 'CopyText' } : name === '@/components/ui' ? { ButtonLink: 'ButtonLink' } : require(name), module, module.exports);
+  new Function('require', 'module', 'exports', code)(name => name === 'react' ? hooks : name === '@/components/useBazaarOrigin' || name === './useBazaarOrigin' ? load('components/useBazaarOrigin.ts') : name === '@/lib/testnet-funding' ? load('lib/testnet-funding.ts') : name === './bazaar-skills' || name === '@/lib/bazaar-skills' ? load('lib/bazaar-skills.ts') : name === '@/components/ui/CopyText' || name === './ui/CopyText' ? { CopyText: 'CopyText' } : name === '@/components/ui' || name === './ui' ? { ButtonLink: 'ButtonLink', Card:'Card', Button:'button' } : name === './AgentDirectConnectCard' ? {AgentDirectConnectCard:'AgentDirectConnectCard'} : require(name), module, module.exports);
   return module.exports;
 }
 function nodes(node = tree, found = []) { if (Array.isArray(node)) node.forEach(value => nodes(value, found)); else if (node?.props) { found.push(node); if (node.props.children !== undefined) nodes(node.props.children, found); } return found; }
@@ -62,6 +62,16 @@ try {
     assert.match(prompt, /http:\/\/127\.0\.0\.1:3282\/api\/mcp/);
     assert(!prompt.includes('https://bazaar.browns.studio'));
   }
+  reset(); const hub = load('components/AgentHub.tsx').AgentHub; render(hub, {}); render(hub, {});
+  nodes().find(node => node.props.role === 'tab' && node.props.children === 'MCP').props.onClick(); render(hub, {});
+  const config = JSON.parse(nodes().find(node => node.type === 'CopyText').props.text);
+  assert.equal(config.mcpServers['stellar-bazaar'].url, 'http://127.0.0.1:3282/api/mcp');
+  reset(); const brief=load('components/PublisherBrief.tsx').PublisherBrief; render(brief); render(brief);
+  const name = '  Servicio humano con espacios  ';
+  nodes().find(node => node.props.id === 'brief-name').props.onChange({target:{value:name}}); render(brief);
+  const prepared = nodes().find(node => node.props.id === 'brief-instructions-text').props.value;
+  assert(prepared.includes('Nombre: '+name)); assert(!prepared.includes('https://bazaar.browns.studio'));
+  for(const path of ['/PROVIDER_ONBOARDING.md','/docs','/llms.txt','/skills/seller/SKILL.md','/api/mcp']) assert(prepared.includes('http://127.0.0.1:3282'+path));
   console.log('PASS entry origin and executed clipboard/hook doubles: current localhost references, denied clipboard/manual selection, confirmation only after completion, stale completion ignored, buyer/seller same environment. Not a browser test.');
 } finally {
   globalThis.window = oldWindow; globalThis.document = oldDocument;
