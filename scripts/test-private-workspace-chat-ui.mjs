@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import ts from 'typescript';
+import React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+const source=readFileSync(new URL('../components/PrivateAgentChat.tsx',import.meta.url),'utf8');
+const code=ts.transpileModule(source,{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
+const module={exports:{}};
+new Function('require','module','exports',code)(createRequire(import.meta.url),module,module.exports);
+const html=renderToStaticMarkup(React.createElement(module.exports.PrivateAgentChat));
+assert(html.includes('Abre tu enlace privado'));assert(html.includes('Este chat no genera respuestas ni ejecuta compras'));
+assert(!html.includes('Enviar mensaje'));assert(!html.includes('Bearer'));assert(!/localStorage|sessionStorage|setInterval|setTimeout/.test(source));
+assert(source.includes("window.history.replaceState"));assert(source.includes('requests.current.forEach(c=>c.abort())'));
+assert(source.includes("setConversations([]);setSelected('');setDraft('')"));assert(source.includes('current!==generation.current'));
+assert(source.includes('pending.current=selected?'));assert(source.includes('Recuperar el mismo intento'));
+console.log('PASS initial unauthenticated UI render and static privacy/lifecycle guard checks. Browser interactions not exercised by this suite.');
