@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createServer } from 'node:net';
+import { createServer as createHttpServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -13,7 +14,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 // execution, external Redis, payments, push, or deployment. This file also loads
 // as --import in the isolated Next processes to deny non-loopback fetch.
 const script = fileURLToPath(import.meta.url), reviewRoot = resolve(dirname(script), '..');
-const root = process.argv[2] === '--checkout' && process.argv[3] ? resolve(process.argv[3]) : reviewRoot;
+const root = ['--checkout', '--independent-redis-protocol'].includes(process.argv[2]) && process.argv[3] ? resolve(process.argv[3]) : reviewRoot;
 const tokens = [], originalFetch = globalThis.fetch;
 globalThis.fetch = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : String(input));
@@ -57,6 +58,67 @@ async function port() {
   const server = createServer();
   await new Promise((ok, fail) => { server.once('error', fail); server.listen(0, '127.0.0.1', ok); });
   const number = server.address().port; await new Promise(ok => server.close(ok)); return number;
+}
+async function independentRedisProtocol() {
+  const { Redis } = await import('@upstash/redis');
+  const { configuredWorkspaceStore, READ_WORKSPACE_LUA, COMMIT_WORKSPACE_LUA } = await import(pathToFileURL(join(root, 'lib', 'workspace-store.ts')).href);
+  const values = new Map(), requests = []; let loseAcknowledgement = false, sdkRequests = 0;
+  const server = createHttpServer(async (request, response) => {
+    try {
+      let body = ''; for await (const chunk of request) body += chunk;
+      const command = JSON.parse(body);
+      if (command[0].toUpperCase() === 'GET' && command[1] === 'synthetic') { sdkRequests++; response.destroy(); return; }
+      assert.equal(command[0].toUpperCase(), 'EVAL');
+      const keys = command.slice(3, 3 + Number(command[2])), args = command.slice(3 + Number(command[2]));
+      assert.equal(keys.length, 3); assert.ok(keys.every(key => key.startsWith('bazaar-workspace:local-test:{local-test}:')));
+      let result;
+      if (command[1] === READ_WORKSPACE_LUA) { requests.push('read'); result = keys.map(key => values.get(key) ?? ''); }
+      else {
+        assert.equal(command[1], COMMIT_WORKSPACE_LUA); requests.push('commit');
+        if (keys.some((key, index) => (values.get(key) ?? '') !== args[index])) result = 0;
+        else {
+          values.set(keys[0], args[3]); if (args[4]) values.set(keys[1], args[4]); values.set(keys[2], 'workspace-v1'); result = 1;
+          if (loseAcknowledgement) { loseAcknowledgement = false; response.destroy(); return; }
+        }
+      }
+      response.setHeader('content-type', 'application/json'); response.end(JSON.stringify({ result }));
+    } catch { response.statusCode = 500; response.end('{}'); }
+  });
+  await new Promise((ok, fail) => { server.once('error', fail); server.listen(0, '127.0.0.1', ok); });
+  const origin = `http://127.0.0.1:${server.address().port}`, configuredOrigin = origin.replace('http:', 'https:'), guardedFetch = globalThis.fetch;
+  // The configured store correctly requires an HTTPS REST URL. This isolated
+  // transport adapter maps only that exact synthetic loopback origin to the
+  // local protocol double; it is not a TLS or actual Upstash acceptance test.
+  globalThis.fetch = (input, init) => { const url = new URL(input instanceof Request ? input.url : String(input)); assert.equal(url.origin, configuredOrigin); url.protocol = 'http:'; return guardedFetch(url.href, init); };
+  Object.assign(process.env, { BAZAAR_ENABLE_OPEN_WORKSPACES: 'true', BAZAAR_WORKSPACE_BACKEND: 'redis', BAZAAR_WORKSPACE_PREFIX: 'bazaar-workspace:local-test', BAZAAR_WORKSPACE_REDIS_REST_URL: configuredOrigin, BAZAAR_WORKSPACE_REDIS_REST_TOKEN: 'independent-synthetic-redis' });
+  try {
+    // Establish the installed SDK's surprising false setting independently,
+    // then exercise configuredWorkspaceStore's actual zero-retry configuration.
+    const broken = new Redis({ url: configuredOrigin, token: 'synthetic', retry: false, enableAutoPipelining: false });
+    await assert.rejects(() => broken.get('synthetic')); assert.equal(sdkRequests, 2, 'Installed SDK retry:false behavior must remain explicit');
+    const credentials = identity(), store = configuredWorkspaceStore();
+    let before = requests.length; loseAcknowledgement = true;
+    await assert.rejects(() => store.createWorkspace(credentials.creation, hash(credentials.bootstrap)), { code: 'WORKSPACE_UNAVAILABLE' });
+    assert.deepEqual(requests.slice(before), ['read', 'read', 'commit'], 'Creation acknowledgement loss must not cause automatic Redis retries');
+    const created = await store.createWorkspace(credentials.creation, hash(credentials.bootstrap)); assert.equal(created.created, false);
+    const changedHuman = access(), change = { action: 'rotate', role: 'human', accessHash: hash(changedHuman), expectedGeneration: 1 };
+    before = requests.length; loseAcknowledgement = true;
+    await assert.rejects(() => store.changeAccess(created.record.workspaceId, hash(credentials.bootstrap), change), { code: 'WORKSPACE_UNAVAILABLE' });
+    assert.deepEqual(requests.slice(before), ['read', 'read', 'commit'], 'Rotation acknowledgement loss must not cause automatic Redis retries');
+    const recovered = await store.changeAccess(created.record.workspaceId, hash(credentials.bootstrap), change); assert.equal(recovered.created, false); assert.equal(recovered.record.generation, 2);
+    await assert.rejects(() => store.resolveHash(hash(credentials.human)), { code: 'UNAUTHORIZED' }); assert.equal((await store.resolveHash(hash(changedHuman))).role, 'human');
+    await assert.rejects(() => store.changeAccess(created.record.workspaceId, hash(credentials.bootstrap), { ...change, accessHash: hash(access()) }), { code: 'WORKSPACE_CONFLICT' });
+    const principal = await store.resolveHash(hash(credentials.agent)), agentStore = store.forPrincipal(principal);
+    const input = { clientOperationId: randomUUID(), mode: 'mock', service: { id: 'independent-ack-fixture', title: 'Ack fixture', provider: 'Independent', url: origin }, payment: { status: 'not-requested', network: 'stellar:testnet', asset: 'USDC', amountAtomic: '0', recipient: 'G' + 'A'.repeat(55) }, delivery: { status: 'reported-delivered', result: { text: 'Original result survives acknowledgement loss' } } };
+    before = requests.length; loseAcknowledgement = true;
+    await assert.rejects(() => agentStore.operations.append(principal.ownerId, input), { code: 'WORKSPACE_UNAVAILABLE' });
+    assert.deepEqual(requests.slice(before), ['read', 'commit'], 'Operation acknowledgement loss must not cause automatic Redis retries');
+    assert.equal((await agentStore.operations.append(principal.ownerId, input)).created, false);
+    const records = await agentStore.operations.list(principal.ownerId, 20); assert.equal(records.length, 1); assert.deepEqual(records[0].delivery.result, input.delivery.result);
+    await assert.rejects(() => agentStore.operations.append(principal.ownerId, { ...input, delivery: { ...input.delivery, result: { text: 'Overwrite probe' } } }), { code: 'WORKSPACE_CONFLICT' });
+    for (const value of values.values()) noSecrets(value);
+    console.log(JSON.stringify({ ok: true, independentRedisProtocol: true, realInstalledSdk: true, configuredStoreUsed: true, loopbackHttpsTransportAdapter: true, retryFalseRequests: sdkRequests, creationLostAck: true, rotationLostAck: true, operationLostAck: true, immutableResult: true, externalRequests: 0 }));
+  } finally { globalThis.fetch = guardedFetch; await new Promise(ok => server.close(ok)); }
 }
 async function acceptance() {
   assert.ok(process.argv.length === 2 || (process.argv.length === 4 && process.argv[2] === '--checkout'), 'Only an optional local checkout path is accepted; no external base URL');
@@ -359,6 +421,11 @@ async function acceptance() {
     assert.deepEqual(authenticateHistory(`Bearer ${legacyRead}`, false, legacyConfig), { ownerId: legacy.ownerId, permission: 'read' });
     assert.deepEqual(authenticateHistory(`Bearer ${legacyWrite}`, true, legacyConfig), { ownerId: legacy.ownerId, permission: 'write' });
     assert.throws(() => authenticateHistory(`Bearer ${legacyRead}`, true, legacyConfig), { code: 'FORBIDDEN' });
+    const independentProtocol = spawn(process.execPath, [script, '--independent-redis-protocol', root], { cwd: root, env: { ...clean, BAZAAR_INDEPENDENT_NETWORK_GUARD: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
+    independentProtocol.stdout.resume(); independentProtocol.stderr.resume();
+    const independentProtocolTimeout = setTimeout(() => independentProtocol.kill(), 20000);
+    const independentProtocolExit = await new Promise((ok, fail) => { independentProtocol.once('exit', ok); independentProtocol.once('error', fail); }); clearTimeout(independentProtocolTimeout);
+    assert.equal(independentProtocolExit, 0, 'Independent configured Redis/SDK protocol acceptance failed');
     // Reproduce the separately authored SDK/REST protocol double under the same
     // network and environment guards; keep this supporting evidence distinct.
     const supporting = spawn(process.execPath, ['--import', pathToFileURL(script).href, 'scripts/test-open-workspace-core.mjs'], { cwd: root, env: { ...clean, BAZAAR_INDEPENDENT_NETWORK_GUARD: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -366,14 +433,14 @@ async function acceptance() {
     const supportingTimeout = setTimeout(() => supporting.kill(), 45000);
     const supportingExit = await new Promise((ok, fail) => { supporting.once('exit', ok); supporting.once('error', fail); }); clearTimeout(supportingTimeout);
     assert.equal(supportingExit, 0, 'Supporting core protocol-double acceptance failed; no author output or credentials emitted');
-    console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
+    console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, independentRedisProtocol: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
   } finally {
     for (const client of clients) await client.close().catch(() => {});
     for (const child of children) if (child.exitCode === null) { const ended = new Promise(ok => child.once('exit', ok)); child.kill(); await ended; }
   }
 }
-if (process.env.BAZAAR_INDEPENDENT_NETWORK_GUARD !== '1') {
-  await acceptance().catch(error => {
+if (process.argv[2] === '--independent-redis-protocol' || process.env.BAZAAR_INDEPENDENT_NETWORK_GUARD !== '1') {
+  await (process.argv[2] === '--independent-redis-protocol' ? independentRedisProtocol() : acceptance()).catch(error => {
     let message = String(error?.stack ?? error);
     for (const token of tokens) message = message.split(token).join('[synthetic access redacted]');
     console.error(message); process.exitCode = 1;
