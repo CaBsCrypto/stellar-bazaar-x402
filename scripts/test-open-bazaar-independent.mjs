@@ -308,7 +308,7 @@ async function acceptance() {
     for (const credential of [a.bootstrap, access()]) denied(await http(first.base, `/api/deliveries?operationId=${op.clientOperationId}`, credential), 'No unauthorized inline delivery read');
     for (const [path, body] of [
       ['/api/deliveries', { operationId: op.clientOperationId, manifest: { externalUrl: 'https://example.invalid/private-upload' } }],
-      ['/api/deliveries/upload', { versionId: randomUUID(), fileId: randomUUID() }],
+      ['/api/deliveries/uploads', { versionId: randomUUID(), fileId: randomUUID() }],
       ['/api/deliveries/confirm', { versionId: randomUUID(), fileId: randomUUID() }],
       ['/api/deliveries/access', { versionId: randomUUID(), fileId: randomUUID(), download: true }],
     ]) assert.equal((await http(first.base, path, a.agent, body)).status, 403, 'Anonymous file actions remain disabled');
