@@ -70,7 +70,7 @@ const decodeCursor = (raw: string): number | null => {
   }
 };
 
-export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{ ok: boolean; body: unknown }>, provider?: ProviderMcpHandlers, workspace?:WorkspaceMcpHandlers) {
+export function createOnboardingMcpServer(readOperationHistory?: () => Promise<McpHttpResult>, provider?: ProviderMcpHandlers, workspace?:WorkspaceMcpHandlers) {
   const server = new McpServer({
     name: "stellar-bazaar-discovery",
     version: MCP_VERSION,
@@ -350,8 +350,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
     async () => {
       if (!readOperationHistory) return errorEnvelope("HISTORY_UNAUTHORIZED", "History access is required.", "history");
       const response = await readOperationHistory();
-      if (!response.ok) return { isError: true, content: [{ type: "text" as const, text: JSON.stringify(response.body) }] };
-      return result(response.body);
+      return mcpHttpResult(response);
     },
   );
   server.registerTool("get_bazaar_skills", {
