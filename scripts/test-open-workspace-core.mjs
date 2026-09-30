@@ -108,14 +108,18 @@ try {
   // Limits stay at the beta defaults. Time advances in this isolated process only.
   const quotaDir=join(dir,'quotas'), quotas=createFileWorkspaceStore(quotaDir), realNow=Date.now; let fakeNow=realNow(); Date.now=()=>fakeNow;
   try {
-    let first;
-    for(let i=0;i<50;i++){const q=credentials(),result=await quotas.createWorkspace(body(q),hash(q.bootstrap),'one-ip');if(i===0)first=result.record;}
+    let first, firstCredentials, firstBody;
+    for(let i=0;i<50;i++){const q=credentials(),qb=body(q),result=await quotas.createWorkspace(qb,hash(q.bootstrap),'one-ip');if(i===0){first=result.record;firstCredentials=q;firstBody=qb;}}
     const q=credentials();await assert.rejects(()=>quotas.createWorkspace(body(q),hash(q.bootstrap),'another-ip'),{code:'WORKSPACE_RATE_LIMIT'});
     fakeNow+=86400000;
     for(let i=0;i<50;i++){const q=credentials();await quotas.createWorkspace(body(q),hash(q.bootstrap),'one-ip');}
     fakeNow+=86400000;const q2=credentials();await assert.rejects(()=>quotas.createWorkspace(body(q2),hash(q2.bootstrap)),{code:'WORKSPACE_CAPACITY'});
     for(let i=0;i<120;i++)await quotas.consumeRequest(first.ownerId,1);
     await assert.rejects(()=>quotas.consumeRequest(first.ownerId,1),{code:'WORKSPACE_RATE_LIMIT'});
+    setWorkspaceStoreForTests(quotas);
+    assert.equal((await http.access(request('/api/workspaces/'+first.workspaceId+'/access',firstCredentials.bootstrap,{action:'revoke',expectedGeneration:1}),first.workspaceId)).status,429);
+    assert.equal((await http.POST(request('/api/workspaces',firstCredentials.bootstrap,firstBody))).status,429);
+    setWorkspaceStoreForTests(undefined);
     await quotas.createConversation(first.ownerId,{conversationId:'capacity',title:'Capacity'});
     let limited=false;
     for(let i=0;i<100;i++){try{await quotas.sendHumanMessage(first.ownerId,{conversationId:'capacity',messageId:'m'+i,taskId:'t'+i,text:'x'.repeat(2000)});}catch(e){assert.equal(e.code,'WORKSPACE_CAPACITY');limited=true;break;}}

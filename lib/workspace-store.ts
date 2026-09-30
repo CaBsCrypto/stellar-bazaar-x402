@@ -216,9 +216,9 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       } else { meta.retiredHashes.push(meta.humanHash!, meta.agentHash!); meta.humanHash = null; meta.agentHash = null; meta.revoked = true; }
       meta.generation++; meta.accessIntents.push({ expectedGeneration: input.expectedGeneration, digest: intentDigest, generation: meta.generation, revoked: meta.revoked }); registry.revision = randomUUID(); const reg = JSON.stringify(registry); if (bytes(reg) > WORKSPACE_LIMITS.registryBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409); validateRegistry(reg, "workspace-v1", reservations()); await commit(reg, ""); return { record: receipt(meta), current: { generation: meta.generation, revoked: meta.revoked }, created: true };
     }); }); },
-    async consumeRequest(ownerId: string, generation: number) { return safe(() => backend.transact(ownerId, async (s, commit) => {
+    async consumeRequest(ownerId: string, generation: number, allowRevokedAdministration = false) { return safe(() => backend.transact(ownerId, async (s, commit) => {
       const registry = validateRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
-      if (!meta || meta.generation !== generation || meta.revoked) throw new WorkspaceError("UNAUTHORIZED", 401);
+      if (!meta || meta.generation !== generation || (meta.revoked && !allowRevokedAdministration)) throw new WorkspaceError("UNAUTHORIZED", 401);
       validateDocument(s.documentRaw, meta);
       const now = Date.now(); registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
       if (!w) { w = { ownerId, count: 0, until: now + 60000 }; registry.requestWindows.push(w); }
