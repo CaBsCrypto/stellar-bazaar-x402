@@ -145,7 +145,7 @@ async function acceptance() {
   const evidenceDirectory = mkdtempSync(join(tmpdir(), 'bazaar-independent-open-'));
   const workspaceDir = join(evidenceDirectory, 'workspaces'), reviewDir = join(evidenceDirectory, 'reviews');
   mkdirSync(workspaceDir); mkdirSync(reviewDir);
-  const children = new Set(), clients = new Set();
+  const children = new Set(), clients = new Set(), fileDiagnostics = [];
   const clean = Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(PATH|SYSTEMROOT|WINDIR|COMSPEC|TEMP|TMP|USERPROFILE|APPDATA|LOCALAPPDATA|PATHEXT|SYSTEMDRIVE)$/i.test(key)));
   const legacyRead = 'bz_read_' + randomBytes(24).toString('hex'), legacyWrite = 'bz_write_' + randomBytes(24).toString('hex');
   tokens.push(legacyRead, legacyWrite);
@@ -153,16 +153,25 @@ async function acceptance() {
   async function start(overrides = {}) {
     const { __independentPort, ...environmentOverrides } = overrides;
     const base = `http://127.0.0.1:${__independentPort ?? await port()}`;
-    const child = spawn(process.execPath, ['--import', pathToFileURL(script).href, 'node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '-p', new URL(base).port], {
+    const diagnosticsScript = join(root, 'scripts', 'workspace-file-diagnostics.mjs');
+    const child = spawn(process.execPath, ['--import', pathToFileURL(script).href, ...(existsSync(diagnosticsScript) ? ['--import', pathToFileURL(diagnosticsScript).href] : []), 'node_modules/next/dist/bin/next', 'start', '--hostname', '127.0.0.1', '-p', new URL(base).port], {
       cwd: root, stdio: ['ignore', 'pipe', 'pipe'], env: {
-        ...clean, NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1', NEXT_PUBLIC_APP_URL: base, BAZAAR_INDEPENDENT_NETWORK_GUARD: '1',
+        ...clean, NODE_ENV: 'production', NEXT_TELEMETRY_DISABLED: '1', NEXT_PUBLIC_APP_URL: base, BAZAAR_INDEPENDENT_NETWORK_GUARD: '1', BAZAAR_WORKSPACE_FILE_DIAGNOSTICS_TEST: '1',
         BAZAAR_ENABLE_OPEN_WORKSPACES: 'true', BAZAAR_WORKSPACE_BACKEND: 'file', BAZAAR_WORKSPACE_PREFIX: 'bazaar-workspace:local-test', BAZAAR_WORKSPACE_FILE_DIRECTORY: workspaceDir, BAZAAR_WORKSPACE_LOCAL_ORIGIN: base,
         BAZAAR_HISTORY_ACCOUNTS_JSON: legacyConfig, BAZAAR_PROVIDER_REVIEW_BACKEND: 'file', BAZAAR_REVIEW_PREFIX: 'bazaar-review:local-test', BAZAAR_PROVIDER_REVIEW_DIR: reviewDir,
         BAZAAR_ENABLE_SELF_LISTING_INTAKE: 'true', BAZAAR_ENABLE_PUBLIC_PROVIDER_REVIEW: 'false', BAZAAR_ENABLE_PROVIDER_ACTIVATION: 'false', BAZAAR_ENABLE_REGISTRY_MUTATIONS: 'false',
         X402_PILOT_PAYMENTS_ENABLED: 'false', X402_LEGACY_PAYMENTS_ENABLED: 'false', X402_ENABLE_LOCAL_PAYER: 'false', NEXT_PUBLIC_X402_XLM_PILOT: 'false', ...environmentOverrides,
       },
     });
-    children.add(child); child.stdout.resume(); child.stderr.resume();
+    children.add(child); child.stdout.resume();
+    let diagnosticLine = '';
+    child.stderr.on('data', chunk => {
+      diagnosticLine = (diagnosticLine + chunk).slice(-8192);
+      const lines = diagnosticLine.split('\n'); diagnosticLine = lines.pop();
+      for (const line of lines) if (/^\{"workspaceFileDiagnostic":\{"phase":"[a-z-]{1,50}","code":"[A-Z]{1,20}"\}\}\r?$/.test(line)) {
+        const diagnostic = JSON.parse(line).workspaceFileDiagnostic; noSecrets(diagnostic); fileDiagnostics.push(diagnostic);
+      }
+    });
     const deadline = Date.now() + 15000;
     while (Date.now() < deadline) {
       if (child.exitCode !== null) throw Error(`Isolated Next startup failed: exit ${child.exitCode}`);
@@ -230,7 +239,7 @@ async function acceptance() {
     const concurrentOutage = parallel.some(result => result.status === 503);
     // Keep the regression fatal, but finish independent gates to identify
     // additional blockers before returning the concurrency assertion below.
-    if (concurrentOutage) console.error(`Deferred fatal concurrent-creation regression: ${parallelDiagnostic}`);
+    if (concurrentOutage) console.error(`Deferred fatal concurrent-creation regression: ${parallelDiagnostic}; safe file diagnostics: ${JSON.stringify(fileDiagnostics)}`);
     const refA = reference(success(accepted[0], 'Concurrent creation'));
     for (const result of accepted) assert.equal(reference(result.body).ownerId, refA.ownerId, 'One intent must not allocate two owners');
     const bootstrapClient = await mcp(second.base, a.bootstrap);
@@ -466,7 +475,7 @@ async function acceptance() {
     const supportingTimeout = setTimeout(() => supporting.kill(), 45000);
     const supportingExit = await new Promise((ok, fail) => { supporting.once('exit', ok); supporting.once('error', fail); }); clearTimeout(supportingTimeout);
     assert.equal(supportingExit, 0, 'Supporting core protocol-double acceptance failed; no author output or credentials emitted');
-    assert.equal(concurrentOutage, false, `Concurrent creation may conflict but must not return a generic outage: ${parallelDiagnostic}`);
+    assert.equal(concurrentOutage, false, `Concurrent creation may conflict but must not return a generic outage: ${parallelDiagnostic}; safe file diagnostics: ${JSON.stringify(fileDiagnostics)}`);
     console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, independentRedisProtocol: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
   } finally {
     for (const client of clients) await client.close().catch(() => {});
