@@ -76,11 +76,26 @@ for(const runtime of [{NODE_ENV:'production'},{NODE_ENV:'development',VERCEL:'1'
 }
 let minted=0,sent=0;
 const mailEnv={};
-const mail=load('app/api/admin/magic-link/route.ts',mailEnv,{'next/server':{NextResponse:Response},'@/lib/admin-guard':{isAuthorizedAdminEmail:()=>true,createMagicLinkToken:async()=>{minted++;return token}}},{fetch:async()=>{sent++;return {ok:true}}});
+let mailLimit={ok:true},originChecks=0;
+const mail=load('app/api/admin/magic-link/route.ts',mailEnv,{
+ 'next/server':{NextResponse:Response},
+ '@/lib/admin-guard':{isAuthorizedAdminEmail:()=>true,createMagicLinkToken:async()=>{minted++;return token}},
+ '@/lib/provider-review-limits':{limitReviewAdminRequest:async()=>mailLimit},
+ '@/lib/provider-admin-session':{requireReviewOrigin:()=>{originChecks++;},reviewJson:request=>request.json(),reviewError:()=>Response.json({error:'fixture'},{status:503})}
+},{fetch:async()=>{sent++;return {ok:true}}});
 const mailReq={json:async()=>({email:'test@example.invalid'}),nextUrl:new URL('https://untrusted.invalid')};
 assert.equal((await mail.POST(mailReq)).status,503);assert.equal(minted,0);
 mailEnv.RESEND_API_KEY='synthetic';mailEnv.NEXT_PUBLIC_APP_URL='http://untrusted.invalid';
 assert.equal((await mail.POST(mailReq)).status,503);assert.equal(minted,0);
 mailEnv.NEXT_PUBLIC_APP_URL='https://bazaar.example.invalid';
 const response=await mail.POST(mailReq);assert.equal(response.status,200);assert.equal(minted,1);assert.equal(sent,1);assert.equal(JSON.stringify(await response.json()).includes(token),false);
+// Route wiring in review mode: limiter failure must stop both OTP creation and email.
+// Origin/CSRF and limiter implementations have their own acceptance suites.
+mailEnv.BAZAAR_ENABLE_PROVIDER_REVIEW_ADMIN='true';
+for(const status of [429,503]){
+ mailLimit={ok:false,status,code:status===429?'RATE_LIMITED':'LIMIT_STORE_UNAVAILABLE',retryAfter:60};
+ const blocked=await mail.POST(mailReq);assert.equal(blocked.status,status);assert.equal(blocked.headers.get('Retry-After'),'60');assert.equal(minted,1);assert.equal(sent,1);
+}
+assert.equal(originChecks,2);
+mailLimit={ok:true};assert.equal((await mail.POST(mailReq)).status,200);assert.equal(minted,2);assert.equal(sent,2);
 console.log('PASS operational guards: explicit auth/config, atomic OTP double concurrency, expired/corrupt/offline rejection, actual ingest validation, legacy payment block before decode/facilitator, no token response/log. No network or real credentials.');

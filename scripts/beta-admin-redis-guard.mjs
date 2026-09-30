@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {mapping,reserve,SET,DEL} from './beta-admin-redis-probe.mjs';
+import {REVIEW_LIMIT_SCRIPT} from '../lib/provider-review-limits.ts';
+const fresh=()=>({runId:'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',token:'1'.repeat(64),csrf:'2'.repeat(64),secret:'3'.repeat(64),requests:0,commands:0,bytes:0});
+let j=fresh();const keys=[...mapping(j).values()];
+for(const c of [['GET',keys[0]],['TTL',keys[1]],['EVAL',SET,1,keys[0],JSON.stringify({email:'synthetic-admin@example.invalid',csrfToken:j.csrf,expiresAt:Date.now()+1000}),'1800'],['EVAL',DEL,1,keys[0]],['EVAL',REVIEW_LIMIT_SCRIPT,2,keys[1],keys[2],'[2,2]','[3600,3600]']])reserve(j,c);
+assert.equal(j.commands,13);
+for(const c of [['GET','bazaar-review:local-test:state'],['GET','bazaar-review:production:state'],['SCAN',0],['DEL',keys[0]],['EVAL',DEL,1,keys[1]],['EVAL',REVIEW_LIMIT_SCRIPT,2,keys[1],keys[2],'[50,50]','[60,60]'],['EVAL','return 1',1,keys[0]],['GET',keys[0],'extra']])assert.throws(()=>reserve(fresh(),c));
+j=fresh();j.commands=200;assert.throws(()=>reserve(j,['GET',keys[0]]));assert.equal(j.requests,0);
+j=fresh();j.bytes=102400;assert.throws(()=>reserve(j,['GET',keys[0]]));
+j=fresh();j.requests=200;assert.throws(()=>reserve(j,['GET',keys[0]]));
+assert.throws(()=>mapping({...fresh(),runId:'../../production'}));
+console.log('PASS beta admin Redis offline guards; no network, credentials, or external writes');
