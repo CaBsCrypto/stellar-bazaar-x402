@@ -106,6 +106,7 @@ export function DocsCodeTabs() {
   }
   async function handleCopy() {
     const version = ++copyVersion.current;
+    setStatus("");
     try {
       await navigator.clipboard.writeText(current.code);
       if (version === copyVersion.current) setStatus("Copiado. Usa estas referencias en este entorno de Bazaar.");

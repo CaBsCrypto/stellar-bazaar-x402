@@ -24,7 +24,7 @@ function nodes(node = tree, found = []) { if (Array.isArray(node)) node.forEach(
 function render(component, props) { cursor = 0; tree = component(props); while (effects.length) effects.shift()(); return tree; }
 function reset() { slots.length = 0; effects.length = 0; cursor = 0; }
 const oldWindow = globalThis.window, oldDocument = globalThis.document, oldNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
-let selected = 0, focused = 0, clipboardValue, finishCopy;
+let selected = 0, focused = 0, clipboardValue, finishCopy, failCopy;
 globalThis.window = { location: { protocol: 'http:', origin: 'http://127.0.0.1:3282' }, getSelection: () => ({ removeAllRanges() {}, addRange() { selected++; } }) };
 globalThis.document = { createRange: () => ({ selectNodeContents() {} }) };
 Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { writeText: async () => { throw Error('blocked'); } } } });
@@ -37,18 +37,23 @@ try {
   await copy(); render(component);
   assert.match(nodes().find(node => node.props.role === 'status').props.children, /^No se pudo copiar/);
   assert.equal(selected, 1); assert.equal(focused, 1);
-  navigator.clipboard.writeText = value => new Promise(resolve => { clipboardValue = value; finishCopy = resolve; });
+  navigator.clipboard.writeText = value => new Promise((resolve, reject) => { clipboardValue = value; finishCopy = resolve; failCopy = reject; });
   const pending = copy(); render(component);
   assert(!nodes().find(node => node.props.role === 'status').props.children.startsWith('Copiado.'));
   finishCopy(); await pending; render(component);
   assert.match(nodes().find(node => node.props.role === 'status').props.children, /^Copiado\./);
   assert.match(clipboardValue, /http:\/\/127\.0\.0\.1:3282\/api\/mcp/);
+  const second = copy(); render(component);
+  assert.equal(nodes().find(node => node.props.role === 'status').props.children, '', 'New pending attempt must clear the previous success');
+  failCopy(Error('blocked')); await second; render(component);
+  assert.match(nodes().find(node => node.props.role === 'status').props.children, /^No se pudo copiar/);
+  assert.equal(selected, 2);
   const stale = copy();
   nodes().find(node => node.type === 'button' && node.props.children?.[0]?.props?.children === 'Python (LangChain & CrewAI)').props.onClick(); render(component);
   finishCopy(); await stale; render(component);
   assert.equal(nodes().find(node => node.props.role === 'status').props.children, '');
   assert.match(nodes().find(node => node.type === 'code').props.children, /BAZAAR_URL = "http:\/\/127\.0\.0\.1:3282"/);
-  nodes().find(node => node.type === 'button' && node.props.children === 'Seleccionar código').props.onClick(); assert.equal(selected, 2);
+  nodes().find(node => node.type === 'button' && node.props.children === 'Seleccionar código').props.onClick(); assert.equal(selected, 3);
   const card = load('components/AgentDirectConnectCard.tsx').AgentDirectConnectCard;
   for (const role of ['buyer', 'seller']) {
     reset(); render(card, { role }); render(card, { role });
