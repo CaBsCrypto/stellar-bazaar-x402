@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createServer } from 'node:net';
-import { createServer as createHttpServer } from 'node:http';
+import { createServer as createHttpServer, request as nodeHttpRequest } from 'node:http';
 import { spawn } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -44,7 +44,8 @@ function reference(body) {
   return workspace;
 }
 async function http(base, path, token, body, extraHeaders = {}) {
-  const response = await fetch(new URL(path, base), {
+  const transport = Object.keys(extraHeaders).some(key => key.toLowerCase() === 'host') ? wireFetch : fetch;
+  const response = await transport(new URL(path, base), {
     method: body === undefined ? 'GET' : 'POST',
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json', Origin: base }), ...extraHeaders },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(10000),
@@ -53,6 +54,23 @@ async function http(base, path, token, body, extraHeaders = {}) {
   noSecrets(result);
   if (!['/api/mcp', '/api/discovery/resources'].includes(path)) assert.equal(response.headers.get('cache-control'), 'private, no-store', `${path}: private no-store required`);
   return { status: response.status, body: result, headers: response.headers };
+}
+async function wireFetch(input, init = {}) {
+  // Node 22 fetch silently ignores an explicit Host override. Use node:http
+  // for these probes so a successful spoof rejection proves actual wire data.
+  const url = new URL(input instanceof Request ? input.url : String(input)); assert.equal(url.protocol, 'http:'); assert.ok(['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname));
+  const headers = new Headers(input instanceof Request ? input.headers : undefined); new Headers(init.headers).forEach((value, key) => headers.set(key, value));
+  let body = init.body;
+  if (body instanceof ReadableStream) body = Buffer.from(await new Response(body).arrayBuffer());
+  else if (body === undefined && input instanceof Request && input.body) body = Buffer.from(await input.arrayBuffer());
+  return new Promise((ok, fail) => {
+    const outgoing = nodeHttpRequest(url, { method: init.method ?? (input instanceof Request ? input.method : 'GET'), headers: Object.fromEntries(headers), signal: init.signal }, response => {
+      const chunks = []; response.on('data', chunk => chunks.push(chunk)); response.once('error', fail); response.once('end', () => {
+        const resultHeaders = new Headers(); for (const [key, value] of Object.entries(response.headers)) if (value !== undefined) resultHeaders.set(key, Array.isArray(value) ? value.join(', ') : value);
+        ok(new Response([204, 205, 304].includes(response.statusCode) ? null : Buffer.concat(chunks), { status: response.statusCode, headers: resultHeaders }));
+      });
+    }); outgoing.once('error', fail); outgoing.end(body);
+  });
 }
 async function port() {
   const server = createServer();
@@ -159,7 +177,8 @@ async function acceptance() {
   }
   async function mcp(base, token, extraHeaders = {}) {
     const client = new Client({ name: 'bazaar-independent-review', version: '1.0' }); clients.add(client);
-    await client.connect(new StreamableHTTPClientTransport(new URL('/api/mcp', base), { requestInit: { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extraHeaders } }, fetch: globalThis.fetch }));
+    const transportFetch = Object.keys(extraHeaders).some(key => key.toLowerCase() === 'host') ? wireFetch : globalThis.fetch;
+    await client.connect(new StreamableHTTPClientTransport(new URL('/api/mcp', base), { requestInit: { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extraHeaders } }, fetch: transportFetch }));
     return client;
   }
   async function helper(file, mode, args) {
@@ -184,7 +203,7 @@ async function acceptance() {
   });
   async function task(base, owner, text) {
     const conversationId = randomUUID(), taskId = randomUUID(), messageId = randomUUID();
-    success(await http(base, '/api/conversations', owner.human, { conversationId, title: 'Independent acceptance' }), 'Human conversation');
+    success(await http(base, '/api/conversations', owner.human, { conversationId, title: '  Independent acceptance  ' }), 'Human conversation');
     success(await http(base, `/api/conversations/${conversationId}/messages`, owner.human, { messageId, taskId, text }), 'Human message');
     return { conversationId, taskId, messageId };
   }
@@ -236,7 +255,13 @@ async function acceptance() {
     denied(await http(first.base, '/api/workspaces', c.bootstrap, c.creation, { Origin: 'https://foreign.invalid' }), 'Foreign origin');
     assert.deepEqual(success(await http(first.base, '/api/operations', a.human), 'Human empty history').records, []);
     denied(await http(first.base, '/api/operations', a.bootstrap), 'Bootstrap history read'); denied(await http(first.base, '/api/operations', access()), 'Unknown history read');
-    const taskA = await task(first.base, a, 'Owner A private unpaid synthetic request.'), taskB = await task(first.base, b, 'Owner B private request.');
+    const humanText = '  Owner A private unpaid synthetic request.  ';
+    const taskA = await task(first.base, a, humanText), taskB = await task(first.base, b, 'Owner B private request.');
+    const exactConversation = success(await http(first.base, `/api/conversations/${taskA.conversationId}/messages`, a.human), 'Exact human content').conversation;
+    assert.equal(exactConversation.title, '  Independent acceptance  '); assert.equal(exactConversation.messages[0].text, humanText);
+    success(await http(first.base, `/api/conversations/${taskA.conversationId}/messages`, a.human, { messageId: taskA.messageId, taskId: taskA.taskId, text: humanText }), 'Exact human message replay');
+    denied(await http(first.base, `/api/conversations/${taskA.conversationId}/messages`, a.human, { messageId: taskA.messageId, taskId: taskA.taskId, text: humanText.trim() }), 'Whitespace-changed frozen human message');
+    denied(await http(first.base, '/api/conversations', a.human, { conversationId: taskA.conversationId, title: 'Independent acceptance' }), 'Whitespace-changed frozen conversation');
     const ownTasks = success(await http(second.base, '/api/agent-tasks', a.agent), 'Cross-process task recovery').tasks;
     assert.ok(ownTasks.some(value => value.taskId === taskA.taskId)); assert.ok(!JSON.stringify(ownTasks).includes(taskB.taskId));
     denied(await http(first.base, `/api/conversations/${taskA.conversationId}/messages`, b.human), 'Other-owner conversation');
@@ -273,12 +298,14 @@ async function acceptance() {
     assert.equal((await call(agentClient, 'record_bazaar_activity', writeArgs('record_bazaar_activity', event))).error, false);
     assert.equal((await call(humanClient, 'record_bazaar_activity', writeArgs('record_bazaar_activity', event))).error, true);
     assert.ok(success(await http(second.base, `/api/activity?view=events&taskId=${taskA.taskId}`, a.human), 'MCP activity').items.some(value => value.eventId === event.eventId && value.agentId === refA.agentId));
-    const reply = { attemptId, messageId: randomUUID(), text: 'Synthetic result preserved for owner A; no purchase.', operationId: op.clientOperationId };
+    const reply = { attemptId, messageId: randomUUID(), text: '  Synthetic result preserved for owner A; no purchase.  ', operationId: op.clientOperationId };
     success(await http(second.base, `/api/agent-tasks/${taskA.taskId}/response`, a.agent, reply), 'Own linked operation response');
     success(await http(first.base, `/api/agent-tasks/${taskA.taskId}/response`, a.agent, reply), 'Response replay');
     denied(await http(first.base, `/api/agent-tasks/${taskA.taskId}/response`, a.agent, { ...reply, text: 'Changed response' }), 'Changed response');
+    denied(await http(first.base, `/api/agent-tasks/${taskA.taskId}/response`, a.agent, { ...reply, text: reply.text.trim() }), 'Whitespace-changed frozen agent response');
     const conversation = success(await http(first.base, `/api/conversations/${taskA.conversationId}/messages`, a.human), 'Conversation recovery').conversation;
     assert.equal(conversation.messages.filter(value => value.messageId === reply.messageId).length, 1);
+    assert.equal(conversation.messages.find(value => value.messageId === reply.messageId).text, reply.text, 'Response preserves exact accepted text');
     assert.ok(conversation.messages.some(value => value.messageId === reply.messageId && value.operationId === op.clientOperationId));
     const attemptB = randomUUID(); success(await http(first.base, '/api/agent-tasks', b.agent, { taskId: taskB.taskId, attemptId: attemptB }), 'Owner B claim');
     denied(await http(first.base, `/api/agent-tasks/${taskB.taskId}/response`, b.agent, { ...reply, attemptId: attemptB, messageId: randomUUID() }), 'Cross-owner operation link');
