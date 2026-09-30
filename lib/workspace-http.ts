@@ -2,13 +2,26 @@ import { isIP } from "node:net";
 import { z } from "zod";
 import { requireWorkspacePrincipal, workspaceBearerHash } from "./workspace-auth.ts";
 import { configuredWorkspaceStore, assertWorkspaceEnabled, workspaceLoopbackOrigin } from "./workspace-store.ts";
+import { openWorkspacesEnabled } from "./workspace-store.ts";
 import { createWorkspaceSchema, workspaceAccessSchema, WorkspaceError, type WorkspaceRole } from "./workspace-types.ts";
 export const workspaceHeaders = { "Cache-Control": "private, no-store", Vary: "Authorization", "X-Content-Type-Options": "nosniff" };
 export function workspaceFailure(e: unknown) { const error = e instanceof WorkspaceError ? e : e instanceof z.ZodError ? new WorkspaceError("INVALID_REQUEST", 400) : new WorkspaceError("WORKSPACE_UNAVAILABLE", 503); return Response.json({ error: { code: error.code } }, { status: error.status, headers: { ...workspaceHeaders, ...(error.status === 429 ? { "Retry-After": "60" } : {}) } }); }
+/** NextURL normalizes loopback IPs to localhost. Host only validates our configured authority. */
+export function workspaceRequestOrigin(request: Request): string {
+  const url = new URL(request.url);
+  if (process.env.BAZAAR_WORKSPACE_BACKEND !== "file" || !openWorkspacesEnabled()) return url.origin;
+  const expected = new URL(workspaceLoopbackOrigin()), host = request.headers.get("host");
+  const port = expected.port || (expected.protocol === "https:" ? "443" : "80");
+  const forwardedHost = request.headers.get("x-forwarded-host"), forwardedProto = request.headers.get("x-forwarded-proto"), forwardedPort = request.headers.get("x-forwarded-port");
+  if (!["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) || url.protocol !== expected.protocol || url.port !== expected.port || url.username || url.password ||
+      (host ? host !== expected.host : url.origin !== expected.origin) ||
+      (forwardedHost !== null && forwardedHost !== expected.host) || (forwardedProto !== null && forwardedProto !== expected.protocol.slice(0, -1)) ||
+      (forwardedPort !== null && forwardedPort !== port) || request.headers.has("forwarded")) throw new WorkspaceError("WORKSPACE_LOCAL_ONLY", 403);
+  return expected.origin;
+}
 export function assertWorkspaceRequest(request: Request, allowQuery = false) {
-  assertWorkspaceEnabled(); const url = new URL(request.url), origin = request.headers.get("origin");
-  if ((origin && origin !== url.origin) || (!allowQuery && url.search) || request.headers.get("authorization")?.length && request.headers.get("authorization")!.length > 150) throw new WorkspaceError("INVALID_REQUEST", 400);
-  if (process.env.BAZAAR_WORKSPACE_BACKEND === "file" && url.origin !== workspaceLoopbackOrigin()) throw new WorkspaceError("WORKSPACE_LOCAL_ONLY", 403);
+  assertWorkspaceEnabled(); const url = new URL(request.url), origin = request.headers.get("origin"), expectedOrigin = workspaceRequestOrigin(request);
+  if ((origin && origin !== expectedOrigin) || (!allowQuery && url.search) || request.headers.get("authorization")?.length && request.headers.get("authorization")!.length > 150) throw new WorkspaceError("INVALID_REQUEST", 400);
 }
 export async function parseWorkspaceBody<T>(request: Request, schema: z.ZodType<T>, maxBytes = 16384): Promise<T> {
   if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json") throw new WorkspaceError("INVALID_CONTENT_TYPE", 415);

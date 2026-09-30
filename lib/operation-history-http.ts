@@ -3,7 +3,7 @@ import { parseOperationHistoryInput } from "./operation-history.ts";
 import { configuredHistoryStore, HistoryStoreError } from "./operation-history-store.ts";
 import { resolveHistoryPrincipal, type ResolvedHistoryPrincipal } from "./workspace-auth.ts";
 import { configuredWorkspaceStore } from "./workspace-store.ts";
-import { assertWorkspaceRequest, workspaceFailure } from "./workspace-http.ts";
+import { assertWorkspaceRequest, workspaceFailure, workspaceRequestOrigin } from "./workspace-http.ts";
 import { WorkspaceError } from "./workspace-types.ts";
 
 const headers = { "Cache-Control": "private, no-store", "Vary": "Authorization", "X-Content-Type-Options": "nosniff" };
@@ -19,7 +19,7 @@ function failure(error: unknown) {
 function allowedRequest(request: Request): boolean {
   const url = new URL(request.url);
   const origin = request.headers.get("origin");
-  return (!origin || origin === url.origin) && [...url.searchParams.keys()].every((key) => key === "limit");
+  return (!origin || origin === workspaceRequestOrigin(request)) && [...url.searchParams.keys()].every((key) => key === "limit");
 }
 
 /** Dependency injection is explicit; deployed routes always use durable configured storage. */
@@ -31,8 +31,8 @@ export function createHistoryHandlers(dependencies: {
   const store = dependencies.store ?? configuredHistoryStore;
   return {
     async GET(request: Request) {
-      if (!allowedRequest(request)) return fail("INVALID_REQUEST", 400);
       try {
+        if (!allowedRequest(request)) return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await authenticate(request.headers.get("authorization"));
         if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
         const rawLimit = new URL(request.url).searchParams.get("limit") ?? "20";
@@ -42,8 +42,8 @@ export function createHistoryHandlers(dependencies: {
       } catch (error) { return failure(error); }
     },
     async POST(request: Request) {
-      if (!allowedRequest(request)) return fail("INVALID_REQUEST", 400);
       try {
+        if (!allowedRequest(request)) return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await authenticate(request.headers.get("authorization"), true);
         if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
         if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json") return fail("INVALID_OPERATION", 415);

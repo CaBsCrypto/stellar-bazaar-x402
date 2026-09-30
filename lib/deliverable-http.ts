@@ -17,7 +17,7 @@ import {
 import { configuredPrivateS3 } from "./deliverable-s3.ts";
 import { resolveHistoryPrincipal, type ResolvedHistoryPrincipal } from "./workspace-auth.ts";
 import { WorkspaceError } from "./workspace-types.ts";
-import { assertWorkspaceRequest, workspaceFailure } from "./workspace-http.ts";
+import { assertWorkspaceRequest, workspaceFailure, workspaceRequestOrigin } from "./workspace-http.ts";
 const headers = {
   "Cache-Control": "private, no-store",
   Vary: "Authorization",
@@ -70,7 +70,7 @@ export function createDeliverableHandlers(
     try {
       const url = new URL(request.url),
         origin = request.headers.get("origin");
-      if (origin && origin !== url.origin)
+      if (origin && origin !== workspaceRequestOrigin(request))
         throw new DeliverableError("INVALID_ORIGIN", 400);
       const principal: ResolvedHistoryPrincipal = await auth(
         request.headers.get("authorization"),

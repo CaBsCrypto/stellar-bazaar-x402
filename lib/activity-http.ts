@@ -11,7 +11,7 @@ import { configuredActivityStore } from "./activity-store.ts";
 import { activitySchema, summarizeTasks } from "./activity.ts";
 import { resolveHistoryPrincipal, type ResolvedHistoryPrincipal } from "./workspace-auth.ts";
 import { configuredWorkspaceStore } from "./workspace-store.ts";
-import { assertWorkspaceRequest, workspaceFailure } from "./workspace-http.ts";
+import { assertWorkspaceRequest, workspaceFailure, workspaceRequestOrigin } from "./workspace-http.ts";
 import { WorkspaceError } from "./workspace-types.ts";
 const headers = {
   "Cache-Control": "private, no-store",
@@ -50,7 +50,7 @@ export function createActivityHandlers(
     async GET(request: Request) {
       try {
         const url = new URL(request.url), origin = request.headers.get("origin");
-        if (origin && origin !== url.origin) return fail("INVALID_REQUEST", 400);
+        if (origin && origin !== workspaceRequestOrigin(request)) return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await auth(request.headers.get("authorization"));
         if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
         const workspaceStore = principal.workspace ? configuredWorkspaceStore().forPrincipal(principal.workspace) : undefined;
@@ -261,7 +261,7 @@ export function createActivityHandlers(
       try {
         const url = new URL(request.url),
           origin = request.headers.get("origin");
-        if ((origin && origin !== url.origin) || url.search)
+        if ((origin && origin !== workspaceRequestOrigin(request)) || url.search)
           return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await auth(request.headers.get("authorization"), true);
         if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
