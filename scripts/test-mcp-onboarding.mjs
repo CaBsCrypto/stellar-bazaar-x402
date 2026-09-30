@@ -15,6 +15,9 @@ const readTools = [
   "get_workflow_bundle",
   "validate_service_card",
   "get_operation_history",
+  "get_bazaar_skills",
+  "submit_provider_request",
+  "get_provider_request_status",
 ];
 const pilotIds = [
   "ai-video-scriptwriter-pilot",
@@ -37,9 +40,9 @@ async function rpc(id, method, params) {
 }
 
 const health = await (await fetch(url)).json();
-assert.equal(health.mode, "read-only");
+assert.equal(health.mode, "discovery-and-provider-requests");
 assert.equal(health.paidCall, false);
-assert.deepEqual(health.writes, []);
+assert.deepEqual(health.writes, ["submit_provider_request"]);
 assert.deepEqual(health.tools, readTools);
 
 const initialized = await rpc(1, "initialize", {
@@ -61,7 +64,7 @@ const capabilities = await rpc(3, "tools/call", {
   arguments: {},
 });
 const capabilityText = JSON.parse(capabilities.result.content[0].text);
-assert.deepEqual(capabilityText.writes, []);
+assert.deepEqual(capabilityText.writes, ["submit_provider_request"]);
 assert.equal(capabilityText.registry.mutationViaMcp, false);
 assert.equal(capabilityText.registry.providerMetadataTrusted, false);
 assert.equal(capabilityText.paymentFlow.version, "bazaar.payment-flow/v1");
@@ -182,9 +185,9 @@ assert.equal(pilotFlowText.paymentFlow.receipt.reconciliationStatus, "not-starte
 
 console.log(JSON.stringify({
   ok: true,
-  mode: "read-only",
+  mode: "discovery-and-provider-requests",
   tools: readTools.length,
-  writes: 0,
+  writes: 1,
   mutationToolRejected: true,
   pilots: pilotIds.length,
   pilotPayment: "not-active",

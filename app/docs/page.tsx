@@ -1,3 +1,4 @@
+import { bazaarRoles, skillPackage } from "@/lib/bazaar-skills";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
@@ -14,7 +15,7 @@ export default function DocsPage() {
   return (
     <main className="docs-page">
       <div className="mock-banner">
-        DEVELOPER HUB · MCP STREAMABLE HTTP READ-ONLY · x402 TESTNET EVIDENCE
+        DEVELOPER HUB · MCP STREAMABLE HTTP · SKILLS Y SOLICITUDES · x402 TESTNET EVIDENCE
       </div>
 
       <Navbar />
@@ -71,7 +72,7 @@ export default function DocsPage() {
           <em>Descubrimiento, validación y revisión.</em>
         </h1>
         <p>
-          Conecta agentes para descubrir e inspeccionar servicios mediante MCP read-only. La ejecución pagada exige un
+          Conecta agentes para descubrir e inspeccionar servicios mediante MCP. La ejecución pagada exige un
           cliente externo con política y conciliación de recibo; Bazaar no firma ni custodia.
         </p>
       </header>
@@ -98,8 +99,8 @@ export default function DocsPage() {
           </div>
           <div className="docs-card">
             <h3>Cursor IDE & Windsurf</h3>
-            <p>Agrega el endpoint MCP para discovery y validación read-only; no expone tools de pago o escritura.</p>
-            <code>Protocol: MCP v1.30</code>
+            <p>Agrega el endpoint MCP para descubrimiento, validación y solicitudes de proveedores; no expone herramientas de pago ni administración.</p>
+            <code>Transporte: MCP Streamable HTTP</code>
           </div>
           <div className="docs-card">
             <h3>LangChain, CrewAI & AutoGen</h3>
@@ -109,7 +110,7 @@ export default function DocsPage() {
         </div>
       </section>
 
-      <section className="docs-shell docs-section" id="proveedores">
+      <section className="docs-shell docs-section" id="skills"><h2>Skills para tu agente</h2><p>Consulta get_bazaar_skills y enumera las herramientas antes de actuar. El formulario es una alternativa; aprobación y activación son del operador.</p><div className="docs-grid-3">{bazaarRoles.map(role => {const skill=skillPackage(role);return <article className="docs-card" key={role}><h3>{role === "buyer" ? "Comprar" : role === "seller" ? "Ofrecer un servicio" : "Recuperar"}</h3><p>{skill.prompt}</p><a href={skill.download}>Leer / descargar SKILL.md</a></article>;})}</div></section><section className="docs-shell docs-section" id="proveedores">
         <h2>Para proveedores: prepara tu servicio para revisión</h2>
         <p className="subtitle">
           Prepara una integración y valida su ficha antes de solicitar revisión manual. Este recorrido no publica automáticamente ni ejecuta pagos. Consulta la <a href="/PROVIDER_ONBOARDING.md">guía de preparación para proveedores</a>.
@@ -127,7 +128,7 @@ export default function DocsPage() {
           </div>
           <div className="docs-card">
             <h3>3. Solicita revisión manual</h3>
-            <p>Usa <code>/publish</code> cuando la recepción esté habilitada. Copiar o validar no envía el borrador. La prueba de control y la revisión preceden al registro público separado del operador.</p>
+            <p>Con recepción habilitada, tu agente puede usar <code>submit_provider_request</code> y recuperar el estado con su acceso privado. <code>/publish</code> es la alternativa manual. Copiar o validar no envía el borrador; verificar, aprobar y activar son acciones separadas del operador.</p>
             <code>Borrador → Revisión manual</code>
           </div>
         </div>

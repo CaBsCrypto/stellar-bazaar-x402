@@ -14,6 +14,11 @@ import { getPaymentFlow, paymentFlowCapability } from "./payment-flow";
 import { selfListingIntakeConfigured } from "./provider-self-listing";
 import { publicProviderReviewConfigured } from "./provider-submission-http";
 import { reviewSharedConfigured } from "./provider-review-runtime";
+import { bazaarRoles, skillPackage } from "./bazaar-skills";
+export interface ProviderMcpHandlers {
+  submit(body: unknown): Promise<{ ok: boolean; status: number; body: unknown }>;
+  status(submissionId: string): Promise<{ ok: boolean; status: number; body: unknown }>;
+}
 
 const result = ok;
 
@@ -49,10 +54,10 @@ const decodeCursor = (raw: string): number | null => {
   }
 };
 
-export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{ ok: boolean; body: unknown }>) {
+export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{ ok: boolean; body: unknown }>, provider?: ProviderMcpHandlers) {
   const server = new McpServer({
     name: "stellar-bazaar-discovery",
-    version: "0.5.0",
+    version: "0.6.0",
   });
 
   server.registerTool(
@@ -67,7 +72,8 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
         ...pilotCapabilityCard,
         historyConnection,
         testnetFunding: { instructions: testnetFundingInstructions, automatic: false },
-        writes: [],
+        writes: ["submit_provider_request"],
+        skills: { tool: "get_bazaar_skills", roles: bazaarRoles },
         registry: {
           discovery: "read-only",
           mutationViaMcp: false,
@@ -77,6 +83,8 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
           guide: "/PROVIDER_ONBOARDING.md",
           validationTool: "validate_service_card",
           submissionEndpoint: "/api/provider-self-listing",
+          submissionTool: "submit_provider_request",
+          statusTool: "get_provider_request_status",
           intakeEnabled: selfListingIntakeConfigured() && (publicProviderReviewConfigured() || (!process.env.VERCEL && (!!process.env.BAZAAR_PROVIDER_REVIEW_DIR || reviewSharedConfigured()))),
           submissionStorage: reviewSharedConfigured()?"shared-redis":"local-file-pilot",
           publicIntakeEnabled: selfListingIntakeConfigured() && publicProviderReviewConfigured(),
@@ -322,5 +330,24 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
       return result(response.body);
     },
   );
+  server.registerTool("get_bazaar_skills", {
+    description: "Read canonical Bazaar buyer, seller and recovery instructions. Reading does not authorize effects.",
+    inputSchema: { role: z.enum(bazaarRoles).optional() }, annotations: { readOnlyHint: true },
+  }, async ({ role }) => result({ skills: (role ? [role] : [...bazaarRoles]).map(skillPackage) }));
+  server.registerTool("submit_provider_request", {
+    description: "Submit an authorized service request, not a publication. Save UUID, 32-byte token and frozen conditions privately before calling. Token is HTTP Authorization Bearer, never an argument. Recover the same intent after uncertainty.",
+    inputSchema: z.object({ submissionId: z.string().uuid(), card: z.record(z.string(), z.unknown()), controlProof: z.object({ method: z.enum(["dns-txt", "http-well-known"]), domain: z.string().max(253) }).strict() }).strict(),
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+  }, async (body) => {
+    if (!provider) return errorEnvelope("INTAKE_DISABLED", "Provider request context unavailable.", "discover");
+    const response = await provider.submit(body); return { ...result(response.body), isError: !response.ok };
+  });
+  server.registerTool("get_provider_request_status", {
+    description: "Read one request with its original UUID and HTTP Authorization Bearer token. Does not grant approval or access by ownerId.",
+    inputSchema: z.object({ submissionId: z.string().uuid() }).strict(), annotations: { readOnlyHint: true, openWorldHint: false },
+  }, async ({ submissionId }) => {
+    if (!provider) return errorEnvelope("INTAKE_DISABLED", "Provider request context unavailable.", "discover");
+    const response = await provider.status(submissionId); return { ...result(response.body), isError: !response.ok };
+  });
   return server;
 }

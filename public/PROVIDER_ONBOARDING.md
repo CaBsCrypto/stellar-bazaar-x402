@@ -14,9 +14,9 @@ En https://bazaar.browns.studio/publish puedes describir el servicio y copiar in
 
 Conecta el MCP Streamable HTTP en https://bazaar.browns.studio/api/mcp y usa `initialize`, `tools/list`, `tools/call`. `GET /api/mcp` solo describe capacidades. Comprueba las herramientas anunciadas por el servidor antes de usarlas.
 
-Las ocho herramientas actuales son `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `list_workflow_bundles`, `get_workflow_bundle`, `validate_service_card` y `get_operation_history`. El historial tiene autenticación propia y no es necesario para preparar un proveedor. Para validar, llama a `validate_service_card` con `{"card": TU_MANIFEST_JSON}`. Revisa `valid` y cada regla en `outcomes`; corrige los fallos antes de continuar.
+Las herramientas de descubrimiento e historial son `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `list_workflow_bundles`, `get_workflow_bundle`, `validate_service_card` y `get_operation_history`. El historial tiene autenticación propia y no es necesario para preparar un proveedor. Para validar, llama a `validate_service_card` con `{"card": TU_MANIFEST_JSON}`. Revisa `valid` y cada regla en `outcomes`; corrige los fallos antes de continuar.
 
-El MCP es de solo lectura. Para el alta solo ofrece validación: no crea la API, no envía solicitudes de revisión, no comprueba control, no publica y no firma pagos. WebMCP es otra interfaz del navegador. Como alternativa HTTP, envía el manifest JSON directamente con `Content-Type: application/json` a `POST https://bazaar.browns.studio/api/conformance/service-card`; comprueba `valid`, no solo que haya respuesta.
+Consulta get_bazaar_skills con {"role":"seller"} o /skills/seller/SKILL.md para el recorrido canónico. El MCP valida y permite enviar y consultar solicitudes mediante submit_provider_request y get_provider_request_status; no crea la API, comprueba control, aprueba, publica ni firma pagos. WebMCP es otra interfaz del navegador. Como alternativa HTTP, envía el manifest JSON directamente con `Content-Type: application/json` a `POST https://bazaar.browns.studio/api/conformance/service-card`; comprueba `valid`, no solo que haya respuesta.
 
 La validación comprueba formato y reglas; no prueba disponibilidad, control del dominio, seguridad, liquidación ni entrega. Para x402, documenta el desafío 402, la autorización, la verificación y liquidación, la conservación del resultado y la recuperación sin repetir un pago incierto. Preparar este paquete no necesita compra ni fondos. Una prueba de pago requiere autorización y configuración independientes.
 
@@ -79,3 +79,16 @@ La incorporación al catálogo requiere una acción del operador con controles y
 Antes de afirmar que está publicado, el operador debe confirmar el alta y debe comprobarse que discovery devuelve la ficha aceptada. Estar en discovery no certifica seguridad, disponibilidad ni una compra completada. Resume siempre qué está listo, qué se comprobó y qué depende del operador.
 
 Para comprobar el alta, consulta `list_services`, `search_services` y `get_service` por el identificador aceptado. La alternativa HTTP pública es `GET /api/discovery/resources` en el mismo origen; contrasta la ficha en `results` por su `id`, endpoint y condiciones. Si informa disponibilidad parcial o error del registro, conserva esa limitación. No confundas aparición en discovery con disponibilidad de pago.
+
+## Ejemplo MCP desde el repositorio
+
+Con Node 22.18+ y npm ci, prepara fuera del repositorio un directorio privado nuevo:
+
+```sh
+node examples/agent-provider-mcp.mjs prepare /ruta/privada/nueva https://bazaar.browns.studio servicio.json dns-txt api.tudominio.com
+# Revisa y autoriza las condiciones antes de enviar:
+node examples/agent-provider-mcp.mjs submit /ruta/privada/nueva
+node examples/agent-provider-mcp.mjs status /ruta/privada/nueva
+```
+
+request.json contiene el token: no lo compartas. response.json conserva el comprobante. Para HTTP .well-known sustituye dns-txt por http-well-known. En Windows usa una ruta privada absoluta. No uses esta URL pública en pruebas sintéticas: usa un localhost explícito. No configures credenciales administrativas o de historial como acceso de solicitud.

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { buyerConnectionPrompt } from "@/lib/testnet-funding";
+import { bazaarPrompts } from "@/lib/bazaar-skills";
 import {ButtonLink} from "@/components/ui";
 import {CopyText} from "@/components/ui/CopyText";
 
@@ -50,12 +51,9 @@ console.log(services);
     auditor: "Me interesa ofrecer análisis de contratos Soroban. Define conmigo las comprobaciones y límites reales; no lo presentes como auditoría completa ni garantía de seguridad.",
     oracle: "Me interesa ofrecer consultas sobre pares y liquidez. Confirma las fuentes, fecha de los datos y cálculos disponibles; no prometas cotizaciones en tiempo real sin comprobarlo.",
   };
-  const sellerPrompt = `Ayúdame a ofrecer mi servicio en Bazaar. Lee la guía y revisa todas las herramientas disponibles. Aclara conmigo qué entregaré y su precio; prepara la integración reutilizando mi API si ya existe. Valida lo necesario y dime qué falta para solicitar revisión manual.${sellerExample === "custom" ? "" : "\n\n" + sellerScopes[sellerExample]}
+  const sellerPrompt = `${bazaarPrompts.seller}${sellerExample === "custom" ? "" : "\n\n" + sellerScopes[sellerExample]}
 
-Validar no equivale a publicar. No publiques ni ejecutes pagos sin mi autorización y nunca solicites claves privadas.
-
-Guía de preparación y revisión: https://bazaar.browns.studio/PROVIDER_ONBOARDING.md
-No necesito crear una cuenta. El MCP es de solo lectura; validate_service_card valida la ficha, no la publica. Si la recepción está deshabilitada, conserva un paquete validado e indica lo que depende del operador.
+Skill: https://bazaar.browns.studio/skills/seller/SKILL.md
 MCP: https://bazaar.browns.studio/api/mcp`;
 
   const sellerCliCode = `# Dentro del repositorio, con dependencias instaladas y Node.js 22.18+.
@@ -102,7 +100,7 @@ const envelope = createDeliverableBundle(card.id, { output: "Muestra ilustrativa
   const advanced=<>
    <div className="ui-chips" aria-label="Formato de instrucciones">{buyer ? (["prompt","mcp_json","sdk"] as BuyerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={buyerFormat===fmt} onClick={()=>setBuyerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="mcp_json"?"MCP JSON":"Ejemplo SDK"}</button>):(["prompt","cli","sdk"] as SellerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={sellerFormat===fmt} onClick={()=>setSellerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="cli"?"Bazaar CLI":"Provider Kit"}</button>)}</div>
    {!buyer && sellerFormat==="prompt" && <div className="ui-actions" aria-label="Ejemplos de proveedor">{(["custom","scriptwriter","auditor","oracle"] as SellerExample[]).map(ex=><button type="button" className="ui-chip" key={ex} aria-pressed={sellerExample===ex} onClick={()=>setSellerExample(ex)}>{ex==="scriptwriter"?"Guiones":ex==="auditor"?"Auditoría":ex==="oracle"?"Oráculo":"Personalizado"}</button>)}</div>}
-   <details className="connect-help"><summary>Cómo usar estas instrucciones</summary><p>{buyer ? "Copia una plantilla o la configuración MCP. El MCP HTTP es de solo lectura: permite descubrir e inspeccionar, no comprar ni firmar. WebMCP es una interfaz distinta del navegador. Para ver acciones externas en el historial, tu agente debe integrar su reporte." : "Estas plantillas son ejemplos para desarrollar un proveedor, no servicios ya disponibles. Publicar requiere validación, prueba de control y revisión manual."}</p><p>Copiar no envía mensajes, no publica un servicio ni ejecuta pagos. Revisa la plantilla antes de usarla; los ejemplos SDK requieren el entorno del repositorio.</p></details>
+   <details className="connect-help"><summary>Cómo usar estas instrucciones</summary><p>{buyer ? "Copia una plantilla o la configuración MCP. El MCP permite descubrir, validar y enviar solicitudes de proveedores; no compra ni firma. WebMCP es una interfaz distinta del navegador. Para ver acciones externas en el historial, tu agente debe integrar su reporte." : "Estas plantillas son ejemplos para desarrollar un proveedor, no servicios ya disponibles. Publicar requiere validación, prueba de control y revisión manual."}</p><p>Copiar no envía mensajes, no publica un servicio ni ejecuta pagos. Revisa la plantilla antes de usarla; los ejemplos SDK requieren el entorno del repositorio.</p></details>
    {buyer && <details className="connect-help"><summary>¿Tu agente necesita fondos de prueba?</summary><p>Si ya tiene saldo, puede continuar. Sozu permite financiar su wallet de Testnet existente o crear una de pruebas si todavía no tiene. Para XLM, la guía explica cómo financiar una cuenta de pruebas con Friendbot. El agente necesita un firmante compatible y el servicio debe aceptar ese activo. No compartas claves secretas.</p><a href="https://faucet.sozu.capital/" target="_blank" rel="noopener noreferrer">Conocer Sozu Faucet ↗</a><p>El prompt enlaza la guía de fondos, que el agente consultará solo si la necesita.</p></details>}
   </>;
   return <section className="connect-instructions" aria-label={buyer?"Conexión del comprador":"Preparación del proveedor"}>

@@ -4,7 +4,7 @@ Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibili
 
 ## Conexión y límites
 - MCP Streamable HTTP: POST /api/mcp, JSON-RPC 2.0. GET /api/mcp describe capacidades; no sustituye initialize + tools/list + tools/call.
-- El MCP HTTP es de solo lectura: no ejecuta servicios, no firma, no crea wallets ni autoriza compras. No expone execute_service.
+- El MCP HTTP descubre, valida y admite solicitudes de proveedores: no ejecuta servicios, no firma, no crea wallets ni autoriza compras. No expone execute_service.
 - WebMCP es la interfaz del navegador; GET /api/webmcp/spec describe esa interfaz distinta, no las herramientas del servidor MCP HTTP.
 - Búsqueda REST: GET /api/discovery/search?query={query}.
 - Catálogo REST: GET /api/discovery/resources.
@@ -12,7 +12,7 @@ Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibili
 - Validación sin publicación: POST /api/conformance/service-card.
 - Registro público: POST /api/publisher/ingest es una acción administrativa separada, habilitada por el operador con su credencial y almacenamiento durable. Esa credencial no se entrega al proveedor. Preparar, validar o solicitar revisión no publica ni aprueba un servicio. Consulta https://bazaar.browns.studio/PROVIDER_ONBOARDING.md para preparar un servicio sin crear una cuenta ni disponer del repositorio. La recepción de propuestas puede estar deshabilitada; conserva el paquete validado y comunica el paso pendiente del operador.
 
-## Las ocho herramientas del MCP HTTP
+## Herramientas del MCP HTTP
 1. get_bazaar_capabilities: capacidades, políticas y límites.
 2. list_services: fichas del catálogo; inspecciona disponibilidad.
 3. search_services: búsqueda léxica por query y paginación.
@@ -21,6 +21,9 @@ Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibili
 6. get_workflow_bundle: detalle de un workflow por id.
 7. validate_service_card: validar una ficha sin publicarla.
 8. get_operation_history: historial privado con Authorization: Bearer configurado en el transporte HTTP. No pongas credenciales en argumentos, prompts ni logs; sin autenticación debe denegar acceso.
+9. get_bazaar_skills: instrucciones canónicas de comprador, vendedor y recuperación.
+10. submit_provider_request: enviar una solicitud autorizada con acceso privado en la cabecera; no publica.
+11. get_provider_request_status: recuperar la misma solicitud con su identificador y acceso.
 
 ## Flujo comprador
 1. Aclara necesidad y compara opciones con search_services y get_service.
@@ -48,3 +51,5 @@ Recibir fondos de prueba no autoriza una compra: respeta el presupuesto y las co
 Conectar MCP no configura un firmante ni concede presupuesto. Consulta esta guía para los fondos y `/HISTORY_CONNECTION.md` para registrar entregas privadas.
 
 Friendbot (https://friendbot.stellar.org) permite financiar cuentas de pruebas con XLM para las reservas y comisiones. Tener XLM no significa que un servicio lo acepte como pago: comprueba siempre el activo declarado. No cambies de activo ni repitas el pago después de iniciarlo.
+
+Suite descargable: /skills/buyer/SKILL.md, /skills/seller/SKILL.md, /skills/recovery/SKILL.md. Consulta get_bazaar_skills y tools/list antes de actuar. El token de solicitud va en Authorization, nunca en argumentos de herramientas ni URLs.
