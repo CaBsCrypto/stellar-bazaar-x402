@@ -268,14 +268,10 @@ export function ActivityDashboard({
       return;
     }
     void refresh();
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 5000);
     return () => {
       generation.current++;
       controllers.current.forEach((c) => c.abort());
       controllers.current.clear();
-      clearInterval(interval);
     };
     // Pagination cursors intentionally do not restart the lifecycle. Refresh replaces the current page set.
   }, [refresh, review]);

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createActivityStore } from "../lib/activity-store.ts";
@@ -327,3 +328,12 @@ try {
 console.log(
   "Activity panel: owner isolation, immutable/idempotent events, pagination, legacy records, private results/files, unavailable delivery, SDK telemetry failure without repay PASS. Redis here is a model, not a real server.",
 );
+
+const dashboardSource = readFileSync(new URL("../components/ActivityDashboard.tsx",import.meta.url),"utf8");
+assert(!/setInterval/.test(dashboardSource), "Activity must not poll automatically");
+assert(dashboardSource.includes("void refresh();"), "Initial load remains");
+assert(dashboardSource.includes("onClick={() => void refresh()}"), "Explicit manual refresh remains");
+assert(dashboardSource.includes("controllers.current.forEach((c) => c.abort())"), "Cleanup cancels in-flight requests");
+assert(dashboardSource.includes("generation.current++"), "Late response guard remains");
+console.log("PASS static activity lifecycle contract: initial/manual refresh, no polling, abort/generation preserved.");
+
