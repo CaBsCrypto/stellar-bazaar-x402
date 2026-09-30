@@ -191,12 +191,17 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       createWorkspaceSchema.parse(input); workspaceHashSchema.parse(bootstrapHash);
       const initial = await backend.read(), initialRegistry = validateRegistry(initial.registryRaw, initial.marker, reservations());
       const ownerId = initialRegistry.workspaces.find(m => m.creationId === input.creationId)?.ownerId ?? "ow_" + randomUUID().replaceAll("-", "");
-      return backend.transact(ownerId, async (s, commit) => {
+      const authenticateReplay = (existing: Meta) => {
+        if (existing.bootstrapHash !== bootstrapHash) throw new WorkspaceError("UNAUTHORIZED", 401);
+        if (existing.initialHumanHash !== input.humanAccessHash || existing.initialAgentHash !== input.agentAccessHash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409);
+      };
+      const result = await backend.transact<{ rebindOwnerId: string } | { record: ReturnType<typeof receipt>; created: boolean }>(ownerId, async (s, commit) => {
         const legacy = reservations(), registry = validateRegistry(s.registryRaw, s.marker, legacy), existing = registry.workspaces.find(m => m.creationId === input.creationId);
         if (existing) {
-          if (existing.bootstrapHash !== bootstrapHash) throw new WorkspaceError("UNAUTHORIZED", 401);
-          if (existing.initialHumanHash !== input.humanAccessHash || existing.initialAgentHash !== input.agentAccessHash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409);
-          if (existing.ownerId !== ownerId) throw new WorkspaceError("WORKSPACE_CONFLICT", 409);
+          authenticateReplay(existing);
+          // Another creator may have committed after our initial registry read.
+          // Bind one fresh read to its stable owner before returning a receipt.
+          if (existing.ownerId !== ownerId) return { rebindOwnerId: existing.ownerId };
           validateDocument(s.documentRaw, existing);
           return { record: receipt(existing), created: false };
         }
@@ -210,6 +215,13 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         const d = emptyDocument(ownerId), raw = JSON.stringify(d);
         const meta: Meta = { creationId: input.creationId, workspaceId: randomUUID(), ownerId, agentId: "agent_" + randomUUID().replaceAll("-", ""), bootstrapHash, initialHumanHash: input.humanAccessHash, initialAgentHash: input.agentAccessHash, humanHash: input.humanAccessHash, agentHash: input.agentAccessHash, retiredHashes: [], accessIntents: [], generation: 1, revoked: false, createdAt: new Date().toISOString(), documentRevision: d.revision, documentBytes: bytes(raw) };
         registry.workspaces.push(meta); registry.revision = randomUUID(); const reg = JSON.stringify(registry); validateRegistry(reg, "workspace-v1", legacy); await commit(reg, raw); return { record: receipt(meta), created: true };
+      });
+      if (!("rebindOwnerId" in result)) return result;
+      return backend.transact(result.rebindOwnerId, async s => {
+        const registry = validateRegistry(s.registryRaw, s.marker, reservations()), existing = registry.workspaces.find(m => m.creationId === input.creationId);
+        if (!existing || existing.ownerId !== result.rebindOwnerId) throw unavailable("creation-owner-rebind");
+        authenticateReplay(existing); validateDocument(s.documentRaw, existing);
+        return { record: receipt(existing), created: false };
       });
     }); },
     async changeAccess(workspaceId: string, bootstrapHash: string, input: z.infer<typeof workspaceAccessSchema>) { return safe(async () => {

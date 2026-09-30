@@ -5,6 +5,8 @@ import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { spawn } from 'node:child_process';
+import fsPromises from 'node:fs/promises';
+import { syncBuiltinESMExports } from 'node:module';
 import { Redis } from '@upstash/redis';
 import { NextRequest } from 'next/server.js';
 import { createRedisWorkspaceStore, createFileWorkspaceStore, configuredWorkspaceStore, setWorkspaceStoreForTests, READ_WORKSPACE_LUA, COMMIT_WORKSPACE_LUA } from '../lib/workspace-store.ts';
@@ -100,6 +102,20 @@ try {
   process.env.BAZAAR_WORKSPACE_BACKEND='redis'; delete process.env.BAZAAR_WORKSPACE_REDIS_REST_URL; delete process.env.BAZAAR_WORKSPACE_REDIS_REST_TOKEN; process.env.UPSTASH_REDIS_REST_URL='https://unused.invalid'; process.env.UPSTASH_REDIS_REST_TOKEN='unused'; assert.throws(()=>configuredWorkspaceStore(),{code:'WORKSPACE_UNAVAILABLE'});
   delete process.env.BAZAAR_ENABLE_OPEN_WORKSPACES; assert.throws(()=>configuredWorkspaceStore(),{code:'WORKSPACES_DISABLED'}); process.env.BAZAAR_ENABLE_OPEN_WORKSPACES='true';
 
+  // Force all candidate owner selections to observe an empty registry. Hold the
+  // read's return only after the real unlink, so the next process can take the lock.
+  const barrierDir=join(dir,'creation-barrier'),barrierStore=createFileWorkspaceStore(barrierDir),barrierLock=join(barrierDir,'local-test','lock');
+  const originalUnlink=fsPromises.unlink;let initialReads=0,releaseInitialReads;const initialReadsReady=new Promise(r=>releaseInitialReads=r);
+  fsPromises.unlink=async path=>{await originalUnlink(path);if(path===barrierLock&&initialReads<6){initialReads++;if(initialReads===6)releaseInitialReads();await initialReadsReady;}};
+  syncBuiltinESMExports();setWorkspaceStoreForTests(barrierStore);
+  try{
+    const bc=credentials(),bb=body(bc),replies=await Promise.all(Array.from({length:6},()=>http.POST(request('/api/workspaces',bc.bootstrap,bb))));
+    assert.equal(initialReads,6);assert.deepEqual(replies.map(r=>r.status).sort(),[200,200,200,200,200,201]);
+    const records=await Promise.all(replies.map(async r=>(await r.json()).record));assert.equal(new Set(records.map(r=>r.ownerId)).size,1);
+    const registry=JSON.parse(await readFile(join(barrierDir,'local-test','registry.json'),'utf8'));assert.equal(registry.workspaces.length,1);
+    assert.equal(registry.workspaces[0].ownerId,records[0].ownerId);
+  }finally{setWorkspaceStoreForTests(undefined);fsPromises.unlink=originalUnlink;syncBuiltinESMExports();}
+
   // A loopback Redis REST protocol double verifies command encoding, namespaces and CAS.
   const data=new Map(); let loseAck=false, commits=0;
   server=createServer(async(req,res)=>{try { let text=''; for await(const chunk of req) text+=chunk; const command=JSON.parse(text); assert.equal(command[0].toUpperCase(),'EVAL'); const script=command[1], count=Number(command[2]), keys=command.slice(3,3+count), args=command.slice(3+count); assert.equal(count,3); assert.ok(keys.every(k=>k.startsWith('bazaar-workspace:local-test:{local-test}:'))); assert.ok(!/EXPIRE|SETEX/.test(script)); let result; if(script===READ_WORKSPACE_LUA) result=keys.map(k=>data.get(k)??''); else {assert.equal(script,COMMIT_WORKSPACE_LUA); if(keys.some((k,i)=>(data.get(k)??'')!==args[i])) result=0; else {data.set(keys[0],args[3]);if(args[4])data.set(keys[1],args[4]);data.set(keys[2],'workspace-v1'); commits++; result=1;if(loseAck){loseAck=false;res.destroy();return;}}}res.setHeader('content-type','application/json');res.end(JSON.stringify({result})); }catch{res.statusCode=500;res.end('{}');}});
@@ -122,7 +138,7 @@ try {
   async function childServer(){return new Promise((resolveChild,reject)=>{const child=spawn(process.execPath,['--experimental-strip-types','--input-type=module','-e',childSource],{cwd:process.cwd(),env:{...isolatedEnv,NODE_ENV:'test',BAZAAR_ENABLE_OPEN_WORKSPACES:'true',BAZAAR_WORKSPACE_BACKEND:'file',BAZAAR_WORKSPACE_FILE_DIRECTORY:shared}});children.push(child);let error='';child.stderr.on('data',v=>error+=v);child.stdout.once('data',v=>resolveChild('http://127.0.0.1:'+Number(v.toString().trim())));child.on('error',reject);child.on('exit',code=>{if(code)reject(Error(error));});});}
   const urls=await Promise.all([childServer(),childServer()]), pc=credentials(), pb=body(pc);
   const invoke=async(index,path,token,value)=>{const response=await fetch(urls[index]+path,{method:value===undefined?'GET':'POST',headers:{authorization:'Bearer '+token,...(value===undefined?{}:{'content-type':'application/json'})},...(value===undefined?{}:{body:JSON.stringify(value)})});return {status:response.status,body:await response.json()};};
-  const parallel=await Promise.all(Array.from({length:8},(_,i)=>invoke(i%2,'/api/workspaces',pc.bootstrap,pb)));assert.equal(parallel.filter(r=>r.status===201).length,1);assert.ok(parallel.every(r=>[200,201,409].includes(r.status)),JSON.stringify(parallel.map(r=>({status:r.status,error:r.body.error?.code}))));const pr=parallel.find(r=>r.status===201).body.record;
+  const parallel=await Promise.all(Array.from({length:8},(_,i)=>invoke(i%2,'/api/workspaces',pc.bootstrap,pb)));assert.equal(parallel.filter(r=>r.status===201).length,1);assert.ok(parallel.every(r=>[200,201].includes(r.status)),JSON.stringify(parallel.map(r=>({status:r.status,error:r.body.error?.code}))));const pr=parallel.find(r=>r.status===201).body.record;
   assert.equal((await invoke(1,'/api/workspaces',pc.bootstrap,pb)).body.record.ownerId,pr.ownerId);
   assert.equal((await invoke(0,'/api/operations',pc.agent,operation)).status,201);const processRead=await invoke(1,'/api/operations',pc.human);assert.equal(processRead.status,200);assert.equal(processRead.body.records.length,1);assert.equal(processRead.body.records[0].agentId,pr.agentId);
   await Promise.all(children.map(child=>new Promise(r=>{child.once('exit',r);child.kill();})));children=[];
@@ -149,5 +165,5 @@ try {
     for(let i=0;i<100;i++){try{await quotas.sendHumanMessage(first.ownerId,{conversationId:'capacity',messageId:'m'+i,taskId:'t'+i,text:'x'.repeat(2000)});}catch(e){assert.equal(e.code,'WORKSPACE_CAPACITY');limited=true;break;}}
     assert.equal(limited,true);assert.ok(Buffer.byteLength(await readFile(join(quotaDir,'local-test','owner-'+first.ownerId+'.json'),'utf8'))<=WORKSPACE_LIMITS.ownerBytes);
   }finally{Date.now=realNow;}
-  console.log(JSON.stringify({ok:true,fileHttpProcesses:3,fileReboot:true,concurrentCreates:8,boundedLockContention:true,redisRestProtocolDouble:true,redisConcurrentCreates:8,atomicGeneration:true,rotationTombstones:true,lostAckRecovery:true,corruptionFailsClosed:true,legacyCollision:true,unpaidOnly:true,noExternalUploads:true,noCredentialAliases:true,limitsEnforced:true,limits:WORKSPACE_LIMITS}));
+  console.log(JSON.stringify({ok:true,fileHttpProcesses:3,fileReboot:true,concurrentCreates:8,creationBarrierRequests:6,identicalCreationRebind:true,boundedLockContention:true,redisRestProtocolDouble:true,redisConcurrentCreates:8,atomicGeneration:true,rotationTombstones:true,lostAckRecovery:true,corruptionFailsClosed:true,legacyCollision:true,unpaidOnly:true,noExternalUploads:true,noCredentialAliases:true,limitsEnforced:true,limits:WORKSPACE_LIMITS}));
 } finally { setWorkspaceStoreForTests(undefined); children.forEach(c=>c.kill()); if(server)await new Promise(r=>server.close(r)); assert.ok(resolve(dir).startsWith(resolve(tmpdir()))); assert.ok(dir.includes('bazaar-workspace-core-')); await rm(dir,{recursive:true,force:true}); for(const key of Object.keys(process.env)) if(!(key in previous))delete process.env[key];Object.assign(process.env,previous); }

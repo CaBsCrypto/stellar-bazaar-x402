@@ -33,7 +33,7 @@ try {
   }
   const parallel=await Promise.all(Array.from({length:6},(_,i)=>invoke('/api/workspaces',tokens.bootstrap,body,{},i%2?secondBase:base)));
   assert.equal(parallel.filter(r=>r.status===201).length,1,JSON.stringify({responses:parallel.map(r=>({status:r.status,code:r.body.error?.code})),diagnostics:diagnostics()}));
-  assert.ok(parallel.every(r=>[200,201,409].includes(r.status)),JSON.stringify({responses:parallel.map(r=>({status:r.status,code:r.body.error?.code})),diagnostics:diagnostics()}));
+  assert.ok(parallel.every(r=>[200,201].includes(r.status)),JSON.stringify({responses:parallel.map(r=>({status:r.status,code:r.body.error?.code})),diagnostics:diagnostics()}));
   assert.equal(new Set(parallel.filter(r=>r.body.record).map(r=>r.body.record.ownerId)).size,1);
   for(let round=0;round<15;round++){
     const raced=await Promise.all(Array.from({length:6},(_,i)=>invoke('/api/workspaces',tokens.bootstrap,body,{},i%2?secondBase:base)));
