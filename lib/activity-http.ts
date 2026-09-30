@@ -9,6 +9,10 @@ import {
 } from "./operation-history-store.ts";
 import { configuredActivityStore } from "./activity-store.ts";
 import { activitySchema, summarizeTasks } from "./activity.ts";
+import { resolveHistoryPrincipal, type ResolvedHistoryPrincipal } from "./workspace-auth.ts";
+import { configuredWorkspaceStore } from "./workspace-store.ts";
+import { assertWorkspaceRequest, workspaceFailure } from "./workspace-http.ts";
+import { WorkspaceError } from "./workspace-types.ts";
 const headers = {
   "Cache-Control": "private, no-store",
   Vary: "Authorization",
@@ -18,6 +22,7 @@ function fail(code: string, status: number) {
   return Response.json({ error: { code } }, { status, headers });
 }
 function errorResponse(e: unknown) {
+  if (e instanceof WorkspaceError) return workspaceFailure(e);
   return e instanceof HistoryAuthError
     ? fail(
         e.code,
@@ -33,18 +38,22 @@ function errorResponse(e: unknown) {
 }
 export function createActivityHandlers(
   deps: {
-    authenticate?: typeof authenticateHistory;
+    authenticate?: typeof authenticateHistory | typeof resolveHistoryPrincipal;
     operations?: typeof configuredHistoryStore;
     events?: typeof configuredActivityStore;
   } = {},
 ) {
-  const auth = deps.authenticate ?? authenticateHistory,
+  const auth = deps.authenticate ?? resolveHistoryPrincipal,
     operations = deps.operations ?? configuredHistoryStore,
     events = deps.events ?? configuredActivityStore;
   return {
     async GET(request: Request) {
       try {
-        const principal = auth(request.headers.get("authorization"));
+        const url = new URL(request.url), origin = request.headers.get("origin");
+        if (origin && origin !== url.origin) return fail("INVALID_REQUEST", 400);
+        const principal: ResolvedHistoryPrincipal = await auth(request.headers.get("authorization"));
+        if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
+        const workspaceStore = principal.workspace ? configuredWorkspaceStore().forPrincipal(principal.workspace) : undefined;
         const q = new URL(request.url).searchParams;
         if (
           [...q.keys()].some(
@@ -133,8 +142,8 @@ export function createActivityHandlers(
           }
         }
         const [allRecords, allEvents] = await Promise.all([
-          operations().all(principal.ownerId),
-          events().all(principal.ownerId),
+          (workspaceStore?.operations ?? operations()).all(principal.ownerId),
+          (workspaceStore?.events ?? events()).all(principal.ownerId),
         ]);
         if (q.get("download") === "1") {
           const record = allRecords.find((r) => r.id === q.get("operationId"));
@@ -254,7 +263,8 @@ export function createActivityHandlers(
           origin = request.headers.get("origin");
         if ((origin && origin !== url.origin) || url.search)
           return fail("INVALID_REQUEST", 400);
-        const principal = auth(request.headers.get("authorization"), true);
+        const principal: ResolvedHistoryPrincipal = await auth(request.headers.get("authorization"), true);
+        if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
         if (
           request.headers.get("content-type")?.split(";")[0] !==
           "application/json"
@@ -282,7 +292,7 @@ export function createActivityHandlers(
         } catch {
           return fail("INVALID_EVENT", 400);
         }
-        const saved = await events().append(principal.ownerId, input);
+        const saved = await (principal.workspace ? configuredWorkspaceStore().forPrincipal(principal.workspace).events : events()).append(principal.ownerId, input);
         return Response.json(
           { version: "2", ...saved },
           { status: saved.created ? 201 : 200, headers },

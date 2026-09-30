@@ -15,6 +15,9 @@ import {
   DeliverableError,
 } from "./deliverable-store.ts";
 import { configuredPrivateS3 } from "./deliverable-s3.ts";
+import { resolveHistoryPrincipal, type ResolvedHistoryPrincipal } from "./workspace-auth.ts";
+import { WorkspaceError } from "./workspace-types.ts";
+import { assertWorkspaceRequest, workspaceFailure } from "./workspace-http.ts";
 const headers = {
   "Cache-Control": "private, no-store",
   Vary: "Authorization",
@@ -50,13 +53,13 @@ async function json(request: Request) {
 }
 export function createDeliverableHandlers(
   deps: {
-    auth?: typeof authenticateHistory;
+    auth?: typeof authenticateHistory | typeof resolveHistoryPrincipal;
     history?: typeof configuredHistoryStore;
     store?: typeof configuredDeliverableStore;
     objects?: typeof configuredPrivateS3;
   } = {},
 ) {
-  const auth = deps.auth ?? authenticateHistory,
+  const auth = deps.auth ?? resolveHistoryPrincipal,
     history = deps.history ?? configuredHistoryStore,
     store = deps.store ?? configuredDeliverableStore,
     objects = deps.objects ?? configuredPrivateS3;
@@ -69,10 +72,11 @@ export function createDeliverableHandlers(
         origin = request.headers.get("origin");
       if (origin && origin !== url.origin)
         throw new DeliverableError("INVALID_ORIGIN", 400);
-      const principal = auth(
+      const principal: ResolvedHistoryPrincipal = await auth(
         request.headers.get("authorization"),
         ["create", "upload", "confirm"].includes(action),
       );
+      if (principal.workspace) { assertWorkspaceRequest(request, true); throw new WorkspaceError("WORKSPACE_UPLOADS_DISABLED", 403); }
       if (action === "list") {
         if ([...url.searchParams.keys()].some((k) => k !== "operationId"))
           throw new DeliverableError("INVALID_QUERY", 400);
@@ -159,6 +163,7 @@ export function createDeliverableHandlers(
         { headers },
       );
     } catch (error) {
+      if (error instanceof WorkspaceError) return workspaceFailure(error);
       const code =
         error instanceof DeliverableError
           ? error.code

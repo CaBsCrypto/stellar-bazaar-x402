@@ -60,3 +60,12 @@ export function authenticateHistory(authorization: string | null, write = false,
   if (write && principal.permission !== "write") throw new HistoryAuthError("FORBIDDEN");
   return principal;
 }
+
+/** Validate the legacy registry through its unchanged synchronous authenticator. */
+export function legacyHistoryReservations(): { ownerIds: string[]; hashes: string[] } {
+  if (process.env.BAZAAR_HISTORY_ACCOUNTS_JSON === undefined) return { ownerIds: [], hashes: [] };
+  try { authenticateHistory("Bearer " + "a".repeat(43)); }
+  catch (e) { if (!(e instanceof HistoryAuthError) || e.code === "HISTORY_UNAVAILABLE") throw new HistoryAuthError("HISTORY_UNAVAILABLE"); }
+  const accounts = JSON.parse(process.env.BAZAAR_HISTORY_ACCOUNTS_JSON) as { ownerId: string; readTokenHash: string; writeTokenHash: string }[];
+  return { ownerIds: accounts.map(a => a.ownerId), hashes: accounts.flatMap(a => [a.readTokenHash, a.writeTokenHash]) };
+}
