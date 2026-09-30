@@ -122,6 +122,7 @@ try {
   await new Promise(r=>server.listen(0,'127.0.0.1',r)); const redisUrl='http://127.0.0.1:'+server.address().port;
   const redisStore=()=>createRedisWorkspaceStore(new Redis({url:redisUrl,token:'synthetic',automaticDeserialization:false,retry:{retries:0},enableAutoPipelining:false}));
   const rc=credentials(), rb=body(rc); const concurrent=await Promise.allSettled(Array.from({length:8},()=>redisStore().createWorkspace(rb,hash(rc.bootstrap)))); const winners=concurrent.filter(v=>v.status==='fulfilled'&&v.value.created); assert.equal(winners.length,1); const rr=winners[0].value.record;
+  assert.ok(concurrent.every(v=>v.status==='fulfilled'));assert.equal(new Set(concurrent.map(v=>v.value.record.ownerId)).size,1);
   const recovered=await redisStore().createWorkspace(rb,hash(rc.bootstrap));assert.equal(recovered.created,false);assert.equal(recovered.record.ownerId,rr.ownerId);
   const before=commits;await redisStore().resolveHash(hash(rc.human));assert.equal(commits,before);
   loseAck=true;const uncertain=credentials(), ub=body(uncertain);await assert.rejects(()=>redisStore().createWorkspace(ub,hash(uncertain.bootstrap)),{code:'WORKSPACE_UNAVAILABLE'});assert.equal((await redisStore().createWorkspace(ub,hash(uncertain.bootstrap))).created,false);

@@ -1,4 +1,4 @@
-// Server-only persistence. No legacy Redis aliases, fallback, expiry or automatic mutation retry.
+// Server-only persistence. No legacy aliases, fallback, expiry or uncertain-outcome retry.
 import { createHash, randomUUID } from "node:crypto";
 import { channel } from "node:diagnostics_channel";
 import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
@@ -98,6 +98,8 @@ function enforceUnpaid(input: OperationHistoryInput) {
 }
 type Snapshot = { registryRaw: string; documentRaw: string; marker: string };
 interface Backend { read(ownerId?: string): Promise<Snapshot>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string) => Promise<void>) => Promise<T>): Promise<T> }
+// Only this error proves the Lua comparison rejected a write before any effect.
+class RedisCompareConflict extends WorkspaceError { constructor() { super("WORKSPACE_CONFLICT", 409); } }
 function validatePrefix(prefix: string) { if (!/^bazaar-workspace:(local-test|preview|production)$/.test(prefix)) throw unavailable(); return prefix; }
 function redisBackend(redis: WorkspaceRedis, prefix: string): Backend {
   validatePrefix(prefix);
@@ -112,7 +114,7 @@ function redisBackend(redis: WorkspaceRedis, prefix: string): Backend {
     const snapshot = await read(ownerId);
     return callback(snapshot, async (registry, document) => {
       const result = await redis.eval(COMMIT_WORKSPACE_LUA, keys(ownerId), [snapshot.registryRaw, snapshot.documentRaw, snapshot.marker, registry, document]);
-      if (result === 0) throw new WorkspaceError("WORKSPACE_CONFLICT", 409);
+      if (result === 0) throw new RedisCompareConflict();
       if (result !== 1) throw unavailable();
     });
   } };
@@ -195,7 +197,9 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         if (existing.bootstrapHash !== bootstrapHash) throw new WorkspaceError("UNAUTHORIZED", 401);
         if (existing.initialHumanHash !== input.humanAccessHash || existing.initialAgentHash !== input.agentAccessHash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409);
       };
-      const result = await backend.transact<{ rebindOwnerId: string } | { record: ReturnType<typeof receipt>; created: boolean }>(ownerId, async (s, commit) => {
+      type CreationResult = { rebindOwnerId: string } | { record: ReturnType<typeof receipt>; created: boolean };
+      let result: CreationResult;
+      try { result = await backend.transact<CreationResult>(ownerId, async (s, commit) => {
         const legacy = reservations(), registry = validateRegistry(s.registryRaw, s.marker, legacy), existing = registry.workspaces.find(m => m.creationId === input.creationId);
         if (existing) {
           authenticateReplay(existing);
@@ -215,7 +219,15 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         const d = emptyDocument(ownerId), raw = JSON.stringify(d);
         const meta: Meta = { creationId: input.creationId, workspaceId: randomUUID(), ownerId, agentId: "agent_" + randomUUID().replaceAll("-", ""), bootstrapHash, initialHumanHash: input.humanAccessHash, initialAgentHash: input.agentAccessHash, humanHash: input.humanAccessHash, agentHash: input.agentAccessHash, retiredHashes: [], accessIntents: [], generation: 1, revoked: false, createdAt: new Date().toISOString(), documentRevision: d.revision, documentBytes: bytes(raw) };
         registry.workspaces.push(meta); registry.revision = randomUUID(); const reg = JSON.stringify(registry); validateRegistry(reg, "workspace-v1", legacy); await commit(reg, raw); return { record: receipt(meta), created: true };
-      });
+      }); } catch (e) {
+        if (!(e instanceof RedisCompareConflict)) throw e;
+        // CAS0 is a definite no-write outcome. Reconcile only a committed match;
+        // do not retry creation when another intent changed the global registry.
+        const current = await backend.read(), registry = validateRegistry(current.registryRaw, current.marker, reservations());
+        const existing = registry.workspaces.find(m => m.creationId === input.creationId);
+        if (!existing) throw unavailable("creation-contention");
+        authenticateReplay(existing); result = { rebindOwnerId: existing.ownerId };
+      }
       if (!("rebindOwnerId" in result)) return result;
       return backend.transact(result.rebindOwnerId, async s => {
         const registry = validateRegistry(s.registryRaw, s.marker, reservations()), existing = registry.workspaces.find(m => m.creationId === input.creationId);
@@ -246,17 +258,25 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       } else { meta.retiredHashes.push(meta.humanHash!, meta.agentHash!); meta.humanHash = null; meta.agentHash = null; meta.revoked = true; }
       meta.generation++; meta.accessIntents.push({ expectedGeneration: input.expectedGeneration, digest: intentDigest, generation: meta.generation, revoked: meta.revoked }); registry.revision = randomUUID(); const reg = JSON.stringify(registry); if (bytes(reg) > WORKSPACE_LIMITS.registryBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409); validateRegistry(reg, "workspace-v1", reservations()); await commit(reg, ""); return { record: receipt(meta), current: { generation: meta.generation, revoked: meta.revoked }, created: true };
     }); }); },
-    async consumeRequest(ownerId: string, generation: number, bootstrapHash?: string) { return safe(() => backend.transact(ownerId, async (s, commit) => {
-      const registry = validateRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
-      if (!meta) throw new WorkspaceError("UNAUTHORIZED", 401);
-      const administration = bootstrapHash !== undefined && bootstrapHash === meta.bootstrapHash;
-      if ((bootstrapHash !== undefined && !administration) || (!administration && (meta.generation !== generation || meta.revoked))) throw new WorkspaceError("UNAUTHORIZED", 401);
-      validateDocument(s.documentRaw, meta);
-      const now = Date.now(); registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
-      if (!w) { w = { ownerId, count: 0, until: now + 60000 }; registry.requestWindows.push(w); }
-      if (w.count >= WORKSPACE_LIMITS.requestsPerMinute) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429);
-      w.count++; registry.revision = randomUUID(); await commit(JSON.stringify(registry), "");
-    })); },
+    async consumeRequest(ownerId: string, generation: number, bootstrapHash?: string) { return safe(async () => {
+      // Only the request counter can retry, and only after Lua's definite CAS0.
+      // Every attempt reads and validates current identity, document and quota.
+      for (let attempt = 0; attempt < 8; attempt++) {
+        try { await backend.transact(ownerId, async (s, commit) => {
+          const registry = validateRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
+          if (!meta) throw new WorkspaceError("UNAUTHORIZED", 401);
+          const administration = bootstrapHash !== undefined && bootstrapHash === meta.bootstrapHash;
+          if ((bootstrapHash !== undefined && !administration) || (!administration && (meta.generation !== generation || meta.revoked))) throw new WorkspaceError("UNAUTHORIZED", 401);
+          validateDocument(s.documentRaw, meta);
+          const now = Date.now(); registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
+          if (!w) { w = { ownerId, count: 0, until: now + 60000 }; registry.requestWindows.push(w); }
+          if (w.count >= WORKSPACE_LIMITS.requestsPerMinute) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429);
+          w.count++; registry.revision = randomUUID(); await commit(JSON.stringify(registry), "");
+        }); return; }
+        catch (e) { if (!(e instanceof RedisCompareConflict)) throw e; }
+      }
+      throw unavailable("quota-contention");
+    }); },
     async listConversations(ownerId: string): Promise<WorkspaceConversation[]> { const { document: d } = await readOwner(ownerId); return d.conversations.map(v => ({ ...v.record, tasks: d.tasks.filter(t => t.record.conversationId === v.record.conversationId).map(t => t.record) })); },
     async getConversation(ownerId: string, id: string): Promise<WorkspaceConversation | null> { workspaceIdentifierSchema.parse(id); const { document: d } = await readOwner(ownerId); const c = d.conversations.find(v => v.record.conversationId === id)?.record; return c ? { ...c, tasks: d.tasks.filter(t => t.record.conversationId === id).map(t => t.record) } : null; },
     async createConversation(ownerId: string, input: { conversationId: string; title: string }) {
