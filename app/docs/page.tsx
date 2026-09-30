@@ -157,12 +157,12 @@ export default function DocsPage() {
             <tr>
               <td><code>/api/discovery/resources</code></td>
               <td>GET</td>
-              <td>Catálogo paginado completo de ServiceCards activas e indexadas.</td>
+                <td>Catálogo paginado; consulta partialResults y dynamicRegistry para conocer su disponibilidad.</td>
             </tr>
             <tr>
-              <td><code>/api/discovery/search?q=...</code></td>
+                <td><code>/api/discovery/search?query=...</code></td>
               <td>GET</td>
-              <td>Búsqueda léxica determinista con scoring de relevancia (NDCG = 1.0).</td>
+                <td>Búsqueda léxica determinista con puntuación y estado del registro; no garantiza relevancia perfecta.</td>
             </tr>
             <tr>
               <td><code>/api/mcp</code></td>
