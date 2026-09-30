@@ -1,5 +1,6 @@
 // Server-only persistence. No legacy Redis aliases, fallback, expiry or automatic mutation retry.
 import { createHash, randomUUID } from "node:crypto";
+import { channel } from "node:diagnostics_channel";
 import { mkdir, open, readFile, rename, unlink } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { Redis } from "@upstash/redis";
@@ -115,22 +116,28 @@ function redisBackend(redis: WorkspaceRedis, prefix: string): Backend {
   } };
 }
 async function optionalRead(path: string) { try { return await readFile(path, "utf8"); } catch (e) { if ((e as NodeJS.ErrnoException).code === "ENOENT") return ""; throw e; } }
+const fileDiagnostics = channel("bazaar.workspace.file");
+function fileFailure(phase: string, error: unknown) {
+  const errno = (error as NodeJS.ErrnoException | undefined)?.code;
+  const code = errno && ["EACCES", "EPERM", "EEXIST", "ENOENT", "EBUSY", "EIO", "EINVAL", "EISDIR", "ENOTDIR", "EMFILE", "ENFILE", "ENOSPC"].includes(errno) ? errno : "UNKNOWN";
+  fileDiagnostics.publish({ phase, code });
+}
 function fileBackend(directory: string, prefix: string): Backend {
   validatePrefix(prefix); const root = join(resolve(directory), prefix.split(":")[1]);
   const paths = (ownerId?: string) => ({ registry: join(root, "registry.json"), document: join(root, ownerId ? `owner-${ownerId}.json` : "unused.json"), marker: join(root, "initialized"), pending: join(root, "pending.json"), lock: join(root, "lock") });
   async function locked<T>(ownerId: string | undefined, callback: (p: ReturnType<typeof paths>) => Promise<T>) {
     await mkdir(root, { recursive: true }); const p = paths(ownerId);
     let handle; const until = Date.now() + 2500;
-    for (;;) { try { handle = await open(p.lock, "wx"); break; } catch (e) { if ((e as NodeJS.ErrnoException).code !== "EEXIST" || Date.now() >= until) throw unavailable(); await new Promise(r => setTimeout(r, 10)); } }
-    try { if (await optionalRead(p.pending)) throw unavailable(); return await callback(p); }
-    finally { await handle.close(); await unlink(p.lock); }
+    for (;;) { try { handle = await open(p.lock, "wx"); break; } catch (e) { if ((e as NodeJS.ErrnoException).code !== "EEXIST" || Date.now() >= until) { fileFailure(Date.now() >= until ? "lock-timeout" : "lock-acquire", e); throw unavailable(); } await new Promise(r => setTimeout(r, 10)); } }
+    try { if (await optionalRead(p.pending)) { fileDiagnostics.publish({ phase: "pending-present", code: "PENDING" }); throw unavailable(); } return await callback(p); }
+    finally { try { await handle.close(); } catch (e) { fileFailure("lock-close", e); throw e; } try { await unlink(p.lock); } catch (e) { fileFailure("lock-release", e); throw e; } }
   }
-  const snapshot = async (p: ReturnType<typeof paths>) => { const values = await Promise.all([optionalRead(p.registry), optionalRead(p.document), optionalRead(p.marker)]); return { registryRaw: values[0], documentRaw: values[1], marker: values[2] }; };
-  const atomicWrite = async (path: string, raw: string) => { const temp = path + "." + randomUUID() + ".tmp"; const h = await open(temp, "wx"); try { await h.writeFile(raw); await h.sync(); } finally { await h.close(); } await rename(temp, path); };
+  const snapshot = async (p: ReturnType<typeof paths>) => { try { const values = await Promise.all([optionalRead(p.registry), optionalRead(p.document), optionalRead(p.marker)]); return { registryRaw: values[0], documentRaw: values[1], marker: values[2] }; } catch (e) { fileFailure("snapshot-read", e); throw e; } };
+  const atomicWrite = async (path: string, raw: string, phase: string) => { try { const temp = path + "." + randomUUID() + ".tmp"; const h = await open(temp, "wx"); try { await h.writeFile(raw); await h.sync(); } finally { await h.close(); } await rename(temp, path); } catch (e) { fileFailure(phase, e); throw e; } };
   return { read: ownerId => locked(ownerId, snapshot), transact: (ownerId, callback) => locked(ownerId, async p => callback(await snapshot(p), async (registry, document) => {
-    await atomicWrite(p.pending, JSON.stringify({ transaction: randomUUID() }));
-    if (document) await atomicWrite(p.document, document);
-    await atomicWrite(p.registry, registry); await atomicWrite(p.marker, "workspace-v1"); await unlink(p.pending);
+    await atomicWrite(p.pending, JSON.stringify({ transaction: randomUUID() }), "write-pending");
+    if (document) await atomicWrite(p.document, document, "write-owner");
+    await atomicWrite(p.registry, registry, "write-registry"); await atomicWrite(p.marker, "workspace-v1", "write-marker"); try { await unlink(p.pending); } catch (e) { fileFailure("clear-pending-after-commit", e); throw e; }
   })) };
 }
 function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistry = legacyHistoryReservations, principal?: WorkspacePrincipal) {
