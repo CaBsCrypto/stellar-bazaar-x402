@@ -5,6 +5,7 @@ import { buyerConnectionPrompt } from "@/lib/testnet-funding";
 import { bazaarPrompts } from "@/lib/bazaar-skills";
 import {ButtonLink} from "@/components/ui";
 import {CopyText} from "@/components/ui/CopyText";
+import {useBazaarOrigin} from "@/components/useBazaarOrigin";
 
 type BuyerFormat = "prompt" | "mcp_json" | "sdk";
 type SellerFormat = "prompt" | "cli" | "sdk";
@@ -12,6 +13,7 @@ type SellerExample = "scriptwriter" | "auditor" | "oracle" | "custom";
 type ActiveTab = "buyer" | "seller";
 
 export function AgentDirectConnectCard({role = "buyer", compact=false}: {role?: ActiveTab; compact?:boolean}) {
+  const origin = useBazaarOrigin();
   const [buyerFormat, setBuyerFormat] = useState<BuyerFormat>("prompt");
   const [sellerFormat, setSellerFormat] = useState<SellerFormat>("prompt");
   const [sellerExample, setSellerExample] = useState<SellerExample>("custom");
@@ -20,13 +22,13 @@ export function AgentDirectConnectCard({role = "buyer", compact=false}: {role?: 
   const quickMcpJson = `{
   "mcpServers": {
     "stellar-bazaar": {
-      "url": "https://bazaar.browns.studio/api/mcp"
+      "url": "${origin}/api/mcp"
     }
   }
 }`;
 
   // Buyer Snippets
-  const buyerPrompt = buyerConnectionPrompt;
+  const buyerPrompt = buyerConnectionPrompt.replaceAll("https://bazaar.browns.studio", origin);
 
   const buyerMcpJson = quickMcpJson;
 
@@ -34,7 +36,7 @@ export function AgentDirectConnectCard({role = "buyer", compact=false}: {role?: 
 import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
 
 const agent = new BazaarAgentClient({
-  baseUrl: "http://127.0.0.1:3000",
+  baseUrl: "${origin}",
   maxPriceAllowedUsdc: 0.10,
   allowedNetworks: ["stellar:testnet"],
 });
@@ -53,8 +55,8 @@ console.log(services);
   };
   const sellerPrompt = `${bazaarPrompts.seller}${sellerExample === "custom" ? "" : "\n\n" + sellerScopes[sellerExample]}
 
-Skill: https://bazaar.browns.studio/skills/seller/SKILL.md
-MCP: https://bazaar.browns.studio/api/mcp`;
+Skill: ${origin}/skills/seller/SKILL.md
+MCP: ${origin}/api/mcp`;
 
   const sellerCliCode = `# Dentro del repositorio, con dependencias instaladas y Node.js 22.18+.
 # 1. Inicializar configuración de ejemplo; sustituir sus valores antes de validar.

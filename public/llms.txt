@@ -2,6 +2,8 @@
 
 Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibilidad, propiedad certificada ni entrega; respeta availability, partialResults y dynamicRegistry y comunica sus límites.
 
+Resuelve rutas relativas contra el mismo origen MCP. En localhost y Preview usa ese origen exacto; no envíes pruebas al servidor público ni mezcles sus capacidades con las del candidato.
+
 ## Conexión y límites
 - MCP Streamable HTTP: POST /api/mcp, JSON-RPC 2.0. GET /api/mcp describe capacidades; no sustituye initialize + tools/list + tools/call.
 - El MCP HTTP descubre, valida, admite solicitudes y conecta espacios privados con agentes externos: no ejecuta servicios, no firma, no crea wallets ni autoriza compras. No expone execute_service.
@@ -10,7 +12,7 @@ Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibili
 - Catálogo REST: GET /api/discovery/resources.
 - Detalle por ID: herramienta MCP get_service con {"id":"ID_REAL"}. La página humana es /resources/{id}; no existe una API REST de detalle por ID.
 - Validación sin publicación: POST /api/conformance/service-card.
-- Registro público: POST /api/publisher/ingest es una acción administrativa separada, habilitada por el operador con su credencial y almacenamiento durable. Esa credencial no se entrega al proveedor. Preparar, validar o solicitar revisión no publica ni aprueba un servicio. Consulta https://bazaar.browns.studio/PROVIDER_ONBOARDING.md para preparar un servicio sin crear una cuenta ni disponer del repositorio. La recepción de propuestas puede estar deshabilitada; conserva el paquete validado y comunica el paso pendiente del operador.
+- Registro público: POST /api/publisher/ingest es una acción administrativa separada, habilitada por el operador con su credencial y almacenamiento durable. Esa credencial no se entrega al proveedor. Preparar, validar o solicitar revisión no publica ni aprueba un servicio. Consulta /PROVIDER_ONBOARDING.md en el mismo origen para preparar un servicio sin crear una cuenta ni disponer del repositorio. La recepción de propuestas puede estar deshabilitada; conserva el paquete validado y comunica el paso pendiente del operador.
 
 ## Herramientas del MCP HTTP
 1. get_bazaar_capabilities: capacidades, políticas y límites.

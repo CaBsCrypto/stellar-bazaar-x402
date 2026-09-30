@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useBazaarOrigin } from "@/components/useBazaarOrigin";
 
 type TabId = "mcp" | "typescript" | "python" | "curl";
 
@@ -13,17 +14,17 @@ interface Tab {
   code: string;
 }
 
-const TABS: Tab[] = [
+function docsTabs(origin: string): Tab[] { return [
   {
     id: "mcp",
-    label: "Claude Desktop & Cursor (MCP)",
+    label: "Cliente MCP HTTP",
     badge: "Skills y espacios privados",
     language: "json",
     description: "Consulta get_bazaar_skills y tools/list. Usa conexiones separadas para descubrimiento, solicitud y espacio privado. Tu agente se ejecuta en tu equipo; MCP conserva tareas y ejemplos, sin firmar, pagar, aprobar ni activar servicios.",
     code: `{
   "mcpServers": {
     "stellar-bazaar": {
-      "url": "https://bazaar.browns.studio/api/mcp"
+      "url": "${origin}/api/mcp"
     }
   }
 }`,
@@ -37,7 +38,7 @@ const TABS: Tab[] = [
     code: `import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
 
 const client = new BazaarAgentClient({
-  baseUrl: "https://bazaar.browns.studio",
+  baseUrl: "${origin}",
   allowedNetworks: ["stellar:testnet"],
   allowedAssets: ["USDC"],
   maxPriceAllowedUsdc: 0.05,
@@ -58,7 +59,7 @@ console.log({ card: cards[0], decision });
     code: `import requests
 from langchain.tools import tool
 
-BAZAAR_URL = "https://stellar-bazaar-x402.vercel.app"
+BAZAAR_URL = "${origin}"
 
 @tool
 def search_stellar_bazaar(query: str) -> dict:
@@ -79,22 +80,40 @@ def search_stellar_bazaar(query: str) -> dict:
     badge: "402 inspection",
     language: "bash",
     description: "Inspecciona el challenge x402 Testnet y se detiene antes de autorizar o pagar.",
-    code: `curl -i "https://stellar-bazaar-x402.vercel.app/api/x402/swap-risk?pair=XLM/USDC&amount=2500&side=buy"
+    code: `curl -i "${origin}/api/x402/swap-risk?pair=XLM/USDC&amount=2500&side=buy"
 
 # Expected: HTTP 402 + PAYMENT-REQUIRED v2
 # This example produces no signature and submits no settlement.`,
   },
-];
+]; }
 
 export function DocsCodeTabs() {
+  const TABS = docsTabs(useBazaarOrigin());
   const [activeTab, setActiveTab] = useState<TabId>("mcp");
-  const [copied, setCopied] = useState(false);
+  const [status, setStatus] = useState("");
+  const codeRef = useRef<HTMLElement>(null);
+  const copyVersion = useRef(0);
   const current = TABS.find((tab) => tab.id === activeTab) ?? TABS[0];
 
-  function handleCopy() {
-    navigator.clipboard.writeText(current.code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  function selectCode() {
+    const selection = window.getSelection();
+    if (!codeRef.current || !selection) return;
+    const range = document.createRange();
+    range.selectNodeContents(codeRef.current);
+    selection.removeAllRanges();
+    selection.addRange(range);
+    codeRef.current.focus();
+  }
+  async function handleCopy() {
+    const version = ++copyVersion.current;
+    try {
+      await navigator.clipboard.writeText(current.code);
+      if (version === copyVersion.current) setStatus("Copiado. Usa estas referencias en este entorno de Bazaar.");
+    } catch {
+      if (version !== copyVersion.current) return;
+      selectCode();
+      setStatus("No se pudo copiar. El código está seleccionado para copiarlo manualmente.");
+    }
   }
 
   return (
@@ -105,7 +124,8 @@ export function DocsCodeTabs() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => { copyVersion.current++; setActiveTab(tab.id); setStatus(""); }}
+              aria-pressed={activeTab === tab.id}
               className={`docs-tab-btn ${activeTab === tab.id ? "active" : ""}`}
             >
               <span>{tab.label}</span>
@@ -114,14 +134,16 @@ export function DocsCodeTabs() {
           ))}
         </div>
         <button type="button" onClick={handleCopy} className="docs-copy-btn" title="Copiar código">
-          {copied ? "✓ Copiado" : "Copiar"}
+          Copiar
         </button>
+        <button type="button" onClick={selectCode} className="docs-copy-btn">Seleccionar código</button>
       </div>
       <div className="docs-tab-content">
         <p className="docs-tab-desc">{current.description}</p>
         <pre className="docs-code-block">
-          <code className={`language-${current.language}`}>{current.code}</code>
+          <code ref={codeRef} tabIndex={-1} className={`language-${current.language}`}>{current.code}</code>
         </pre>
+        <p role="status">{status}</p>
       </div>
     </div>
   );

@@ -87,14 +87,14 @@ export default function DocsPage() {
       </section>
 
       <section className="docs-shell docs-section" id="entornos">
-        <h2>🤖 Modelos y Asistentes Soportados</h2>
+        <h2>🤖 Requisitos de tu cliente</h2>
         <p className="subtitle">
-          Stellar Bazaar expone un servidor MCP nativo compatible con los principales entornos de IA agéntica.
+          Usa un cliente MCP Streamable HTTP con cabeceras de autenticación configurables para los accesos privados. Comprueba esa capacidad en tu cliente; una plantilla no demuestra compatibilidad de todas sus versiones.
         </p>
         <div className="docs-grid-3">
           <div className="docs-card">
             <h3>Claude Desktop & Anthropic</h3>
-            <p>Conexión directa vía <code>claude_desktop_config.json</code> usando transporte MCP Streamable HTTP.</p>
+            <p>Consulta la configuración de tu versión: debe admitir MCP remoto y cabecera Authorization para herramientas privadas. No entregues el secreto de recuperación a su conexión de agente.</p>
             <code>URL: /api/mcp</code>
           </div>
           <div className="docs-card">

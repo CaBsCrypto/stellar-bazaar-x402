@@ -2,6 +2,8 @@
 
 Este recorrido no requiere crear una cuenta. Prepara un servicio para Stellar Testnet y un paquete para revisión; no garantiza publicación, ventas ni cobros. Puedes seguirlo sin una copia del repositorio.
 
+Resuelve las rutas relativas contra el mismo origen donde consultaste esta guía y las capacidades MCP. Las URLs públicas de los ejemplos son referencias: en localhost o Preview sustitúyelas por el origen exacto de ese entorno antes de ejecutar comandos. No envíes pruebas locales al servidor público.
+
 ## 1. Idea o API existente
 
 Aclara qué hace el servicio, para quién, entradas, resultado, formato de entrega y límites. Si ya existe una API, reutilízala y prueba que produce lo declarado. Si solo existe una idea, prepara una muestra identificada como ilustrativa y enumera lo que falta implementar. No presentes una muestra simulada como servicio operativo.
@@ -10,13 +12,13 @@ Confirma con el proveedor precio, activo exacto, red, destino público de cobro 
 
 ## 2. Prepara y valida la ficha
 
-En https://bazaar.browns.studio/publish puedes describir el servicio y copiar instrucciones para tu agente. Ese borrador editorial no es una ServiceCard. El apartado «Ya tengo una integración técnica» permite preparar y copiar el manifest JSON; sustituye todos los valores de ejemplo por datos confirmados.
+En /publish puedes describir el servicio y copiar instrucciones para tu agente. Ese borrador editorial no es una ServiceCard. El apartado «Ya tengo una integración técnica» permite preparar y copiar el manifest JSON; sustituye todos los valores de ejemplo por datos confirmados.
 
-Conecta el MCP Streamable HTTP en https://bazaar.browns.studio/api/mcp y usa `initialize`, `tools/list`, `tools/call`. `GET /api/mcp` solo describe capacidades. Comprueba las herramientas anunciadas por el servidor antes de usarlas.
+Conecta el MCP Streamable HTTP en /api/mcp del mismo origen y usa `initialize`, `tools/list`, `tools/call`. `GET /api/mcp` solo describe capacidades. Comprueba las herramientas anunciadas por el servidor antes de usarlas.
 
 Las herramientas de descubrimiento e historial son `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `list_workflow_bundles`, `get_workflow_bundle`, `validate_service_card` y `get_operation_history`. El historial tiene autenticación propia y no es necesario para preparar un proveedor. Para validar, llama a `validate_service_card` con `{"card": TU_MANIFEST_JSON}`. Revisa `valid` y cada regla en `outcomes`; corrige los fallos antes de continuar.
 
-Consulta get_bazaar_skills con {"role":"seller"} o /skills/seller/SKILL.md para el recorrido canónico. El MCP valida y permite enviar y consultar solicitudes mediante submit_provider_request y get_provider_request_status; no crea la API, comprueba control, aprueba, publica ni firma pagos. WebMCP es otra interfaz del navegador. Como alternativa HTTP, envía el manifest JSON directamente con `Content-Type: application/json` a `POST https://bazaar.browns.studio/api/conformance/service-card`; comprueba `valid`, no solo que haya respuesta.
+Consulta get_bazaar_skills con {"role":"seller"} o /skills/seller/SKILL.md para el recorrido canónico. El MCP valida y permite enviar y consultar solicitudes mediante submit_provider_request y get_provider_request_status; no crea la API, comprueba control, aprueba, publica ni firma pagos. WebMCP es otra interfaz del navegador. Como alternativa HTTP, envía el manifest JSON directamente con `Content-Type: application/json` a `POST /api/conformance/service-card` del mismo origen; comprueba `valid`, no solo que haya respuesta.
 
 La validación comprueba formato y reglas; no prueba disponibilidad, control del dominio, seguridad, liquidación ni entrega. Para x402, documenta el desafío 402, la autorización, la verificación y liquidación, la conservación del resultado y la recuperación sin repetir un pago incierto. Preparar este paquete no necesita compra ni fondos. Una prueba de pago requiere autorización y configuración independientes.
 

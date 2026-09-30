@@ -9,10 +9,10 @@ assert.equal(parseServiceCardShape(example).ok, true, 'Published minimum example
 const llms = read("public/llms.txt");
 const card = read("components/AgentDirectConnectCard.tsx");
 for (const tool of MCP_TOOLS) assert(llms.includes(tool), `Missing documented MCP tool: ${tool}`);
-assert(llms.includes("https://bazaar.browns.studio/PROVIDER_ONBOARDING.md"));
+assert(llms.includes("/PROVIDER_ONBOARDING.md en el mismo origen"));
 assert(!llms.includes("Consulta docs/PROVIDER_ONBOARDING.md"));
 const seller = card.split("const sellerPrompt =")[1].split("const getBuyerText")[0];
-assert(seller.includes("https://bazaar.browns.studio/skills/seller/SKILL.md"));
+assert(seller.includes("${origin}/skills/seller/SKILL.md"));
 for (const boundary of ["INTAKE_DISABLED", "24 horas", "expiresAt", "submissionId", "verificationPath", "staged-not-public", "no es autopublicación", "secreto compartido", "no requiere crear una cuenta", "no existe" ]) {
   assert(guide.toLowerCase().includes(boundary.toLowerCase()), `Missing seller boundary: ${boundary}`);
 }
