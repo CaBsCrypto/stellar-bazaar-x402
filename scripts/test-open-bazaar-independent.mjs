@@ -226,7 +226,11 @@ async function acceptance() {
     const accepted = parallel.filter(result => [200, 201, 202].includes(result.status));
     const parallelDiagnostic = JSON.stringify(parallel.map(result => ({ status: result.status, code: result.body?.error?.code })));
     assert.ok(accepted.length, `At least one concurrent creation must succeed: ${parallelDiagnostic}`);
-    for (const result of parallel) if (![200, 201, 202].includes(result.status)) assert.equal(result.status, 409, `Concurrent creation may conflict but must not return a generic outage: ${parallelDiagnostic}`);
+    for (const result of parallel) if (![200, 201, 202].includes(result.status)) assert.ok([409, 503].includes(result.status), `Concurrent creation returned an unexpected status: ${parallelDiagnostic}`);
+    const concurrentOutage = parallel.some(result => result.status === 503);
+    // Keep the regression fatal, but finish independent gates to identify
+    // additional blockers before returning the concurrency assertion below.
+    if (concurrentOutage) console.error(`Deferred fatal concurrent-creation regression: ${parallelDiagnostic}`);
     const refA = reference(success(accepted[0], 'Concurrent creation'));
     for (const result of accepted) assert.equal(reference(result.body).ownerId, refA.ownerId, 'One intent must not allocate two owners');
     const bootstrapClient = await mcp(second.base, a.bootstrap);
@@ -460,6 +464,7 @@ async function acceptance() {
     const supportingTimeout = setTimeout(() => supporting.kill(), 45000);
     const supportingExit = await new Promise((ok, fail) => { supporting.once('exit', ok); supporting.once('error', fail); }); clearTimeout(supportingTimeout);
     assert.equal(supportingExit, 0, 'Supporting core protocol-double acceptance failed; no author output or credentials emitted');
+    assert.equal(concurrentOutage, false, `Concurrent creation may conflict but must not return a generic outage: ${parallelDiagnostic}`);
     console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, independentRedisProtocol: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
   } finally {
     for (const client of clients) await client.close().catch(() => {});
