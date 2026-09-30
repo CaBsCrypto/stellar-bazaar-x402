@@ -355,8 +355,9 @@ async function acceptance() {
     const casServer = await start(), casOther = await start();
     const humanCandidates = [access(), access()];
     const cas = await Promise.all(humanCandidates.map((token, index) => http(index ? casOther.base : casServer.base, `/api/workspaces/${refB.workspaceId}/access`, b.bootstrap, { action: 'rotate', role: 'human', accessHash: hash(token), expectedGeneration: refB.generation })));
-    assert.equal(cas.filter(result => result.status === 200).length, 1, 'Simultaneous generation CAS must have exactly one winner');
-    assert.equal(cas.filter(result => result.status === 409).length, 1, 'Simultaneous generation CAS loser must conflict');
+    const casDiagnostic = JSON.stringify(cas.map(result => ({ status: result.status, code: result.body?.error?.code })));
+    assert.equal(cas.filter(result => result.status === 200).length, 1, `Simultaneous generation CAS must have exactly one winner: ${casDiagnostic}`);
+    assert.equal(cas.filter(result => result.status === 409).length, 1, `Simultaneous generation CAS loser must conflict: ${casDiagnostic}`);
     const winnerIndex = cas.findIndex(result => result.status === 200), winningHuman = humanCandidates[winnerIndex];
     success(await http(casServer.base, '/api/operations', winningHuman), 'Winning human rotation');
     denied(await http(casServer.base, '/api/operations', humanCandidates[1 - winnerIndex]), 'Losing human access not installed');
@@ -483,6 +484,9 @@ async function acceptance() {
     assert.equal(supportingExit, 0, 'Supporting core protocol-double acceptance failed; no author output or credentials emitted');
     assert.equal(concurrentOutage, false, `Concurrent creation may conflict but must not return a generic outage: ${parallelDiagnostic}; safe file diagnostics: ${JSON.stringify(fileDiagnostics)}`);
     console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, independentRedisProtocol: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
+  } catch (error) {
+    if (fileDiagnostics.length) console.error(`Safe file diagnostics for failed acceptance: ${JSON.stringify(fileDiagnostics)}`);
+    throw error;
   } finally {
     for (const client of clients) await client.close().catch(() => {});
     for (const child of children) if (child.exitCode === null) { const ended = new Promise(ok => child.once('exit', ok)); child.kill(); await ended; }
