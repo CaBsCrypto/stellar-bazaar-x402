@@ -9,7 +9,7 @@ Resultado: **20 solicitudes REST, 40 comandos conservadores, 4.337 bytes acumula
 - Sesión sintética aceptada; origen ajeno y CSRF incorrecto rechazados.
 - Revocación nativa confirmada y nueva lectura rechazada.
 - Lua nativo permite dos solicitudes, rechaza la tercera con 429; contadores en 2 y TTL positivo.
-- Otro proceso confirma ausencia de sesión revocada y contadores conservados.
+- Otro proceso confirma ausencia de sesión revocada y acepta únicamente contadores ausentes por caducidad o con valor 2; no demuestra conservación más allá del TTL.
 - La sesión se sembró directamente: no acredita correo, OTP ni intercambio inicial. La segunda invocación prueba revocación, no persistencia de una sesión activa.
 - La prueba elimina únicamente su sesión sintética mediante la revocación prevista; contadores caducan por diseño. No borra solicitudes ni auditoría.
 - Cero publicaciones, pagos, correos o consultas históricas. No demuestra respaldos ni recuperación ante pérdida de Redis.
