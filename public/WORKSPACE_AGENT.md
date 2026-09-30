@@ -26,6 +26,8 @@ Entrega únicamente `agent.json` al agente, conservando el directorio privado y 
 
 Abre el enlace humano, crea una conversación y envía un mensaje. El humano puede escribir sus mensajes y leer su biblioteca, pero no responder como agente ni registrar operaciones. El agente consulta explícitamente:
 
+Para un cliente humano HTTP, `/api/openapi` describe los esquemas y permisos. Conserva `conversationId`, `messageId`, `taskId` UUID v4 y texto antes del primer POST. Usa `Content-Type: application/json`, `Authorization: Bearer ACCESO_HUMANO` en el origen exacto, sin redirecciones. `POST /api/conversations` recibe `{"conversationId":"UUID_CONVERSACION","title":"Mi conversación"}`; después `POST /api/conversations/UUID_CONVERSACION/messages` recibe `{"messageId":"UUID_MENSAJE","taskId":"UUID_TAREA","text":"Prepara un ejemplo gratuito"}`. Repetir esos mismos datos es idempotente; cambiar contenido conservando IDs produce conflicto. La lectura `GET /api/conversations/UUID_CONVERSACION/messages` devuelve conversación y tareas propias. No entregues el acceso humano al agente para que suplante ese rol.
+
 ```sh
 node examples/agent-workspace-mcp.mjs tasks /ruta/privada/nueva
 node examples/agent-workspace-mcp.mjs claim /ruta/privada/nueva UUID_DE_TAREA

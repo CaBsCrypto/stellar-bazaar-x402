@@ -4,10 +4,10 @@ import { authenticateWorkspaceRequest, assertWorkspaceRequest, parseWorkspaceBod
 import { WorkspaceError } from './workspace-types.ts';
 
 const id = z.string().uuid();
-const create = z.object({ conversationId: id, title: z.string().trim().min(1).max(120) }).strict();
-const message = z.object({ messageId: id, taskId: id, text: z.string().trim().min(1).max(2000) }).strict();
+const create = z.object({ conversationId: id, title: z.string().min(1).max(120).refine(v => v.trim().length > 0) }).strict();
+const message = z.object({ messageId: id, taskId: id, text: z.string().min(1).max(2000).refine(v => v.trim().length > 0) }).strict();
 const claim = z.object({ taskId: id, attemptId: id }).strict();
-const response = z.object({ attemptId: id, messageId: id, text: z.string().trim().min(1).max(2000), operationId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/).optional() }).strict();
+const response = z.object({ attemptId: id, messageId: id, text: z.string().min(1).max(2000).refine(v => v.trim().length > 0), operationId: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$/).optional() }).strict();
 
 export function createWorkspaceChatHandlers(deps: {
   authenticate?: typeof authenticateWorkspaceRequest;

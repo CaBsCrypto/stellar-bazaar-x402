@@ -28,6 +28,12 @@ assert.equal((await handlers.conversationsGET(request('bootstrap'))).status,403)
 assert.equal((await handlers.conversationsGET(request('unknown'))).status,401);
 assert.equal(invoked,before);
 assert.equal((await handlers.tasksPOST(request('agent',{taskId,attemptId}))).status,201);assert.equal(last.agentId,'server-agent');
+const exactText='  Texto humano\ncon formato  ';
+assert.equal((await handlers.messagesPOST(request('human',{messageId,taskId,text:exactText}),conversationId)).status,201);
+assert.equal(last.text,exactText);
+assert.equal((await handlers.messagesPOST(request('human',{messageId,taskId,text:exactText}),conversationId)).status,200);
+assert.equal((await handlers.messagesPOST(request('human',{messageId,taskId,text:exactText.trim()}),conversationId)).status,409);
+assert.equal((await handlers.messagesPOST(request('human',{messageId:randomUUID(),taskId:randomUUID(),text:' \n '}),conversationId)).status,400);
 assert.equal((await handlers.messagesGET(request('human'),conversationId)).status,404);
 assert.equal((await handlers.messagesPOST(request('human',{messageId,taskId,text:'x'.repeat(2001)}),conversationId)).status,400);
 const origin=request('human',{conversationId,title:'X'});origin.headers.set('origin','https://attacker.invalid');assert.equal((await handlers.conversationsPOST(origin)).status,400);

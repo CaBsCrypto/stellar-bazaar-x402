@@ -3,7 +3,7 @@
 > Nota en español: esta guía técnica está en inglés. Para la descripción general del proyecto en español, consulta [README.es.md](../README.es.md).
 
 A single ordered journey from a clean machine to a live testnet settlement on
-**Stellar Bazaar x402** (Next.js 16 app + read-only MCP server v0.5.0 with 7 tools).
+**Stellar Bazaar x402** (Next.js 16 + MCP Streamable HTTP; private workspace and provider writes, no signing/payment). This local candidate uses the canonical tools in `lib/mcp-tool-contract.ts`; see `/WORKSPACE_AGENT.md` and `/llms.txt`. Historical readiness commands below are not a substitute for current workspace acceptance.
 
 ---
 
@@ -77,7 +77,7 @@ All script names are from `package.json` (`scripts` block, lines 7-24).
 
 | # | Command | What it verifies | Notes |
 |---|---------|------------------|-------|
-| 1 | `npm run test:e2e:ecosystem` | REST discovery, pilots, search, MCP health + 7 read-only tools, reference endpoint, unpaid 402 + tamper rejection | `BASE_URL` env overrides target; default `http://127.0.0.1:3000` (`scripts/test-e2e-ecosystem.mjs:4`) |
+| 1 | `npm run test:e2e:ecosystem` | Historical REST/pilot readiness; use `test:workspace:independent` for the current scoped MCP surface | `BASE_URL` env overrides target; run only against isolated loopback |
 | 2 | `npm run test:mcp:onboarding` | MCP pagination, hostile corpus, full register/update/delete lifecycle | `MCP_BASE_URL` + optional `BAZAAR_PROVIDER_SECRET` (`scripts/test-mcp-onboarding.mjs:3,10`) |
 | 3 | `npm run test:agent:policy:evals` | 12-scenario eval corpus: tool-list stability, deterministic search, unknown ID, malformed cards, hostile metadata as data, 12 route-template traversal probes, pilot exclusion, status fidelity vs declared enums, bilingual completeness, oversized/invalid args, no secret leaks | `MCP_BASE_URL` + optional `BAZAAR_PROVIDER_SECRET` (`scripts/test-agent-policy-evals.mjs:3,11`) |
 | 4 | `npm run benchmark:ranking` | Reproducible ranking benchmark over a golden set (8 queries): NDCG@3, MRR, Recall@3 with gates ≥0.80/0.90/0.90; corpus snapshot in output | `MCP_BASE_URL` (`scripts/benchmark-ranking.mjs:3`) |
