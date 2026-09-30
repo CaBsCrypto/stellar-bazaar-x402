@@ -80,7 +80,7 @@ async function port() {
 async function independentRedisProtocol() {
   const { Redis } = await import('@upstash/redis');
   const { configuredWorkspaceStore, READ_WORKSPACE_LUA, COMMIT_WORKSPACE_LUA } = await import(pathToFileURL(join(root, 'lib', 'workspace-store.ts')).href);
-  const values = new Map(), requests = []; let loseAcknowledgement = false, sdkRequests = 0, successfulCommits = 0, readBarrier;
+  const values = new Map(), requests = []; let loseAcknowledgement = false, sdkRequests = 0, successfulCommits = 0, readBarrier, forcedCompareRejections = 0, unknownCommitResult = false, rotationBeforeCompare;
   const server = createHttpServer(async (request, response) => {
     try {
       let body = ''; for await (const chunk of request) body += chunk;
@@ -92,8 +92,8 @@ async function independentRedisProtocol() {
       let result;
       if (command[1] === READ_WORKSPACE_LUA) {
         requests.push('read'); result = keys.map(key => values.get(key) ?? '');
-        if (readBarrier) {
-          const stage = keys[1].endsWith(':owner:none') ? 0 : 1;
+        const stage = keys[1].endsWith(':owner:none') ? 0 : 1;
+        if (readBarrier && readBarrier[stage].length < 6) {
           await new Promise(ok => {
             readBarrier[stage].push(ok);
             if (readBarrier[stage].length === 6) readBarrier[stage].forEach(release => release());
@@ -102,7 +102,10 @@ async function independentRedisProtocol() {
       }
       else {
         assert.equal(command[1], COMMIT_WORKSPACE_LUA); requests.push('commit');
-        if (keys.some((key, index) => (values.get(key) ?? '') !== args[index])) result = 0;
+        if (rotationBeforeCompare) { const rotate = rotationBeforeCompare; rotationBeforeCompare = undefined; await rotate(); }
+        if (forcedCompareRejections > 0) { forcedCompareRejections--; result = 0; }
+        else if (unknownCommitResult) { unknownCommitResult = false; result = 2; }
+        else if (keys.some((key, index) => (values.get(key) ?? '') !== args[index])) result = 0;
         else {
           values.set(keys[0], args[3]); if (args[4]) values.set(keys[1], args[4]); values.set(keys[2], 'workspace-v1'); result = 1; successfulCommits++;
           if (loseAcknowledgement) { loseAcknowledgement = false; response.destroy(); return; }
@@ -166,8 +169,53 @@ async function independentRedisProtocol() {
     await assert.rejects(() => store.createWorkspace({ ...racing.creation, humanAccessHash: hash(access()) }, hash(racing.bootstrap)), { code: 'WORKSPACE_CONFLICT' });
     await assert.rejects(() => store.createWorkspace(racing.creation, hash(access())), { code: 'UNAUTHORIZED' });
     assert.equal(successfulCommits, commitsBeforeRace + 1, 'Redis CAS recovery must never repeat a committed write');
+
+    const owner = winners[0].value.record.ownerId, registryKey = 'bazaar-workspace:local-test:{local-test}:registry';
+    const quotaCount = () => JSON.parse(values.get(registryKey)).requestWindows.find(window => window.ownerId === owner)?.count ?? 0;
+    let countBefore = quotaCount(), commitsBefore = successfulCommits;
+    before = requests.length; loseAcknowledgement = true;
+    await assert.rejects(() => store.consumeRequest(owner, 1), { code: 'WORKSPACE_UNAVAILABLE' });
+    assert.deepEqual(requests.slice(before), ['read', 'commit'], 'Quota acknowledgement loss must never cause automatic retries');
+    assert.equal(quotaCount(), countBefore + 1); assert.equal(successfulCommits, commitsBefore + 1);
+
+    countBefore = quotaCount(); commitsBefore = successfulCommits;
+    readBarrier = [[], []];
+    await Promise.all(Array.from({ length: 6 }, () => store.consumeRequest(owner, 1)));
+    readBarrier = undefined;
+    assert.equal(quotaCount(), countBefore + 6); assert.equal(successfulCommits, commitsBefore + 6, 'Concurrent quota CAS must increment exactly once per accepted request');
+
+    const stateBeforeExhaustion = new Map(values); before = requests.length; commitsBefore = successfulCommits; forcedCompareRejections = 8;
+    await assert.rejects(() => store.consumeRequest(owner, 1), { code: 'WORKSPACE_UNAVAILABLE' });
+    assert.equal(forcedCompareRejections, 0); assert.deepEqual(requests.slice(before), Array.from({ length: 8 }, () => ['read', 'commit']).flat());
+    assert.equal(successfulCommits, commitsBefore); assert.deepEqual(values, stateBeforeExhaustion, 'Exhausted confirmed CAS must leave stored state unchanged');
+
+    before = requests.length; unknownCommitResult = true;
+    await assert.rejects(() => store.consumeRequest(owner, 1), { code: 'WORKSPACE_UNAVAILABLE' });
+    assert.deepEqual(requests.slice(before), ['read', 'commit'], 'An unknown commit result must not authorize another attempt');
+    assert.deepEqual(values, stateBeforeExhaustion);
+
+    const rotatedHuman = access(); countBefore = quotaCount(); commitsBefore = successfulCommits;
+    rotationBeforeCompare = () => store.changeAccess(winners[0].value.record.workspaceId, hash(racing.bootstrap), { action: 'rotate', role: 'human', accessHash: hash(rotatedHuman), expectedGeneration: 1 });
+    await assert.rejects(() => store.consumeRequest(owner, 1), { code: 'UNAUTHORIZED' });
+    assert.equal(quotaCount(), countBefore); assert.equal(successfulCommits, commitsBefore + 1, 'Only the competing rotation may commit; stale quota authority must be revalidated');
+    await assert.rejects(() => store.resolveHash(hash(racing.human)), { code: 'UNAUTHORIZED' });
+    assert.equal((await store.resolveHash(hash(rotatedHuman))).generation, 2);
+
+    const { createWorkspaceHandlers } = await import(pathToFileURL(join(root, 'lib', 'workspace-http.ts')).href);
+    const native = identity(), handlers = createWorkspaceHandlers(); commitsBefore = successfulCommits;
+    readBarrier = [[], []];
+    const nativeResponses = await Promise.all(Array.from({ length: 6 }, () => handlers.POST(new Request(`${origin}/api/workspaces`, {
+      method: 'POST', headers: { Authorization: `Bearer ${native.bootstrap}`, Origin: origin, 'Content-Type': 'application/json' }, body: JSON.stringify(native.creation),
+    }))));
+    readBarrier = undefined;
+    assert.deepEqual(nativeResponses.map(response => response.status).sort(), [200, 200, 200, 200, 200, 201]);
+    const nativeBodies = await Promise.all(nativeResponses.map(response => response.json())); nativeBodies.forEach(noSecrets);
+    const nativeOwner = nativeBodies[0].record.ownerId;
+    assert.equal(new Set(nativeBodies.map(body => body.record.ownerId)).size, 1);
+    assert.equal(JSON.parse(values.get(registryKey)).requestWindows.find(window => window.ownerId === nativeOwner).count, 6);
+    assert.equal(successfulCommits, commitsBefore + 7, 'Native creation race must commit one creation plus exactly six quota increments');
     for (const value of values.values()) noSecrets(value);
-    console.log(JSON.stringify({ ok: true, independentRedisProtocol: true, realInstalledSdk: true, configuredStoreUsed: true, loopbackHttpsTransportAdapter: true, retryFalseRequests: sdkRequests, creationLostAck: true, rotationLostAck: true, operationLostAck: true, immutableResult: true, identicalRedisCreates: accepted.length, readOnlyRedisCasReconciliation: true, explicitRedisCasRecovery: true, externalRequests: 0 }));
+    console.log(JSON.stringify({ ok: true, independentRedisProtocol: true, realInstalledSdk: true, configuredStoreUsed: true, loopbackHttpsTransportAdapter: true, retryFalseRequests: sdkRequests, creationLostAck: true, rotationLostAck: true, operationLostAck: true, immutableResult: true, identicalRedisCreates: accepted.length, readOnlyRedisCasReconciliation: true, explicitRedisCasRecovery: true, quotaLostAck: true, concurrentQuotaIncrements: 6, confirmedQuotaCasAttempts: 8, unknownCommitNoRetry: true, quotaRevalidatesRotation: true, nativeRedisCreationResponses: 6, externalRequests: 0 }));
   } finally { globalThis.fetch = guardedFetch; await new Promise(ok => server.close(ok)); }
 }
 async function acceptance() {
