@@ -80,7 +80,7 @@ async function port() {
 async function independentRedisProtocol() {
   const { Redis } = await import('@upstash/redis');
   const { configuredWorkspaceStore, READ_WORKSPACE_LUA, COMMIT_WORKSPACE_LUA } = await import(pathToFileURL(join(root, 'lib', 'workspace-store.ts')).href);
-  const values = new Map(), requests = []; let loseAcknowledgement = false, sdkRequests = 0;
+  const values = new Map(), requests = []; let loseAcknowledgement = false, sdkRequests = 0, successfulCommits = 0, readBarrier;
   const server = createHttpServer(async (request, response) => {
     try {
       let body = ''; for await (const chunk of request) body += chunk;
@@ -90,12 +90,21 @@ async function independentRedisProtocol() {
       const keys = command.slice(3, 3 + Number(command[2])), args = command.slice(3 + Number(command[2]));
       assert.equal(keys.length, 3); assert.ok(keys.every(key => key.startsWith('bazaar-workspace:local-test:{local-test}:')));
       let result;
-      if (command[1] === READ_WORKSPACE_LUA) { requests.push('read'); result = keys.map(key => values.get(key) ?? ''); }
+      if (command[1] === READ_WORKSPACE_LUA) {
+        requests.push('read'); result = keys.map(key => values.get(key) ?? '');
+        if (readBarrier) {
+          const stage = keys[1].endsWith(':owner:none') ? 0 : 1;
+          await new Promise(ok => {
+            readBarrier[stage].push(ok);
+            if (readBarrier[stage].length === 6) readBarrier[stage].forEach(release => release());
+          });
+        }
+      }
       else {
         assert.equal(command[1], COMMIT_WORKSPACE_LUA); requests.push('commit');
         if (keys.some((key, index) => (values.get(key) ?? '') !== args[index])) result = 0;
         else {
-          values.set(keys[0], args[3]); if (args[4]) values.set(keys[1], args[4]); values.set(keys[2], 'workspace-v1'); result = 1;
+          values.set(keys[0], args[3]); if (args[4]) values.set(keys[1], args[4]); values.set(keys[2], 'workspace-v1'); result = 1; successfulCommits++;
           if (loseAcknowledgement) { loseAcknowledgement = false; response.destroy(); return; }
         }
       }
@@ -134,8 +143,31 @@ async function independentRedisProtocol() {
     assert.equal((await agentStore.operations.append(principal.ownerId, input)).created, false);
     const records = await agentStore.operations.list(principal.ownerId, 20); assert.equal(records.length, 1); assert.deepEqual(records[0].delivery.result, input.delivery.result);
     await assert.rejects(() => agentStore.operations.append(principal.ownerId, { ...input, delivery: { ...input.delivery, result: { text: 'Overwrite probe' } } }), { code: 'WORKSPACE_CONFLICT' });
+    // Force six identical Redis creations to prefetch the same registry and
+    // transaction snapshots. A confirmed CAS rejection may reconcile the
+    // committed intent by reading; it must never repeat a mutation or treat
+    // acknowledgement loss as a confirmed CAS rejection.
+    const racing = identity(), commitsBeforeRace = successfulCommits;
+    readBarrier = [[], []];
+    const raced = await Promise.allSettled(Array.from({ length: 6 }, () => store.createWorkspace(racing.creation, hash(racing.bootstrap))));
+    readBarrier = undefined;
+    const accepted = raced.filter(result => result.status === 'fulfilled');
+    const conflicts = raced.filter(result => result.status === 'rejected');
+    const raceDiagnostic = JSON.stringify({ accepted: accepted.length, rejected: conflicts.map(result => result.reason.code) });
+    assert.equal(accepted.length, 6, `Identical confirmed Redis CAS race must reconcile read-only: ${raceDiagnostic}`);
+    const winners = accepted.filter(result => result.value.created);
+    assert.equal(winners.length, 1); accepted.forEach(result => assert.deepEqual(result.value.record, winners[0].value.record));
+    assert.equal(conflicts.length, 0);
+    assert.equal(successfulCommits, commitsBeforeRace + 1);
+    for (let attempt = 0; attempt < 6; attempt++) {
+      const recoveredRace = await store.createWorkspace(racing.creation, hash(racing.bootstrap));
+      assert.equal(recoveredRace.created, false); assert.deepEqual(recoveredRace.record, winners[0].value.record);
+    }
+    await assert.rejects(() => store.createWorkspace({ ...racing.creation, humanAccessHash: hash(access()) }, hash(racing.bootstrap)), { code: 'WORKSPACE_CONFLICT' });
+    await assert.rejects(() => store.createWorkspace(racing.creation, hash(access())), { code: 'UNAUTHORIZED' });
+    assert.equal(successfulCommits, commitsBeforeRace + 1, 'Redis CAS recovery must never repeat a committed write');
     for (const value of values.values()) noSecrets(value);
-    console.log(JSON.stringify({ ok: true, independentRedisProtocol: true, realInstalledSdk: true, configuredStoreUsed: true, loopbackHttpsTransportAdapter: true, retryFalseRequests: sdkRequests, creationLostAck: true, rotationLostAck: true, operationLostAck: true, immutableResult: true, externalRequests: 0 }));
+    console.log(JSON.stringify({ ok: true, independentRedisProtocol: true, realInstalledSdk: true, configuredStoreUsed: true, loopbackHttpsTransportAdapter: true, retryFalseRequests: sdkRequests, creationLostAck: true, rotationLostAck: true, operationLostAck: true, immutableResult: true, identicalRedisCreates: accepted.length, readOnlyRedisCasReconciliation: true, explicitRedisCasRecovery: true, externalRequests: 0 }));
   } finally { globalThis.fetch = guardedFetch; await new Promise(ok => server.close(ok)); }
 }
 async function acceptance() {
