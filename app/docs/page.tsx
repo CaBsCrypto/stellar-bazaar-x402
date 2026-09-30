@@ -157,7 +157,7 @@ export default function DocsPage() {
             <tr>
               <td><code>/api/discovery/resources</code></td>
               <td>GET</td>
-                <td>Catálogo paginado; consulta partialResults y dynamicRegistry para conocer su disponibilidad.</td>
+                <td>Catálogo filtrable; consulta partialResults y dynamicRegistry para conocer su disponibilidad.</td>
             </tr>
             <tr>
                 <td><code>/api/discovery/search?query=...</code></td>
