@@ -37,6 +37,8 @@ export function PrivatePurchase({
     [selectedId, setSelectedId] = useState<string>(),
     [notice, setNotice] = useState(""),
     generation = useRef(0);
+  const refresh = useRef<() => void>(() => {});
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const current = ++generation.current;
@@ -49,6 +51,7 @@ export function PrivatePurchase({
     async function load() {
       if (busy) return;
       busy = true;
+      setRefreshing(true);
       try {
         const res = await fetch(
           "/api/deliveries?operationId=" +
@@ -83,18 +86,17 @@ export function PrivatePurchase({
           );
       } finally {
         busy = false;
+        if (current === generation.current) setRefreshing(false);
       }
     }
 
+    refresh.current = () => { void load(); };
     void load();
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, 5000);
 
     return () => {
       generation.current++;
       controller.abort();
-      clearInterval(timer);
+      refresh.current = () => {};
     };
   }, [record.clientOperationId, token, onUnauthorized]);
 
@@ -146,6 +148,8 @@ export function PrivatePurchase({
   }
 
   return (
+    <>
+    <button type="button" onClick={() => refresh.current()} disabled={refreshing} style={{minHeight:44,marginBottom:12}}>Actualizar entrega</button>
     <PurchaseWorkspace
       record={record}
       versions={versions}
@@ -172,5 +176,6 @@ export function PrivatePurchase({
         </section>
       }
     />
+    </>
   );
 }
