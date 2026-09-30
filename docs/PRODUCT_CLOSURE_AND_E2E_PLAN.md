@@ -1,5 +1,8 @@
 # 🎯 Stellar Bazaar x402 — Plan Integral de Cierre de Producto y Flujos E2E
 
+> Plan histórico: sus observaciones y propuestas no describen el candidato actual.
+> Consulta [MCP_DISCOVERY.md](MCP_DISCOVERY.md) y [OPEN_WORKSPACE_CONTRACT.md](OPEN_WORKSPACE_CONTRACT.md).
+
 Este documento consolida el plan de acción técnico y de producto derivado de la auditoría y feedback del agente externo en `https://stellar-bazaar-x402.vercel.app`.
 
 ---

@@ -1,5 +1,8 @@
 # Testnet E2E readiness gate
 
+> Historical Testnet checklist. It does not enable payments or describe the current
+> scoped MCP tool suite. See [MCP_DISCOVERY.md](MCP_DISCOVERY.md) for the active contract.
+
 This is the minimum **go/no-go checklist before authorizing a new Stellar Testnet settlement**. Passing the visualization tests is necessary but not sufficient. This draft PR performs no signing, payment, provider invocation or settlement.
 
 ## 1. Receipt contract — required fields

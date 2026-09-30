@@ -69,7 +69,7 @@ provider, or verifies a paid delivery.
 This validates SDK protocol compatibility and discovery contract preservation
 against production route/server code with synthetic storage. It does not prove
 live provider readiness, deployed routing/authentication, funded balances,
-settlement, delivery, or provider ownership. It lists all eight tools but only
+settlement, delivery, or provider ownership. It lists the canonical MCP tool suite but only
 executes the buyer discovery/capability tools and unauthorized history; it does
 not claim behavioral coverage of workflow bundle or card validation tools.
 

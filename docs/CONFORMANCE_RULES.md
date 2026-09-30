@@ -6,7 +6,9 @@ The 11 deterministic conformance rules that every ServiceCard must pass before
 it can be registered (`lib/discovery.ts:76-139`). A card is valid only when no
 outcome is `fail` (`warnings` are advisory; see rule 11). These rules run on
 `POST /api/conformance/service-card`, gated `POST /api/publisher/ingest`, and
-MCP `validate_service_card`. MCP is read-only.
+MCP `validate_service_card`, which is read-only. The MCP server also exposes
+scoped provider-request and private-workspace writes; it cannot approve,
+activate, sign or pay. See [MCP discovery](MCP_DISCOVERY.md) for the current tools.
 
 ## The 11 rules
 
