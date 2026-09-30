@@ -50,7 +50,10 @@ try {
   }
   assert.equal((await invoke('/api/operations',tokens.agent,operation,{origin:'http://localhost:'+port})).status,400);
   assert.equal((await invoke('/api/activity',tokens.agent,{eventId:'bad',taskId:'task-next',mode:'mock',kind:'search',title:'Synthetic'},{'x-forwarded-host':'evil.example'})).status,403);
-  console.log(JSON.stringify({ok:true,nextProductionHttp:true,node:process.version,nextProcesses:2,concurrentCreations:6,fileDiagnostics:diagnostics(),configuredIpOrigin:true,nextLoopbackNormalization:true,strictHost:true,strictOrigin:true,forwardedAuthorityRejected:true,nativeOperations:true,nativeActivity:true,externalWrites:false}));
+  const workspaceId=parallel.find(r=>r.status===201).body.record.workspaceId;
+  const changes=await Promise.all([base,secondBase].map(origin=>invoke('/api/workspaces/'+workspaceId+'/access',tokens.bootstrap,{action:'rotate',role:'human',accessHash:hash(randomBytes(32).toString('base64url')),expectedGeneration:1},{},origin)));
+  assert.deepEqual(changes.map(r=>r.status).sort(),[200,409],JSON.stringify({responses:changes.map(r=>({status:r.status,code:r.body.error?.code})),diagnostics:diagnostics()}));
+  console.log(JSON.stringify({ok:true,nextProductionHttp:true,node:process.version,nextProcesses:2,concurrentCreations:6,concurrentReplayBatches:15,nativeGenerationCas:true,fileDiagnostics:diagnostics(),configuredIpOrigin:true,nextLoopbackNormalization:true,strictHost:true,strictOrigin:true,forwardedAuthorityRejected:true,nativeOperations:true,nativeActivity:true,externalWrites:false}));
 }finally{
   await Promise.all(children.map(child=>child.exitCode!==null?Promise.resolve():new Promise(r=>{child.once('exit',r);child.kill();})));
   assert.ok(resolve(dir).startsWith(resolve(tmpdir()))&&dir.includes('bazaar-workspace-next-'));await rm(dir,{recursive:true,force:true});
