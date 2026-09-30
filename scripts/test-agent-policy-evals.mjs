@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import {MCP_TOOLS} from "../lib/mcp-tool-contract.ts";
+import {MCP_TOOLS,MCP_WRITES} from "../lib/mcp-tool-contract.ts";
+import {pilotCards} from "../lib/pilot-cards.ts";
 
 const base = process.env.MCP_BASE_URL ?? "http://127.0.0.1:3000";
 const url = `${base}/api/mcp`;
@@ -83,10 +84,10 @@ for (const [index, routeTemplate] of adversarialTemplates.entries()) {
 const pilotsHidden = textOf((await rpc(40, "tools/call", { name: "list_services", arguments: {} })).result);
 const pilotsShown = textOf((await rpc(41, "tools/call", { name: "list_services", arguments: { includePilots: true } })).result);
 assert.equal(pilotsHidden.pilots.length, 0);
-assert.equal(pilotsShown.pilots.length, 6);
+assert.deepEqual(pilotsShown.pilots.map(card => card.id), pilotCards.map(card => card.id));
 
 const capabilities = textOf((await rpc(42, "tools/call", { name: "get_bazaar_capabilities", arguments: {} })).result);
-assert.deepEqual(capabilities.writes, []);
+assert.deepEqual(capabilities.writes, MCP_WRITES);
 assert.equal(capabilities.registry.mutationViaMcp, false);
 assert.equal(capabilities.localeDefault, "es");
 assert.deepEqual(capabilities.locales, ["es", "en"]);
@@ -105,11 +106,11 @@ console.log(JSON.stringify({
   ok: true,
   corpus: "MCP_SECURITY_POLICY_EVALS",
   scenarios: {
-    readOnlyTools: { count: toolNamesA.length, writes: 0, mutationRejected: true },
+    scopedTools: { count: toolNamesA.length, writes: MCP_WRITES.length, registryMutationRejected: true },
     deterministicSearch: true,
     malformedCards: 4,
     routeTemplateTraversal: { probes: adversarialTemplates.length, rejected: adversarialTemplates.length },
-    bilingualPilots: 6,
+    bilingualPilots: pilotCards.length,
     secretsAbsence: true,
   },
 }, null, 2));

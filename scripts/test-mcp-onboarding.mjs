@@ -174,7 +174,7 @@ assert.equal(pilotFlowText.paymentFlow.receipt.reconciliationStatus, "not-starte
 
 console.log(JSON.stringify({
   ok: true,
-  mode: "discovery-and-provider-requests",
+  mode: MCP_MODE,
   tools: readTools.length,
   writes: MCP_WRITES.length,
   mutationToolRejected: true,
