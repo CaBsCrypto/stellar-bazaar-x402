@@ -297,6 +297,21 @@ async function acceptance() {
     assert.equal((await call(agentClient, 'record_bazaar_operation', writeArgs('record_bazaar_operation', op))).error, false, 'Agent native-schema MCP write');
     const ownHistory = success(await http(second.base, '/api/operations', a.human), 'Human sees MCP operation'); assert.equal(ownHistory.records.length, 1);
     const original = ownHistory.records[0]; assert.equal(original.clientOperationId, op.clientOperationId); assert.equal(original.taskId, taskA.taskId); assert.equal(original.agentId, refA.agentId); assert.deepEqual(original.delivery.result, op.delivery.result);
+    for (const credential of [a.human, a.agent]) {
+      const deliveryList = success(await http(first.base, `/api/deliveries?operationId=${op.clientOperationId}`, credential), 'Own inline delivery list');
+      assert.deepEqual(deliveryList.versions, []); assert.equal(deliveryList.inlineOnly, true); assert.equal('limits' in deliveryList, false, 'Inline-only response must not imply file/S3 capacity');
+    }
+    const foreignDelivery = await http(first.base, `/api/deliveries?operationId=${op.clientOperationId}`, b.human); assert.equal(foreignDelivery.status, 404, 'Another owner cannot list an inline operation');
+    for (const value of [refA.ownerId, taskA.taskId, op.delivery.result.text]) assert.ok(!JSON.stringify(foreignDelivery.body).includes(value));
+    assert.equal((await http(first.base, `/api/deliveries?operationId=${op.clientOperationId}&ownerId=${refA.ownerId}`, a.human)).status, 400, 'Unknown delivery query cannot route an owner');
+    assert.equal((await http(first.base, '/api/deliveries', a.human)).status, 400, 'Delivery list requires its fixed operation ID');
+    for (const credential of [a.bootstrap, access()]) denied(await http(first.base, `/api/deliveries?operationId=${op.clientOperationId}`, credential), 'No unauthorized inline delivery read');
+    for (const [path, body] of [
+      ['/api/deliveries', { operationId: op.clientOperationId, manifest: { externalUrl: 'https://example.invalid/private-upload' } }],
+      ['/api/deliveries/upload', { versionId: randomUUID(), fileId: randomUUID() }],
+      ['/api/deliveries/confirm', { versionId: randomUUID(), fileId: randomUUID() }],
+      ['/api/deliveries/access', { versionId: randomUUID(), fileId: randomUUID(), download: true }],
+    ]) assert.equal((await http(first.base, path, a.agent, body)).status, 403, 'Anonymous file actions remain disabled');
     assert.deepEqual(success(await http(first.base, '/api/operations', a.human, undefined, { Origin: first.base }), 'Configured loopback Origin history').records, ownHistory.records);
     const legitimateMcpHistory = await call(humanClient, 'get_operation_history'); assert.equal(legitimateMcpHistory.error, false, 'Configured loopback Origin MCP history'); assert.deepEqual(legitimateMcpHistory.data.records, ownHistory.records);
     const foreignHistoryClient = await mcp(first.base, a.human, { Origin: 'https://foreign.invalid' });
@@ -483,7 +498,7 @@ async function acceptance() {
     const supportingExit = await new Promise((ok, fail) => { supporting.once('exit', ok); supporting.once('error', fail); }); clearTimeout(supportingTimeout);
     assert.equal(supportingExit, 0, 'Supporting core protocol-double acceptance failed; no author output or credentials emitted');
     assert.equal(concurrentOutage, false, `Concurrent creation may conflict but must not return a generic outage: ${parallelDiagnostic}; safe file diagnostics: ${JSON.stringify(fileDiagnostics)}`);
-    console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, independentRedisProtocol: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
+    console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, inlineDeliveryOwnList: true, anonymousFilesDisabled: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, independentRedisProtocol: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
   } catch (error) {
     if (fileDiagnostics.length) console.error(`Safe file diagnostics for failed acceptance: ${JSON.stringify(fileDiagnostics)}`);
     throw error;
