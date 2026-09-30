@@ -12,7 +12,7 @@ const buttonStyle = { minHeight: 44, maxWidth: "100%", padding: ".65rem 1rem", b
 export function SubmissionDetails({ submission }: { submission: ProviderSubmission }) {
   return <div style={panel}>
     <h3>{submission.card.name}</h3><p>{submission.submissionId} · {submission.status}</p>
-    <p>{submission.publiclyActive ? "Públicamente activo" : "No está publicado"}</p>
+    <p>{submission.publiclyActive ? "Públicamente activo" : ["activation-pending", "activation-uncertain"].includes(submission.status) ? "Publicación sin confirmar. Requiere reconciliación." : "No está publicado"}</p>
     <p>Control: {submission.control.method} · {submission.control.domain} · {submission.control.status}</p>
     <p>Recibido: {submission.submittedAt} · Expira: {submission.expiresAt}</p>
     <details open><summary style={{ minHeight: 44, padding: ".75rem 0", cursor: "pointer" }}>Ficha y evidencia</summary><pre style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", color: "#172033", background: "#f8fafc", padding: ".75rem", fontSize: ".875rem" }}>{JSON.stringify({ card: submission.card, control: submission.control, conformance: submission.conformance, review: submission.review, activation: submission.activation }, null, 2)}</pre></details>

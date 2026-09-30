@@ -26,6 +26,11 @@ function button(tree, label) { return nodes(tree, node => node.type === "button"
 const settle = async () => { for (let i = 0; i < 8; i++) await new Promise(resolve => setImmediate(resolve)); };
 const html = renderToStaticMarkup(React.createElement(SubmissionDetails, { submission: record }));
 assert.match(html, /&lt;img/); assert.ok(!html.includes("<img")); assert.ok(!html.includes("href="));
+for (const status of ["activation-pending", "activation-uncertain"]) {
+  const uncertain = renderToStaticMarkup(React.createElement(SubmissionDetails, { submission: { ...record, status, publiclyActive: false } }));
+  assert.match(uncertain, /Publicación sin confirmar/);
+  assert.ok(!uncertain.includes("No está publicado"));
+}
 render(); const cleanup = effects[0](); await settle();
 let tree = render();
 assert.equal(calls[0][0], "replace", "URL credential removed before network");
