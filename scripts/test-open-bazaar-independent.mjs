@@ -45,7 +45,7 @@ function reference(body) {
 async function http(base, path, token, body, extraHeaders = {}) {
   const response = await fetch(new URL(path, base), {
     method: body === undefined ? 'GET' : 'POST',
-    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...extraHeaders },
+    headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json', Origin: base }), ...extraHeaders },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }), signal: AbortSignal.timeout(10000),
   });
   let result; try { result = await response.json(); } catch { result = null; }
@@ -151,6 +151,19 @@ async function acceptance() {
     const bootstrapClient = await mcp(second.base, a.bootstrap);
     const mcpCreationReplay = await call(bootstrapClient, 'create_bazaar_workspace', a.creation);
     assert.equal(mcpCreationReplay.error, false); assert.equal(reference(mcpCreationReplay.data).ownerId, refA.ownerId, 'MCP reuses native creation identity');
+    success(await http(first.base, '/api/workspaces', a.bootstrap, a.creation), 'Exact configured loopback Origin creation replay');
+    const endpoint = new URL(first.base);
+    for (const [label, spoof] of [
+      ['foreign Host', { Host: 'foreign.invalid' }],
+      ['foreign forwarded Host', { 'X-Forwarded-Host': 'foreign.invalid' }],
+      ['foreign forwarded protocol', { 'X-Forwarded-Proto': 'https' }],
+      ['wrong Host port', { Host: `127.0.0.1:${Number(endpoint.port) + 1}` }],
+      ['unconfigured localhost Origin alias', { Origin: `http://localhost:${endpoint.port}` }],
+    ]) {
+      denied(await http(first.base, '/api/workspaces', a.bootstrap, a.creation, spoof), `Loopback ${label} rejection`);
+      const spoofClient = await mcp(first.base, a.bootstrap, spoof);
+      assert.equal((await call(spoofClient, 'create_bazaar_workspace', a.creation)).error, true, `MCP must preserve loopback ${label} rejection`);
+    }
     assert.equal((await call(bootstrapClient, 'get_operation_history')).error, true, 'Bootstrap MCP cannot read human history');
     const refB = reference(success(await http(first.base, '/api/workspaces', b.bootstrap, b.creation), 'Owner B creation'));
     for (const field of ['ownerId', 'workspaceId', 'agentId']) assert.notEqual(refA[field], refB[field]);
@@ -177,11 +190,13 @@ async function acceptance() {
     denied(await http(first.base, '/api/operations', a.agent, { ...op, ownerId: refB.ownerId }), 'Client owner record routing');
     denied(await http(first.base, '/api/operations', a.agent, { ...op, payment: { ...op.payment, status: 'reported-unverified', amountAtomic: '1', transactionHash: 'a'.repeat(64) } }), 'Anonymous paid report');
     denied(await http(first.base, '/api/operations', a.agent, { ...op, delivery: { ...op.delivery, artifact: { kind: 'external', url: 'https://example.invalid/result', label: 'External reference' } } }), 'Anonymous external upload');
-    const agentClient = await mcp(first.base, a.agent), humanClient = await mcp(second.base, a.human), otherClient = await mcp(second.base, b.agent);
+    const agentClient = await mcp(first.base, a.agent, { Origin: first.base }), humanClient = await mcp(second.base, a.human, { Origin: second.base }), otherClient = await mcp(second.base, b.agent);
     function writeArgs(name, value) { const props = tools.find(tool => tool.name === name).inputSchema.properties; return props.operation ? { operation: value } : props.event ? { event: value } : value; }
     assert.equal((await call(agentClient, 'record_bazaar_operation', writeArgs('record_bazaar_operation', op))).error, false, 'Agent native-schema MCP write');
     const ownHistory = success(await http(second.base, '/api/operations', a.human), 'Human sees MCP operation'); assert.equal(ownHistory.records.length, 1);
     const original = ownHistory.records[0]; assert.equal(original.clientOperationId, op.clientOperationId); assert.equal(original.taskId, taskA.taskId); assert.equal(original.agentId, refA.agentId); assert.deepEqual(original.delivery.result, op.delivery.result);
+    assert.deepEqual(success(await http(first.base, '/api/operations', a.human, undefined, { Origin: first.base }), 'Configured loopback Origin history').records, ownHistory.records);
+    const legitimateMcpHistory = await call(humanClient, 'get_operation_history'); assert.equal(legitimateMcpHistory.error, false, 'Configured loopback Origin MCP history'); assert.deepEqual(legitimateMcpHistory.data.records, ownHistory.records);
     const foreignHistoryClient = await mcp(first.base, a.human, { Origin: 'https://foreign.invalid' });
     const foreignHistory = await call(foreignHistoryClient, 'get_operation_history');
     assert.equal(foreignHistory.error, true, 'MCP history must preserve and reject foreign Origin');
