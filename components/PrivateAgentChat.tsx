@@ -2,8 +2,11 @@
 import { useEffect, useRef, useState } from 'react';
 
 type Message = { messageId:string; actor:'human'|'agent'; text:string; taskId:string; operationId?:string };
-type Conversation = { conversationId:string; title:string; messages:Message[] };
+type Task = { taskId:string; status:'pending'|'claimed'|'responded'|'uncertain' };
+type Conversation = { conversationId:string; title:string; messages:Message[]; tasks?:Task[] };
+const statusLabel={pending:'En cola para tu agente',claimed:'Tu agente tomó esta tarea',responded:'Respuesta registrada',uncertain:'Resultado incierto; tu agente debe recuperar el mismo intento'};
 type Pending = { path:string; body:Record<string,string>; kind:'create'|'send' };
+function taskLabel(conversation:Conversation, taskId:string){const task=conversation.tasks?.find(item=>item.taskId===taskId);return task?statusLabel[task.status]:'Sin respuesta registrada';}
 export function PrivateAgentChat() {
  const [token,setToken]=useState(''), [conversations,setConversations]=useState<Conversation[]>([]), [selected,setSelected]=useState('');
  const [draft,setDraft]=useState(''), [notice,setNotice]=useState(''), [busy,setBusy]=useState(false), [locked,setLocked]=useState(false);
@@ -57,13 +60,16 @@ export function PrivateAgentChat() {
   {!token?<div><h2>{locked?'Conversación bloqueada':'Abre tu enlace privado'}</h2><p>Tu agente crea el espacio con el helper privado de terminal y te entrega el enlace. Conserva ese enlace para volver a entrar.</p><p>El acceso no se guarda en este navegador. Bloquear no revoca el enlace.</p></div>:<>
    <div style={{display:'flex',gap:12,flexWrap:'wrap',marginBottom:16}}><button type="button" onClick={lock} style={{minHeight:44}}>Bloquear</button><button type="button" disabled={busy} onClick={()=>void refresh()} style={{minHeight:44}}>Actualizar mensajes</button><button type="button" style={{minHeight:44}} onClick={()=>{window.location.assign('/history#token='+encodeURIComponent(token));}}>Abrir mi biblioteca</button></div>
    <label htmlFor="private-conversation">Conversación</label><select id="private-conversation" value={selected} disabled={busy||!!pending.current} onChange={e=>{setSelected(e.target.value);setDraft('');}} style={{width:'100%',minHeight:44}}><option value="">Crear una conversación</option>{conversations.map(c=><option key={c.conversationId} value={c.conversationId}>{c.title}</option>)}</select>
-   <ol aria-label="Mensajes" style={{listStyle:'none',padding:0}}>{conversation?.messages.map(m=><li key={m.messageId} style={{padding:'12px 0',borderBottom:'1px solid #ddd'}}><strong>{m.actor==='human'?'Tú':'Tu agente'}</strong><p style={{whiteSpace:'pre-wrap'}}>{m.text}</p>{m.actor==='human'&&!conversation.messages.some(answer=>answer.actor==='agent'&&answer.taskId===m.taskId)&&<small>Sin respuesta registrada · actualiza para consultar</small>}{m.operationId&&<small>Entrega registrada: {m.operationId}</small>}</li>)}</ol>
+   <ol aria-label="Mensajes" style={{listStyle:'none',padding:0}}>{conversation?.messages.map(m=><li key={m.messageId} style={{padding:'12px 0',borderBottom:'1px solid #ddd'}}><strong>{m.actor==='human'?'Tú':'Tu agente'}</strong><p style={{whiteSpace:'pre-wrap'}}>{m.text}</p>{m.actor==='human'&&!conversation.messages.some(answer=>answer.actor==='agent'&&answer.taskId===m.taskId)&&<small>{taskLabel(conversation,m.taskId)} · actualiza para consultar</small>}{m.operationId&&<small>Entrega registrada: {m.operationId}</small>}</li>)}</ol>
    {selected&&<><label htmlFor="private-chat-draft">Mensaje para tu agente</label><textarea id="private-chat-draft" value={draft} onChange={e=>setDraft(e.target.value)} maxLength={2000} disabled={busy||!!pending.current} rows={4} style={{display:'block',width:'100%',boxSizing:'border-box',fontSize:16}}/></>}
    <button type="button" disabled={busy||!!pending.current||(!!selected&&!draft.trim())} onClick={()=>void submit()} style={{minHeight:44,marginTop:12}}>{selected?'Enviar mensaje':'Crear conversación'}</button>
    {pending.current&&<button type="button" disabled={busy} onClick={()=>void submit(true)} style={{minHeight:44,margin:12}}>Recuperar el mismo intento</button>}
   </>}
  </section>;
 }
+
+
+
 
 
 

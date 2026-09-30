@@ -2,6 +2,9 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createWorkspaceChatHandlers } from '../lib/workspace-chat-http.ts';
 import { WorkspaceError } from '../lib/workspace-types.ts';
+process.env.BAZAAR_ENABLE_OPEN_WORKSPACES='true';
+process.env.BAZAAR_WORKSPACE_BACKEND='file';
+process.env.BAZAAR_WORKSPACE_LOCAL_ORIGIN='http://localhost';
 const conversationId=randomUUID(),taskId=randomUUID(),messageId=randomUUID(),attemptId=randomUUID();
 let invoked=0, last;
 const records=new Map();
@@ -31,3 +34,4 @@ const origin=request('human',{conversationId,title:'X'});origin.headers.set('ori
 assert.equal((await handlers.conversationsGET(request('human',undefined,'/api/conversations?ownerId=other'))).status,400);
 const valid=await handlers.conversationsGET(request('human'));assert.match(valid.headers.get('cache-control'),/no-store/);
 console.log('PASS chat handler strict bodies, roles, server identity, idempotency/conflict, origins, input limits, private headers. Synthetic injected store only.');
+
