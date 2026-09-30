@@ -304,6 +304,12 @@ async function acceptance() {
     assert.equal(foreignHistory.error, true, 'MCP history must preserve and reject foreign Origin');
     const foreignHistoryBody = JSON.stringify(foreignHistory.data);
     for (const privateValue of [refA.ownerId, taskA.taskId, op.clientOperationId, op.delivery.result.text]) assert.ok(!foreignHistoryBody.includes(privateValue), 'Denied foreign-Origin MCP response must not disclose private history');
+    for (const spoof of [{ 'X-Forwarded-Port': String(Number(endpoint.port) + 1) }, { Forwarded: 'host=foreign.invalid;proto=https' }]) {
+      const deniedNativeHistory = await http(first.base, '/api/operations', a.human, undefined, spoof); denied(deniedNativeHistory, 'Native forwarded-authority history');
+      const forwardedHistoryClient = await mcp(first.base, a.human, spoof), deniedForwardedHistory = await call(forwardedHistoryClient, 'get_operation_history');
+      assert.equal(deniedForwardedHistory.error, true, 'MCP history must retain forwarded-authority denials');
+      for (const body of [deniedNativeHistory.body, deniedForwardedHistory.data]) for (const privateValue of [refA.ownerId, taskA.taskId, op.clientOperationId, op.delivery.result.text]) assert.ok(!JSON.stringify(body).includes(privateValue), 'Denied authority must not disclose private history');
+    }
     assert.equal((await call(humanClient, 'record_bazaar_operation', writeArgs('record_bazaar_operation', op))).error, true);
     assert.equal((await call(agentClient, 'record_bazaar_operation', writeArgs('record_bazaar_operation', op))).error, false);
     assert.deepEqual(success(await http(second.base, '/api/operations', a.human), 'History replay').records, ownHistory.records);
