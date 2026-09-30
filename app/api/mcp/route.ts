@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   // Credential context belongs to one request; never share it between transports.
   const server = createOnboardingMcpServer(async () => {
     const historyHeaders = new Headers();
-    for (const name of ["authorization", "origin", "host", "x-forwarded-host", "x-forwarded-proto", "x-vercel-forwarded-for"]) {
+    for (const name of ["authorization", "origin", "host", "x-forwarded-host", "x-forwarded-proto", "x-forwarded-port", "forwarded", "x-vercel-forwarded-for"]) {
       const value = request.headers.get(name); if (value !== null) historyHeaders.set(name, value);
     }
     const response = await readOperations(new Request(new URL("/api/operations", request.url), {

@@ -8,7 +8,7 @@ import { POST as recordActivity } from "../app/api/activity/route";
 export function workspaceMcpContext(incoming: Request) {
   function request(path: string, body?: unknown) {
     const headers = new Headers();
-    for (const name of ["authorization", "origin", "host", "x-forwarded-host", "x-forwarded-proto", "x-vercel-forwarded-for"]) {
+    for (const name of ["authorization", "origin", "host", "x-forwarded-host", "x-forwarded-proto", "x-forwarded-port", "forwarded", "x-vercel-forwarded-for"]) {
       const value = incoming.headers.get(name); if (value !== null) headers.set(name, value);
     }
     const json = body === undefined ? undefined : JSON.stringify(body);
