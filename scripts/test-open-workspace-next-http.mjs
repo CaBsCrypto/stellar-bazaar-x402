@@ -26,7 +26,11 @@ try {
   const secondReservation=createServer();await new Promise(r=>secondReservation.listen(0,'127.0.0.1',r));const secondPort=secondReservation.address().port;await new Promise(r=>secondReservation.close(r));const secondBase='http://127.0.0.1:'+secondPort,second=start(secondPort);await readyServer(secondBase,second);
   const tokens=Object.fromEntries(['bootstrap','human','agent'].map(role=>[role,randomBytes(32).toString('base64url')])),hash=v=>createHash('sha256').update(v).digest('hex');
   const body={creationId:randomUUID(),humanAccessHash:hash(tokens.human),agentAccessHash:hash(tokens.agent)};
-  async function invoke(path,token,value,headers={},origin=base){return new Promise((resolveRequest,reject)=>{const request=httpRequest(origin+path,{method:value===undefined?'GET':'POST',headers:{authorization:'Bearer '+token,origin,...(value===undefined?{}:{'content-type':'application/json'}),...headers}},response=>{let text='';response.on('data',chunk=>text+=chunk);response.on('end',()=>{try{resolveRequest({status:response.statusCode,body:JSON.parse(text)});}catch(e){reject(e);}});});request.on('error',reject);if(value!==undefined)request.write(JSON.stringify(value));request.end();});}
+  async function invoke(path,token,value,headers={},origin=base){
+    const options={method:value===undefined?'GET':'POST',headers:{authorization:'Bearer '+token,origin,...(value===undefined?{}:{'content-type':'application/json'}),...headers}};
+    if(!Object.keys(headers).some(key=>key.toLowerCase()==='host')){const response=await fetch(origin+path,{...options,...(value===undefined?{}:{body:JSON.stringify(value)})});return{status:response.status,body:await response.json()};}
+    return new Promise((resolveRequest,reject)=>{const request=httpRequest(origin+path,options,response=>{let text='';response.on('data',chunk=>text+=chunk);response.on('end',()=>{try{resolveRequest({status:response.statusCode,body:JSON.parse(text)});}catch(e){reject(e);}});});request.on('error',reject);if(value!==undefined)request.write(JSON.stringify(value));request.end();});
+  }
   const parallel=await Promise.all(Array.from({length:6},(_,i)=>invoke('/api/workspaces',tokens.bootstrap,body,{},i%2?secondBase:base)));
   assert.equal(parallel.filter(r=>r.status===201).length,1,JSON.stringify({responses:parallel.map(r=>({status:r.status,code:r.body.error?.code})),diagnostics:diagnostics()}));
   assert.ok(parallel.every(r=>[200,201,409].includes(r.status)),JSON.stringify({responses:parallel.map(r=>({status:r.status,code:r.body.error?.code})),diagnostics:diagnostics()}));

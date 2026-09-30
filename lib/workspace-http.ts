@@ -32,7 +32,7 @@ export async function parseWorkspaceBody<T>(request: Request, schema: z.ZodType<
 }
 export async function authenticateWorkspaceRequest(request: Request, role?: WorkspaceRole) {
   assertWorkspaceRequest(request); const principal = await requireWorkspacePrincipal(request.headers.get("authorization"), role);
-  await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.generation, principal.role === "bootstrap");
+  await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.generation, principal.role === "bootstrap" ? workspaceBearerHash(request.headers.get("authorization")) : undefined);
   return principal;
 }
 function trustedIp(request: Request) {
@@ -41,7 +41,7 @@ function trustedIp(request: Request) {
 }
 export function createWorkspaceHandlers() {
   return {
-    async POST(request: Request) { try { assertWorkspaceRequest(request); const bootstrapHash = workspaceBearerHash(request.headers.get("authorization")); const input = await parseWorkspaceBody(request, createWorkspaceSchema, 1024); const store = configuredWorkspaceStore(), result = await store.createWorkspace(input, bootstrapHash, trustedIp(request)); await store.consumeRequest(result.record.ownerId, result.record.generation, true); return Response.json({ version: "1", ...result }, { status: result.created ? 201 : 200, headers: workspaceHeaders }); } catch (e) { return workspaceFailure(e); } },
-    async access(request: Request, workspaceId: string) { try { assertWorkspaceRequest(request); const bootstrapHash = workspaceBearerHash(request.headers.get("authorization")); const principal = await requireWorkspacePrincipal(request.headers.get("authorization"), "bootstrap"); if (principal.workspaceId !== workspaceId) throw new WorkspaceError("FORBIDDEN", 403); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.generation, true); const input = await parseWorkspaceBody(request, workspaceAccessSchema, 1024); const result = await configuredWorkspaceStore().changeAccess(workspaceId, bootstrapHash, input); return Response.json({ version: "1", ...result }, { headers: workspaceHeaders }); } catch (e) { return workspaceFailure(e); } },
+    async POST(request: Request) { try { assertWorkspaceRequest(request); const bootstrapHash = workspaceBearerHash(request.headers.get("authorization")); const input = await parseWorkspaceBody(request, createWorkspaceSchema, 1024); const store = configuredWorkspaceStore(), result = await store.createWorkspace(input, bootstrapHash, trustedIp(request)); await store.consumeRequest(result.record.ownerId, result.record.generation, bootstrapHash); return Response.json({ version: "1", ...result }, { status: result.created ? 201 : 200, headers: workspaceHeaders }); } catch (e) { return workspaceFailure(e); } },
+    async access(request: Request, workspaceId: string) { try { assertWorkspaceRequest(request); const bootstrapHash = workspaceBearerHash(request.headers.get("authorization")); const principal = await requireWorkspacePrincipal(request.headers.get("authorization"), "bootstrap"); if (principal.workspaceId !== workspaceId) throw new WorkspaceError("FORBIDDEN", 403); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.generation, bootstrapHash); const input = await parseWorkspaceBody(request, workspaceAccessSchema, 1024); const result = await configuredWorkspaceStore().changeAccess(workspaceId, bootstrapHash, input); return Response.json({ version: "1", ...result }, { headers: workspaceHeaders }); } catch (e) { return workspaceFailure(e); } },
   };
 }

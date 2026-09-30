@@ -72,12 +72,18 @@ try {
   assert.deepEqual((await (await history.GET(request('/api/operations',other.human))).json()).records,[]); assert.equal((await createFileWorkspaceStore(dir).getConversation(otherOwner,'conversation-a')),null);
   const rotated=randomBytes(32).toString('base64url'); const access=await http.access(request('/api/workspaces/'+receipt.workspaceId+'/access',c.bootstrap,{action:'rotate',role:'human',accessHash:hash(rotated),expectedGeneration:1}),receipt.workspaceId); assert.equal(access.status,200); assert.equal((await access.json()).record.generation,2);
   await assert.rejects(()=>requireWorkspacePrincipal('Bearer '+c.human),{code:'UNAUTHORIZED'}); await assert.rejects(()=>hs.createConversation(receipt.ownerId,{conversationId:'stale',title:'Stale principal'}),{code:'UNAUTHORIZED'});
+  await store.consumeRequest(receipt.ownerId,1,hash(c.bootstrap));
+  await assert.rejects(()=>store.consumeRequest(receipt.ownerId,1,hash(c.agent)),{code:'UNAUTHORIZED'});
+  await assert.rejects(()=>store.consumeRequest(receipt.ownerId,1),{code:'UNAUTHORIZED'});
   assert.equal((await http.access(request('/api/workspaces/'+receipt.workspaceId+'/access',c.bootstrap,{action:'revoke',expectedGeneration:1}),receipt.workspaceId)).status,409);
   const afterRotate=await http.POST(request('/api/workspaces',c.bootstrap,input)); assert.equal(afterRotate.status,200); assert.equal((await afterRotate.json()).record.generation,2);
   assert.equal((await http.access(request('/api/workspaces/'+receipt.workspaceId+'/access',c.bootstrap,{action:'revoke',expectedGeneration:2}),receipt.workspaceId)).status,200);
   const revokeReplay=await http.access(request('/api/workspaces/'+receipt.workspaceId+'/access',c.bootstrap,{action:'revoke',expectedGeneration:2}),receipt.workspaceId);assert.equal(revokeReplay.status,200);assert.equal((await revokeReplay.json()).created,false);
   await assert.rejects(()=>requireWorkspacePrincipal('Bearer '+rotated),{code:'UNAUTHORIZED'}); await assert.rejects(()=>requireWorkspacePrincipal('Bearer '+c.agent),{code:'UNAUTHORIZED'});
   const tombstone=await http.POST(request('/api/workspaces',c.bootstrap,input)); assert.equal(tombstone.status,200); assert.equal((await tombstone.json()).record.revoked,true);
+  const raceCredentials=credentials(),raceCreated=await http.POST(request('/api/workspaces',raceCredentials.bootstrap,body(raceCredentials))),raceWorkspace=(await raceCreated.json()).record;
+  const competingAccess=await Promise.all([0,1].map(()=>http.access(request('/api/workspaces/'+raceWorkspace.workspaceId+'/access',raceCredentials.bootstrap,{action:'rotate',role:'human',accessHash:hash(credentials().human),expectedGeneration:1}),raceWorkspace.workspaceId)));
+  assert.deepEqual(competingAccess.map(r=>r.status).sort(),[200,409]);
   const persisted=await readFile(join(dir,'local-test','registry.json'),'utf8'); for(const token of [...Object.values(c),rotated]) assert.equal(persisted.includes(token),false);
   process.env.BAZAAR_HISTORY_ACCOUNTS_JSON=JSON.stringify([{ownerId:'legacy',readTokenHash:hash('l'.repeat(43)),writeTokenHash:hash('w'.repeat(43))}]);
   const collision=await http.POST(request('/api/workspaces',credentials().bootstrap,{...body(credentials()),humanAccessHash:hash('l'.repeat(43))})); assert.equal(collision.status,409); delete process.env.BAZAAR_HISTORY_ACCOUNTS_JSON;

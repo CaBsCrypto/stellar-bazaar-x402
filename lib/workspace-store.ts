@@ -11,6 +11,7 @@ import { WORKSPACE_LIMITS, WorkspaceError, createWorkspaceSchema, workspaceAcces
 import { legacyHistoryReservations } from "./operation-history-auth.ts";
 
 if (typeof window !== "undefined") throw new Error("Workspace storage is server-only");
+const fileDiagnostics = channel("bazaar.workspace.file");
 const uuid = z.string().uuid(), iso = z.string().datetime();
 const accessIntentSchema = z.object({ expectedGeneration: z.number().int().min(1), digest: workspaceHashSchema, generation: z.number().int().min(2), revoked: z.boolean() }).strict();
 const metaSchema = z.object({ creationId: uuid, workspaceId: uuid, ownerId: z.string().regex(/^ow_[a-f0-9]{32}$/), agentId: z.string().regex(/^agent_[a-f0-9]{32}$/), bootstrapHash: workspaceHashSchema, initialHumanHash: workspaceHashSchema, initialAgentHash: workspaceHashSchema, humanHash: workspaceHashSchema.nullable(), agentHash: workspaceHashSchema.nullable(), retiredHashes: z.array(workspaceHashSchema).max(4096), accessIntents: z.array(accessIntentSchema).max(4094), generation: z.number().int().min(1), revoked: z.boolean(), createdAt: iso, documentRevision: uuid, documentBytes: z.number().int().min(0).max(WORKSPACE_LIMITS.ownerBytes) }).strict();
@@ -39,26 +40,27 @@ const digest = (v: unknown) => createHash("sha256").update(canonicalOperationJso
 const bytes = (v: string) => Buffer.byteLength(v, "utf8");
 const emptyRegistry = (): Registry => ({ version: 1, revision: randomUUID(), workspaces: [], creationWindows: [], requestWindows: [] });
 const emptyDocument = (ownerId: string): Document => ({ version: 1, ownerId, revision: randomUUID(), conversations: [], tasks: [], operations: [], events: [] });
-const unavailable = () => new WorkspaceError("WORKSPACE_UNAVAILABLE");
+const unavailable = (phase = "store-unavailable") => { fileDiagnostics.publish({ phase, code: "UNAVAILABLE" }); return new WorkspaceError("WORKSPACE_UNAVAILABLE"); };
 function validateRegistry(raw: string, marker: string, legacy: WorkspaceLegacyRegistry): Registry {
-  if (!raw) { if (marker) throw unavailable(); return emptyRegistry(); }
-  if (marker !== "workspace-v1" || bytes(raw) > WORKSPACE_LIMITS.registryBytes) throw unavailable();
+  if (!raw) { if (marker) throw unavailable("registry-missing"); return emptyRegistry(); }
+  if (marker !== "workspace-v1" || bytes(raw) > WORKSPACE_LIMITS.registryBytes) throw unavailable("registry-envelope");
   const registry = registrySchema.parse(JSON.parse(raw));
   const ids = new Set<string>(), hashes = new Set<string>();
   for (const m of registry.workspaces) {
-    for (const id of [m.creationId, m.workspaceId, m.ownerId, m.agentId]) { if (ids.has(id) || legacy.ownerIds.includes(id)) throw unavailable(); ids.add(id); }
+    for (const id of [m.creationId, m.workspaceId, m.ownerId, m.agentId]) { if (ids.has(id) || legacy.ownerIds.includes(id)) throw unavailable("registry-identity"); ids.add(id); }
     const unique = new Set([m.bootstrapHash, m.initialHumanHash, m.initialAgentHash, m.humanHash, m.agentHash, ...m.retiredHashes].filter((h): h is string => h !== null));
     if (m.bootstrapHash === m.initialHumanHash || m.bootstrapHash === m.initialAgentHash || m.initialHumanHash === m.initialAgentHash || (m.humanHash && m.humanHash === m.agentHash) || m.bootstrapHash === m.humanHash || m.bootstrapHash === m.agentHash || (m.revoked ? !!(m.humanHash || m.agentHash) : !(m.humanHash && m.agentHash)) || new Set(m.retiredHashes).size !== m.retiredHashes.length || m.retiredHashes.includes(m.bootstrapHash) || (m.humanHash && m.retiredHashes.includes(m.humanHash)) || (m.agentHash && m.retiredHashes.includes(m.agentHash)) || m.retiredHashes.length !== m.generation - 1 + (m.revoked ? 1 : 0) || ![m.humanHash, ...m.retiredHashes].includes(m.initialHumanHash) || ![m.agentHash, ...m.retiredHashes].includes(m.initialAgentHash)) throw unavailable();
-    if (m.accessIntents.length !== m.generation - 1 || m.accessIntents.some((intent, i) => intent.expectedGeneration !== i + 1 || intent.generation !== i + 2 || intent.revoked !== (m.revoked && i === m.accessIntents.length - 1))) throw unavailable();
-    for (const hash of unique) { if (hashes.has(hash) || legacy.hashes.includes(hash)) throw unavailable(); hashes.add(hash); }
+    if (m.accessIntents.length !== m.generation - 1 || m.accessIntents.some((intent, i) => intent.expectedGeneration !== i + 1 || intent.generation !== i + 2 || intent.revoked !== (m.revoked && i === m.accessIntents.length - 1))) throw unavailable("registry-intents");
+    for (const hash of unique) { if (hashes.has(hash) || legacy.hashes.includes(hash)) throw unavailable("registry-hashes"); hashes.add(hash); }
   }
   if (registry.workspaces.reduce((n, m) => n + m.documentBytes, bytes(raw)) > WORKSPACE_LIMITS.globalBytes) throw unavailable();
   return registry;
 }
 function validateDocument(raw: string, meta: Meta): Document {
-  if (!raw || bytes(raw) !== meta.documentBytes) throw unavailable();
+  if (!raw) throw unavailable("owner-missing");
+  if (bytes(raw) !== meta.documentBytes) throw unavailable("owner-size");
   const d = docSchema.parse(JSON.parse(raw)) as Document;
-  if (d.ownerId !== meta.ownerId || d.revision !== meta.documentRevision) throw unavailable();
+  if (d.ownerId !== meta.ownerId || d.revision !== meta.documentRevision) throw unavailable("owner-identity");
   const conversations = new Set<string>(), messages = new Set<string>(), tasks = new Set<string>(), operations = new Set<string>(), events = new Set<string>();
   for (const c of d.conversations) {
     if (conversations.has(c.record.conversationId) || c.digest !== digest({ conversationId: c.record.conversationId, title: c.record.title })) throw unavailable();
@@ -116,7 +118,6 @@ function redisBackend(redis: WorkspaceRedis, prefix: string): Backend {
   } };
 }
 async function optionalRead(path: string) { try { return await readFile(path, "utf8"); } catch (e) { if ((e as NodeJS.ErrnoException).code === "ENOENT") return ""; throw e; } }
-const fileDiagnostics = channel("bazaar.workspace.file");
 function fileFailure(phase: string, error: unknown) {
   const errno = (error as NodeJS.ErrnoException | undefined)?.code;
   const code = errno && ["EACCES", "EPERM", "EEXIST", "ENOENT", "EBUSY", "EIO", "EINVAL", "EISDIR", "ENOTDIR", "EMFILE", "ENFILE", "ENOSPC"].includes(errno) ? errno : "UNKNOWN";
@@ -141,7 +142,7 @@ function fileBackend(directory: string, prefix: string): Backend {
   })) };
 }
 function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistry = legacyHistoryReservations, principal?: WorkspacePrincipal) {
-  const safe = async <T>(fn: () => Promise<T>): Promise<T> => { try { return await fn(); } catch (e) { if (e instanceof WorkspaceError) throw e; throw unavailable(); } };
+  const safe = async <T>(fn: () => Promise<T>): Promise<T> => { try { return await fn(); } catch (e) { if (e instanceof WorkspaceError) throw e; fileDiagnostics.publish({ phase: "store-unexpected", code: e instanceof z.ZodError ? "SCHEMA" : e instanceof SyntaxError ? "JSON" : "UNKNOWN" }); throw unavailable(); } };
   function authorized(meta: Meta, role?: WorkspaceRole) {
     if (meta.revoked && role !== "bootstrap") throw new WorkspaceError("WORKSPACE_REVOKED", 401);
     if (principal && (meta.ownerId !== principal.ownerId || meta.workspaceId !== principal.workspaceId || meta.generation !== principal.generation || meta.agentId !== principal.agentId)) throw new WorkspaceError("UNAUTHORIZED", 401);
@@ -223,9 +224,11 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       } else { meta.retiredHashes.push(meta.humanHash!, meta.agentHash!); meta.humanHash = null; meta.agentHash = null; meta.revoked = true; }
       meta.generation++; meta.accessIntents.push({ expectedGeneration: input.expectedGeneration, digest: intentDigest, generation: meta.generation, revoked: meta.revoked }); registry.revision = randomUUID(); const reg = JSON.stringify(registry); if (bytes(reg) > WORKSPACE_LIMITS.registryBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409); validateRegistry(reg, "workspace-v1", reservations()); await commit(reg, ""); return { record: receipt(meta), current: { generation: meta.generation, revoked: meta.revoked }, created: true };
     }); }); },
-    async consumeRequest(ownerId: string, generation: number, allowRevokedAdministration = false) { return safe(() => backend.transact(ownerId, async (s, commit) => {
+    async consumeRequest(ownerId: string, generation: number, bootstrapHash?: string) { return safe(() => backend.transact(ownerId, async (s, commit) => {
       const registry = validateRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
-      if (!meta || meta.generation !== generation || (meta.revoked && !allowRevokedAdministration)) throw new WorkspaceError("UNAUTHORIZED", 401);
+      if (!meta) throw new WorkspaceError("UNAUTHORIZED", 401);
+      const administration = bootstrapHash !== undefined && bootstrapHash === meta.bootstrapHash;
+      if ((bootstrapHash !== undefined && !administration) || (!administration && (meta.generation !== generation || meta.revoked))) throw new WorkspaceError("UNAUTHORIZED", 401);
       validateDocument(s.documentRaw, meta);
       const now = Date.now(); registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
       if (!w) { w = { ownerId, count: 0, until: now + 60000 }; registry.requestWindows.push(w); }
