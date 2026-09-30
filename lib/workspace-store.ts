@@ -128,8 +128,18 @@ function fileBackend(directory: string, prefix: string): Backend {
   const paths = (ownerId?: string) => ({ registry: join(root, "registry.json"), document: join(root, ownerId ? `owner-${ownerId}.json` : "unused.json"), marker: join(root, "initialized"), pending: join(root, "pending.json"), lock: join(root, "lock") });
   async function locked<T>(ownerId: string | undefined, callback: (p: ReturnType<typeof paths>) => Promise<T>) {
     await mkdir(root, { recursive: true }); const p = paths(ownerId);
-    let handle; const until = Date.now() + 2500;
-    for (;;) { try { handle = await open(p.lock, "wx"); break; } catch (e) { if ((e as NodeJS.ErrnoException).code !== "EEXIST" || Date.now() >= until) { fileFailure(Date.now() >= until ? "lock-timeout" : "lock-acquire", e); throw unavailable(); } await new Promise(r => setTimeout(r, 10)); } }
+    let handle, reportedPermissionContention = false; const until = Date.now() + 2500;
+    for (;;) {
+      try { handle = await open(p.lock, "wx"); break; }
+      catch (e) {
+        const code = (e as NodeJS.ErrnoException).code;
+        // Windows can report EPERM during concurrent lock acquisition.
+        // Only acquisition is retried: the callback has not read or changed state.
+        if (!["EEXIST", "EPERM"].includes(code ?? "") || Date.now() >= until) { fileFailure(Date.now() >= until ? "lock-timeout" : "lock-acquire", e); throw unavailable(); }
+        if (code === "EPERM" && !reportedPermissionContention) { fileFailure("lock-contention", e); reportedPermissionContention = true; }
+        await new Promise(r => setTimeout(r, 10));
+      }
+    }
     try { if (await optionalRead(p.pending)) { fileDiagnostics.publish({ phase: "pending-present", code: "PENDING" }); throw unavailable(); } return await callback(p); }
     finally { try { await handle.close(); } catch (e) { fileFailure("lock-close", e); throw e; } try { await unlink(p.lock); } catch (e) { fileFailure("lock-release", e); throw e; } }
   }

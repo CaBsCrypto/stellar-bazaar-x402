@@ -90,6 +90,12 @@ try {
   const registryPath=join(dir,'local-test','registry.json'); await writeFile(registryPath,'{bad'); assert.equal((await http.POST(request('/api/workspaces',c.bootstrap,input))).status,503); await writeFile(registryPath,persisted);
   const documentPath=join(dir,'local-test','owner-'+otherOwner+'.json'); const validDocument=await readFile(documentPath,'utf8'); await writeFile(documentPath,'{bad'); assert.equal((await history.GET(request('/api/operations',other.human))).status,503); await writeFile(documentPath,validDocument);
   await writeFile(join(dir,'local-test','pending.json'),'{}'); assert.equal((await history.GET(request('/api/operations',other.human))).status,503); await rm(join(dir,'local-test','pending.json'));
+  // Persistent lock contention is bounded and cannot clear a lock or mutate state.
+  const lockPath=join(dir,'local-test','lock'), beforeLockedRegistry=await readFile(registryPath,'utf8');
+  await writeFile(lockPath,'synthetic-lock'); const lockStarted=performance.now();
+  const blocked=credentials(); await assert.rejects(()=>store.createWorkspace(body(blocked),hash(blocked.bootstrap)),{code:'WORKSPACE_UNAVAILABLE'});
+  assert.ok(performance.now()-lockStarted>=2400); assert.equal(await readFile(lockPath,'utf8'),'synthetic-lock');
+  assert.equal(await readFile(registryPath,'utf8'),beforeLockedRegistry); await rm(lockPath);
   process.env.VERCEL='1'; assert.throws(()=>configuredWorkspaceStore(),{code:'WORKSPACE_UNAVAILABLE'}); delete process.env.VERCEL;
   process.env.BAZAAR_WORKSPACE_BACKEND='redis'; delete process.env.BAZAAR_WORKSPACE_REDIS_REST_URL; delete process.env.BAZAAR_WORKSPACE_REDIS_REST_TOKEN; process.env.UPSTASH_REDIS_REST_URL='https://unused.invalid'; process.env.UPSTASH_REDIS_REST_TOKEN='unused'; assert.throws(()=>configuredWorkspaceStore(),{code:'WORKSPACE_UNAVAILABLE'});
   delete process.env.BAZAAR_ENABLE_OPEN_WORKSPACES; assert.throws(()=>configuredWorkspaceStore(),{code:'WORKSPACES_DISABLED'}); process.env.BAZAAR_ENABLE_OPEN_WORKSPACES='true';
@@ -143,5 +149,5 @@ try {
     for(let i=0;i<100;i++){try{await quotas.sendHumanMessage(first.ownerId,{conversationId:'capacity',messageId:'m'+i,taskId:'t'+i,text:'x'.repeat(2000)});}catch(e){assert.equal(e.code,'WORKSPACE_CAPACITY');limited=true;break;}}
     assert.equal(limited,true);assert.ok(Buffer.byteLength(await readFile(join(quotaDir,'local-test','owner-'+first.ownerId+'.json'),'utf8'))<=WORKSPACE_LIMITS.ownerBytes);
   }finally{Date.now=realNow;}
-  console.log(JSON.stringify({ok:true,fileHttpProcesses:3,fileReboot:true,concurrentCreates:8,redisRestProtocolDouble:true,redisConcurrentCreates:8,atomicGeneration:true,rotationTombstones:true,lostAckRecovery:true,corruptionFailsClosed:true,legacyCollision:true,unpaidOnly:true,noExternalUploads:true,noCredentialAliases:true,limitsEnforced:true,limits:WORKSPACE_LIMITS}));
+  console.log(JSON.stringify({ok:true,fileHttpProcesses:3,fileReboot:true,concurrentCreates:8,boundedLockContention:true,redisRestProtocolDouble:true,redisConcurrentCreates:8,atomicGeneration:true,rotationTombstones:true,lostAckRecovery:true,corruptionFailsClosed:true,legacyCollision:true,unpaidOnly:true,noExternalUploads:true,noCredentialAliases:true,limitsEnforced:true,limits:WORKSPACE_LIMITS}));
 } finally { setWorkspaceStoreForTests(undefined); children.forEach(c=>c.kill()); if(server)await new Promise(r=>server.close(r)); assert.ok(resolve(dir).startsWith(resolve(tmpdir()))); assert.ok(dir.includes('bazaar-workspace-core-')); await rm(dir,{recursive:true,force:true}); for(const key of Object.keys(process.env)) if(!(key in previous))delete process.env[key];Object.assign(process.env,previous); }
