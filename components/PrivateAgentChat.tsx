@@ -31,12 +31,23 @@ export function PrivateAgentChat() {
   finally {if(current===generation.current)setBusy(false);}
  }
  useEffect(()=>{
-
-  const url=new URL(window.location.href), access=capturedAccess.current??new URLSearchParams(url.hash.slice(1)).get('token');
-  url.hash='';url.searchParams.delete('token');window.history.replaceState(null,'',url.pathname+url.search);
-  if(access && /^[A-Za-z0-9_-]{32,256}$/.test(access)){capturedAccess.current=access;setToken(access);void refresh(access);}else if(access)setNotice('El enlace de acceso no es válido.');
-  return ()=>{generation.current++;requests.current.forEach(c=>c.abort());};
- // Access exists only in memory and the initial fragment.
+  function capture(initial=false) {
+   const url=new URL(window.location.href), fragment=new URLSearchParams(url.hash.slice(1));
+   const supplied=fragment.has('token');
+   const access=supplied?fragment.get('token'):(initial?capturedAccess.current:null);
+   // Remove credentials before any request, including malformed and replacement links.
+   url.hash='';url.searchParams.delete('token');window.history.replaceState(null,'',url.pathname+url.search);
+   if(!supplied&&!initial)return;
+   generation.current++;requests.current.forEach(c=>c.abort());requests.current.clear();
+   pending.current=null;capturedAccess.current=null;setToken('');setConversations([]);setSelected('');setDraft('');setBusy(false);setNotice('');setLocked(false);
+   if(access && /^[A-Za-z0-9_-]{32,256}$/.test(access)){capturedAccess.current=access;setToken(access);void refresh(access);}
+   else if(supplied)setNotice('El enlace de acceso no es válido.');
+  }
+  const changed=()=>capture();
+  window.addEventListener('hashchange',changed);
+  capture(true);
+  return ()=>{window.removeEventListener('hashchange',changed);generation.current++;requests.current.forEach(c=>c.abort());requests.current.clear();};
+ // Access exists only in memory; replacement fragments reset the whole private session.
  // eslint-disable-next-line react-hooks/exhaustive-deps
  },[]);
  async function submit(recover=false) {
