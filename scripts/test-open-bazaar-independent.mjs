@@ -242,6 +242,8 @@ async function acceptance() {
       ['foreign Host', { Host: 'foreign.invalid' }],
       ['foreign forwarded Host', { 'X-Forwarded-Host': 'foreign.invalid' }],
       ['foreign forwarded protocol', { 'X-Forwarded-Proto': 'https' }],
+      ['foreign forwarded port', { 'X-Forwarded-Port': String(Number(endpoint.port) + 1) }],
+      ['unsupported Forwarded authority', { Forwarded: 'host=foreign.invalid;proto=https' }],
       ['wrong Host port', { Host: `127.0.0.1:${Number(endpoint.port) + 1}` }],
       ['unconfigured localhost Origin alias', { Origin: `http://localhost:${endpoint.port}` }],
     ]) {
