@@ -100,13 +100,15 @@ async function acceptance() {
     await client.connect(new StreamableHTTPClientTransport(new URL('/api/mcp', base), { requestInit: { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extraHeaders } }, fetch: globalThis.fetch }));
     return client;
   }
-  async function providerHelper(mode, args) {
-    const child = spawn(process.execPath, ['--import', pathToFileURL(script).href, 'examples/agent-provider-mcp.mjs', mode, ...args], { cwd: root, env: { ...clean, BAZAAR_INDEPENDENT_NETWORK_GUARD: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
+  async function helper(file, mode, args) {
+    const child = spawn(process.execPath, ['--import', pathToFileURL(script).href, file, mode, ...args], { cwd: root, env: { ...clean, BAZAAR_INDEPENDENT_NETWORK_GUARD: '1' }, stdio: ['ignore', 'pipe', 'pipe'] });
     let output = ''; child.stdout.on('data', chunk => { output += chunk; }); child.stderr.resume();
     const timeout = setTimeout(() => child.kill(), 20000);
     const code = await new Promise((ok, fail) => { child.once('exit', ok); child.once('error', fail); }); clearTimeout(timeout);
     noSecrets(output); return { code, output };
   }
+  const providerHelper = (mode, args) => helper('examples/agent-provider-mcp.mjs', mode, args);
+  const workspaceHelper = (mode, args) => helper('examples/agent-workspace-mcp.mjs', mode, args);
   async function call(client, name, args = {}) {
     const response = await client.callTool({ name, arguments: args });
     const data = response.structuredContent ?? JSON.parse(response.content.find(block => block.type === 'text').text);
@@ -140,8 +142,10 @@ async function acceptance() {
     denied(await http(first.base, '/api/workspaces', undefined, a.creation), 'Missing bootstrap');
     denied(await http(first.base, '/api/workspaces', a.bootstrap, { ...a.creation, ownerId: 'client_owner' }), 'Client owner assignment');
     const parallel = await Promise.all(Array.from({ length: 6 }, (_, index) => http(index % 2 ? first.base : second.base, '/api/workspaces', a.bootstrap, a.creation)));
-    const accepted = parallel.filter(result => [200, 201, 202].includes(result.status)); assert.ok(accepted.length);
-    for (const result of parallel) if (![200, 201, 202].includes(result.status)) assert.ok([409, 503].includes(result.status), 'Concurrent creation must fail closed without allocating another owner');
+    const accepted = parallel.filter(result => [200, 201, 202].includes(result.status));
+    const parallelDiagnostic = JSON.stringify(parallel.map(result => ({ status: result.status, code: result.body?.error?.code })));
+    assert.ok(accepted.length, `At least one concurrent creation must succeed: ${parallelDiagnostic}`);
+    for (const result of parallel) if (![200, 201, 202].includes(result.status)) assert.equal(result.status, 409, `Concurrent creation may conflict but must not return a generic outage: ${parallelDiagnostic}`);
     const refA = reference(success(accepted[0], 'Concurrent creation'));
     for (const result of accepted) assert.equal(reference(result.body).ownerId, refA.ownerId, 'One intent must not allocate two owners');
     const bootstrapClient = await mcp(second.base, a.bootstrap);
@@ -255,6 +259,60 @@ async function acceptance() {
     assert.ok(existsSync(pendingPath), 'Incomplete transaction must not be silently cleared or retried');
     await stop(incomplete); unlinkSync(pendingPath);
     const restored = await start(); success(await http(restored.base, '/api/operations', winningHuman), 'Original owner data survives corruption tests'); await stop(restored);
+    // Follow the published workspace guide with the real helper and SDK. The
+    // delegated agent directory contains only its permitted agent packet.
+    const guideServer = await start(), guideOwnerDir = join(evidenceDirectory, 'private-workspace-owner'), guideAgentDir = join(evidenceDirectory, 'private-workspace-agent');
+    assert.equal((await workspaceHelper('prepare', [guideOwnerDir, guideServer.base])).code, 0, 'Workspace guide offline prepare');
+    const rootPacketPath = join(guideOwnerDir, 'workspace-root.json');
+    let guidePacket = JSON.parse(readFileSync(rootPacketPath, 'utf8'));
+    tokens.push(guidePacket.bootstrapAccess, guidePacket.humanAccess, guidePacket.agentAccess);
+    assert.equal((await workspaceHelper('create', [guideOwnerDir])).code, 0, 'Workspace guide create');
+    guidePacket = JSON.parse(readFileSync(rootPacketPath, 'utf8'));
+    const creationReceiptPath = join(guideOwnerDir, 'creation-receipt.json'), guideReceipt = readFileSync(creationReceiptPath, 'utf8');
+    assert.equal((await workspaceHelper('create', [guideOwnerDir])).code, 0, 'Workspace helper same creation recovery');
+    assert.equal(readFileSync(creationReceiptPath, 'utf8'), guideReceipt, 'Workspace creation receipt is immutable');
+    const { preparePrivateDirectory, verifyPrivateDirectory } = await import(pathToFileURL(join(root, 'scripts', 'history-private-files.mjs')).href);
+    preparePrivateDirectory(guideAgentDir); verifyPrivateDirectory(guideAgentDir);
+    writeFileSync(join(guideAgentDir, 'agent.json'), readFileSync(join(guideOwnerDir, 'agent.json')), { mode: 0o600, flag: 'wx' });
+    assert.deepEqual(readdirSync(guideAgentDir), ['agent.json']);
+    const guideTask = await task(guideServer.base, { human: guidePacket.humanAccess }, 'Task from the published workspace guide acceptance.');
+    assert.equal((await workspaceHelper('tasks', [guideAgentDir])).code, 0, 'Delegated agent lists tasks without root packet');
+    assert.equal((await workspaceHelper('claim', [guideAgentDir, guideTask.taskId])).code, 0, 'Delegated agent claims fixed task');
+    const guideAttemptPath = join(guideAgentDir, 'attempts', `${guideTask.taskId}.json`), claimAttempt = readFileSync(guideAttemptPath, 'utf8');
+    assert.equal((await workspaceHelper('claim', [guideAgentDir, guideTask.taskId])).code, 0, 'Delegated agent recovers same claim');
+    assert.equal(readFileSync(guideAttemptPath, 'utf8'), claimAttempt);
+    const guideOp = operation(guideTask.taskId), guideOpPath = join(evidenceDirectory, 'guide-operation.json'); writeFileSync(guideOpPath, JSON.stringify(guideOp));
+    assert.equal((await workspaceHelper('record', [guideAgentDir, guideOpPath])).code, 0, 'Guide native operation schema');
+    const guideEvent = { eventId: randomUUID(), taskId: guideTask.taskId, operationId: guideOp.clientOperationId, mode: 'mock', kind: 'delivery-reported', title: 'Guide synthetic delivery' }, guideEventPath = join(evidenceDirectory, 'guide-activity.json'); writeFileSync(guideEventPath, JSON.stringify(guideEvent));
+    assert.equal((await workspaceHelper('activity', [guideAgentDir, guideEventPath])).code, 0, 'Guide native activity schema');
+    const guideResponsePath = join(evidenceDirectory, 'guide-response.json'); writeFileSync(guideResponsePath, JSON.stringify({ text: 'Guide synthetic response', operationId: guideOp.clientOperationId }));
+    assert.equal((await workspaceHelper('respond', [guideAgentDir, guideTask.taskId, guideResponsePath])).code, 0, 'Guide response links same-owner operation');
+    const frozenResponseAttempt = readFileSync(guideAttemptPath, 'utf8');
+    assert.equal((await workspaceHelper('respond', [guideAgentDir, guideTask.taskId, guideResponsePath])).code, 0, 'Guide fixed response recovery');
+    assert.equal(readFileSync(guideAttemptPath, 'utf8'), frozenResponseAttempt, 'Helper preserves frozen response identity');
+    writeFileSync(guideResponsePath, JSON.stringify({ text: 'Changed guide response', operationId: guideOp.clientOperationId }));
+    assert.notEqual((await workspaceHelper('respond', [guideAgentDir, guideTask.taskId, guideResponsePath])).code, 0, 'Guide helper rejects changed frozen response');
+    assert.equal(readFileSync(guideAttemptPath, 'utf8'), frozenResponseAttempt);
+    assert.equal((await workspaceHelper('recover', [guideAgentDir])).code, 0, 'Guide delegated agent history recovery');
+    const guideHistory = success(await http(guideServer.base, '/api/operations', guidePacket.humanAccess), 'Guide human history');
+    assert.equal(guideHistory.records.length, 1); assert.equal(guideHistory.records[0].clientOperationId, guideOp.clientOperationId); assert.equal(guideHistory.records[0].agentId, guidePacket.workspace.agentId);
+    const oldGuideAgent = guidePacket.agentAccess, oldGuideHuman = guidePacket.humanAccess;
+    assert.equal((await workspaceHelper('rotate', [guideOwnerDir, 'agent'])).code, 0, 'Guide owner rotates delegated access');
+    guidePacket = JSON.parse(readFileSync(rootPacketPath, 'utf8')); tokens.push(guidePacket.agentAccess);
+    denied(await http(guideServer.base, '/api/operations', oldGuideAgent), 'Guide old agent retired');
+    assert.notEqual((await workspaceHelper('recover', [guideAgentDir])).code, 0, 'Old delegated packet is rejected after rotation');
+    assert.equal((await workspaceHelper('recover', [guideOwnerDir])).code, 0, 'Owner helper updated agent packet remains usable');
+    assert.equal((await workspaceHelper('rotate', [guideOwnerDir, 'human'])).code, 0, 'Guide owner rotates human access');
+    guidePacket = JSON.parse(readFileSync(rootPacketPath, 'utf8')); tokens.push(guidePacket.humanAccess);
+    denied(await http(guideServer.base, '/api/operations', oldGuideHuman), 'Guide old human retired');
+    const humanLinks = readFileSync(join(guideOwnerDir, 'human-links.txt'), 'utf8'); assert.ok(humanLinks.includes(guidePacket.humanAccess)); assert.ok(!humanLinks.includes(oldGuideHuman));
+    assert.deepEqual(success(await http(guideServer.base, '/api/operations', guidePacket.humanAccess), 'Guide rotated human history').records, guideHistory.records);
+    assert.equal((await workspaceHelper('revoke', [guideOwnerDir])).code, 0, 'Guide owner revokes workspace');
+    denied(await http(guideServer.base, '/api/operations', guidePacket.humanAccess), 'Guide revoked human'); denied(await http(guideServer.base, '/api/operations', guidePacket.agentAccess), 'Guide revoked agent');
+    const guideRevokedReplay = await workspaceHelper('create', [guideOwnerDir]); assert.notEqual(guideRevokedReplay.code, 0); assert.ok(guideRevokedReplay.output.includes('WORKSPACE_REVOKED'));
+    assert.equal(readFileSync(creationReceiptPath, 'utf8'), guideReceipt, 'Rotations, revoke, and creation replay preserve the original receipt');
+    assert.equal(existsSync(join(guideOwnerDir, 'pending-access-change.json')), false); assert.equal(readdirSync(guideOwnerDir).filter(name => name.startsWith('accepted-access-change-')).length, 3);
+    await stop(guideServer);
     const providerDirectory = join(evidenceDirectory, 'private-provider'), cardPath = join(evidenceDirectory, 'synthetic-card.json');
     const providerCard = { version: 'bazaar.service-card/v0', id: 'independent-provider-request', name: 'Independent synthetic provider', description: 'Synthetic request only; no deployed provider or payments', kind: 'http', url: 'https://api.example.com', routeTemplate: '/v1/report', input: [{ name: 'topic', type: 'string', required: true }], network: 'stellar:testnet', payment: { scheme: 'exact', asset: 'USDC', amount: '0.001', destination: 'GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ' }, provider: { name: 'Independent synthetic review' }, tags: ['synthetic'] };
     writeFileSync(cardPath, JSON.stringify(providerCard));
@@ -293,7 +351,7 @@ async function acceptance() {
     const supportingTimeout = setTimeout(() => supporting.kill(), 45000);
     const supportingExit = await new Promise((ok, fail) => { supporting.once('exit', ok); supporting.once('error', fail); }); clearTimeout(supportingTimeout);
     assert.equal(supportingExit, 0, 'Supporting core protocol-double acceptance failed; no author output or credentials emitted');
-    console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, chatTaskOperationHistory: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
+    console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
   } finally {
     for (const client of clients) await client.close().catch(() => {});
     for (const child of children) if (child.exitCode === null) { const ended = new Promise(ok => child.once('exit', ok)); child.kill(); await ended; }
