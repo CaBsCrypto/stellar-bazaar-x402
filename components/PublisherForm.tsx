@@ -7,7 +7,7 @@ import { ProviderReviewControls } from "./ProviderReviewControls";
 
 const destination = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF";
 
-export function PublisherForm() {
+export function PublisherForm({ reception = "closed" }: { reception?: "open" | "closed" | "unavailable" }) {
   const [name, setName] = useState("Mi servicio Stellar");
   const [description, setDescription] = useState("Descripción clara del resultado que entrega este servicio.");
   const [kind, setKind] = useState<"http" | "mcp">("http");
@@ -134,8 +134,12 @@ export function PublisherForm() {
         </fieldset>
         <ProviderReviewControls card={card} method={proofMethod} domain={proofDomain} disabled={failures > 0} />
         <p className="form-help">
-          El alta real es append-only, revisada por el operador y sólo server-to-server. Bazaar no recibe fondos ni entrega resultados.
-          El piloto local conserva solicitudes en disco y requiere prueba de control y revisión humana. La recepción pública permanece deshabilitada hasta validar su almacenamiento y operación.
+          {reception === "open"
+            ? "Recepción abierta: guarda tu acceso privado antes de enviar. La solicitud se conserva en almacenamiento compartido para verificar el dominio y recibir revisión manual. Enviar, aprobar o preparar no activa el servicio."
+            : reception === "unavailable"
+              ? "La recepción no está disponible por un problema de configuración del almacenamiento. Puedes preparar tu ficha; no envíes una nueva solicitud para resolver un error de recuperación."
+              : "Recepción cerrada: puedes preparar tu ficha y conservarla. Las solicitudes enviadas anteriormente siguen disponibles mediante su acceso privado."}
+          {" "}Los pagos permanecen deshabilitados. No compartas claves de wallet ni credenciales administrativas.
         </p>
       </div>
 
