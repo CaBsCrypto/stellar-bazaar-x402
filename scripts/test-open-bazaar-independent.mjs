@@ -95,9 +95,9 @@ async function acceptance() {
     if (server.child.exitCode === null) { const ended = new Promise(ok => server.child.once('exit', ok)); server.child.kill(); await ended; }
     children.delete(server.child);
   }
-  async function mcp(base, token) {
+  async function mcp(base, token, extraHeaders = {}) {
     const client = new Client({ name: 'bazaar-independent-review', version: '1.0' }); clients.add(client);
-    await client.connect(new StreamableHTTPClientTransport(new URL('/api/mcp', base), { requestInit: { headers: token ? { Authorization: `Bearer ${token}` } : {} }, fetch: globalThis.fetch }));
+    await client.connect(new StreamableHTTPClientTransport(new URL('/api/mcp', base), { requestInit: { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extraHeaders } }, fetch: globalThis.fetch }));
     return client;
   }
   async function providerHelper(mode, args) {
@@ -178,6 +178,11 @@ async function acceptance() {
     assert.equal((await call(agentClient, 'record_bazaar_operation', writeArgs('record_bazaar_operation', op))).error, false, 'Agent native-schema MCP write');
     const ownHistory = success(await http(second.base, '/api/operations', a.human), 'Human sees MCP operation'); assert.equal(ownHistory.records.length, 1);
     const original = ownHistory.records[0]; assert.equal(original.clientOperationId, op.clientOperationId); assert.equal(original.taskId, taskA.taskId); assert.equal(original.agentId, refA.agentId); assert.deepEqual(original.delivery.result, op.delivery.result);
+    const foreignHistoryClient = await mcp(first.base, a.human, { Origin: 'https://foreign.invalid' });
+    const foreignHistory = await call(foreignHistoryClient, 'get_operation_history');
+    assert.equal(foreignHistory.error, true, 'MCP history must preserve and reject foreign Origin');
+    const foreignHistoryBody = JSON.stringify(foreignHistory.data);
+    for (const privateValue of [refA.ownerId, taskA.taskId, op.clientOperationId, op.delivery.result.text]) assert.ok(!foreignHistoryBody.includes(privateValue), 'Denied foreign-Origin MCP response must not disclose private history');
     assert.equal((await call(humanClient, 'record_bazaar_operation', writeArgs('record_bazaar_operation', op))).error, true);
     assert.equal((await call(agentClient, 'record_bazaar_operation', writeArgs('record_bazaar_operation', op))).error, false);
     assert.deepEqual(success(await http(second.base, '/api/operations', a.human), 'History replay').records, ownHistory.records);
