@@ -217,7 +217,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
                 👁️ Ver Demo de Entregables
               </Link>
               <Link
-                href="/agent-chat"
+                href={token ? `/agent-chat#token=${encodeURIComponent(token)}` : "/agent-chat"}
                 style={{
                   fontSize: "0.8rem",
                   padding: "5px 12px",
