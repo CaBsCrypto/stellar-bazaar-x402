@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {MCP_TOOLS} from "../lib/mcp-tool-contract.ts";
 
 const base = process.env.MCP_BASE_URL ?? "http://127.0.0.1:3000";
 const url = `${base}/api/mcp`;
@@ -25,7 +26,7 @@ const toolsB = await rpc(4, "tools/list", {});
 const toolNamesA = toolsA.result.tools.map((tool) => tool.name);
 const toolNamesB = toolsB.result.tools.map((tool) => tool.name);
 assert.deepEqual(toolNamesA, toolNamesB);
-assert.equal(toolNamesA.length, 8);
+assert.deepEqual(toolNamesA, MCP_TOOLS);
 assert.ok(toolNamesA.includes("get_operation_history"));
 assert.ok(toolNamesA.every((name) => !/(register|update|delete|pay|sign|execute)/i.test(name)));
 

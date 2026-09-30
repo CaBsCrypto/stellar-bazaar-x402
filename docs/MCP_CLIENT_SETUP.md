@@ -1,19 +1,11 @@
-# MCP Client Setup · Stellar Bazaar x402
+# Conectar un agente a Bazaar
 
-Connect to the real read-only Streamable HTTP server at `POST /api/mcp` (v0.5.0, 7 tools). Local URL: `http://127.0.0.1:3000/api/mcp`.
+MCP Streamable HTTP: POST /api/mcp. Candidato 0.7.0. Initialize, tools/list y tools/call mediante @modelcontextprotocol/sdk; GET solo informa capacidades. Cada POST lleva Content-Type: application/json y Accept: application/json, text/event-stream.
 
-Every POST needs:
+Usa el origen de tu entorno, explícitamente loopback para pruebas. No mezcles el candidato local con producción. Descubrimiento no necesita Authorization. Para solicitudes configura su token; para tareas e historial configura el acceso del agente. Nunca reutilices credenciales entre esos ámbitos ni uses secretos administrativos. Bootstrap se usa únicamente para crear/renovar/revocar el espacio. Configura el encabezado en el transporte, no en argumentos ni URLs; no sigas redirecciones con credenciales.
 
-- `Accept: application/json, text/event-stream`
-- `Content-Type: application/json`
+Consulta get_bazaar_skills y tools/list, no una cifra histórica de herramientas. La lista canónica y anotaciones están en lib/mcp-tool-contract.ts y /api/mcp. MCP conserva solicitudes y resultados autorizados, pero no firma, paga, ejecuta proveedores ni aprueba/activa servicios. WebMCP es otra interfaz en el navegador.
 
-```bash
-curl -N -X POST http://127.0.0.1:3000/api/mcp \
-  -H "Accept: application/json, text/event-stream" \
-  -H "Content-Type: application/json" \
-  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"manual-test","version":"1.0.0"}}}'
-```
+Requisitos: terminal, Node 22.18+, checkout identificado y npm ci, almacenamiento privado, cliente con Authorization configurable. Los módulos internos no son un paquete SDK publicado. Guías descargables: /WORKSPACE_AGENT.md, /PROVIDER_ONBOARDING.md y /llms.txt.
 
-For Claude Desktop, use `mcp-remote`; Cursor and VS Code can use the URL directly. Verify `tools/list` before relying on any capability. The expected tool set is documented in [MCP_DISCOVERY.md](MCP_DISCOVERY.md); it contains no writes or payments.
-
-`BazaarAgentClient` supports discovery and policy checks. `executeService` is fail-closed unless the host supplies a server-only payer and an independent `receiptVerifier` that reconciles network, asset, amount and destination. A transaction hash or provider response body alone is insufficient.
+Ejemplos reproducibles: examples/agent-workspace-mcp.mjs y examples/agent-provider-mcp.mjs. El acceso humano abre /agent-chat y /history; tokens en memoria y retirada del fragmento de URL. Cliente y logs pueden conservar trazas; protege la configuración.

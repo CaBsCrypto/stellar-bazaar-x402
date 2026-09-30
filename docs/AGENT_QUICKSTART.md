@@ -2,7 +2,7 @@
 
 ## Read-only MCP discovery
 
-Connect to `POST /api/mcp`, initialize with protocol `2025-11-25`, then use the seven read-only tools documented in [MCP_DISCOVERY.md](MCP_DISCOVERY.md). The endpoint never writes, signs, pays or executes providers.
+Connect to `POST /api/mcp`, initialize with protocol `2025-11-25`, then enumerate tools/list and use the canonical tools documented in [MCP_DISCOVERY.md](MCP_DISCOVERY.md). The endpoint supports scoped provider and workspace writes; it never signs, pays, activates or executes providers. See /WORKSPACE_AGENT.md for private chat.
 
 ```typescript
 import { BazaarAgentClient } from "@/lib/bazaar-agent-client";

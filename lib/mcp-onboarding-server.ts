@@ -15,9 +15,25 @@ import { selfListingIntakeConfigured } from "./provider-self-listing";
 import { publicProviderReviewConfigured } from "./provider-submission-http";
 import { reviewSharedConfigured } from "./provider-review-runtime";
 import { bazaarRoles, skillPackage } from "./bazaar-skills";
+import { MCP_VERSION, MCP_WRITES } from "./mcp-tool-contract";
 export interface ProviderMcpHandlers {
-  submit(body: unknown): Promise<{ ok: boolean; status: number; body: unknown }>;
-  status(submissionId: string): Promise<{ ok: boolean; status: number; body: unknown }>;
+  submit(body: unknown): Promise<McpHttpResult>;
+  status(submissionId: string): Promise<McpHttpResult>;
+}
+export interface McpHttpResult { ok: boolean; status: number; body: unknown; retryAfter?: number }
+export interface WorkspaceMcpHandlers {
+  create(body:unknown):Promise<McpHttpResult>;
+  listTasks():Promise<McpHttpResult>;
+  claim(body:unknown):Promise<McpHttpResult>;
+  respond(taskId:string,body:unknown):Promise<McpHttpResult>;
+  recordOperation(body:unknown):Promise<McpHttpResult>;
+  recordActivity(body:unknown):Promise<McpHttpResult>;
+}
+export function mcpHttpResult(response: McpHttpResult) {
+  const body = response.body && typeof response.body === "object" && !Array.isArray(response.body)
+    ? response.body : { error: { code: "INVALID_HANDLER_RESPONSE" } };
+  return { ...ok({ ...body, http: { status: response.status,
+    ...(response.retryAfter !== undefined ? { retryAfter: response.retryAfter } : {}) } }), isError: !response.ok };
 }
 
 const result = ok;
@@ -54,10 +70,10 @@ const decodeCursor = (raw: string): number | null => {
   }
 };
 
-export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{ ok: boolean; body: unknown }>, provider?: ProviderMcpHandlers) {
+export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{ ok: boolean; body: unknown }>, provider?: ProviderMcpHandlers, workspace?:WorkspaceMcpHandlers) {
   const server = new McpServer({
     name: "stellar-bazaar-discovery",
-    version: "0.6.0",
+    version: MCP_VERSION,
   });
 
   server.registerTool(
@@ -72,8 +88,16 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
         ...pilotCapabilityCard,
         historyConnection,
         testnetFunding: { instructions: testnetFundingInstructions, automatic: false },
-        writes: ["submit_provider_request"],
+        writes: MCP_WRITES,
         skills: { tool: "get_bazaar_skills", roles: bazaarRoles },
+        workspace: {
+          creationTool: "create_bazaar_workspace", enabled:process.env.BAZAAR_ENABLE_OPEN_WORKSPACES==='true',
+          humanView:"/agent-chat", guide:"/WORKSPACE_AGENT.md", agentRunsExternally:true,
+          emailRequired:false, operatorApprovalRequired:false, automaticPolling:false,
+          payments:false, fileUploads:false,
+          storage:process.env.BAZAAR_WORKSPACE_BACKEND??'not-configured',
+          creationAccess:"Save UUID, bootstrap/human/agent accesses privately before creation. Send hashes only; bootstrap uses Authorization. Server assigns owner.",
+        },
         registry: {
           discovery: "read-only",
           mutationViaMcp: false,
@@ -336,18 +360,45 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<{
   }, async ({ role }) => result({ skills: (role ? [role] : [...bazaarRoles]).map(skillPackage) }));
   server.registerTool("submit_provider_request", {
     description: "Submit an authorized service request, not a publication. Save UUID, 32-byte token and frozen conditions privately before calling. Token is HTTP Authorization Bearer, never an argument. Recover the same intent after uncertainty.",
-    inputSchema: z.object({ submissionId: z.string().uuid(), card: z.record(z.string(), z.unknown()), controlProof: z.object({ method: z.enum(["dns-txt", "http-well-known"]), domain: z.string().max(253) }).strict() }).strict(),
+    inputSchema: z.object({ submissionId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i), card: z.record(z.string(), z.unknown()), controlProof: z.object({ method: z.enum(["dns-txt", "http-well-known"]), domain: z.string().max(253) }).strict() }).strict(),
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
   }, async (body) => {
     if (!provider) return errorEnvelope("INTAKE_DISABLED", "Provider request context unavailable.", "discover");
-    const response = await provider.submit(body); return { ...result(response.body), isError: !response.ok };
+    return mcpHttpResult(await provider.submit(body));
   });
   server.registerTool("get_provider_request_status", {
     description: "Read one request with its original UUID and HTTP Authorization Bearer token. Does not grant approval or access by ownerId.",
-    inputSchema: z.object({ submissionId: z.string().uuid() }).strict(), annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: z.object({ submissionId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i) }).strict(), annotations: { readOnlyHint: true, openWorldHint: false },
   }, async ({ submissionId }) => {
     if (!provider) return errorEnvelope("INTAKE_DISABLED", "Provider request context unavailable.", "discover");
-    const response = await provider.status(submissionId); return { ...result(response.body), isError: !response.ok };
+    return mcpHttpResult(await provider.status(submissionId));
   });
+  const uuid = z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i);
+  const writeHints = {readOnlyHint:false,destructiveHint:false,idempotentHint:true,openWorldHint:false};
+  const missingWorkspace = () => errorEnvelope("WORKSPACE_UNAVAILABLE","Private workspace context unavailable.","workspace");
+  server.registerTool("create_bazaar_workspace", {
+    description:"Create or recover a new anonymous private space. Save credentials first. Bootstrap secret is Authorization; only credential hashes are arguments. Never supplies an existing owner or activates services.",
+    inputSchema:z.object({creationId:uuid,humanAccessHash:z.string().regex(/^[a-f0-9]{64}$/),agentAccessHash:z.string().regex(/^[a-f0-9]{64}$/)}).strict(),annotations:writeHints,
+  },async body=>workspace?mcpHttpResult(await workspace.create(body)):missingWorkspace());
+  server.registerTool("list_bazaar_agent_tasks", {
+    description:"Read tasks belonging to the authenticated external agent's space. Agent credential is Authorization; no payment or execution.",
+    inputSchema:z.object({}).strict(),annotations:{readOnlyHint:true,openWorldHint:false},
+  },async()=>workspace?mcpHttpResult(await workspace.listTasks()):missingWorkspace());
+  server.registerTool("claim_bazaar_agent_task", {
+    description:"Claim one owned task with a saved attemptId. Claims never expire or authorize automatic reexecution. Execution remains with your external agent.",
+    inputSchema:z.object({taskId:uuid,attemptId:uuid}).strict(),annotations:writeHints,
+  },async body=>workspace?mcpHttpResult(await workspace.claim(body)):missingWorkspace());
+  server.registerTool("respond_bazaar_agent_task", {
+    description:"Preserve a response to the same owned claimed attempt; optional operationId must belong to this owner. Does not execute or pay.",
+    inputSchema:z.object({taskId:uuid,attemptId:uuid,messageId:uuid,text:z.string().min(1).max(2000),operationId:z.string().max(128).optional()}).strict(),annotations:writeHints,
+  },async({taskId,...body})=>workspace?mcpHttpResult(await workspace.respond(taskId,body)):missingWorkspace());
+  server.registerTool("record_bazaar_activity", {
+    description:"Register an owned bounded activity report using the native history handler. Agent access only; identifiers must remain stable on retry. No payment authority.",
+    inputSchema:z.object({event:z.record(z.string(),z.unknown())}).strict(),annotations:writeHints,
+  },async({event})=>workspace?mcpHttpResult(await workspace.recordActivity(event)):missingWorkspace());
+  server.registerTool("record_bazaar_operation", {
+    description:"Register an owned response already conserved privately, using the native operation handler. Anonymous beta only allows unpaid fixture/mock inline results. Retry registration, never the purchase.",
+    inputSchema:z.object({operation:z.record(z.string(),z.unknown())}).strict(),annotations:writeHints,
+  },async({operation})=>workspace?mcpHttpResult(await workspace.recordOperation(operation)):missingWorkspace());
   return server;
 }

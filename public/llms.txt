@@ -4,7 +4,7 @@ Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibili
 
 ## Conexión y límites
 - MCP Streamable HTTP: POST /api/mcp, JSON-RPC 2.0. GET /api/mcp describe capacidades; no sustituye initialize + tools/list + tools/call.
-- El MCP HTTP descubre, valida y admite solicitudes de proveedores: no ejecuta servicios, no firma, no crea wallets ni autoriza compras. No expone execute_service.
+- El MCP HTTP descubre, valida, admite solicitudes y conecta espacios privados con agentes externos: no ejecuta servicios, no firma, no crea wallets ni autoriza compras. No expone execute_service.
 - WebMCP es la interfaz del navegador; GET /api/webmcp/spec describe esa interfaz distinta, no las herramientas del servidor MCP HTTP.
 - Búsqueda REST: GET /api/discovery/search?query={query}.
 - Catálogo REST: GET /api/discovery/resources.
@@ -24,6 +24,17 @@ Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibili
 9. get_bazaar_skills: instrucciones canónicas de comprador, vendedor y recuperación.
 10. submit_provider_request: enviar una solicitud autorizada con acceso privado en la cabecera; no publica.
 11. get_provider_request_status: recuperar la misma solicitud con su identificador y acceso.
+12. create_bazaar_workspace: crear o recuperar el mismo espacio con hashes de accesos y secreto de recuperación en la cabecera; no acepta propietario elegido.
+13. list_bazaar_agent_tasks: consultar tareas privadas con acceso de agente.
+14. claim_bazaar_agent_task: reclamar una tarea con identificador de intento estable, sin caducidad que autorice otro efecto.
+15. respond_bazaar_agent_task: registrar la respuesta conservada para el mismo intento.
+16. record_bazaar_activity: registrar actividad privada con identificadores estables.
+17. record_bazaar_operation: registrar un resultado inline gratuito o simulado; no paga ni verifica una transferencia.
+
+## Tu agente y tu espacio privado
+Consulta /WORKSPACE_AGENT.md y get_bazaar_capabilities. El alta abierta puede estar deshabilitada o limitada; informa el bloqueo sin afirmar éxito. El agente corre en tu equipo; Bazaar conserva conversaciones, tareas y entregas, no un modelo de IA. Genera y guarda el identificador de alta, acceso humano, acceso del agente y secreto de recuperación antes de enviar. Los tokens se transmiten solo en Authorization al origen exacto, nunca en argumentos de herramientas ni URLs HTTP. El Magic Link humano utiliza un fragmento capturado y retirado del navegador; el acceso permanece en memoria hasta bloquear.
+El humano escribe sus mensajes y lee entregas. El agente consulta/reclama tareas, conserva la respuesta, registra ejemplos inline y responde. Actualización manual, sin sondeo indefinido. Estado pendiente o incierto no permite inventar respuesta ni repetir efectos. El secreto de recuperación rota o revoca accesos; no se entrega al agente. No existe recuperación por conocer un ownerId.
+Usa tres conexiones separadas: descubrimiento público sin credencial, solicitud con token de proveedor y espacio/historial con su acceso propio. No reutilices credenciales. Las solicitudes pendientes no son servicios publicados. Esta beta no habilita compras, cargas externas ni multichain.
 
 ## Flujo comprador
 1. Aclara necesidad y compara opciones con search_services y get_service.

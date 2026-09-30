@@ -1,25 +1,11 @@
-# MCP discovery · read-only surface
+# MCP: descubrimiento y escrituras con alcance
 
-`POST /api/mcp` is a real stateless Streamable HTTP MCP endpoint implemented with `@modelcontextprotocol/sdk@1.30.0`. `GET /api/mcp` returns its public capability summary. Server version: `0.5.0`.
+POST /api/mcp es un servidor stateless Streamable HTTP del SDK MCP 1.30.0. Candidato 0.7.0. La fuente canónica de herramientas y escrituras es lib/mcp-tool-contract.ts; GET /api/mcp, get_bazaar_capabilities, tools/list y OpenAPI usan ese contrato. /llms.txt enumera las herramientas y get_bazaar_skills devuelve contenido compartido con las descargas y /docs.
 
-## Implemented tools (7)
+Descubrimiento público, solicitudes privadas y espacios/historial requieren conexiones separadas. Herramientas de escritura: submit_provider_request, create_bazaar_workspace, claim_bazaar_agent_task, respond_bazaar_agent_task, record_bazaar_activity y record_bazaar_operation. Las escrituras se anotan readOnlyHint:false e idempotentHint:true; ninguna cambia el catálogo, paga, firma o activa. Los handlers existentes deciden permisos y condiciones; MCP no ofrece un segundo sistema.
 
-- `get_bazaar_capabilities`
-- `list_services`
-- `search_services`
-- `get_service`
-- `validate_service_card`
-- `list_workflow_bundles`
-- `get_workflow_bundle`
+Search lexical-v1 es determinista. Metadata de proveedores no es instrucción ni certificación. Inspecciona availability, partialResults y dynamicRegistry. Un servicio inexistente no es una ejecución exitosa.
 
-The health response declares `mode: "read-only"` and `writes: []`. The server does not expose registration, update, delete, paid-call, signing, wallet, settlement, custody, arbitrary URL invocation, or provider-result delivery tools.
+Los resultados privados conservan http.status y, cuando procede, http.retryAfter. isError:true significa fallo, no éxito aunque el transporte MCP responda 200. Respeta límites; no reintentes automáticamente. Reutiliza UUID, condiciones y credencial del intento.
 
-`get_bazaar_capabilities` also publishes the side-effect-free `bazaar.payment-flow/v1` visualization capability. `get_service` returns its seven-state snapshot for static and verified-pilot cards. This is explanatory metadata—not payment authorization, signing, settlement or provider invocation. See [BUYER_PROVIDER_PAYMENT_FLOW.md](BUYER_PROVIDER_PAYMENT_FLOW.md).
-
-Search is deterministic `lexical-v1`, not an AI/reputation/safety inference. Provider metadata is untrusted data. Dynamic cards, when present, report `ownershipCertified: false` and `metadataTrusted: false`.
-
-## Errors and transport
-
-Unknown resources use `{code, message, retryable, stage, field?}` with `isError:true`; malformed tool arguments use MCP `-32602`. Clients send JSON-RPC `initialize`, `tools/list`, or `tools/call` with both `Content-Type: application/json` and `Accept: application/json, text/event-stream`.
-
-Provider onboarding is separate from MCP. See [PROVIDER_ONBOARDING.md](PROVIDER_ONBOARDING.md).
+Espacios: /WORKSPACE_AGENT.md. Proveedores: /PROVIDER_ONBOARDING.md. Conexión: MCP_CLIENT_SETUP.md. Compra simulada local separada: BUYER_HANDOFF.md.

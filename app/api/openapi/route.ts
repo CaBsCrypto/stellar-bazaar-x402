@@ -1,15 +1,23 @@
 import { NextResponse } from "next/server";
+import { MCP_VERSION, MCP_TOOLS, MCP_WRITES } from "@/lib/mcp-tool-contract";
 
 export function GET() {
   return NextResponse.json({
     openapi: "3.1.0",
     info: {
       title: "Stellar Bazaar Discovery API",
-      version: "0.5.0",
-      description: "Read-only discovery/MCP, deterministic conformance, append-only gated ingest, and x402 Stellar Testnet reference routes.",
+      version: MCP_VERSION,
+      description: "Public discovery and private provider/workspace MCP; conformance and operator-controlled activation. No MCP payments or signing.",
     },
     servers: [{ url: "/" }],
+    "x-bazaar-mcp": { tools: MCP_TOOLS, writes: MCP_WRITES, paidCall: false, signing: false },
     paths: {
+      "/api/workspaces": { post: { summary: "Create or recover an open private workspace", description: "Recovery-secret Bearer; strict creationId UUIDv4, humanAccessHash and agentAccessHash SHA256. Server assigns owner and agent. Original tokens are never stored. Disabled by default; shared creation/byte limits.", responses: { "201": {description:"Created"}, "200":{description:"Same creation replay"}, "409":{description:"Conditions/hash conflict"}, "410":{description:"Revoked attempt"}, "429":{description:"Shared limit reached"}, "503":{description:"Disabled or storage unavailable"} } } },
+      "/api/workspaces/{id}/access": { post: { summary: "Rotate one role or revoke the workspace", description: "Recovery-secret Bearer for that workspace; action rotate with role human|agent, accessHash and expectedGeneration, or action revoke with expectedGeneration. No public owner reassignment.", responses: { "200":{description:"Access changed"}, "403":{description:"Wrong scope"}, "409":{description:"Generation conflict"}, "410":{description:"Revoked"} } } },
+      "/api/conversations": { get: {summary:"List own private conversations; human or agent access",responses:{"200":{description:"Own conversations"}}}, post: {summary:"Human creates a conversation with stable UUID and title",responses:{"201":{description:"Created"},"200":{description:"Identical replay"},"409":{description:"Changed content"}}} },
+      "/api/conversations/{id}/messages": { get: {summary:"Read an owned conversation and tasks",responses:{"200":{description:"Owned messages"},"404":{description:"Unavailable"}}}, post: {summary:"Human message creates one task atomically",description:"Stable messageId and taskId UUIDs and bounded text. Agent cannot impersonate human.",responses:{"201":{description:"Message and task conserved"},"200":{description:"Replay"},"409":{description:"Content conflict"}}} },
+      "/api/agent-tasks": { get: {summary:"Agent lists own pending/claimed/responded tasks",responses:{"200":{description:"Tasks"}}}, post: {summary:"Agent claims a task with stable attemptId",description:"No lease expiry or automatic replacement attempt.",responses:{"201":{description:"Claim conserved"},"200":{description:"Same claim"},"409":{description:"Other attempt"}}} },
+      "/api/agent-tasks/{id}/response": { post: {summary:"Agent registers a conserved response for the same claim",description:"attemptId, messageId, text and optional owned operationId. Server derives actor and owner.",responses:{"201":{description:"Response conserved"},"200":{description:"Same response"},"409":{description:"Conditions changed"}}} },
       "/api/deliveries": { get: { summary: "Private delivery versions by client operation ID", responses: {"200":{description:"Owned manifest versions"},"401":{description:"Unauthorized"}} }, post: {summary:"Reserve a versioned delivery manifest and file quota using write access",responses:{"201":{description:"Reserved"},"409":{description:"Version conflict or storage limit"}}}},
       "/api/deliveries/uploads": {post:{summary:"Obtain a private checksum-bound upload URL",responses:{"200":{description:"Temporary upload access"}}}},
       "/api/deliveries/confirm": {post:{summary:"Verify object size/checksum and mark it available",responses:{"200":{description:"Confirmed"},"409":{description:"Integrity mismatch"}}}},
@@ -23,10 +31,10 @@ export function GET() {
       },
       "/api/operations": {
         get: { summary: "Private owner-scoped agent journal; Bearer read or write credential required", responses: { "200": { description: "Agent-reported records, not independent settlement proof" }, "401": { description: "Unauthorized" }, "503": { description: "Durable history not configured" } } },
-        post: { summary: "Append an immutable operation report; owner derived from Bearer write credential", responses: { "201": { description: "Recorded" }, "200": { description: "Idempotent replay" }, "401": { description: "Unauthorized" }, "409": { description: "Operation conflict" }, "503": { description: "Durable history unavailable" } } },
+        post: { summary: "Append an immutable operation report; owner derived from Bearer write credential", description: "Open workspaces only permit unpaid mock/fixture inline results; human access is read-only for history. Legacy registered accesses retain their scopes. A report is agent-reported evidence, not independent payment verification.", responses: { "201": { description: "Recorded" }, "200": { description: "Idempotent replay" }, "401": { description: "Unauthorized" }, "403":{description:"Wrong scope or workspace paid/external content"}, "409": { description: "Operation conflict" }, "503": { description: "Durable history unavailable" } } },
       },
       "/api/mcp": {
-        get: { summary: "MCP read-only health summary, including authenticated history; writes: []", responses: { "200": { description: "Capability summary" } } },
+        get: { summary: "MCP health with canonical tools and scoped writes", responses: { "200": { description: "Capability summary" } } },
         post: { summary: "MCP Streamable HTTP: initialize, tools/list, tools/call", responses: { "200": { description: "MCP response" } } },
       },
       "/api/discovery/resources": {

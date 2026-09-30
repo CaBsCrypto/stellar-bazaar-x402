@@ -24,6 +24,7 @@ function loadRoute(state,history){
    if(name==='./dynamic-registry'||name==='./dynamic-registry.ts')return {readDynamicServiceCards:async()=>({available:state.available,entries:[]})};
    if(name==='./pilot-cards')return {pilotCards:[],pilotSearchServices:[],pilotCapabilityCard:{mode:'read-only'}};
    if(name==='@/app/api/operations/route')return {GET:history.GET};
+   if(name==='@/lib/mcp-workspace-context')return {workspaceMcpContext:()=>undefined};
    if(name.startsWith('.')||name.startsWith('@/')){let p=name.startsWith('@/')?path.join(root,name.slice(2)):path.resolve(path.dirname(file),name);if(!path.extname(p))p+='.ts';return load(p);}
    return require(name);
   };

@@ -72,12 +72,12 @@ export default function DocsPage() {
           <em>Descubrimiento, validación y revisión.</em>
         </h1>
         <p>
-          Conecta agentes para descubrir e inspeccionar servicios mediante MCP. La ejecución pagada exige un
-          cliente externo con política y conciliación de recibo; Bazaar no firma ni custodia.
+          Tu agente corre en tu equipo. Bazaar conserva conversaciones, tareas y ejemplos en un espacio privado,
+          y recibe servicios para revisión. Esta beta no habilita pagos ni aloja un modelo de IA.
         </p>
       </header>
 
-      <nav className="docs-shell docs-index" aria-label="Índice de documentación"><a href="#inicio-rapido">Inicio rápido</a><a href="#entornos">Entornos compatibles</a><a href="#proveedores">Para proveedores</a><a href="#endpoints">Endpoints</a></nav>
+      <nav className="docs-shell docs-index" aria-label="Índice de documentación"><a href="#inicio-rapido">Inicio rápido</a><a href="#espacio">Mi espacio</a><a href="#skills">Skills</a><a href="#proveedores">Para proveedores</a><a href="#endpoints">Endpoints</a></nav>
       <section className="docs-shell docs-section" id="inicio-rapido">
         <h2>⚡ Quickstart para Agentes de IA</h2>
         <p className="subtitle">
@@ -105,11 +105,12 @@ export default function DocsPage() {
           <div className="docs-card">
             <h3>LangChain, CrewAI & AutoGen</h3>
             <p>Crea clients de discovery/política en Python o TypeScript sin introducir seeds en prompts o tools.</p>
-            <code>Read-only discovery SDK</code>
+            <code>Descubrimiento y accesos separados</code>
           </div>
         </div>
       </section>
 
+      <section className="docs-shell docs-section" id="espacio"><h2>Un espacio privado para tu agente</h2><p>Prepara y guarda tus accesos antes del alta. El humano conversa y lee entregas; su agente consulta tareas, responde y registra ejemplos inline gratuitos o simulados. Actualización manual, sin conexión permanente. El alta puede estar cerrada o limitada: comprueba capacidades antes de actuar.</p><p><a href="/WORKSPACE_AGENT.md">Requisitos y comandos reproducibles</a> · <Link href="/agent-chat">Abrir chat privado</Link></p><p>El secreto de recuperación permite renovar o revocar accesos y permanece contigo. No lo entregues al agente; usa una conexión distinta para las solicitudes de proveedor.</p></section>
       <section className="docs-shell docs-section" id="skills"><h2>Skills para tu agente</h2><p>Consulta get_bazaar_skills y enumera las herramientas antes de actuar. El formulario es una alternativa; aprobación y activación son del operador.</p><div className="docs-grid-3">{bazaarRoles.map(role => {const skill=skillPackage(role);return <article className="docs-card" key={role}><h3>{role === "buyer" ? "Comprar" : role === "seller" ? "Ofrecer un servicio" : "Recuperar"}</h3><p>{skill.prompt}</p><a href={skill.download}>Leer / descargar SKILL.md</a></article>;})}</div></section><section className="docs-shell docs-section" id="proveedores">
         <h2>Para proveedores: prepara tu servicio para revisión</h2>
         <p className="subtitle">

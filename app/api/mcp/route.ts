@@ -3,6 +3,8 @@ import { createOnboardingMcpServer } from "@/lib/mcp-onboarding-server";
 import { GET as readOperations } from "@/app/api/operations/route";
 import { providerMcpContext } from "@/lib/mcp-provider-context";
 import { readBoundedSubmission } from "@/lib/provider-submission-http";
+import { MCP_MODE, MCP_TOOLS, MCP_VERSION, MCP_WRITES } from "@/lib/mcp-tool-contract";
+import { workspaceMcpContext } from "@/lib/mcp-workspace-context";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,7 +22,7 @@ export async function POST(request: Request) {
       headers: { Authorization: request.headers.get("Authorization") ?? "" },
     }));
     return { ok: response.ok, body: await response.json() };
-  }, providerMcpContext(request));
+  }, providerMcpContext(request), workspaceMcpContext(request));
   await server.connect(transport);
   const response = await transport.handleRequest(request);
   response.headers.set("Cache-Control", "private, no-store");
@@ -31,25 +33,13 @@ export function GET() {
   return Response.json({
     ok: true,
     name: "stellar-bazaar-discovery",
-    version: "0.6.0",
+    version: MCP_VERSION,
     protocol: "MCP",
     transport: "streamable-http",
-    mode: "discovery-and-provider-requests",
+    mode: MCP_MODE,
     endpoint: "/api/mcp",
-    tools: [
-      "get_bazaar_capabilities",
-      "list_services",
-      "search_services",
-      "get_service",
-      "list_workflow_bundles",
-      "get_workflow_bundle",
-      "validate_service_card",
-      "get_operation_history",
-      "get_bazaar_skills",
-      "submit_provider_request",
-      "get_provider_request_status",
-    ],
-    writes: ["submit_provider_request"],
+    tools: MCP_TOOLS,
+    writes: MCP_WRITES,
     paidCall: false,
     signing: false,
     custody: false,

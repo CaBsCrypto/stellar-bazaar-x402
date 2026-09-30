@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {MCP_TOOLS,MCP_WRITES,MCP_MODE} from "../lib/mcp-tool-contract.ts";
 
 const base = process.env.MCP_BASE_URL ?? "http://127.0.0.1:3000";
 const url = `${base}/api/mcp`;
@@ -6,19 +7,7 @@ const headers = {
   "content-type": "application/json",
   accept: "application/json, text/event-stream",
 };
-const readTools = [
-  "get_bazaar_capabilities",
-  "list_services",
-  "search_services",
-  "get_service",
-  "list_workflow_bundles",
-  "get_workflow_bundle",
-  "validate_service_card",
-  "get_operation_history",
-  "get_bazaar_skills",
-  "submit_provider_request",
-  "get_provider_request_status",
-];
+const readTools = [...MCP_TOOLS];
 const pilotIds = [
   "ai-video-scriptwriter-pilot",
   "website-intelligence-pilot",
@@ -40,9 +29,9 @@ async function rpc(id, method, params) {
 }
 
 const health = await (await fetch(url)).json();
-assert.equal(health.mode, "discovery-and-provider-requests");
+assert.equal(health.mode, MCP_MODE);
 assert.equal(health.paidCall, false);
-assert.deepEqual(health.writes, ["submit_provider_request"]);
+assert.deepEqual(health.writes, MCP_WRITES);
 assert.deepEqual(health.tools, readTools);
 
 const initialized = await rpc(1, "initialize", {
@@ -64,7 +53,7 @@ const capabilities = await rpc(3, "tools/call", {
   arguments: {},
 });
 const capabilityText = JSON.parse(capabilities.result.content[0].text);
-assert.deepEqual(capabilityText.writes, ["submit_provider_request"]);
+assert.deepEqual(capabilityText.writes, MCP_WRITES);
 assert.equal(capabilityText.registry.mutationViaMcp, false);
 assert.equal(capabilityText.registry.providerMetadataTrusted, false);
 assert.equal(capabilityText.paymentFlow.version, "bazaar.payment-flow/v1");
@@ -187,7 +176,7 @@ console.log(JSON.stringify({
   ok: true,
   mode: "discovery-and-provider-requests",
   tools: readTools.length,
-  writes: 1,
+  writes: MCP_WRITES.length,
   mutationToolRejected: true,
   pilots: pilotIds.length,
   pilotPayment: "not-active",

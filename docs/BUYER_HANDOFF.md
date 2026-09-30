@@ -8,7 +8,7 @@ El prompt compartido por landing y hub está en `lib/testnet-funding.ts`: enlaza
 
 ## Prompt local listo para copiar
 
-> Ayúdame a elegir y probar un servicio de Bazaar en simulación local. Lee public/llms.txt y docs/BUYER_HANDOFF.md en este repositorio. Conecta el cliente MCP a http://127.0.0.1:3214/api/mcp, enumera las ocho herramientas e inspecciona la ficha sintética. El MCP es de solo lectura. Usa exclusivamente scripts/buyer-acceptance.mjs para preparar, comprar y recuperar en una carpeta temporal nueva; autorizo solo simulación XLM con presupuesto 0.01, cero pagos reales. Verifica entrega e historial y demuestra que recuperar no agrega firmas ni liquidaciones. Informa límites o bloqueos; no uses faucets, red de pagos ni credenciales reales.
+> Ayúdame a elegir y probar un servicio de Bazaar en simulación local. Lee public/llms.txt y docs/BUYER_HANDOFF.md en este repositorio. Conecta el cliente MCP a http://127.0.0.1:3214/api/mcp, enumera las herramientas reales e inspecciona la ficha sintética. El MCP descubre y conserva registros autorizados; no paga ni firma. Usa exclusivamente scripts/buyer-acceptance.mjs para preparar, comprar y recuperar en una carpeta temporal nueva; autorizo solo simulación XLM con presupuesto 0.01, cero pagos reales. Verifica entrega e historial y demuestra que recuperar no agrega firmas ni liquidaciones. Informa límites o bloqueos; no uses faucets, red de pagos ni credenciales reales.
 
 ## 1. Descubrir por MCP HTTP real
 
@@ -24,7 +24,7 @@ En terminal B:
 node scripts/buyer-mcp-review.mjs --url http://127.0.0.1:3214/api/mcp
 ```
 
-El cliente usa el SDK MCP instalado, inicializa la conexión, enumera herramientas y consulta fichas sintéticas por loopback. No supone que un GET informativo sea una conexión MCP. Las ocho herramientas esperadas son get_bazaar_capabilities, list_services, search_services, get_service, list_workflow_bundles, get_workflow_bundle, validate_service_card y get_operation_history. Esta última requiere autenticación privada en producción; conectar no concede acceso al historial. No hay execute_service.
+El cliente usa el SDK MCP instalado, inicializa la conexión, enumera herramientas y consulta fichas sintéticas por loopback. No supone que un GET informativo sea una conexión MCP. Las herramientas esperadas provienen de lib/mcp-tool-contract.ts; consulta /llms.txt y tools/list. get_operation_history requiere acceso privado; conectar no concede acceso. Las nuevas herramientas de solicitudes y espacios no pagan ni ejecutan proveedores. No hay execute_service.
 
 Prueba autocontenida alternativa (inicia y cierra su propio servidor):
 

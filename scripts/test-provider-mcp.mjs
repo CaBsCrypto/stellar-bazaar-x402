@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {MCP_TOOLS} from "../lib/mcp-tool-contract.ts";
 import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -24,7 +25,7 @@ const args={submissionId:id,card,controlProof:{method:'dns-txt',domain:'api.exam
 let clients=[];
 try {
   await start(); const a=await connect(token);clients.push(a);
-  const list=await a.listTools();assert.equal(list.tools.length,11);
+  const list=await a.listTools();assert.deepEqual(list.tools.map(tool=>tool.name),MCP_TOOLS);
   assert.equal(list.tools.find(t=>t.name==='submit_provider_request').annotations.readOnlyHint,false);
   const skills=body(await a.callTool({name:'get_bazaar_skills',arguments:{role:'seller'}}));
   const downloaded=await (await fetch(base+skills.skills[0].download)).text();assert.equal(downloaded,skills.skills[0].instructions);

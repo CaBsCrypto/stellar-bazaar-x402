@@ -1,10 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { MCP_TOOLS } from '../lib/mcp-tool-contract.ts';
 const read = path => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const guide = read('public/llms.txt');
-const server = read('app/api/mcp/route.ts');
-const names = [...server.matchAll(/^      "([a-z_]+)",$/gm)].map(match => match[1]);
-assert.equal(names.length, 11);
+const names = [...MCP_TOOLS];
 const documented = [...guide.matchAll(/^\d+\. ([a-z_]+):/gm)].map(match => match[1]);
 assert.deepEqual(documented, names, 'Published tools must match the actual HTTP MCP surface');
 assert(!guide.includes('/api/discovery/resources/{id}'));

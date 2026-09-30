@@ -21,7 +21,7 @@ Static capability card. `200` → `{ok, capabilities}` (bazaar.capabilities/v1, 
 
 ## 2. `POST /api/mcp` — MCP Streamable HTTP (JSON-RPC 2.0)
 
-`app/api/mcp/route.ts`. Headers required: `Content-Type: application/json` and `Accept: application/json, text/event-stream` (SDK returns `406` otherwise). Methods: `initialize`, `tools/list`, `tools/call` (7 read-only tools; see [MCP_CLIENT_SETUP.md](MCP_CLIENT_SETUP.md)). Stateless — no session IDs. `DELETE` → `405` (`Allow: GET, POST`).
+`app/api/mcp/route.ts`. Headers required: `Content-Type: application/json` and `Accept: application/json, text/event-stream` (SDK returns `406` otherwise). Methods: `initialize`, `tools/list`, `tools/call` (canonical tools with scoped writes; see [MCP_CLIENT_SETUP.md](MCP_CLIENT_SETUP.md)). Stateless — no session IDs. `DELETE` → `405` (`Allow: GET, POST`).
 
 ```bash
 curl -N -X POST http://127.0.0.1:3000/api/mcp \
@@ -34,7 +34,7 @@ Successful tool calls return `{jsonrpc, id, result: {content: [{type: "text", te
 
 ## 3. `GET /api/mcp` — MCP health
 
-`200` → `{ok, name: "stellar-bazaar-discovery", version: "0.5.0", protocol: "MCP", transport: "streamable-http", mode: "read-only", endpoint: "/api/mcp", tools: [7], writes: [], paidCall: false, signing: false, custody: false}`.
+`200` → `{ok, name: "stellar-bazaar-discovery", version: "0.7.0", protocol: "MCP", transport: "streamable-http", mode: "discovery-provider-requests-and-private-workspaces", endpoint: "/api/mcp", tools: [canonical list], writes: [six scoped tools], paidCall: false, signing: false, custody: false}`.
 
 ## 4. `GET /api/openapi`
 
@@ -143,3 +143,9 @@ Disabled with `405 PROVIDER_OWNERSHIP_NOT_IMPLEMENTED` for the same fail-closed 
 | `422` | Conformance failure (`valid: false`, `INVALID_SERVICE_CARD`, `schema.shape`) |
 | `502` | `VERIFY_TRANSPORT_ERROR` / `SETTLEMENT_TRANSPORT_ERROR` (facilitator unreachable) |
 | `503` | `X402_SERVER_NOT_CONFIGURED`, `SERVICE_NOT_CONFIGURED`, `PAYER_SECRET_MISSING`, `EXTERNAL_PROVIDER_CONFIG_INVALID` |
+
+## Open private workspaces (candidate, disabled by default)
+
+See /WORKSPACE_AGENT.md and /api/openapi. POST /api/workspaces accepts creationId and two credential hashes with recovery-secret Authorization. Server assigns owner/agent and rejects replay conflicts. POST /api/workspaces/{id}/access rotates one role or revokes both using that secret and expectedGeneration. No original tokens persisted.
+
+GET/POST /api/conversations; GET/POST /api/conversations/{id}/messages; GET/POST /api/agent-tasks; POST /api/agent-tasks/{id}/response. Human writes its messages, agent claims/responds; server derives identity. Native operation/activity schemas are retained with an isolated workspace adapter restricted to unpaid inline results. No external files or payments.

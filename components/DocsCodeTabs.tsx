@@ -17,9 +17,9 @@ const TABS: Tab[] = [
   {
     id: "mcp",
     label: "Claude Desktop & Cursor (MCP)",
-    badge: "Skills y solicitudes",
+    badge: "Skills y espacios privados",
     language: "json",
-    description: "Consulta get_bazaar_skills y tools/list. MCP descubre y valida; puede enviar y recuperar solicitudes con acceso privado en Authorization. No firma, paga, aprueba ni activa servicios.",
+    description: "Consulta get_bazaar_skills y tools/list. Usa conexiones separadas para descubrimiento, solicitud y espacio privado. Tu agente se ejecuta en tu equipo; MCP conserva tareas y ejemplos, sin firmar, pagar, aprobar ni activar servicios.",
     code: `{
   "mcpServers": {
     "stellar-bazaar": {
@@ -33,7 +33,7 @@ const TABS: Tab[] = [
     label: "TypeScript / Node.js",
     badge: "Policy preflight",
     language: "typescript",
-    description: "Discovery y policy preflight sin seeds, firma ni pago en el proceso del agente.",
+    description: "Ejemplo interno de este repositorio, ejecutado con su configuración TypeScript. No es un paquete SDK publicado. Discovery y policy preflight sin firma ni pago.",
     code: `import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
 
 const client = new BazaarAgentClient({

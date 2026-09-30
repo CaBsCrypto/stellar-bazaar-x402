@@ -13,7 +13,11 @@ export function providerMcpContext(incoming: Request) {
     if (json !== undefined) { headers.set("content-type", "application/json"); headers.set("content-length", String(Buffer.byteLength(json))); }
     return new NextRequest(new URL(path, incoming.url), { method: json === undefined ? "GET" : "POST", headers, ...(json === undefined ? {} : { body: json }) });
   }
-  async function envelope(response: Response) { return { ok: response.ok, status: response.status, body: await response.json() }; }
+  async function envelope(response: Response) {
+    const wait = response.headers.get("retry-after");
+    return { ok: response.ok, status: response.status, body: await response.json(),
+      ...(wait && /^\d+$/.test(wait) ? { retryAfter: Number(wait) } : {}) };
+  }
   return {
     submit: async (body: unknown) => envelope(await submit(request("/api/provider-self-listing", body))),
     status: async (submissionId: string) => envelope(await status(request(`/api/provider-self-listing/${encodeURIComponent(submissionId)}`), { params: Promise.resolve({ id: submissionId }) })),
