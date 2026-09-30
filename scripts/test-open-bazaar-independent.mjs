@@ -235,16 +235,17 @@ async function acceptance() {
     const accepted = parallel.filter(result => [200, 201, 202].includes(result.status));
     const parallelDiagnostic = JSON.stringify(parallel.map(result => ({ status: result.status, code: result.body?.error?.code })));
     assert.ok(accepted.length, `At least one concurrent creation must succeed: ${parallelDiagnostic}`);
-    for (const result of parallel) if (![200, 201, 202].includes(result.status)) assert.ok([409, 503].includes(result.status), `Concurrent creation returned an unexpected status: ${parallelDiagnostic}`);
-    const concurrentOutage = parallel.some(result => result.status === 503);
+    for (const result of parallel) if (![200, 201].includes(result.status)) assert.ok([409, 503].includes(result.status), `Concurrent creation returned an unexpected status: ${parallelDiagnostic}`);
+    assert.equal(parallel.filter(result => result.status === 201).length, 1, `Exactly one identical-intent creation must be new: ${parallelDiagnostic}`);
+    const concurrentOutage = parallel.some(result => ![200, 201].includes(result.status));
     // Keep the regression fatal, but finish independent gates to identify
     // additional blockers before returning the concurrency assertion below.
-    if (concurrentOutage) console.error(`Deferred fatal concurrent-creation regression: ${parallelDiagnostic}; safe file diagnostics: ${JSON.stringify(fileDiagnostics)}`);
+    if (concurrentOutage) console.error(`Deferred fatal identical-intent creation regression: ${parallelDiagnostic}; safe file diagnostics: ${JSON.stringify(fileDiagnostics)}`);
     const refA = reference(success(accepted[0], 'Concurrent creation'));
     for (const result of accepted) assert.equal(reference(result.body).ownerId, refA.ownerId, 'One intent must not allocate two owners');
     const bootstrapClient = await mcp(second.base, a.bootstrap);
     const mcpCreationReplay = await call(bootstrapClient, 'create_bazaar_workspace', a.creation);
-    assert.equal(mcpCreationReplay.error, false); assert.equal(reference(mcpCreationReplay.data).ownerId, refA.ownerId, 'MCP reuses native creation identity');
+    assert.equal(mcpCreationReplay.error, false); assert.equal(mcpCreationReplay.data.created, false); assert.equal(reference(mcpCreationReplay.data).ownerId, refA.ownerId, 'MCP reuses native creation identity');
     success(await http(first.base, '/api/workspaces', a.bootstrap, a.creation), 'Exact configured loopback Origin creation replay');
     const endpoint = new URL(first.base);
     for (const [label, spoof] of [
@@ -383,7 +384,7 @@ async function acceptance() {
     for (const name of files) noSecrets(readFileSync(join(stateDirectory, name), 'utf8'));
     const unavailable = await start({ BAZAAR_WORKSPACE_BACKEND: 'redis' });
     assert.equal((await http(unavailable.base, '/api/operations', winningHuman)).status, 503, 'Missing explicit Redis must not fall back to files'); await stop(unavailable);
-    const registryPath = join(stateDirectory, 'registry.json'), ownerPath = join(stateDirectory, `owner-${refB.ownerId}.json`), pendingPath = join(stateDirectory, 'pending.json');
+    const registryPath = join(stateDirectory, 'registry.json'), ownerPath = join(stateDirectory, `owner-${refB.ownerId}.json`), pendingPath = join(stateDirectory, 'pending.json'), lockPath = join(stateDirectory, 'lock');
     assert.ok(existsSync(registryPath) && existsSync(ownerPath));
     const originalRegistry = readFileSync(registryPath, 'utf8'), originalOwner = readFileSync(ownerPath, 'utf8');
     for (const [path, invalid, original] of [[registryPath, '{malformed', originalRegistry], [ownerPath, '{"version":1}', originalOwner]]) {
@@ -399,6 +400,13 @@ async function acceptance() {
     assert.equal((await http(incomplete.base, '/api/operations', winningHuman)).status, 503, 'Incomplete transaction marker must fail closed');
     assert.ok(existsSync(pendingPath), 'Incomplete transaction must not be silently cleared or retried');
     await stop(incomplete); unlinkSync(pendingPath);
+    const lockEvidence = 'Independent synthetic persistent-lock fixture'; writeFileSync(lockPath, lockEvidence, { flag: 'wx' });
+    const persistentlyLocked = await start();
+    assert.equal((await http(persistentlyLocked.base, '/api/operations', winningHuman)).status, 503, 'Persistent lock must still fail closed after its bounded deadline');
+    assert.equal((await http(persistentlyLocked.base, '/api/workspaces', b.bootstrap, b.creation)).status, 503, 'Persistent lock cannot trigger an automatic creation retry');
+    assert.equal(readFileSync(lockPath, 'utf8'), lockEvidence, 'Persistent lock must not be automatically removed');
+    assert.equal(readFileSync(registryPath, 'utf8'), originalRegistry, 'Lock failure must not mutate the registry'); assert.equal(readFileSync(ownerPath, 'utf8'), originalOwner, 'Lock failure must not mutate owner data');
+    await stop(persistentlyLocked); unlinkSync(lockPath); // Explicit cleanup of our own injected fixture after the server stops.
     const restored = await start(); success(await http(restored.base, '/api/operations', winningHuman), 'Original owner data survives corruption tests'); await stop(restored);
     // Follow the published workspace guide with the real helper and SDK. The
     // delegated agent directory contains only its permitted agent packet.
@@ -497,8 +505,8 @@ async function acceptance() {
     const supportingTimeout = setTimeout(() => supporting.kill(), 45000);
     const supportingExit = await new Promise((ok, fail) => { supporting.once('exit', ok); supporting.once('error', fail); }); clearTimeout(supportingTimeout);
     assert.equal(supportingExit, 0, 'Supporting core protocol-double acceptance failed; no author output or credentials emitted');
-    assert.equal(concurrentOutage, false, `Concurrent creation may conflict but must not return a generic outage: ${parallelDiagnostic}; safe file diagnostics: ${JSON.stringify(fileDiagnostics)}`);
-    console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, inlineDeliveryOwnList: true, anonymousFilesDisabled: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, independentRedisProtocol: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
+    assert.equal(concurrentOutage, false, `Identical concurrent creation must return only one 201 and 200 replays: ${parallelDiagnostic}; safe file diagnostics: ${JSON.stringify(fileDiagnostics)}`);
+    console.log(JSON.stringify({ ok: true, reviewer: 'independent-of-feature-authors', transport: 'built Next HTTP + real MCP SDK', storage: 'isolated files, two server processes and restart', publicDiscovery: true, roleIsolation: true, serverOwners: true, concurrentCreation: true, crossOwnerIsolation: true, foreignOriginHistoryDenied: true, chatTaskOperationHistory: true, inlineDeliveryOwnList: true, anonymousFilesDisabled: true, recovery: true, rotation: true, concurrentGenerationCas: true, revokeTombstone: true, corruptStateFailsClosed: true, incompleteTransactionFailsClosed: true, persistentLockFailsClosed: true, workspaceGuideHelper: true, authenticatedProviderSeparation: true, providerSameIntentRetry: true, immutableProviderReceipt: true, legacyPreserved: true, redisFailsClosed: true, independentRedisProtocol: true, supportingCoreProtocolDouble: true, externalRequests: 0, realPayments: 0, productionWrites: 0, evidenceDirectory }));
   } catch (error) {
     if (fileDiagnostics.length) console.error(`Safe file diagnostics for failed acceptance: ${JSON.stringify(fileDiagnostics)}`);
     throw error;
