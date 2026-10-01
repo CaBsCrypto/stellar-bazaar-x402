@@ -23,7 +23,7 @@ function block(name) {
 const evidenceDirectory = mkdtempSync(join(tmpdir(), 'bazaar-synthetic-handoff-'));
 const state = join(evidenceDirectory, 'workspaces'); mkdirSync(state);
 const owner = join(evidenceDirectory, 'owner'), agent = join(evidenceDirectory, 'agent');
-const clean = Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(PATH|SYSTEMROOT|WINDIR|COMSPEC|TEMP|TMP|USERPROFILE|APPDATA|LOCALAPPDATA|PATHEXT|SYSTEMDRIVE)$/i.test(key)));
+const clean = Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(PATH|SYSTEMROOT|WINDIR|COMSPEC|TEMP|TMP|USERPROFILE|APPDATA|LOCALAPPDATA|PATHEXT|SYSTEMDRIVE|PROGRAMDATA)$/i.test(key)));
 const guard = pathToFileURL(join(serverRoot, 'scripts/test-open-bazaar-independent.mjs')).href;
 const env = {...clean, BAZAAR_INDEPENDENT_NETWORK_GUARD: '1'};
 const secrets = [], commands = [];

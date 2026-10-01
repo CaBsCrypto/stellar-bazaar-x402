@@ -128,7 +128,12 @@ try {
       await page.getByText(agentText, { exact: true }).first().waitFor();
       await page.getByText('Consultar contenido original', { exact: true }).click();
       assert.deepEqual(JSON.parse(await page.locator('.delivery-original pre').textContent()), { text: agentText });
-      assert.match(await page.locator('body').innerText(), /Simulación/i);
+      const technical = page.locator('summary', { hasText: 'Últimas operaciones · vista técnica detallada' });
+      const simulationBadge = page.locator('.history-record .history-badge', { hasText: /^Simulación$/ });
+      await technical.click();
+      await simulationBadge.waitFor({ state: 'visible' });
+      await technical.click();
+      await simulationBadge.waitFor({ state: 'hidden' });
     }
     const stored = await page.evaluate(() => JSON.stringify([Object.entries(localStorage), Object.entries(sessionStorage), document.cookie]));
     for (const secret of Object.values(secrets)) assert.ok(!stored.includes(secret), 'Private access persisted in browser storage');
@@ -218,8 +223,9 @@ try {
     sourceSha: candidateSha, runtime: process.version,
     chromium: browser.version(), origin, buildProvenance, buildId, config: Object.fromEntries(Object.entries(env).filter(([k]) => /^(BAZAAR_|X402_|NEXT_PUBLIC_)/.test(k))),
     command: 'Node22 scripts/review-open-bazaar-browser.mjs <bundled-node_modules> <existing-chromium-executable>', fixtureHttpRequests: httpRequests, readinessRequests, traffic,
-    cases, pageErrors, externalBlocked, lateProbe: { ignoresAbortSignalAtTransport: true, responseDeliveredAfterLock: true, contentRemainedLocked: true }, assertions: ['fragment removed', 'access absent from browser storage', 'text computed 2x', 'keyboard lock', 'draft retired', 'same-tab reentry', 'late response delivered and ignored', 'same records after restart', 'inline original JSON matches fixture', 'library lock and reentry'],
-    limitations: ['Synthetic file storage; real Redis remains separate', 'Chromium viewport emulation; physical device untested', 'Computed text doubling; browser zoom not claimed'] };
+    cases, pageErrors, externalBlocked, lateProbe: { ignoresAbortSignalAtTransport: true, responseDeliveredAfterLock: true, contentRemainedLocked: true }, assertions: ['fragment removed', 'access absent from browser storage', 'text computed 2x', 'keyboard lock', 'draft retired', 'same-tab reentry', 'late response delivered and ignored', 'same records after restart', 'inline original JSON matches fixture', 'simulation badge visible when technical details are opened', 'library lock and reentry'],
+    simulationLabelVerifiedInTechnicalDetails: true,
+    limitations: ['Synthetic file storage; real Redis remains separate', 'Chromium viewport emulation; physical device untested', 'Computed text doubling; browser zoom not claimed', 'Main delivery view shows no payment; simulation badge is in technical details'] };
   await writeFile(join(evidence, 'report.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ ok: report.ok, evidence, runtime: report.runtime, chromium: report.chromium, cases: cases.map(v => ({ name: v.name, minRatio: v.minRatio, scrollWidth: v.scrollWidth, viewport: v.viewport, overflowing: v.overflowing })), pageErrors, externalBlocked }));
   if (!report.ok) process.exitCode = 1;

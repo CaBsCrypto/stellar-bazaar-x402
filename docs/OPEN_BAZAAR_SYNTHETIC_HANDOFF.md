@@ -200,7 +200,7 @@ una operación y el mismo comprobante. Fallos inducidos se prueban con dobles lo
 Abre el enlace chat de `OWNER/human-links.txt` de forma privada. El token debe
 desaparecer de la URL antes de cargar datos. Pulsa **Actualizar mensajes** y comprueba
 un mensaje humano y una respuesta del agente con la misma referencia de operación.
-**Abrir mi biblioteca** muestra la entrega y la etiqueta **Simulación**.
+**Abrir mi biblioteca** muestra la entrega y **Sin pago**. Para consultar la etiqueta **Simulación**, abre **Últimas operaciones · vista técnica detallada**.
 
 En 390×844 y 1366×768 comprueba controles visibles, líneas largas, actividad y
 resultado original. Repite con texto o zoom al 200 %; verifica la ampliación efectiva
