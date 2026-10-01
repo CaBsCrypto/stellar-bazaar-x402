@@ -11,12 +11,12 @@ import { DEFAULT_BUDGET, canonical, sha256, scriptsFromSource, validatePlan, Red
 import { preparePrivateDirectory, verifyPrivateDirectory } from './history-private-files.mjs';
 
 const root = resolve(fileURLToPath(new URL('../', import.meta.url)));
-const trackedSources = ['lib/workspace-store.ts', 'scripts/history-private-files.mjs', 'scripts/workspace-redis-budget.mjs', 'scripts/workspace-redis-http-worker.mjs', 'scripts/run-open-workspace-redis-isolated.mjs'];
+const trackedSources = ['lib/workspace-store.ts', 'scripts/history-private-files.mjs', 'scripts/workspace-redis-budget.mjs', 'scripts/workspace-redis-http-worker.mjs', 'scripts/run-open-workspace-redis-isolated.mjs', 'scripts/run-open-workspace-redis-native.mjs', 'scripts/workspace-native-next-preload.mjs', 'scripts/workspace-native-application-proxy.mjs', 'scripts/workspace-native-browser-acceptance.mjs'];
 export function sourceFingerprint() {
-  const tracked = execFileSync('git', ['ls-files', '--', 'lib', 'app', 'components', 'styles', 'public', 'scripts', 'examples', 'package.json', 'package-lock.json'], { cwd: root, encoding: 'utf8' }).trim().split(/\r?\n/).filter(name => name && !/(^|\/)\.env(?:\.|$)/.test(name));
-  return sha256(canonical([...new Set([...tracked, ...trackedSources])].sort().map(name => [name, sha256(readFileSync(join(root, name)))])));
+  const tracked = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', '--', 'lib', 'app', 'components', 'styles', 'public', 'scripts', 'examples', 'package.json', 'package-lock.json', 'tsconfig.json', 'next.config.js', 'next.config.mjs', 'next.config.ts'], { cwd: root, encoding: 'utf8' }).trim().split(/\r?\n/).filter(name => name && !/(^|\/)\.env(?:\.|$)/i.test(name));
+  return sha256(canonical([...new Set([...tracked, ...trackedSources.filter(name => { try { readFileSync(join(root, name)); return true; } catch { return false; } })])].sort().map(name => [name, sha256(readFileSync(join(root, name)))])));
 }
-function noEnvFiles() { assert.equal(readdirSync(root).filter(name => /^\.env(?:\.|$)/.test(name) && name !== '.env.example').length, 0, 'Run only in a clean checkout without .env files; no .env is opened'); }
+function noEnvFiles() { assert.equal(readdirSync(root).filter(name => /^\.env(?:\.|$)/i.test(name) && name.toLowerCase() !== '.env.example').length, 0, 'Run only in a clean checkout without .env files; no .env is opened'); }
 export function prepare(directory) {
   noEnvFiles(); assert.match(process.version, /^v22\./, 'Use existing Node 22');
   const out = preparePrivateDirectory(directory);

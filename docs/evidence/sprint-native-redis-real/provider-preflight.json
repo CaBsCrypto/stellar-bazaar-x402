@@ -1,0 +1,38 @@
+{
+  "observedAt": "2026-10-01T06:32:00Z",
+  "timezone": "America/Santiago",
+  "source": "Authenticated Upstash Console: Details and Settings; read-only UI inspection",
+  "databaseName": "bazaar-validacion-20261001",
+  "databaseId": "1f90faef-48d7-49b3-916a-c378e13a8c23",
+  "redisOrigin": "https://smooth-dory-323957.upstash.io",
+  "provider": "AWS",
+  "primaryRegion": "us-east-1",
+  "readRegions": [],
+  "evictionEnabled": false,
+  "plan": "Free Tier",
+  "currentCostUsd": "0.00",
+  "commandsUsed": 0,
+  "commandsMonthlyLimit": 500000,
+  "bandwidthUsedBytes": 0,
+  "bandwidthLimitDisplayed": "10 GB",
+  "storageUsedBytes": 0,
+  "storageLimitDisplayed": "256 MB",
+  "credential": {
+    "dedicatedDatabaseCredentialSaved": true,
+    "outsideRepository": true,
+    "operatorOnlyAclVerified": true,
+    "tokenPrinted": false,
+    "historicalCredentialsLoaded": false
+  },
+  "redisDataRequestsIssuedDuringPreparation": 0,
+  "databaseSettingsModified": false,
+  "humanAuthorizationForFinalPlan": "pending; this observation does not authorize a Redis write",
+  "accounting": "Console UI control-plane requests are separate from data-plane Redis REST. Console displayed zero commands, bandwidth and storage. All future application, MCP and browser data-plane traffic must use the runner's shared ledgers.",
+  "officialPricingReference": "https://upstash.com/pricing/redis",
+  "evidence": [
+    "provider-free-margin.png",
+    "provider-settings.png"
+  ],
+  "recheckedAt": "2026-10-01T06:54:11.701Z",
+  "currentMarginScreenshot": "provider-current-margin.png"
+}

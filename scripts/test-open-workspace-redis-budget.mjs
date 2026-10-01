@@ -39,6 +39,22 @@ function commit(documentBytes = 0) {
 }
 await rejected(commit(-100), 'IDENTITY_OUTSIDE_PLAN');
 const definite = make(async () => { sends++; return '{"result":0}'; }); await definite.exchange(commit()); assert.equal(definite.counts.commands, 4); assert.equal(definite.counts.casRejections, 1);
+assert.equal(definite.report().storedValues.lastConfirmedValueBytes, null, 'CAS0 does not affirm stored state');
+const acknowledged = make(async () => { sends++; return '{"result":1}'; }), confirmedBody = commit();
+await acknowledged.exchange(confirmedBody); const committedRegistry = JSON.parse(JSON.parse(confirmedBody)[9]);
+assert.equal(acknowledged.report().storedValues.lastConfirmedValueBytes, Buffer.byteLength(JSON.parse(confirmedBody)[9]) + committedRegistry.workspaces.reduce((sum, owner) => sum + owner.documentBytes, 0) + 12);
+assert.equal(acknowledged.report().storedValues.peakConfirmedValueBytes, acknowledged.report().storedValues.lastConfirmedValueBytes); assert.equal(acknowledged.report().storedValues.lastConfirmedOwners, 1); assert.equal(acknowledged.report().storedValues.currentStateConfirmed, true);
+acknowledged.send = async () => { throw Error('SYNTHETIC_LOST_ACK'); }; await assert.rejects(acknowledged.exchange(commit()), { message: 'SYNTHETIC_LOST_ACK' });
+assert.equal(acknowledged.report().storedValues.currentStateConfirmed, false); assert.equal(acknowledged.report().storedValues.uncertainAfterConfirmation, true); assert.ok(acknowledged.report().storedValues.lastConfirmedValueBytes > 0, 'Retain prior confirmed state after uncertainty');
+const orderedReplies = [], reordered = make(async () => new Promise(done => orderedReplies.push(done)));
+const earlierCommit = reordered.exchange(commit(8)), laterCommit = reordered.exchange(commit(16)); assert.equal(reordered.report().storedValues.currentStateConfirmed, false);
+orderedReplies[1]('{"result":1}'); await laterCommit; assert.equal(reordered.report().storedValues.currentStateConfirmed, false, 'An exchange is still pending');
+orderedReplies[0]('{"result":1}'); await earlierCommit; assert.equal(reordered.report().storedValues.currentStateConfirmed, false, 'Older successful acknowledgement must not assert current state'); assert.equal(reordered.report().storedValues.lastAcknowledgedCommitSequence, 1); assert.equal(reordered.report().storedValues.highestAcknowledgedCommitSequence, 2);
+reordered.send = async () => '{"result":1}'; await reordered.exchange(commit(24)); assert.equal(reordered.report().storedValues.currentStateConfirmed, true, 'Sequential final commit after draining the exchanges confirms its values');
+const concurrentReplies = [], concurrentAcknowledgements = make(async () => new Promise(done => concurrentReplies.push(done)));
+const concurrentFirst = concurrentAcknowledgements.exchange(commit(8)), concurrentSecond = concurrentAcknowledgements.exchange(commit(16));
+concurrentReplies[0]('{"result":1}'); await concurrentFirst; concurrentReplies[1]('{"result":1}'); await concurrentSecond;
+assert.equal(concurrentAcknowledgements.report().storedValues.currentStateConfirmed, false, 'Request sequence and acknowledgement order cannot replace an exclusive commit window');
 const uncertain = make(async (_raw, _max, meter) => { sends++; meter(11); throw Error('SYNTHETIC_LOST_ACK'); });
 const beforeUnknown = sends; await assert.rejects(uncertain.exchange(commit()), { message: 'SYNTHETIC_LOST_ACK' }); assert.equal(sends - beforeUnknown, 1); assert.equal(uncertain.counts.commands, 6); assert.equal(uncertain.counts.responseBytes, 11);
 await assert.rejects(uncertain.exchange(commit()), { message: 'SYNTHETIC_LOST_ACK' }); assert.equal(sends - beforeUnknown, 1);

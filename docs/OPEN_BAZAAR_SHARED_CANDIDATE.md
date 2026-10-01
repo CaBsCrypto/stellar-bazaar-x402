@@ -1,7 +1,8 @@
 # Bazaar abierto — candidato para validación compartida
 
 Fecha: 2026-10-01, America/Santiago. Este expediente prepara una revisión de
-publicación separada. **Sprint sin cerrar: Redis real sigue bloqueado.**
+publicación separada. **Sprint sin cerrar: el recorrido nativo real necesita
+autorización específica del nuevo plan y revisión final.**
 
 ## Identificación y alcance
 
@@ -13,8 +14,15 @@ Los commits posteriores de expediente solo añaden documentación y evidencia;
 el código servido y revisado queda identificado por ese SHA y BUILD_ID.
 El tablero único está en [SPRINT_REDIS_BOARD.md](SPRINT_REDIS_BOARD.md).
 
-El usuario confirmó que aún no hay instancia Redis ni margen gratuito confirmado.
-No se abrió, consultó ni modificó una instancia. Cero escrituras Redis externas,
+La validación anterior se hizo sin una instancia Redis ni margen confirmado.
+El sprint del 2026-10-01 ya dispone de `bazaar-validacion-20261001`, AWS
+`us-east-1`, Free Tier, origen `https://smooth-dory-323957.upstash.io`.
+La consola autenticada mostró 0/500.000 comandos, 0 B/10 GB de tráfico,
+0 B/256 MB de almacenamiento y coste $0.00; sin regiones de lectura y eviction
+desactivado. La credencial dedicada se guardó fuera del checkout con ACL exclusiva.
+La inspección fue de configuración/cuotas; no envió comandos a Redis ni cambió
+la instancia. [Evidencia del preflight](evidence/sprint-native-redis-real/provider-preflight.json).
+Cero escrituras Redis externas,
 compras, modelos/proveedores alojados, transferencias, faucets, push, merge o deploy.
 No se cargaron `.env`, firmantes ni accesos históricos. Las dependencias existentes
 y Node **22.18.0** se reutilizaron sin instalar paquetes.
@@ -46,7 +54,7 @@ y Node **22.18.0** se reutilizaron sin instalar paquetes.
 | Local con dobles | Aprobado en el SHA de código | Guard propio independiente y recorrido acotado; 167 requests Redis, 764 comandos EVAL/Lua, 58 HTTP/MCP, cuatro procesos y dos reinicios |
 | HTTP/MCP real + file aislado | Aprobado; canonical final reproducido independientemente | Dos propietarios, una conversación/respuesta/operación tras reinicio; scopes, rotación/revocación; reenvío de registro fallido conservando los mismos bytes |
 | Navegador Chromium real | Aprobado en el SHA de código | Ocho casos: 390×844 y 1366×768, texto x2 medido, cero desbordes; teclado, bloqueo/reentrada y respuesta tardía |
-| Redis real aislado | **Bloqueado** | Sin instancia, margen gratuito ni autorización específica |
+| Redis real aislado | **Pendiente de autorización específica** | Instancia y margen gratuito actual comprobados; el nuevo plan requiere aprobación antes de escribir |
 | Next nativo + Redis real | **Pendiente** | No sustituir por el host HTTP instrumentado |
 | Navegador/Magic Link + Redis real | **Pendiente** | El navegador con file no valida este backend |
 | Dispositivo físico | Pendiente, evidencia separada | Chromium emula viewport; no certifica dispositivo real |
@@ -126,7 +134,8 @@ El plan Redis de aceptación local quedó consumido por un doble, nunca por un s
 Sus hashes identifican esa ejecución, no autorizan una escritura futura. HEAD y digest
 de fuente se verifican al ejecutar: después de cerrar los commits del expediente debe
 prepararse un plan nuevo para el HEAD final, en una carpeta privada nueva. La instancia
-y el margen de ese plan seguirán sin confirmar hasta que el humano los aporte.
+y el margen actual ya se comprobaron en la consola de la base dedicada;
+la autorización del plan final sigue pendiente.
 
 ## Reversión y cierre
 

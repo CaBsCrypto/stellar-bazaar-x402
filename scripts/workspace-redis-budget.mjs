@@ -30,6 +30,8 @@ export class RedisBudget {
     this.plan = structuredClone(plan); this.keys = validatePlan(this.plan); this.scripts = scripts; if (plan.scriptHashes && canonical(plan.scriptHashes) !== canonical(Object.fromEntries(Object.entries(scripts).map(([k, v]) => [k, sha256(v)])))) throw Error('CANONICAL_LUA_CHANGED'); this.send = send; this.started = Date.now(); this.stopped = null;
     this.counts = { requests: 0, commands: 0, evalCommands: 0, luaCommands: 0, requestBytes: 0, responseBytes: 0, casRejections: 0, commits: 0, uncertain: 0, rejected: 0 };
     this.reservedResponseBytes = 0;
+    this.storage = { lastConfirmedValueBytes: null, peakConfirmedValueBytes: 0, lastConfirmedOwners: null, peakConfirmedOwners: 0, uncertainAfterConfirmation: false, lastAcknowledgedCommitSequence: null, highestAcknowledgedCommitSequence: null, lastCommitAcknowledgedInExclusiveWindow: false };
+    this.outstandingExchanges = 0;
   }
   stop(code) { this.stopped ??= code; this.counts.rejected++; throw Error(code); }
   command(raw) {
@@ -68,6 +70,7 @@ export class RedisBudget {
     // Reserve the largest possible effect BEFORE calling the transport. Count
     // EVAL itself as well as every internal GET/SET; CAS0 only executes GETs.
     this.counts.requests++; this.counts.commands += command.maxCommands; this.counts.evalCommands++; this.counts.requestBytes += n; this.reservedResponseBytes += budget.perResponseBytes;
+    const requestSequence = this.counts.requests, beganQuiescent = this.outstandingExchanges === 0; this.outstandingExchanges++;
     let response, received = 0;
     try {
       response = await this.send(raw, budget.perResponseBytes, bytes => { received += bytes; this.counts.responseBytes += bytes; });
@@ -79,17 +82,25 @@ export class RedisBudget {
       else {
         if (![0, 1].includes(parsed.result)) throw Error('UNCERTAIN_REDIS_COMMIT');
         if (parsed.result === 0) { this.counts.commands -= command.maxCommands - 4; this.counts.casRejections++; }
-        else this.counts.commits++;
+        else {
+          this.counts.commits++;
+          const registry = JSON.parse(command.args[3]);
+          const valueBytes = Buffer.byteLength(command.args[3]) + registry.workspaces.reduce((sum, owner) => sum + owner.documentBytes, 0) + Buffer.byteLength('workspace-v1');
+          this.storage.lastConfirmedValueBytes = valueBytes; this.storage.peakConfirmedValueBytes = Math.max(this.storage.peakConfirmedValueBytes, valueBytes);
+          this.storage.lastConfirmedOwners = registry.workspaces.length; this.storage.peakConfirmedOwners = Math.max(this.storage.peakConfirmedOwners, registry.workspaces.length);
+          this.storage.lastAcknowledgedCommitSequence = requestSequence; this.storage.highestAcknowledgedCommitSequence = Math.max(this.storage.highestAcknowledgedCommitSequence ?? 0, requestSequence);
+          this.storage.lastCommitAcknowledgedInExclusiveWindow = beganQuiescent && this.counts.requests === requestSequence && this.outstandingExchanges === 1;
+        }
       }
       this.counts.luaCommands = this.counts.commands - this.counts.evalCommands;
       return response;
     } catch (error) {
       // No network/SDK transport retry. Unknown acknowledgements retain their
       // full command reservation and require explicit operator recovery.
-      this.counts.uncertain++; this.stopped = /^[A-Z_]{1,60}$/.test(error.message) ? error.message : 'REDIS_TRANSPORT_UNCERTAIN'; this.counts.luaCommands = this.counts.commands - this.counts.evalCommands; throw Error(this.stopped);
-    } finally { this.reservedResponseBytes -= budget.perResponseBytes; }
+      this.counts.uncertain++; this.storage.uncertainAfterConfirmation = true; this.stopped = /^[A-Z_]{1,60}$/.test(error.message) ? error.message : 'REDIS_TRANSPORT_UNCERTAIN'; this.counts.luaCommands = this.counts.commands - this.counts.evalCommands; throw Error(this.stopped);
+    } finally { this.reservedResponseBytes -= budget.perResponseBytes; this.outstandingExchanges--; }
   }
-  report() { return { ...this.counts, stopped: this.stopped, elapsedMs: Date.now() - this.started, byteAccounting: 'exact UTF-8 HTTP JSON body bytes; TCP/TLS/header overhead excluded', unknownCommandsAreUpperBound: this.counts.uncertain > 0 }; }
+  report() { return { ...this.counts, stopped: this.stopped, elapsedMs: Date.now() - this.started, byteAccounting: 'exact UTF-8 HTTP JSON body bytes; TCP/TLS/header overhead excluded', unknownCommandsAreUpperBound: this.counts.uncertain > 0, storedValues: { ...this.storage, outstandingExchanges: this.outstandingExchanges, currentStateConfirmed: this.storage.lastConfirmedValueBytes !== null && !this.storage.uncertainAfterConfirmation && this.outstandingExchanges === 0 && this.storage.lastCommitAcknowledgedInExclusiveWindow, accounting: 'last acknowledged canonical COMMIT1 registry UTF-8 bytes + validated owner documentBytes + workspace-v1 marker bytes; excludes keys/server overhead; CAS0 never updates state; current state requires last COMMIT1 to begin with no pending exchange and complete without any concurrent exchange, then zero pending exchanges and no uncertainty' } }; }
 }
 
 export function realRedisTransport(origin, token, request = httpsRequest) {

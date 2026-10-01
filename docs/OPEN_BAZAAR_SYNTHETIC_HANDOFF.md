@@ -6,6 +6,16 @@ correcciones del sprint. Usa el helper existente y MCP real; la respuesta es tex
 generado localmente, sin modelo, proveedor, pago ni archivo externo. Una ejecución
 con backend file demuestra el recorrido local; no cuenta como Redis real.
 
+El sprint nativo del 2026-10-01 dispone de una base dedicada Free Tier y margen
+actual comprobado. La validación autorizable usa ahora
+`scripts/run-open-workspace-redis-native.mjs`, Next construido, el store
+configurado en producción y un plan con dos propietarios asignados por servidor
+antes de los efectos. La guía de abajo sigue describiendo el paquete de
+desarrollador; no constituye autorización para escribir esa base. El expediente
+nativo conserva los payloads antes del alta y separa resultados con dobles de
+Next/navegador sobre Redis real. Consulte el preflight en
+`evidence/sprint-native-redis-real/provider-preflight.json` y el plan final revisado.
+
 ## Entrada que recibe el desarrollador
 
 > Lee /WORKSPACE_AGENT.md y las skills buyer y recovery de este origen. Consulta

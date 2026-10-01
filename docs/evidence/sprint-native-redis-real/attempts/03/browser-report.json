@@ -1,0 +1,154 @@
+{
+  "category": "native-next-browser-with-redis-double",
+  "ok": true,
+  "candidateSha": "6ceff21a5ad3102c9658a36b5f21d0dd70b1c94a",
+  "sourceFingerprint": "5b03d83156e9c6bd0808bca07e0bd532bb6502d8c10f84d0147cc9ffdbe4105b",
+  "planHash": "3e0e4934296e8302ca7b1896228a7b19af42574d766abe9baa76f41165e6b35f",
+  "buildId": "hunOK1cLkqAr9VJJ9Q3lE",
+  "runtime": "v22.18.0",
+  "chromium": "153.0.8010.12",
+  "origin": "http://127.0.0.1:63966",
+  "cases": [
+    {
+      "name": "agent-chat-390-text100",
+      "textSamples": 26,
+      "minRatio": 1,
+      "maxRatio": 1,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "overflowing": []
+    },
+    {
+      "name": "agent-chat-390-text200",
+      "textSamples": 26,
+      "minRatio": 2,
+      "maxRatio": 2,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "overflowing": []
+    },
+    {
+      "name": "agent-chat-1366-text100",
+      "textSamples": 31,
+      "minRatio": 1,
+      "maxRatio": 1,
+      "viewport": 1366,
+      "scrollWidth": 1366,
+      "overflowing": []
+    },
+    {
+      "name": "agent-chat-1366-text200",
+      "textSamples": 31,
+      "minRatio": 2,
+      "maxRatio": 2,
+      "viewport": 1366,
+      "scrollWidth": 1366,
+      "overflowing": []
+    },
+    {
+      "name": "history-390-text100",
+      "textSamples": 69,
+      "minRatio": 0.9469923076923077,
+      "maxRatio": 1,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "overflowing": []
+    },
+    {
+      "name": "history-390-text200",
+      "textSamples": 69,
+      "minRatio": 2,
+      "maxRatio": 2,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "overflowing": []
+    },
+    {
+      "name": "history-1366-text100",
+      "textSamples": 74,
+      "minRatio": 0.8274027777777777,
+      "maxRatio": 1,
+      "viewport": 1366,
+      "scrollWidth": 1366,
+      "overflowing": []
+    },
+    {
+      "name": "history-1366-text200",
+      "textSamples": 74,
+      "minRatio": 2,
+      "maxRatio": 2,
+      "viewport": 1366,
+      "scrollWidth": 1366,
+      "overflowing": []
+    }
+  ],
+  "requests": {
+    "GET /agent-chat": 2,
+    "GET /_next/static/css/ce711fda1398e0e7.css": 4,
+    "GET /_next/static/chunks/webpack-c210acfdad42a157.js": 4,
+    "GET /_next/static/chunks/1b11581d-e2de9005c9e17dbe.js": 4,
+    "GET /_next/static/chunks/8540-1329e8ebb14cfd2d.js": 4,
+    "GET /_next/static/chunks/main-app-1db3a43c17bcced3.js": 4,
+    "GET /_next/static/chunks/6897-22c6fe5cf098a3f3.js": 4,
+    "GET /_next/static/chunks/app/agent-chat/page-301a641fafbeabf8.js": 2,
+    "GET /_next/static/chunks/351-909e179bbcdd8193.js": 4,
+    "GET /_next/static/chunks/7799-d720d339887cc5d4.js": 4,
+    "GET /_next/static/chunks/6599-62074b911d340332.js": 4,
+    "GET /_next/static/chunks/1665-dbaf7d1ca861dda5.js": 4,
+    "GET /_next/static/chunks/app/layout-894ac66c49287697.js": 4,
+    "GET /api/conversations": 5,
+    "GET /history": 2,
+    "GET /_next/static/css/cec41383047bdf4b.css": 2,
+    "GET /_next/static/css/8a3b719ad1a25005.css": 2,
+    "GET /_next/static/chunks/4491-a1ce20d3c51f9dc9.js": 2,
+    "GET /_next/static/chunks/7689-d772eca7ccc0786a.js": 2,
+    "GET /_next/static/chunks/app/page-dcc3d708dfe88de8.js": 2,
+    "GET /_next/static/chunks/3947-309e430cc7737a16.js": 2,
+    "GET /_next/static/chunks/6879-077d2994e30e531b.js": 2,
+    "GET /_next/static/chunks/app/history/page-bdffda69a8f3c267.js": 2,
+    "GET /api/operations": 2,
+    "GET /api/activity": 12,
+    "GET /api/deliveries": 2
+  },
+  "externalBlocked": [],
+  "pageErrors": [],
+  "staticTransport": {
+    "interceptedBrowserRequests": 62,
+    "cacheHits": 42,
+    "nativeGetRequests": 19,
+    "nativeRangeRequests": 4,
+    "decodedBytes": 820880,
+    "policy": "Build static assets only; first native responses verified against build SHA256. Assets with gzip size above 65536 use contiguous identity ranges <=65536 via counted Next proxy. Exact validated bytes cached in this browser context. No fallback or retries."
+  },
+  "limitations": [
+    "Chromium viewport emulation; physical device untested",
+    "Computed text doubling; browser zoom not claimed",
+    "Simulation badge verified inside technical details",
+    "Static asset distribution instrumented with verified native ranges and context memory cache to retain 64KiB individual responses; dynamic requests unaltered"
+  ],
+  "keyboardTabFocus": {
+    "tag": "BUTTON",
+    "text": "Abrir mi biblioteca",
+    "visible": true
+  },
+  "assertions": [
+    "Magic Link token removed from URL",
+    "access absent from local/session storage and cookies",
+    "one human and agent message",
+    "delivery original matches preserved payload",
+    "eight viewports/text cases without overflow",
+    "computed text 2x",
+    "keyboard lock and focus",
+    "draft erased",
+    "same-tab reentry",
+    "late successful read ignored after lock",
+    "Magic Link and delivery restored after Next restart",
+    "library lock and recovery"
+  ],
+  "lateProbe": {
+    "successfulReadHeldLocally": true,
+    "ignoresAbortSignalAtBrowser": true,
+    "deliveredAfterLock": true,
+    "remainedLocked": true
+  }
+}

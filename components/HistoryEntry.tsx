@@ -13,6 +13,6 @@ export function HistoryEntry(){
  if(mode==="checking")return <main className="shell ui-page" role="status">Comprobando acceso…</main>;
  if(mode==="private")return <OperationHistory key={access} initialAccess={access} onLocked={leave} onExploreDemo={()=>{setAccess("");setManual("");setMode("demo");}}/>;
  const form=<details className="history-manual"><summary>Tengo un acceso de lectura</summary><form onSubmit={e=>{e.preventDefault();if(manual.trim()){setAccess(manual.trim());setManual("");setMode("private");}}}><label htmlFor="manual-history-access">Acceso de lectura</label><input id="manual-history-access" type="password" autoComplete="off" value={manual} onChange={e=>setManual(e.target.value)}/><Button type="submit" disabled={!manual.trim()}>Abrir mi biblioteca</Button></form></details>;
- if(mode==="locked")return <><Navbar/><main className="shell ui-page"><h1>Biblioteca bloqueada</h1><p>Abre nuevamente el enlace original de tu agente para recuperar tus entregas.</p><Button onClick={()=>setMode("demo")}>Explorar demostración</Button>{form}</main></>;
+ if(mode==="locked")return <><Navbar prefetch={false}/><main className="shell ui-page"><h1>Biblioteca bloqueada</h1><p>Abre nuevamente el enlace original de tu agente para recuperar tus entregas.</p><Button onClick={()=>setMode("demo")}>Explorar demostración</Button>{form}</main></>;
  return <DeliverableReview accessEntry={form}/>;
 }

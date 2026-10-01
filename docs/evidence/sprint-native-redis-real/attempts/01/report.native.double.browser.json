@@ -1,0 +1,108 @@
+{
+  "ok": false,
+  "category": "native Next/configuredWorkspaceStore with Redis REST double",
+  "candidateSha": "6ceff21a5ad3102c9658a36b5f21d0dd70b1c94a",
+  "sourceFingerprint": "9d943f96322cc1ccefe29013128a7119a9682dafd8e0bae44e3afdcfd4c6afd1",
+  "planHash": "27503b1427fe4e21d5cf2be440229999217865738903ba8d5fc0a25f3adb20b8",
+  "nativeBuild": {
+    "candidateSha": "6ceff21a5ad3102c9658a36b5f21d0dd70b1c94a",
+    "sourceFingerprint": "9d943f96322cc1ccefe29013128a7119a9682dafd8e0bae44e3afdcfd4c6afd1",
+    "runtime": "v22.18.0",
+    "nodeExecutable": "C:\\Users\\MGC\\AppData\\Local\\Temp\\bazaar-node22-review\\node.exe",
+    "nextVersion": "16.3.1",
+    "buildId": "PdR4-VW_nKMHSuJZwqGNR",
+    "buildFingerprint": "4fb6ba3d1d3a9e63d8906ff435414f03f20e4fbf5779ffaf4f5a6784c7a016f1",
+    "command": "node node_modules/next/dist/bin/next build --webpack",
+    "environment": "OS allowlist plus NEXT_TELEMETRY_DISABLED=1; no env files",
+    "exitCode": 0,
+    "builtAt": "2026-10-01T06:39:32.301Z"
+  },
+  "runtime": "v22.18.0",
+  "redisOrigin": null,
+  "prefix": "bazaar-workspace:isolated-2f030f79d5c0265e059eed0efa6b726d",
+  "keys": [
+    "bazaar-workspace:isolated-2f030f79d5c0265e059eed0efa6b726d:{isolated-2f030f79d5c0265e059eed0efa6b726d}:registry",
+    "bazaar-workspace:isolated-2f030f79d5c0265e059eed0efa6b726d:{isolated-2f030f79d5c0265e059eed0efa6b726d}:initialized",
+    "bazaar-workspace:isolated-2f030f79d5c0265e059eed0efa6b726d:{isolated-2f030f79d5c0265e059eed0efa6b726d}:owner:none",
+    "bazaar-workspace:isolated-2f030f79d5c0265e059eed0efa6b726d:{isolated-2f030f79d5c0265e059eed0efa6b726d}:owner:ow_828c7f6052ba446887d3ae05d4d65000",
+    "bazaar-workspace:isolated-2f030f79d5c0265e059eed0efa6b726d:{isolated-2f030f79d5c0265e059eed0efa6b726d}:owner:ow_7edf4043b9d54911bae5e3f738e68fe2"
+  ],
+  "observedProcesses": [
+    {
+      "pid": 36520,
+      "origin": "http://127.0.0.1:64599",
+      "nativeOrigin": "http://127.0.0.1:64598",
+      "command": "node --import scripts/workspace-native-next-preload.mjs node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port <isolated-loopback>",
+      "buildId": "PdR4-VW_nKMHSuJZwqGNR"
+    },
+    {
+      "pid": 9424,
+      "origin": "http://127.0.0.1:50121",
+      "nativeOrigin": "http://127.0.0.1:50120",
+      "command": "node --import scripts/workspace-native-next-preload.mjs node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port <isolated-loopback>",
+      "buildId": "PdR4-VW_nKMHSuJZwqGNR"
+    }
+  ],
+  "processesStarted": 2,
+  "configuration": {
+    "backend": "redis",
+    "configuredWorkspaceStore": true,
+    "nativeNext": true,
+    "production": true,
+    "ownerFactory": "server-only frozen isolated owners bound to creation and initial auth hashes",
+    "localOriginsOnly": true,
+    "cleanEnvironment": true,
+    "sdkRetry": {
+      "retries": 0
+    },
+    "autoPipelining": false,
+    "mcpReconnectRetries": 0,
+    "selfListing": false,
+    "providerActivation": false,
+    "payments": false,
+    "envFilesLoaded": false
+  },
+  "effective": {
+    "requests": 173,
+    "commands": 790,
+    "evalCommands": 173,
+    "luaCommands": 617,
+    "requestBytes": 397411,
+    "responseBytes": 453586,
+    "casRejections": 1,
+    "commits": 45,
+    "uncertain": 0,
+    "rejected": 0,
+    "stopped": null,
+    "elapsedMs": 6159,
+    "byteAccounting": "exact UTF-8 HTTP JSON body bytes; TCP/TLS/header overhead excluded",
+    "unknownCommandsAreUpperBound": false
+  },
+  "applicationTransport": {
+    "requests": 120,
+    "observedRequests": 120,
+    "requestBytes": 7513,
+    "responseBytes": 543964,
+    "rejected": 0,
+    "uncertain": 0,
+    "staticRequests": 30,
+    "apiRequests": 58,
+    "pageRequests": 32,
+    "stopped": null,
+    "elapsedMs": 6159,
+    "reservedResponseBytes": 0,
+    "byteAccounting": "HTTP body bytes at shared proxy, including encoded browser assets; headers/TCP excluded",
+    "allBrowserMcpAndNextRequestsCounted": true
+  },
+  "browser": {
+    "ok": null,
+    "status": "pending: not requested for this double"
+  },
+  "findings": [],
+  "failure": "BROWSER_OVERFLOW",
+  "externalRequests": 0,
+  "paidProviderInvocations": 0,
+  "payments": 0,
+  "limitation": "Double does not certify Redis real. Browser required for sprint acceptance. No backup/Redis-loss durability claim. Unknown effect stays stopped; keys are never deleted.",
+  "nativeSprintAcceptance": false
+}

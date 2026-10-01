@@ -1,0 +1,293 @@
+{
+  "ok": false,
+  "category": "native Next/configuredWorkspaceStore with Redis REST double",
+  "candidateSha": "6ceff21a5ad3102c9658a36b5f21d0dd70b1c94a",
+  "sourceFingerprint": "5b03d83156e9c6bd0808bca07e0bd532bb6502d8c10f84d0147cc9ffdbe4105b",
+  "planHash": "3e0e4934296e8302ca7b1896228a7b19af42574d766abe9baa76f41165e6b35f",
+  "nativeBuild": {
+    "candidateSha": "6ceff21a5ad3102c9658a36b5f21d0dd70b1c94a",
+    "sourceFingerprint": "5b03d83156e9c6bd0808bca07e0bd532bb6502d8c10f84d0147cc9ffdbe4105b",
+    "runtime": "v22.18.0",
+    "nodeExecutable": "C:\\Users\\MGC\\AppData\\Local\\Temp\\bazaar-node22-review\\node.exe",
+    "nextVersion": "16.3.1",
+    "buildId": "hunOK1cLkqAr9VJJ9Q3lE",
+    "buildFingerprint": "e7ecff077b0011816521c77e7bb602969921b907dc62dd4c460246c4cf16f1eb",
+    "command": "node node_modules/next/dist/bin/next build --webpack",
+    "environment": "OS allowlist plus NEXT_TELEMETRY_DISABLED=1; no env files",
+    "exitCode": 0,
+    "builtAt": "2026-10-01T06:50:57.310Z"
+  },
+  "runtime": "v22.18.0",
+  "redisOrigin": null,
+  "prefix": "bazaar-workspace:isolated-0b22ce21ec3b471ebfb075dfbed32514",
+  "keys": [
+    "bazaar-workspace:isolated-0b22ce21ec3b471ebfb075dfbed32514:{isolated-0b22ce21ec3b471ebfb075dfbed32514}:registry",
+    "bazaar-workspace:isolated-0b22ce21ec3b471ebfb075dfbed32514:{isolated-0b22ce21ec3b471ebfb075dfbed32514}:initialized",
+    "bazaar-workspace:isolated-0b22ce21ec3b471ebfb075dfbed32514:{isolated-0b22ce21ec3b471ebfb075dfbed32514}:owner:none",
+    "bazaar-workspace:isolated-0b22ce21ec3b471ebfb075dfbed32514:{isolated-0b22ce21ec3b471ebfb075dfbed32514}:owner:ow_0f6f49a1333f4c509794e68cbaf09583",
+    "bazaar-workspace:isolated-0b22ce21ec3b471ebfb075dfbed32514:{isolated-0b22ce21ec3b471ebfb075dfbed32514}:owner:ow_32ccd0faf9f64fb5ad2e50faab2f9212"
+  ],
+  "observedProcesses": [
+    {
+      "pid": 6188,
+      "origin": "http://127.0.0.1:63966",
+      "nativeOrigin": "http://127.0.0.1:63965",
+      "command": "node --import scripts/workspace-native-next-preload.mjs node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port <isolated-loopback>",
+      "buildId": "hunOK1cLkqAr9VJJ9Q3lE"
+    },
+    {
+      "pid": 44284,
+      "origin": "http://127.0.0.1:63972",
+      "nativeOrigin": "http://127.0.0.1:63971",
+      "command": "node --import scripts/workspace-native-next-preload.mjs node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port <isolated-loopback>",
+      "buildId": "hunOK1cLkqAr9VJJ9Q3lE"
+    },
+    {
+      "pid": 49776,
+      "origin": "http://127.0.0.1:63966",
+      "nativeOrigin": "http://127.0.0.1:51902",
+      "command": "node --import scripts/workspace-native-next-preload.mjs node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port <isolated-loopback>",
+      "buildId": "hunOK1cLkqAr9VJJ9Q3lE"
+    },
+    {
+      "pid": 49704,
+      "origin": "http://127.0.0.1:63966",
+      "nativeOrigin": "http://127.0.0.1:51940",
+      "command": "node --import scripts/workspace-native-next-preload.mjs node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port <isolated-loopback>",
+      "buildId": "hunOK1cLkqAr9VJJ9Q3lE"
+    },
+    {
+      "pid": 47824,
+      "origin": "http://127.0.0.1:63966",
+      "nativeOrigin": "http://127.0.0.1:57497",
+      "command": "node --import scripts/workspace-native-next-preload.mjs node_modules/next/dist/bin/next start --hostname 127.0.0.1 --port <isolated-loopback>",
+      "buildId": "hunOK1cLkqAr9VJJ9Q3lE"
+    }
+  ],
+  "processesStarted": 5,
+  "configuration": {
+    "backend": "redis",
+    "configuredWorkspaceStore": true,
+    "nativeNext": true,
+    "production": true,
+    "ownerFactory": "server-only frozen isolated owners bound to creation and initial auth hashes",
+    "localOriginsOnly": true,
+    "cleanEnvironment": true,
+    "sdkRetry": {
+      "retries": 0
+    },
+    "autoPipelining": false,
+    "mcpReconnectRetries": 0,
+    "selfListing": false,
+    "providerActivation": false,
+    "payments": false,
+    "envFilesLoaded": false
+  },
+  "effective": {
+    "requests": 294,
+    "commands": 1328,
+    "evalCommands": 294,
+    "luaCommands": 1034,
+    "requestBytes": 693337,
+    "responseBytes": 871176,
+    "casRejections": 2,
+    "commits": 72,
+    "uncertain": 0,
+    "rejected": 0,
+    "stopped": "APPLICATION_BUDGET_EXHAUSTED",
+    "elapsedMs": 9511,
+    "byteAccounting": "exact UTF-8 HTTP JSON body bytes; TCP/TLS/header overhead excluded",
+    "unknownCommandsAreUpperBound": false,
+    "storedValues": {
+      "lastConfirmedValueBytes": 5822,
+      "peakConfirmedValueBytes": 5822,
+      "lastConfirmedOwners": 2,
+      "peakConfirmedOwners": 2,
+      "uncertainAfterConfirmation": false,
+      "lastAcknowledgedCommitSequence": 289,
+      "highestAcknowledgedCommitSequence": 289,
+      "outstandingExchanges": 0,
+      "currentStateConfirmed": true,
+      "accounting": "last acknowledged canonical COMMIT1 registry UTF-8 bytes + validated owner documentBytes + workspace-v1 marker bytes; excludes keys/server overhead; CAS0 never updates state; current state requires no outstanding exchange, uncertainty or reordered successful acknowledgement"
+    }
+  },
+  "applicationTransport": {
+    "requests": 120,
+    "observedRequests": 121,
+    "requestBytes": 8417,
+    "responseBytes": 549788,
+    "rejected": 1,
+    "uncertain": 0,
+    "staticRequests": 23,
+    "apiRequests": 93,
+    "pageRequests": 4,
+    "stopped": "APPLICATION_BUDGET_EXHAUSTED",
+    "elapsedMs": 9511,
+    "reservedResponseBytes": 0,
+    "byteAccounting": "HTTP body bytes at shared proxy, including encoded browser assets; headers/TCP excluded",
+    "allBrowserMcpAndNextRequestsCounted": true
+  },
+  "browser": {
+    "category": "native-next-browser-with-redis-double",
+    "ok": true,
+    "candidateSha": "6ceff21a5ad3102c9658a36b5f21d0dd70b1c94a",
+    "sourceFingerprint": "5b03d83156e9c6bd0808bca07e0bd532bb6502d8c10f84d0147cc9ffdbe4105b",
+    "planHash": "3e0e4934296e8302ca7b1896228a7b19af42574d766abe9baa76f41165e6b35f",
+    "buildId": "hunOK1cLkqAr9VJJ9Q3lE",
+    "runtime": "v22.18.0",
+    "chromium": "153.0.8010.12",
+    "origin": "http://127.0.0.1:63966",
+    "cases": [
+      {
+        "name": "agent-chat-390-text100",
+        "textSamples": 26,
+        "minRatio": 1,
+        "maxRatio": 1,
+        "viewport": 390,
+        "scrollWidth": 390,
+        "overflowing": []
+      },
+      {
+        "name": "agent-chat-390-text200",
+        "textSamples": 26,
+        "minRatio": 2,
+        "maxRatio": 2,
+        "viewport": 390,
+        "scrollWidth": 390,
+        "overflowing": []
+      },
+      {
+        "name": "agent-chat-1366-text100",
+        "textSamples": 31,
+        "minRatio": 1,
+        "maxRatio": 1,
+        "viewport": 1366,
+        "scrollWidth": 1366,
+        "overflowing": []
+      },
+      {
+        "name": "agent-chat-1366-text200",
+        "textSamples": 31,
+        "minRatio": 2,
+        "maxRatio": 2,
+        "viewport": 1366,
+        "scrollWidth": 1366,
+        "overflowing": []
+      },
+      {
+        "name": "history-390-text100",
+        "textSamples": 69,
+        "minRatio": 0.9469923076923077,
+        "maxRatio": 1,
+        "viewport": 390,
+        "scrollWidth": 390,
+        "overflowing": []
+      },
+      {
+        "name": "history-390-text200",
+        "textSamples": 69,
+        "minRatio": 2,
+        "maxRatio": 2,
+        "viewport": 390,
+        "scrollWidth": 390,
+        "overflowing": []
+      },
+      {
+        "name": "history-1366-text100",
+        "textSamples": 74,
+        "minRatio": 0.8274027777777777,
+        "maxRatio": 1,
+        "viewport": 1366,
+        "scrollWidth": 1366,
+        "overflowing": []
+      },
+      {
+        "name": "history-1366-text200",
+        "textSamples": 74,
+        "minRatio": 2,
+        "maxRatio": 2,
+        "viewport": 1366,
+        "scrollWidth": 1366,
+        "overflowing": []
+      }
+    ],
+    "requests": {
+      "GET /agent-chat": 2,
+      "GET /_next/static/css/ce711fda1398e0e7.css": 4,
+      "GET /_next/static/chunks/webpack-c210acfdad42a157.js": 4,
+      "GET /_next/static/chunks/1b11581d-e2de9005c9e17dbe.js": 4,
+      "GET /_next/static/chunks/8540-1329e8ebb14cfd2d.js": 4,
+      "GET /_next/static/chunks/main-app-1db3a43c17bcced3.js": 4,
+      "GET /_next/static/chunks/6897-22c6fe5cf098a3f3.js": 4,
+      "GET /_next/static/chunks/app/agent-chat/page-301a641fafbeabf8.js": 2,
+      "GET /_next/static/chunks/351-909e179bbcdd8193.js": 4,
+      "GET /_next/static/chunks/7799-d720d339887cc5d4.js": 4,
+      "GET /_next/static/chunks/6599-62074b911d340332.js": 4,
+      "GET /_next/static/chunks/1665-dbaf7d1ca861dda5.js": 4,
+      "GET /_next/static/chunks/app/layout-894ac66c49287697.js": 4,
+      "GET /api/conversations": 5,
+      "GET /history": 2,
+      "GET /_next/static/css/cec41383047bdf4b.css": 2,
+      "GET /_next/static/css/8a3b719ad1a25005.css": 2,
+      "GET /_next/static/chunks/4491-a1ce20d3c51f9dc9.js": 2,
+      "GET /_next/static/chunks/7689-d772eca7ccc0786a.js": 2,
+      "GET /_next/static/chunks/app/page-dcc3d708dfe88de8.js": 2,
+      "GET /_next/static/chunks/3947-309e430cc7737a16.js": 2,
+      "GET /_next/static/chunks/6879-077d2994e30e531b.js": 2,
+      "GET /_next/static/chunks/app/history/page-bdffda69a8f3c267.js": 2,
+      "GET /api/operations": 2,
+      "GET /api/activity": 12,
+      "GET /api/deliveries": 2
+    },
+    "externalBlocked": [],
+    "pageErrors": [],
+    "staticTransport": {
+      "interceptedBrowserRequests": 62,
+      "cacheHits": 42,
+      "nativeGetRequests": 19,
+      "nativeRangeRequests": 4,
+      "decodedBytes": 820880,
+      "policy": "Build static assets only; first native responses verified against build SHA256. Assets with gzip size above 65536 use contiguous identity ranges <=65536 via counted Next proxy. Exact validated bytes cached in this browser context. No fallback or retries."
+    },
+    "limitations": [
+      "Chromium viewport emulation; physical device untested",
+      "Computed text doubling; browser zoom not claimed",
+      "Simulation badge verified inside technical details",
+      "Static asset distribution instrumented with verified native ranges and context memory cache to retain 64KiB individual responses; dynamic requests unaltered"
+    ],
+    "keyboardTabFocus": {
+      "tag": "BUTTON",
+      "text": "Abrir mi biblioteca",
+      "visible": true
+    },
+    "assertions": [
+      "Magic Link token removed from URL",
+      "access absent from local/session storage and cookies",
+      "one human and agent message",
+      "delivery original matches preserved payload",
+      "eight viewports/text cases without overflow",
+      "computed text 2x",
+      "keyboard lock and focus",
+      "draft erased",
+      "same-tab reentry",
+      "late successful read ignored after lock",
+      "Magic Link and delivery restored after Next restart",
+      "library lock and recovery"
+    ],
+    "lateProbe": {
+      "successfulReadHeldLocally": true,
+      "ignoresAbortSignalAtBrowser": true,
+      "deliveredAfterLock": true,
+      "remainedLocked": true
+    }
+  },
+  "findings": [
+    "browser Magic Link on counted native Next proxy; exact records recovered after restart"
+  ],
+  "failure": "fetch failed",
+  "externalRequests": 0,
+  "paidProviderInvocations": 0,
+  "payments": 0,
+  "limitation": "Double does not certify Redis real. Browser required for sprint acceptance. No backup/Redis-loss durability claim. Unknown effect stays stopped; keys are never deleted.",
+  "nativeSprintAcceptance": false
+}

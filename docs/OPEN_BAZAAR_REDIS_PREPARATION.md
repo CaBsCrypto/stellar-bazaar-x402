@@ -4,8 +4,20 @@ Fecha: 2026-10-01. Base del especialista: `61bcb685f6e359e8f756c5226399d3a6bc820
 La evidencia incluye cambios locales identificados por su digest; no representa
 un candidato integrado/publicado ni una autorización para una instancia futura.
 
-El humano confirmó que aún no hay instancia ni margen gratuito verificados.
-No se consultó ni escribió Redis externo, no se abrió ningún `.env`, no se usaron
+En la validación anterior no había instancia ni margen gratuito verificados.
+En el nuevo sprint del 2026-10-01 se comprobó en la consola autenticada la base
+dedicada `bazaar-validacion-20261001`, AWS `us-east-1`, Free Tier, coste $0.00,
+0/500.000 comandos, 0 B/10 GB de tráfico y 0 B/256 MB de almacenamiento.
+Eviction está desactivado y no hay regiones de lectura adicionales.
+Su credencial dedicada quedó fuera del repositorio con ACL exclusiva; no se
+reutilizaron credenciales históricas. La inspección no envió comandos Redis.
+La evidencia actual está en `evidence/sprint-native-redis-real/provider-preflight.json`.
+El nuevo ejecutor `run-open-workspace-redis-native.mjs` añade Next construido,
+`configuredWorkspaceStore` de producción y un ledger compartido para navegador,
+MCP, assets, errores y reinicios. Su aceptación real sigue pendiente de un plan
+nuevo revisado y autorización específica antes de cualquier escritura.
+
+Durante la validación anterior no se consultó ni escribió Redis externo, no se abrió ningún `.env`, no se usaron
 claves/cuentas históricas y no se creó infraestructura. El modo real permanece
 pendiente de instancia explícita, aislamiento, margen cero coste y autorización
 humana específica del plan congelado.

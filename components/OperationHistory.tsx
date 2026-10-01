@@ -191,11 +191,12 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <Navbar />
+      <Navbar prefetch={false} />
 
       <main className="operation-history shell" lang={locale} style={{ flex: 1, paddingBottom: "4rem" }}>
         {onExploreDemo && ["unauthorized","unavailable","error"].includes(state) && <button onClick={onExploreDemo}>Explorar demostración</button>}
         <Breadcrumbs
+          prefetch={false}
           items={[{ label: "Mi Historial Privado" }]}
           backHref="/catalogo"
           backLabel="← Volver al Catálogo"
@@ -203,6 +204,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
             <div style={{ display: "flex", gap: "8px" }}>
               <Link
                 href="/history/review"
+                prefetch={false}
                 style={{
                   fontSize: "0.8rem",
                   padding: "5px 12px",
@@ -218,6 +220,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
               </Link>
               <Link
                 href={token ? `/agent-chat#token=${encodeURIComponent(token)}` : "/agent-chat"}
+                prefetch={false}
                 style={{
                   fontSize: "0.8rem",
                   padding: "5px 12px",
@@ -531,7 +534,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
         )}
       </main>
 
-      <Footer />
+      <Footer prefetch={false} />
     </div>
   );
 }

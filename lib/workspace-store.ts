@@ -23,6 +23,9 @@ const taskSchema = z.object({ taskId: workspaceIdentifierSchema, conversationId:
 const docSchema = z.object({ version: z.literal(1), ownerId: z.string(), revision: uuid, conversations: z.array(z.object({ digest: workspaceHashSchema, record: conversationSchema }).strict()).max(100), tasks: z.array(z.object({ digest: workspaceHashSchema, claimDigest: workspaceHashSchema.optional(), responseDigest: workspaceHashSchema.optional(), record: taskSchema }).strict()).max(500), operations: z.array(z.object({ digest: workspaceHashSchema, record: z.unknown() }).strict()).max(1000), events: z.array(z.object({ digest: workspaceHashSchema, record: z.unknown() }).strict()).max(1000) }).strict();
 type Registry = z.infer<typeof registrySchema>;
 type Meta = z.infer<typeof metaSchema>;
+const frozenUuid = z.string().regex(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
+const frozenOwnerSchema = z.object({ creationId: frozenUuid, ownerUuid: frozenUuid, ownerId: z.string().regex(/^ow_[a-f0-9]{32}$/), hashes: z.object({ bootstrap: workspaceHashSchema, human: workspaceHashSchema, agent: workspaceHashSchema, rotatedHuman: workspaceHashSchema, rotatedAgent: workspaceHashSchema }).strict() }).strict();
+type FrozenOwner = z.infer<typeof frozenOwnerSchema>;
 type Document = Omit<z.infer<typeof docSchema>, "operations" | "events"> & { operations: { digest: string; record: OperationHistoryRecord }[]; events: { digest: string; record: ActivityEvent }[] };
 export type WorkspaceLegacyRegistry = { ownerIds: string[]; hashes: string[] };
 export interface WorkspaceRedis { eval(script: string, keys: string[], args: string[]): Promise<unknown> }
@@ -101,10 +104,13 @@ interface Backend { read(ownerId?: string): Promise<Snapshot>; transact<T>(owner
 // Only this error proves the Lua comparison rejected a write before any effect.
 class RedisCompareConflict extends WorkspaceError { constructor() { super("WORKSPACE_CONFLICT", 409); } }
 function validatePrefix(prefix: string) { if (!/^bazaar-workspace:(local-test|preview|production|isolated-[a-f0-9]{32})$/.test(prefix)) throw unavailable(); return prefix; }
-function redisBackend(redis: WorkspaceRedis, prefix: string): Backend {
+function redisBackend(redis: WorkspaceRedis, prefix: string, allowedOwners?: readonly string[]): Backend {
   validatePrefix(prefix);
   const tag = prefix.split(":")[1];
-  const keys = (ownerId?: string) => [`${prefix}:{${tag}}:registry`, `${prefix}:{${tag}}:owner:${ownerId ?? "none"}`, `${prefix}:{${tag}}:initialized`];
+  const keys = (ownerId?: string) => {
+    if (allowedOwners && ownerId !== undefined && !allowedOwners.includes(ownerId)) throw unavailable("owner-outside-isolated-plan");
+    return [`${prefix}:{${tag}}:registry`, `${prefix}:{${tag}}:owner:${ownerId ?? "none"}`, `${prefix}:{${tag}}:initialized`];
+  };
   const read = async (ownerId?: string): Promise<Snapshot> => {
     const result = await redis.eval(READ_WORKSPACE_LUA, keys(ownerId), []);
     if (!Array.isArray(result) || result.length !== 3 || !result.every(v => typeof v === "string")) throw unavailable();
@@ -153,8 +159,18 @@ function fileBackend(directory: string, prefix: string): Backend {
     await atomicWrite(p.registry, registry, "write-registry"); await atomicWrite(p.marker, "workspace-v1", "write-marker"); try { await unlink(p.pending); } catch (e) { fileFailure("clear-pending-after-commit", e); throw e; }
   })) };
 }
-function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistry = legacyHistoryReservations, principal?: WorkspacePrincipal, testOwnerUuid?: (creationId: string) => string) {
+function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistry = legacyHistoryReservations, principal?: WorkspacePrincipal, testOwnerUuid?: (creationId: string) => string, frozenOwners?: readonly FrozenOwner[]) {
   const safe = async <T>(fn: () => Promise<T>): Promise<T> => { try { return await fn(); } catch (e) { if (e instanceof WorkspaceError) throw e; fileDiagnostics.publish({ phase: "store-unexpected", code: e instanceof z.ZodError ? "SCHEMA" : e instanceof SyntaxError ? "JSON" : "UNKNOWN" }); throw unavailable(); } };
+  const readRegistry = (raw: string, marker: string, legacy: WorkspaceLegacyRegistry) => {
+    const registry = validateRegistry(raw, marker, legacy);
+    if (frozenOwners) for (const meta of registry.workspaces) {
+      const frozen = frozenOwners.find(owner => owner.creationId === meta.creationId);
+      if (!frozen || meta.ownerId !== frozen.ownerId || meta.bootstrapHash !== frozen.hashes.bootstrap || meta.initialHumanHash !== frozen.hashes.human || meta.initialAgentHash !== frozen.hashes.agent ||
+          ![null, frozen.hashes.human, frozen.hashes.rotatedHuman].includes(meta.humanHash) || ![null, frozen.hashes.agent, frozen.hashes.rotatedAgent].includes(meta.agentHash) ||
+          meta.retiredHashes.some(hash => ![frozen.hashes.human, frozen.hashes.agent, frozen.hashes.rotatedHuman, frozen.hashes.rotatedAgent].includes(hash))) throw unavailable("identity-outside-isolated-plan");
+    }
+    return registry;
+  };
   function authorized(meta: Meta, role?: WorkspaceRole) {
     if (meta.revoked && role !== "bootstrap") throw new WorkspaceError("WORKSPACE_REVOKED", 401);
     if (principal && (meta.ownerId !== principal.ownerId || meta.workspaceId !== principal.workspaceId || meta.generation !== principal.generation || meta.agentId !== principal.agentId)) throw new WorkspaceError("UNAUTHORIZED", 401);
@@ -162,14 +178,14 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
   }
   const readOwner = (ownerId: string, role?: WorkspaceRole) => safe(async () => {
     if (!/^ow_[a-f0-9]{32}$/.test(ownerId)) throw unavailable();
-    const s = await backend.read(ownerId), registry = validateRegistry(s.registryRaw, s.marker, reservations());
+    const s = await backend.read(ownerId), registry = readRegistry(s.registryRaw, s.marker, reservations());
     const meta = registry.workspaces.find(m => m.ownerId === ownerId); if (!meta) throw new WorkspaceError("NOT_FOUND", 404);
     authorized(meta, role); return { registry, meta, document: validateDocument(s.documentRaw, meta) };
   });
   const mutateOwner = <T>(ownerId: string, role: WorkspaceRole | undefined, fn: (d: Document, meta: Meta) => T) => safe(() => {
     if (!/^ow_[a-f0-9]{32}$/.test(ownerId)) throw unavailable();
     return backend.transact(ownerId, async (s, commit) => {
-    const registry = validateRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId); if (!meta) throw new WorkspaceError("NOT_FOUND", 404);
+    const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId); if (!meta) throw new WorkspaceError("NOT_FOUND", 404);
     authorized(meta, role); const d = validateDocument(s.documentRaw, meta), before = JSON.stringify(d), result = fn(d, meta);
     if (JSON.stringify(d) !== before) {
       d.revision = randomUUID(); const raw = JSON.stringify(d); if (bytes(raw) > WORKSPACE_LIMITS.ownerBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409);
@@ -180,9 +196,9 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     return result;
   }); });
   const store = {
-    forPrincipal(p: WorkspacePrincipal) { return buildStore(backend, reservations, p, testOwnerUuid); },
+    forPrincipal(p: WorkspacePrincipal) { return buildStore(backend, reservations, p, testOwnerUuid, frozenOwners); },
     async resolveHash(hash: string): Promise<WorkspacePrincipal> { return safe(async () => {
-      workspaceHashSchema.parse(hash); const s = await backend.read(); const registry = validateRegistry(s.registryRaw, s.marker, reservations());
+      workspaceHashSchema.parse(hash); const s = await backend.read(); const registry = readRegistry(s.registryRaw, s.marker, reservations());
       for (const m of registry.workspaces) {
         const role: WorkspaceRole | undefined = hash === m.bootstrapHash ? "bootstrap" : hash === m.humanHash ? "human" : hash === m.agentHash ? "agent" : undefined;
         if (role && (!m.revoked || role === "bootstrap")) return { ownerId: m.ownerId, workspaceId: m.workspaceId, agentId: m.agentId, generation: m.generation, role };
@@ -191,8 +207,15 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     }); },
     async createWorkspace(input: z.infer<typeof createWorkspaceSchema>, bootstrapHash: string, trustedIp = "untrusted") { return safe(async () => {
       createWorkspaceSchema.parse(input); workspaceHashSchema.parse(bootstrapHash);
-      const initial = await backend.read(), initialRegistry = validateRegistry(initial.registryRaw, initial.marker, reservations());
-      const ownerId = initialRegistry.workspaces.find(m => m.creationId === input.creationId)?.ownerId ?? "ow_" + uuid.parse(testOwnerUuid ? testOwnerUuid(input.creationId) : randomUUID()).replaceAll("-", "");
+      const frozen = frozenOwners?.find(owner => owner.creationId === input.creationId);
+      // The server freezes ownership and the whole creation intent before any
+      // Redis read. Neither request fields nor an unrecognized creation choose keys.
+      if (frozenOwners) {
+        if (!frozen || frozen.hashes.bootstrap !== bootstrapHash) throw new WorkspaceError("UNAUTHORIZED", 401);
+        if (frozen.hashes.human !== input.humanAccessHash || frozen.hashes.agent !== input.agentAccessHash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409);
+      }
+      const initial = await backend.read(), initialRegistry = readRegistry(initial.registryRaw, initial.marker, reservations());
+      const ownerId = initialRegistry.workspaces.find(m => m.creationId === input.creationId)?.ownerId ?? frozen?.ownerId ?? "ow_" + uuid.parse(testOwnerUuid ? testOwnerUuid(input.creationId) : randomUUID()).replaceAll("-", "");
       const authenticateReplay = (existing: Meta) => {
         if (existing.bootstrapHash !== bootstrapHash) throw new WorkspaceError("UNAUTHORIZED", 401);
         if (existing.initialHumanHash !== input.humanAccessHash || existing.initialAgentHash !== input.agentAccessHash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409);
@@ -200,7 +223,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       type CreationResult = { rebindOwnerId: string } | { record: ReturnType<typeof receipt>; created: boolean };
       let result: CreationResult;
       try { result = await backend.transact<CreationResult>(ownerId, async (s, commit) => {
-        const legacy = reservations(), registry = validateRegistry(s.registryRaw, s.marker, legacy), existing = registry.workspaces.find(m => m.creationId === input.creationId);
+        const legacy = reservations(), registry = readRegistry(s.registryRaw, s.marker, legacy), existing = registry.workspaces.find(m => m.creationId === input.creationId);
         if (existing) {
           authenticateReplay(existing);
           // Another creator may have committed after our initial registry read.
@@ -218,30 +241,30 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         for (const w of windows) { let old = registry.creationWindows.find(v => v.key === w.key); if (old && old.count >= w.max) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429); if (!old) { old = { key: w.key, count: 0, until: w.until }; registry.creationWindows.push(old); } old.count++; }
         const d = emptyDocument(ownerId), raw = JSON.stringify(d);
         const meta: Meta = { creationId: input.creationId, workspaceId: randomUUID(), ownerId, agentId: "agent_" + randomUUID().replaceAll("-", ""), bootstrapHash, initialHumanHash: input.humanAccessHash, initialAgentHash: input.agentAccessHash, humanHash: input.humanAccessHash, agentHash: input.agentAccessHash, retiredHashes: [], accessIntents: [], generation: 1, revoked: false, createdAt: new Date().toISOString(), documentRevision: d.revision, documentBytes: bytes(raw) };
-        registry.workspaces.push(meta); registry.revision = randomUUID(); const reg = JSON.stringify(registry); validateRegistry(reg, "workspace-v1", legacy); await commit(reg, raw); return { record: receipt(meta), created: true };
+        registry.workspaces.push(meta); registry.revision = randomUUID(); const reg = JSON.stringify(registry); readRegistry(reg, "workspace-v1", legacy); await commit(reg, raw); return { record: receipt(meta), created: true };
       }); } catch (e) {
         if (!(e instanceof RedisCompareConflict)) throw e;
         // CAS0 is a definite no-write outcome. Reconcile only a committed match;
         // do not retry creation when another intent changed the global registry.
-        const current = await backend.read(), registry = validateRegistry(current.registryRaw, current.marker, reservations());
+        const current = await backend.read(), registry = readRegistry(current.registryRaw, current.marker, reservations());
         const existing = registry.workspaces.find(m => m.creationId === input.creationId);
         if (!existing) throw unavailable("creation-contention");
         authenticateReplay(existing); result = { rebindOwnerId: existing.ownerId };
       }
       if (!("rebindOwnerId" in result)) return result;
       return backend.transact(result.rebindOwnerId, async s => {
-        const registry = validateRegistry(s.registryRaw, s.marker, reservations()), existing = registry.workspaces.find(m => m.creationId === input.creationId);
+        const registry = readRegistry(s.registryRaw, s.marker, reservations()), existing = registry.workspaces.find(m => m.creationId === input.creationId);
         if (!existing || existing.ownerId !== result.rebindOwnerId) throw unavailable("creation-owner-rebind");
         authenticateReplay(existing); validateDocument(s.documentRaw, existing);
         return { record: receipt(existing), created: false };
       });
     }); },
     async changeAccess(workspaceId: string, bootstrapHash: string, input: z.infer<typeof workspaceAccessSchema>) { return safe(async () => {
-      const first = await backend.read(), firstRegistry = validateRegistry(first.registryRaw, first.marker, reservations());
+      const first = await backend.read(), firstRegistry = readRegistry(first.registryRaw, first.marker, reservations());
       const owner = firstRegistry.workspaces.find(m => m.workspaceId === workspaceId && m.bootstrapHash === bootstrapHash)?.ownerId;
       if (!owner) throw new WorkspaceError("UNAUTHORIZED", 401);
       return backend.transact(owner, async (s, commit) => {
-      workspaceAccessSchema.parse(input); const registry = validateRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.workspaceId === workspaceId);
+      workspaceAccessSchema.parse(input); const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.workspaceId === workspaceId);
       if (!meta || meta.bootstrapHash !== bootstrapHash) throw new WorkspaceError("UNAUTHORIZED", 401);
       validateDocument(s.documentRaw, meta);
       const intentDigest = digest(input), previous = meta.accessIntents.find(intent => intent.expectedGeneration === input.expectedGeneration);
@@ -256,14 +279,14 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         if (reservations().hashes.includes(input.accessHash) || registry.workspaces.some(m => [m.bootstrapHash, m.initialHumanHash, m.initialAgentHash, m.humanHash, m.agentHash, ...m.retiredHashes].includes(input.accessHash))) throw new WorkspaceError("WORKSPACE_COLLISION", 409);
         const field = input.role === "human" ? "humanHash" : "agentHash"; meta.retiredHashes.push(meta[field]!); meta[field] = input.accessHash;
       } else { meta.retiredHashes.push(meta.humanHash!, meta.agentHash!); meta.humanHash = null; meta.agentHash = null; meta.revoked = true; }
-      meta.generation++; meta.accessIntents.push({ expectedGeneration: input.expectedGeneration, digest: intentDigest, generation: meta.generation, revoked: meta.revoked }); registry.revision = randomUUID(); const reg = JSON.stringify(registry); if (bytes(reg) > WORKSPACE_LIMITS.registryBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409); validateRegistry(reg, "workspace-v1", reservations()); await commit(reg, ""); return { record: receipt(meta), current: { generation: meta.generation, revoked: meta.revoked }, created: true };
+      meta.generation++; meta.accessIntents.push({ expectedGeneration: input.expectedGeneration, digest: intentDigest, generation: meta.generation, revoked: meta.revoked }); registry.revision = randomUUID(); const reg = JSON.stringify(registry); if (bytes(reg) > WORKSPACE_LIMITS.registryBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, ""); return { record: receipt(meta), current: { generation: meta.generation, revoked: meta.revoked }, created: true };
     }); }); },
     async consumeRequest(ownerId: string, generation: number, bootstrapHash?: string) { return safe(async () => {
       // Only the request counter can retry, and only after Lua's definite CAS0.
       // Every attempt reads and validates current identity, document and quota.
       for (let attempt = 0; attempt < 8; attempt++) {
         try { await backend.transact(ownerId, async (s, commit) => {
-          const registry = validateRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
+          const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
           if (!meta) throw new WorkspaceError("UNAUTHORIZED", 401);
           const administration = bootstrapHash !== undefined && bootstrapHash === meta.bootstrapHash;
           if ((bootstrapHash !== undefined && !administration) || (!administration && (meta.generation !== generation || meta.revoked))) throw new WorkspaceError("UNAUTHORIZED", 401);
@@ -327,12 +350,37 @@ export function workspacePrefix() {
   return prefix;
 }
 export function workspaceLoopbackOrigin() { const value = process.env.BAZAAR_WORKSPACE_LOCAL_ORIGIN; if (!value) throw unavailable(); const url = new URL(value); if (url.origin !== value || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) || !["http:", "https:"].includes(url.protocol)) throw unavailable(); return value; }
+function isolatedWorkspaceOwners(prefix: string, url: string | undefined, token: string | undefined): FrozenOwner[] | undefined {
+  const raw = process.env.BAZAAR_WORKSPACE_ISOLATED_OWNERS_JSON, relay = process.env.BAZAAR_WORKSPACE_ISOLATED_RELAY_ORIGIN;
+  if (!prefix.includes(":isolated-")) {
+    if (raw !== undefined || relay !== undefined) throw unavailable("isolated-config-outside-prefix");
+    return;
+  }
+  // Production Next acceptance uses the ordinary configured store, with an
+  // explicit loopback relay as its only Redis transport and no file fallback.
+  if (!raw || bytes(raw) > 4096 || !relay || process.env.VERCEL || process.env.VERCEL_ENV || process.env.BAZAAR_WORKSPACE_FILE_DIRECTORY !== undefined || url !== relay || token !== "isolated-loopback-only") throw unavailable("isolated-config");
+  let parsedRelay: URL, value: unknown;
+  try { parsedRelay = new URL(relay); value = JSON.parse(raw); } catch { throw unavailable("isolated-config"); }
+  if (parsedRelay.origin !== relay || parsedRelay.protocol !== "http:" || parsedRelay.hostname !== "127.0.0.1" || !parsedRelay.port) throw unavailable("isolated-relay");
+  const parsed = z.array(frozenOwnerSchema).length(2).safeParse(value);
+  if (!parsed.success) throw unavailable("isolated-owners");
+  const ids = new Set<string>(), hashes = new Set<string>();
+  for (const owner of parsed.data) {
+    if (owner.ownerId !== "ow_" + owner.ownerUuid.replaceAll("-", "")) throw unavailable("isolated-owner-binding");
+    for (const id of [owner.creationId, owner.ownerUuid, owner.ownerId]) { if (ids.has(id)) throw unavailable("isolated-owner-collision"); ids.add(id); }
+    for (const hash of Object.values(owner.hashes)) { if (hashes.has(hash)) throw unavailable("isolated-hash-collision"); hashes.add(hash); }
+  }
+  return parsed.data;
+}
 export function configuredWorkspaceStore(reservations?: () => WorkspaceLegacyRegistry): WorkspaceStore {
   assertWorkspaceEnabled(); if (testStore) return testStore;
+  if (process.env.BAZAAR_WORKSPACE_BACKEND !== "redis" && (process.env.BAZAAR_WORKSPACE_ISOLATED_OWNERS_JSON !== undefined || process.env.BAZAAR_WORKSPACE_ISOLATED_RELAY_ORIGIN !== undefined)) throw unavailable("isolated-backend");
   if (process.env.BAZAAR_WORKSPACE_BACKEND === "file") { if (process.env.VERCEL || process.env.VERCEL_ENV || !process.env.BAZAAR_WORKSPACE_FILE_DIRECTORY) throw unavailable(); workspaceLoopbackOrigin(); return createFileWorkspaceStore(process.env.BAZAAR_WORKSPACE_FILE_DIRECTORY, workspacePrefix(), reservations); }
   if (process.env.BAZAAR_WORKSPACE_BACKEND !== "redis") throw unavailable();
   const url = process.env.BAZAAR_WORKSPACE_REDIS_REST_URL, token = process.env.BAZAAR_WORKSPACE_REDIS_REST_TOKEN;
+  const prefix = workspacePrefix(), frozenOwners = isolatedWorkspaceOwners(prefix, url, token);
+  if (frozenOwners) return buildStore(redisBackend(new Redis({ url: url!, token: token!, automaticDeserialization: false, retry: { retries: 0 }, enableAutoPipelining: false }), prefix, frozenOwners.map(owner => owner.ownerId)), reservations, undefined, undefined, frozenOwners);
   if (!url?.startsWith("https://") || !token) throw unavailable();
   const parsed = new URL(url); if (parsed.username || parsed.password || parsed.search || parsed.hash) throw unavailable();
-  return createRedisWorkspaceStore(new Redis({ url, token, automaticDeserialization: false, retry: { retries: 0 }, enableAutoPipelining: false }), workspacePrefix(), reservations);
+  return createRedisWorkspaceStore(new Redis({ url, token, automaticDeserialization: false, retry: { retries: 0 }, enableAutoPipelining: false }), prefix, reservations);
 }
