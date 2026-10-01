@@ -9,7 +9,8 @@ export function workspaceFailure(e: unknown) { const error = e instanceof Worksp
 /** NextURL normalizes loopback IPs to localhost. Host only validates our configured authority. */
 export function workspaceRequestOrigin(request: Request): string {
   const url = new URL(request.url);
-  if (process.env.BAZAAR_WORKSPACE_BACKEND !== "file" || !openWorkspacesEnabled()) return url.origin;
+  const isolatedRedis = process.env.BAZAAR_WORKSPACE_BACKEND === "redis" && /^bazaar-workspace:isolated-[a-f0-9]{32}$/.test(process.env.BAZAAR_WORKSPACE_PREFIX ?? "");
+  if ((!isolatedRedis && process.env.BAZAAR_WORKSPACE_BACKEND !== "file") || !openWorkspacesEnabled()) return url.origin;
   const expected = new URL(workspaceLoopbackOrigin()), host = request.headers.get("host");
   const port = expected.port || (expected.protocol === "https:" ? "443" : "80");
   const forwardedHost = request.headers.get("x-forwarded-host"), forwardedProto = request.headers.get("x-forwarded-proto"), forwardedPort = request.headers.get("x-forwarded-port");

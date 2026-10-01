@@ -226,7 +226,7 @@ async function acceptance() {
   const workspaceDir = join(evidenceDirectory, 'workspaces'), reviewDir = join(evidenceDirectory, 'reviews');
   mkdirSync(workspaceDir); mkdirSync(reviewDir);
   const children = new Set(), clients = new Set(), fileDiagnostics = [];
-  const clean = Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(PATH|SYSTEMROOT|WINDIR|COMSPEC|TEMP|TMP|USERPROFILE|APPDATA|LOCALAPPDATA|PATHEXT|SYSTEMDRIVE)$/i.test(key)));
+  const clean = Object.fromEntries(Object.entries(process.env).filter(([key]) => /^(PATH|SYSTEMROOT|WINDIR|COMSPEC|TEMP|TMP|USERPROFILE|APPDATA|LOCALAPPDATA|PATHEXT|SYSTEMDRIVE|PROGRAMDATA)$/i.test(key)));
   const legacyRead = 'bz_read_' + randomBytes(24).toString('hex'), legacyWrite = 'bz_write_' + randomBytes(24).toString('hex');
   tokens.push(legacyRead, legacyWrite);
   const legacy = { ownerId: 'independent_legacy', readTokenHash: hash(legacyRead), writeTokenHash: hash(legacyWrite) }, legacyConfig = JSON.stringify([legacy]);
@@ -267,7 +267,11 @@ async function acceptance() {
   async function mcp(base, token, extraHeaders = {}) {
     const client = new Client({ name: 'bazaar-independent-review', version: '1.0' }); clients.add(client);
     const transportFetch = Object.keys(extraHeaders).some(key => key.toLowerCase() === 'host') ? wireFetch : globalThis.fetch;
-    await client.connect(new StreamableHTTPClientTransport(new URL('/api/mcp', base), { requestInit: { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extraHeaders } }, fetch: transportFetch }));
+    await client.connect(new StreamableHTTPClientTransport(new URL('/api/mcp', base), {
+      requestInit: { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extraHeaders } },
+      fetch: transportFetch,
+      reconnectionOptions: { maxRetries: 0, initialReconnectionDelay: 1000, maxReconnectionDelay: 1000, reconnectionDelayGrowFactor: 1 },
+    }));
     return client;
   }
   async function helper(file, mode, args) {

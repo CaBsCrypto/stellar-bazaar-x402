@@ -7,7 +7,7 @@ export function verifyPrivateDirectory(path) {
   if (lstatSync(path).isSymbolicLink() || !statSync(path).isDirectory()) throw new Error('Private directory must not be a link');
   if (process.platform === 'win32') {
     const script = '$ErrorActionPreference="Stop"; $p=$env:BAZAAR_ACL_CHECK_PATH; $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User; $a=Get-Acl -LiteralPath $p; if (!$a.AreAccessRulesProtected) {exit 2}; $r=@($a.GetAccessRules($true,$true,[System.Security.Principal.SecurityIdentifier])); if ($r.Count -ne 1) {exit 3}; if ($r[0].IdentityReference.Value -ne $sid.Value -or $r[0].AccessControlType -ne "Allow" -or $r[0].IsInherited -or (($r[0].FileSystemRights -band [System.Security.AccessControl.FileSystemRights]::FullControl) -ne [System.Security.AccessControl.FileSystemRights]::FullControl) -or (($r[0].InheritanceFlags -band 3) -ne 3)) {exit 4}';
-    execFileSync('powershell.exe', ['-NoProfile','-NonInteractive','-Command',script], {env:{...Object.fromEntries(Object.entries(process.env).filter(([k])=>/^(PATH|SYSTEMROOT|WINDIR|TEMP|TMP|USERPROFILE|HOME|COMSPEC|PATHEXT)$/i.test(k))),BAZAAR_ACL_CHECK_PATH:path},stdio:'ignore'});
+    execFileSync('powershell.exe', ['-NoProfile','-NonInteractive','-Command',script], {env:{...Object.fromEntries(Object.entries(process.env).filter(([k])=>/^(PATH|SYSTEMROOT|SYSTEMDRIVE|PROGRAMDATA|WINDIR|TEMP|TMP|USERPROFILE|HOME|COMSPEC|PATHEXT)$/i.test(k))),BAZAAR_ACL_CHECK_PATH:path},stdio:'ignore'});
   } else {
     const info=statSync(path);
     if ((info.mode & 0o777) !== 0o700 || info.uid !== process.getuid()) throw new Error('Private directory permissions are not exclusive');

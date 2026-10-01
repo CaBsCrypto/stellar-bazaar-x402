@@ -2,10 +2,13 @@
 
 Esta guía corresponde al candidato local. Consulta `get_bazaar_capabilities.workspace.enabled` antes de crear accesos. Un bloqueo de configuración o capacidad no es un alta exitosa. Bazaar no aloja un modelo: tu agente usa terminal y MCP desde tu equipo. No necesita correo, aprobación ni credenciales administrativas.
 
+Para reproducir el recorrido gratuito completo desde el checkout, sigue también `docs/OPEN_BAZAAR_SYNTHETIC_HANDOFF.md`: incluye scripts privados copiables para la intención humana, delegación y respuesta sintética conservada, con comprobación de la misma entrega tras reiniciar. No invoca un modelo ni un servicio y no autoriza Redis externo.
+
 ## Requisitos y ámbitos
 
 - Checkout de Bazaar identificado por SHA, Node 22.18+ y `npm ci`. Ejecuta desde su raíz. Los ejemplos son internos del repositorio, no un SDK publicado.
 - Cliente MCP Streamable HTTP con cabecera Authorization configurable, almacenamiento privado fuera del checkout y origen HTTPS exacto (loopback HTTP solo para pruebas).
+- Desactiva reconexión y reintentos automáticos de transporte. El helper configura el SDK con `reconnectionOptions: {maxRetries:0, initialReconnectionDelay:1000, maxReconnectionDelay:1000, reconnectionDelayGrowFactor:1}` y cierra cada conexión al terminar su comando. Un agente externo debe aplicar el mismo límite; la recuperación es explícita con la intención conservada.
 - Tres conexiones distintas: descubrimiento sin token; proveedor con su token de solicitud; espacio e historial con el acceso del agente. No intercambies credenciales.
 - El secreto de recuperación pertenece al dueño del espacio. Solo autoriza alta, rotación y revocación; nunca se entrega al agente delegado. No guardes tokens en prompts públicos, repositorio, URLs HTTP ni argumentos MCP. El cliente MCP puede conservar trazas: protege su configuración.
 
@@ -35,7 +38,12 @@ node examples/agent-workspace-mcp.mjs claim /ruta/privada/nueva UUID_DE_TAREA
 
 El resultado íntegro se guarda privadamente en `responses/`. `claim` conserva `attemptId` antes de llamar al servidor. Una tarea reclamada permanece asociada a ese intento: no caduca para autorizar otro efecto. Consulta o repite ese mismo intento ante incertidumbre; no reclames con otro identificador.
 
-Prepara y guarda `respuesta.json` antes de responder:
+Cada tarea admite una única respuesta definitiva. Para el recorrido con entrega
+inline, continúa al paso 3 **sin ejecutar `respond` todavía**: conserva respuesta
+y resultado antes de registrar, y responde una sola vez después del registro.
+
+Como alternativa, si solo necesitas texto y ninguna entrega, prepara y guarda
+`respuesta.json` antes de responder:
 
 ```json
 {"text":"Resultado de ejemplo, gratuito y sin pago."}
@@ -45,11 +53,11 @@ Prepara y guarda `respuesta.json` antes de responder:
 node examples/agent-workspace-mcp.mjs respond /ruta/privada/nueva UUID_DE_TAREA respuesta.json
 ```
 
-El helper congela `messageId`, texto e intento antes de enviar. Repetir lo mismo recupera la respuesta; cambiarla produce conflicto. El humano pulsa **Actualizar**: no hay conexión permanente ni consultas indefinidas. Los estados representan pendiente, recibido por el agente, respuesta disponible o incierto. Una respuesta no se inventa cuando el agente está ausente.
+Esa respuesta de solo texto termina el recorrido de esta tarea. No la reemplaces después por otra con una entrega. El helper congela `messageId`, texto e intento antes de enviar. Repetir lo mismo recupera la respuesta; cambiarla produce conflicto. El humano pulsa **Actualizar**: no hay conexión permanente ni consultas indefinidas. Los estados representan pendiente, recibido por el agente, respuesta disponible o incierto. Una respuesta no se inventa cuando el agente está ausente.
 
 ## 3. Conservar una entrega inline
 
-Si el agente genera una muestra, guarda primero el resultado en un archivo privado. Consulta `/api/openapi` y los esquemas de `tools/list`. `record_bazaar_operation` recibe `{operation:…}` con el esquema nativo de `/api/operations`; `record_bazaar_activity` recibe `{event:…}` con el de `/api/activity`. El servidor deriva propietario y agente. Usa identificadores estables, `mode: "mock"` o `"fixture"`, pago `not-requested`, importe atómico `"0"` y resultado inline. La etiqueta de simulación permanece visible. No son pruebas de pago, descarga externa ni persistencia certificada.
+Este es el final alternativo con entrega de la tarea reclamada en el paso 2, antes de enviar su respuesta. Si el agente genera una muestra, guarda primero el resultado en un archivo privado. Consulta `/api/openapi` y los esquemas de `tools/list`. `record_bazaar_operation` recibe `{operation:…}` con el esquema nativo de `/api/operations`; `record_bazaar_activity` recibe `{event:…}` con el de `/api/activity`. El servidor deriva propietario y agente. Usa identificadores estables, `mode: "mock"` o `"fixture"`, pago `not-requested`, importe atómico `"0"` y resultado inline. La etiqueta de simulación permanece visible. No son pruebas de pago, descarga externa ni persistencia certificada.
 
 Ejemplo completo para `operacion.json`: sustituye `UUID_DE_TAREA` por el identificador real reclamado y conserva `clientOperationId` para todos sus reenvíos. El destinatario es un campo requerido del esquema heredado; aquí no se transfiere nada y `NO_PAYMENT` no es un activo admitido para comprar. Omite `agentId`: lo asigna el servidor.
 
@@ -70,13 +78,21 @@ Para un entorno HTTPS utiliza su URL exacta en `service.url`. Guarda `actividad.
 {"eventId":"ejemplo-entrega-001", "taskId":"UUID_DE_TAREA", "operationId":"ejemplo-inline-001", "mode":"mock", "kind":"delivery-reported", "title":"Ejemplo inline disponible", "result":{"simulation":true}}
 ```
 
+Conserva también la respuesta definitiva en `respuesta.json` **antes** del primer
+registro. `operationId` es el mismo `clientOperationId` de `operacion.json`:
+
+```json
+{"text":"Tu ejemplo está en la biblioteca", "operationId":"ejemplo-inline-001"}
+```
+
 ```sh
 node examples/agent-workspace-mcp.mjs record /ruta/privada/nueva operacion.json
 node examples/agent-workspace-mcp.mjs activity /ruta/privada/nueva actividad.json
+node examples/agent-workspace-mcp.mjs respond /ruta/privada/nueva UUID_DE_TAREA respuesta.json
 node examples/agent-workspace-mcp.mjs recover /ruta/privada/nueva
 ```
 
-Después de registrar, responde con `{"text":"Tu ejemplo está en la biblioteca", "operationId":"ID_DE_OPERACION_CONSERVADO"}`. Solo se puede vincular una operación propia. Ante fallo de historial, reintenta **el mismo registro conservado**, sin regenerar el resultado ni ejecutar otra compra. El Magic Link humano recupera esa misma entrega tras reiniciar el servidor con el mismo almacenamiento. Registrar no paga; este espacio no admite informes de pagos, archivos externos ni cargas.
+Comprueba cada comando antes de seguir: registra primero y envía esa única respuesta después del registro confirmado. Solo se puede vincular una operación propia. Ante fallo de historial, reintenta **el mismo registro conservado**, sin regenerar la respuesta ni el resultado ni ejecutar otra compra. No ejecutes `respond` mientras el registro no esté confirmado. El Magic Link humano recupera esa misma entrega tras reiniciar el servidor con el mismo almacenamiento. Registrar no paga; este espacio no admite informes de pagos, archivos externos ni cargas.
 
 ## 4. Ofrecer un servicio
 

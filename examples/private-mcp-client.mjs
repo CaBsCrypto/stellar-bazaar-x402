@@ -10,6 +10,8 @@ export async function withPrivateMcp(origin, token, action) {
   const endpoint = new URL('/api/mcp', originOnly(origin));
   const client = new Client({ name:'bazaar-private-terminal-example', version:'1' });
   const transport = new StreamableHTTPClientTransport(endpoint, {
+    // Every recovery is an explicit command against the conserved intent.
+    reconnectionOptions: { maxRetries:0, initialReconnectionDelay:1000, maxReconnectionDelay:1000, reconnectionDelayGrowFactor:1 },
     requestInit: { headers: { Authorization: `Bearer ${token}` } },
     fetch: async (url, init) => {
       if (new URL(url instanceof Request ? url.url : String(url)).origin !== endpoint.origin) throw Error('Cross-origin request denied');

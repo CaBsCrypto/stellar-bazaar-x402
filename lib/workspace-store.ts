@@ -100,7 +100,7 @@ type Snapshot = { registryRaw: string; documentRaw: string; marker: string };
 interface Backend { read(ownerId?: string): Promise<Snapshot>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string) => Promise<void>) => Promise<T>): Promise<T> }
 // Only this error proves the Lua comparison rejected a write before any effect.
 class RedisCompareConflict extends WorkspaceError { constructor() { super("WORKSPACE_CONFLICT", 409); } }
-function validatePrefix(prefix: string) { if (!/^bazaar-workspace:(local-test|preview|production)$/.test(prefix)) throw unavailable(); return prefix; }
+function validatePrefix(prefix: string) { if (!/^bazaar-workspace:(local-test|preview|production|isolated-[a-f0-9]{32})$/.test(prefix)) throw unavailable(); return prefix; }
 function redisBackend(redis: WorkspaceRedis, prefix: string): Backend {
   validatePrefix(prefix);
   const tag = prefix.split(":")[1];
@@ -153,7 +153,7 @@ function fileBackend(directory: string, prefix: string): Backend {
     await atomicWrite(p.registry, registry, "write-registry"); await atomicWrite(p.marker, "workspace-v1", "write-marker"); try { await unlink(p.pending); } catch (e) { fileFailure("clear-pending-after-commit", e); throw e; }
   })) };
 }
-function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistry = legacyHistoryReservations, principal?: WorkspacePrincipal) {
+function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistry = legacyHistoryReservations, principal?: WorkspacePrincipal, testOwnerUuid?: (creationId: string) => string) {
   const safe = async <T>(fn: () => Promise<T>): Promise<T> => { try { return await fn(); } catch (e) { if (e instanceof WorkspaceError) throw e; fileDiagnostics.publish({ phase: "store-unexpected", code: e instanceof z.ZodError ? "SCHEMA" : e instanceof SyntaxError ? "JSON" : "UNKNOWN" }); throw unavailable(); } };
   function authorized(meta: Meta, role?: WorkspaceRole) {
     if (meta.revoked && role !== "bootstrap") throw new WorkspaceError("WORKSPACE_REVOKED", 401);
@@ -180,7 +180,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     return result;
   }); });
   const store = {
-    forPrincipal(p: WorkspacePrincipal) { return buildStore(backend, reservations, p); },
+    forPrincipal(p: WorkspacePrincipal) { return buildStore(backend, reservations, p, testOwnerUuid); },
     async resolveHash(hash: string): Promise<WorkspacePrincipal> { return safe(async () => {
       workspaceHashSchema.parse(hash); const s = await backend.read(); const registry = validateRegistry(s.registryRaw, s.marker, reservations());
       for (const m of registry.workspaces) {
@@ -192,7 +192,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     async createWorkspace(input: z.infer<typeof createWorkspaceSchema>, bootstrapHash: string, trustedIp = "untrusted") { return safe(async () => {
       createWorkspaceSchema.parse(input); workspaceHashSchema.parse(bootstrapHash);
       const initial = await backend.read(), initialRegistry = validateRegistry(initial.registryRaw, initial.marker, reservations());
-      const ownerId = initialRegistry.workspaces.find(m => m.creationId === input.creationId)?.ownerId ?? "ow_" + randomUUID().replaceAll("-", "");
+      const ownerId = initialRegistry.workspaces.find(m => m.creationId === input.creationId)?.ownerId ?? "ow_" + uuid.parse(testOwnerUuid ? testOwnerUuid(input.creationId) : randomUUID()).replaceAll("-", "");
       const authenticateReplay = (existing: Meta) => {
         if (existing.bootstrapHash !== bootstrapHash) throw new WorkspaceError("UNAUTHORIZED", 401);
         if (existing.initialHumanHash !== input.humanAccessHash || existing.initialAgentHash !== input.agentAccessHash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409);
@@ -310,13 +310,22 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
 }
 function receipt(m: Meta) { return { workspaceId: m.workspaceId, ownerId: m.ownerId, agentId: m.agentId, creationId: m.creationId, generation: m.generation, revoked: m.revoked, createdAt: m.createdAt }; }
 export type WorkspaceStore = ReturnType<typeof buildStore>;
-export function createRedisWorkspaceStore(redis: WorkspaceRedis, prefix = "bazaar-workspace:local-test", reservations?: () => WorkspaceLegacyRegistry): WorkspaceStore { return buildStore(redisBackend(redis, prefix), reservations); }
+// The isolated HTTP acceptance harness can freeze server-owned keys before any
+// transport effect. Deployed/configured stores cannot supply this test-only hook.
+export function createRedisWorkspaceStore(redis: WorkspaceRedis, prefix = "bazaar-workspace:local-test", reservations?: () => WorkspaceLegacyRegistry, testOwnerUuid?: (creationId: string) => string): WorkspaceStore {
+  if (testOwnerUuid && (process.env.NODE_ENV !== "test" || process.env.VERCEL)) throw unavailable();
+  return buildStore(redisBackend(redis, prefix), reservations, undefined, testOwnerUuid);
+}
 export function createFileWorkspaceStore(directory: string, prefix = "bazaar-workspace:local-test", reservations?: () => WorkspaceLegacyRegistry): WorkspaceStore { return buildStore(fileBackend(directory, prefix), reservations); }
 let testStore: WorkspaceStore | undefined;
 export function setWorkspaceStoreForTests(store: WorkspaceStore | undefined) { if (process.env.NODE_ENV === "production" || process.env.VERCEL) throw unavailable(); testStore = store; }
 export function openWorkspacesEnabled() { return process.env.BAZAAR_ENABLE_OPEN_WORKSPACES === "true"; }
 export function assertWorkspaceEnabled() { if (!openWorkspacesEnabled()) throw new WorkspaceError("WORKSPACES_DISABLED", 503); }
-export function workspacePrefix() { return validatePrefix(process.env.BAZAAR_WORKSPACE_PREFIX ?? `bazaar-workspace:${process.env.VERCEL_ENV === "production" ? "production" : process.env.VERCEL_ENV === "preview" ? "preview" : "local-test"}`); }
+export function workspacePrefix() {
+  const prefix = validatePrefix(process.env.BAZAAR_WORKSPACE_PREFIX ?? `bazaar-workspace:${process.env.VERCEL_ENV === "production" ? "production" : process.env.VERCEL_ENV === "preview" ? "preview" : "local-test"}`);
+  if (prefix.includes(":isolated-")) { if (process.env.VERCEL || process.env.VERCEL_ENV) throw unavailable(); workspaceLoopbackOrigin(); }
+  return prefix;
+}
 export function workspaceLoopbackOrigin() { const value = process.env.BAZAAR_WORKSPACE_LOCAL_ORIGIN; if (!value) throw unavailable(); const url = new URL(value); if (url.origin !== value || !["127.0.0.1", "localhost", "[::1]"].includes(url.hostname) || !["http:", "https:"].includes(url.protocol)) throw unavailable(); return value; }
 export function configuredWorkspaceStore(reservations?: () => WorkspaceLegacyRegistry): WorkspaceStore {
   assertWorkspaceEnabled(); if (testStore) return testStore;
