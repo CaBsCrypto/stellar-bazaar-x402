@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "preparedAt": "2026-10-01T04:56:23.526Z",
+  "candidateSha": "61bcb685f6e359e8f756c5226399d3a6bc8202fa",
+  "sourceFingerprint": "b78fa9b38afdddf4764c95140ce56b5fa66985ba1f7c20cbc5f01fb221cfc38d",
+  "scriptHashes": {
+    "READ": "3eb521c4ea5723b3097237cf612c13fc94982a744de383fc2e9385812db6f26a",
+    "COMMIT": "f5633598b4e85ac2323574afc775a7cb5d1c2d27820f6ed2aa0deb3b81cdbb69"
+  },
+  "runtime": "v22.18.0",
+  "instance": null,
+  "zeroCost": "unconfirmed",
+  "prefix": "bazaar-workspace:isolated-928690ca074f011c7aac8cbcc4d39a65",
+  "identities": [
+    {
+      "creationId": "02d6eea1-0a4c-47b6-8b1c-5b48cd99959c",
+      "ownerUuid": "938927b9-dbb3-4f1b-8c9e-2f6a95528a72",
+      "ownerId": "ow_938927b9dbb34f1b8c9e2f6a95528a72",
+      "hashes": {
+        "bootstrap": "83b2f01f24f3505587a711f502e3806b58150dba69db478b3f62179c5a81f73d",
+        "human": "5d782e40012c8cf94053a30666fa3fdb5d736d38cdc75f447a9d973eed946f78",
+        "agent": "c88e8136a2c6b796af0dd96bb8649bd89706b728a6b4fd68ee58fc41e447fa84",
+        "rotatedHuman": "400ad2b052f7661bc68f4e576a5e185072b988c5d81d424d40ad073357621b4e",
+        "rotatedAgent": "b5d427264494665852b970b165f973d33476d91c84d9679d71ff8273b08586dd"
+      }
+    },
+    {
+      "creationId": "9d1ec7a7-18fd-4342-af67-9853771968cc",
+      "ownerUuid": "00eacf34-814b-4c20-a825-56a691d0d699",
+      "ownerId": "ow_00eacf34814b4c20a82556a691d0d699",
+      "hashes": {
+        "bootstrap": "af495b144e976d2db244d48fbc1dcea820578a833dc43d0936b7caa6b1de488e",
+        "human": "2f2f584bba7f3e97c518d145bdc9c5bce30b75bec4802c87f26257622624a2bc",
+        "agent": "40f6b59f2344aa446da0c2a6aeb3c77592cd1328fbdf586aaa765bfb4fb21b6c",
+        "rotatedHuman": "78fadc32aae0f81ffe915c695c99cbaab13cde91e6c11691a963b81b1548ce86",
+        "rotatedAgent": "ad54008bf98f2030a627ebb740d860019b9e56fb1371a6a606992d7cd8eb3cf4"
+      }
+    }
+  ],
+  "payloads": {
+    "conversation": {
+      "conversationId": "7819fff7-03d8-4ce5-932f-80a21c8b5444",
+      "title": "Redis isolated synthetic acceptance"
+    },
+    "humanMessage": {
+      "messageId": "4912e79b-a682-4bd8-928c-465325898260",
+      "taskId": "a0570266-a1b6-44e0-b7c7-2d1ab364f5cf",
+      "text": "  Solicitud sintética privada; sin proveedor ni pago.  "
+    },
+    "claim": {
+      "taskId": "a0570266-a1b6-44e0-b7c7-2d1ab364f5cf",
+      "attemptId": "fd303858-b0d9-495d-b7b4-e77a7d9c346b"
+    },
+    "conflictingAttemptId": "b187c2c8-ab45-432d-a9fc-01b982bd8d16",
+    "response": {
+      "taskId": "a0570266-a1b6-44e0-b7c7-2d1ab364f5cf",
+      "attemptId": "fd303858-b0d9-495d-b7b4-e77a7d9c346b",
+      "messageId": "0b9e1d3e-7181-455e-bed8-c7963afb60a4",
+      "text": "  Respuesta conservada una sola vez. Resultado sintético inline.  ",
+      "operationId": "29d03eee-ac1f-46d7-8bc9-8e09f0d2dde3"
+    },
+    "operation": {
+      "clientOperationId": "29d03eee-ac1f-46d7-8bc9-8e09f0d2dde3",
+      "taskId": "a0570266-a1b6-44e0-b7c7-2d1ab364f5cf",
+      "mode": "mock",
+      "service": {
+        "id": "isolated-unpaid-synthetic",
+        "title": "Synthetic output",
+        "provider": "No external provider",
+        "url": "http://127.0.0.1"
+      },
+      "payment": {
+        "status": "not-requested",
+        "network": "stellar:testnet",
+        "asset": "USDC",
+        "amountAtomic": "0",
+        "recipient": "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "delivery": {
+        "status": "reported-delivered",
+        "result": {
+          "text": "  Respuesta conservada una sola vez. Resultado sintético inline.  ",
+          "synthetic": true
+        }
+      }
+    },
+    "event": {
+      "eventId": "293dfd74-290f-4bce-a85f-9c04e4faff20",
+      "taskId": "a0570266-a1b6-44e0-b7c7-2d1ab364f5cf",
+      "operationId": "29d03eee-ac1f-46d7-8bc9-8e09f0d2dde3",
+      "mode": "mock",
+      "kind": "delivery-reported",
+      "title": "Synthetic inline receipt"
+    }
+  },
+  "keys": [
+    "bazaar-workspace:isolated-928690ca074f011c7aac8cbcc4d39a65:{isolated-928690ca074f011c7aac8cbcc4d39a65}:registry",
+    "bazaar-workspace:isolated-928690ca074f011c7aac8cbcc4d39a65:{isolated-928690ca074f011c7aac8cbcc4d39a65}:initialized",
+    "bazaar-workspace:isolated-928690ca074f011c7aac8cbcc4d39a65:{isolated-928690ca074f011c7aac8cbcc4d39a65}:owner:none",
+    "bazaar-workspace:isolated-928690ca074f011c7aac8cbcc4d39a65:{isolated-928690ca074f011c7aac8cbcc4d39a65}:owner:ow_938927b9dbb34f1b8c9e2f6a95528a72",
+    "bazaar-workspace:isolated-928690ca074f011c7aac8cbcc4d39a65:{isolated-928690ca074f011c7aac8cbcc4d39a65}:owner:ow_00eacf34814b4c20a82556a691d0d699"
+  ],
+  "budget": {
+    "redisRequests": 400,
+    "redisCommands": 2400,
+    "requestBytes": 16777216,
+    "responseBytes": 33554432,
+    "perRequestBytes": 65536,
+    "perResponseBytes": 65536,
+    "registryBytes": 16384,
+    "ownerBytes": 16384,
+    "storedBytes": 49164,
+    "owners": 2,
+    "applicationRequests": 120,
+    "applicationRequestBytes": 1048576,
+    "applicationResponseBytes": 2097152,
+    "elapsedMs": 120000,
+    "casAttemptsPerQuota": 8,
+    "transportRetries": 0
+  },
+  "scope": "two new synthetic owners; no payments/provider activation/files/deletion; real execution requires specific authorization",
+  "planHash": "ee4ac99cddd3b078977b271e02b51888156f98ace4270bac7efdac17d1575734"
+}

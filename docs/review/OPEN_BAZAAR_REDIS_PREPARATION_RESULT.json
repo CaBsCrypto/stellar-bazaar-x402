@@ -1,0 +1,68 @@
+{
+  "ok": true,
+  "category": "local with Redis REST double, test-only HTTP host",
+  "candidateSha": "61bcb685f6e359e8f756c5226399d3a6bc8202fa",
+  "sourceFingerprint": "b78fa9b38afdddf4764c95140ce56b5fa66985ba1f7c20cbc5f01fb221cfc38d",
+  "planHash": "ee4ac99cddd3b078977b271e02b51888156f98ace4270bac7efdac17d1575734",
+  "runtime": "v22.18.0",
+  "observedOrigins": [
+    "http://127.0.0.1:59428",
+    "http://127.0.0.1:59429",
+    "http://127.0.0.1:59440",
+    "http://127.0.0.1:59448"
+  ],
+  "processesStarted": 4,
+  "redisOrigin": null,
+  "prefix": "bazaar-workspace:isolated-928690ca074f011c7aac8cbcc4d39a65",
+  "configuration": {
+    "backend": "redis",
+    "localOriginsOnly": true,
+    "ownerFactory": "test-only, server-assigned frozen UUIDs",
+    "cleanEnvironment": true,
+    "sdkRetry": {
+      "retries": 0
+    },
+    "autoPipelining": false,
+    "mcpReconnectRetries": 0,
+    "selfListing": false,
+    "providerActivation": false,
+    "payments": false,
+    "envFilesLoaded": false
+  },
+  "effective": {
+    "requests": 167,
+    "commands": 764,
+    "evalCommands": 167,
+    "luaCommands": 597,
+    "requestBytes": 390464,
+    "responseBytes": 405982,
+    "casRejections": 1,
+    "commits": 44,
+    "uncertain": 0,
+    "rejected": 0,
+    "stopped": null,
+    "elapsedMs": 2451,
+    "byteAccounting": "exact UTF-8 HTTP JSON body bytes; TCP/TLS/header overhead excluded",
+    "unknownCommandsAreUpperBound": false
+  },
+  "applicationTransport": {
+    "requests": 58,
+    "requestBytes": 7318,
+    "responseBytes": 31844,
+    "discardedAcknowledgements": 0
+  },
+  "findings": [
+    "two server-owned identities",
+    "concurrent/idempotent HTTP creation",
+    "real MCP SDK with 17 tools",
+    "preserved human message/task/agent response/inline operation/activity receipt",
+    "other owner and wrong scopes denied",
+    "rotation and revocation survive process restart",
+    "same IDs and exact delivery recovered without reexecution"
+  ],
+  "failure": null,
+  "externalRequests": 0,
+  "paidProviderInvocations": 0,
+  "payments": 0,
+  "limitation": "Not native Next/configuredWorkspaceStore acceptance, browser Magic Link acceptance, backups or Redis-loss durability. Unknown outcome remains stopped; no deletion/cleanup of Redis keys."
+}

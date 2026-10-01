@@ -1,0 +1,206 @@
+{
+  "ok": true,
+  "category": "local-file-real-http-mcp",
+  "literalGuideScripts": true,
+  "existingWorkspaceHelper": true,
+  "credentialsBeforeCreate": true,
+  "delegatedAgentOnly": true,
+  "definiteRecordFailure": true,
+  "sameRecordRetryWithoutGeneration": true,
+  "oneHumanMessage": true,
+  "oneAgentResponse": true,
+  "oneOperation": true,
+  "sameRecoveryAfterRestart": true,
+  "commands": [
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "prepare",
+      "ok": true,
+      "requests": 0
+    },
+    {
+      "script": "owner/human-demo.mjs",
+      "mode": "prepare",
+      "ok": true,
+      "requests": 0
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "create",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "create",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "owner/human-demo.mjs",
+      "mode": "delegate",
+      "ok": true,
+      "requests": 0
+    },
+    {
+      "script": "owner/human-demo.mjs",
+      "mode": "send",
+      "ok": true,
+      "requests": 2
+    },
+    {
+      "script": "owner/human-demo.mjs",
+      "mode": "send",
+      "ok": true,
+      "requests": 2
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "tasks",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "claim",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "claim",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "agent/fixture-demo.mjs",
+      "mode": "freeze",
+      "ok": true,
+      "requests": 0
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "record",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "recover",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "record",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "record",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "activity",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "activity",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "respond",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "respond",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "owner/human-demo.mjs",
+      "mode": "verify",
+      "ok": true,
+      "requests": 2
+    },
+    {
+      "script": "examples/agent-workspace-mcp.mjs",
+      "mode": "recover",
+      "ok": true,
+      "requests": 5
+    },
+    {
+      "script": "owner/human-demo.mjs",
+      "mode": "verify",
+      "ok": true,
+      "requests": 2
+    },
+    {
+      "script": "agent/fixture-demo.mjs",
+      "mode": "freeze",
+      "ok": true,
+      "requests": 0
+    }
+  ],
+  "commandHttpRequests": 78,
+  "readinessRequests": 6,
+  "verificationHttpRequests": 1,
+  "externalRequests": 0,
+  "hostedModels": 0,
+  "realPayments": 0,
+  "evidenceDirectory": "C:\\Users\\MGC\\AppData\\Local\\Temp\\bazaar-synthetic-handoff-0hoJrT",
+  "base": "61bcb685f6e359e8f756c5226399d3a6bc8202fa",
+  "runtime": "v22.18.0",
+  "serverCategory": "Built base candidate, localhost file; final UI CSS requires integrated browser repeat",
+  "configuration": {
+    "BAZAAR_ENABLE_OPEN_WORKSPACES": true,
+    "BAZAAR_WORKSPACE_BACKEND": "file",
+    "BAZAAR_WORKSPACE_PREFIX": "bazaar-workspace:local-test",
+    "storage": "new temporary synthetic directory",
+    "origin": "ephemeral HTTP 127.0.0.1 port",
+    "payments": false,
+    "providerIntake": false,
+    "providerActivation": false,
+    "registryMutations": false,
+    "environmentFiles": false
+  },
+  "files": [
+    {
+      "path": "app/history/history.css",
+      "sha256": "3715fdc46907dd545d6917c3004d21509a24ced165e6aba17457056e190db60d"
+    },
+    {
+      "path": "examples/private-mcp-client.mjs",
+      "sha256": "702cc804a46fc611804f91d75953b28dd0d922b3a18ed2f0ea2cea8ae2fba627"
+    },
+    {
+      "path": "styles/ui.css",
+      "sha256": "468018790b207f8a906bde68106e142dd000582557a23622e451414f2776898b"
+    },
+    {
+      "path": "public/WORKSPACE_AGENT.md",
+      "sha256": "fab98af40b31307428cb20a70de9954a6ac176a6ea0d6904ca8932f0f8523a02"
+    },
+    {
+      "path": "docs/OPEN_BAZAAR_SYNTHETIC_HANDOFF.md",
+      "sha256": "30df7aee2dac8185d563ff7fe5a0e1c051c34050cbd71af972c9970a04ec338e"
+    },
+    {
+      "path": "scripts/test-open-bazaar-synthetic-handoff.mjs",
+      "sha256": "9b0cd18915f7a855afebd34784d9056231098bb713e709da85320475306844da"
+    },
+    {
+      "path": "scripts/test-private-mcp-no-reconnect.mjs",
+      "sha256": "241f99f45fce8f9e0565c2a4c838c891c871534c51c80df8da43d9023949a94d"
+    }
+  ]
+}

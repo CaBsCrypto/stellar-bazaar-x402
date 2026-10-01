@@ -1,0 +1,169 @@
+{
+  "sourceSha": "6c60391d271a57b04ec8621470237c9ca2f522e2",
+  "runtime": "v22.18.0",
+  "buildId": "WxPu0FGeFg7y3k_ufOvHy",
+  "origin": "http://127.0.0.1:56790",
+  "command": "node scripts/test-open-bazaar-synthetic-handoff.mjs",
+  "environment": "OS allowlist, loopback network guard, no .env, isolated file directory, payments/provider activation/intake false",
+  "result": {
+    "ok": true,
+    "category": "local-file-real-http-mcp",
+    "literalGuideScripts": true,
+    "existingWorkspaceHelper": true,
+    "credentialsBeforeCreate": true,
+    "delegatedAgentOnly": true,
+    "definiteRecordFailure": true,
+    "sameRecordRetryWithoutGeneration": true,
+    "oneHumanMessage": true,
+    "oneAgentResponse": true,
+    "oneOperation": true,
+    "sameRecoveryAfterRestart": true,
+    "commands": [
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "prepare",
+        "ok": true,
+        "requests": 0
+      },
+      {
+        "script": "owner\\human-demo.mjs",
+        "mode": "prepare",
+        "ok": true,
+        "requests": 0
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "create",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "create",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "owner\\human-demo.mjs",
+        "mode": "delegate",
+        "ok": true,
+        "requests": 0
+      },
+      {
+        "script": "owner\\human-demo.mjs",
+        "mode": "send",
+        "ok": true,
+        "requests": 2
+      },
+      {
+        "script": "owner\\human-demo.mjs",
+        "mode": "send",
+        "ok": true,
+        "requests": 2
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "tasks",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "claim",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "claim",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "agent\\fixture-demo.mjs",
+        "mode": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\",
+        "ok": true,
+        "requests": 0
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "record",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "recover",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "record",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "record",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "activity",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "activity",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "respond",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "respond",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "owner\\human-demo.mjs",
+        "mode": "verify",
+        "ok": true,
+        "requests": 2
+      },
+      {
+        "script": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\examples\\agent-workspace-mcp.mjs",
+        "mode": "recover",
+        "ok": true,
+        "requests": 5
+      },
+      {
+        "script": "owner\\human-demo.mjs",
+        "mode": "verify",
+        "ok": true,
+        "requests": 2
+      },
+      {
+        "script": "agent\\fixture-demo.mjs",
+        "mode": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation\\",
+        "ok": true,
+        "requests": 0
+      }
+    ],
+    "commandHttpRequests": 78,
+    "readinessRequests": 6,
+    "verificationHttpRequests": 1,
+    "externalRequests": 0,
+    "hostedModels": 0,
+    "realPayments": 0,
+    "evidenceDirectory": "C:\\Users\\MGC\\AppData\\Local\\Temp\\bazaar-synthetic-handoff-4Cmukb"
+  }
+}

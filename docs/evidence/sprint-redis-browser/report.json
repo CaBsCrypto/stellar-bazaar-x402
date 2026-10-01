@@ -1,0 +1,196 @@
+{
+  "category": "real-browser-with-isolated-file-storage",
+  "ok": true,
+  "sourceSha": "6c60391d271a57b04ec8621470237c9ca2f522e2",
+  "runtime": "v22.18.0",
+  "chromium": "153.0.8010.12",
+  "origin": "http://127.0.0.1:56792",
+  "buildProvenance": {
+    "sourceSha": "6c60391d271a57b04ec8621470237c9ca2f522e2",
+    "buildId": "WxPu0FGeFg7y3k_ufOvHy",
+    "runtime": "v22.18.0",
+    "nodeExecutable": "C:\\Users\\MGC\\AppData\\Local\\Temp\\bazaar-node22-review\\node.exe",
+    "command": "node node_modules/next/dist/bin/next build --webpack",
+    "environment": "OS allowlist only plus NEXT_TELEMETRY_DISABLED=1; no .env",
+    "result": "exit 0",
+    "observedWarning": "metadataBase defaults to localhost; public HTTPS remains pending",
+    "observedAt": "2026-10-01T05:04:49.3104462Z"
+  },
+  "buildId": "WxPu0FGeFg7y3k_ufOvHy",
+  "config": {
+    "NEXT_PUBLIC_APP_URL": "http://127.0.0.1:56792",
+    "BAZAAR_INDEPENDENT_NETWORK_GUARD": "1",
+    "BAZAAR_ENABLE_OPEN_WORKSPACES": "true",
+    "BAZAAR_WORKSPACE_BACKEND": "file",
+    "BAZAAR_WORKSPACE_PREFIX": "bazaar-workspace:local-test",
+    "BAZAAR_WORKSPACE_FILE_DIRECTORY": "C:\\Users\\MGC\\AppData\\Local\\Temp\\bazaar-sprint-browser-rg2BMA",
+    "BAZAAR_WORKSPACE_LOCAL_ORIGIN": "http://127.0.0.1:56792",
+    "BAZAAR_ENABLE_SELF_LISTING_INTAKE": "false",
+    "BAZAAR_ENABLE_PUBLIC_PROVIDER_REVIEW": "false",
+    "BAZAAR_ENABLE_PROVIDER_ACTIVATION": "false",
+    "BAZAAR_ENABLE_REGISTRY_MUTATIONS": "false",
+    "X402_PILOT_PAYMENTS_ENABLED": "false",
+    "X402_LEGACY_PAYMENTS_ENABLED": "false",
+    "X402_ENABLE_LOCAL_PAYER": "false",
+    "NEXT_PUBLIC_X402_XLM_PILOT": "false"
+  },
+  "command": "Node22 scripts/review-open-bazaar-browser.mjs <bundled-node_modules> <existing-chromium-executable>",
+  "fixtureHttpRequests": 7,
+  "readinessRequests": 12,
+  "traffic": {
+    "fixtureHttp": {
+      "POST /api/workspaces": 1,
+      "POST /api/conversations": 1,
+      "POST /api/conversations/2d770c50-7a98-43a9-b94e-375e85d1d9f5/messages": 1,
+      "GET /api/operations": 2,
+      "GET /api/conversations/2d770c50-7a98-43a9-b94e-375e85d1d9f5/messages": 2
+    },
+    "fixtureMcp": {
+      "POST /api/mcp": 5,
+      "GET /api/mcp": 1
+    },
+    "browser": {
+      "GET /agent-chat": 6,
+      "GET /_next/static/css/ce711fda1398e0e7.css": 4,
+      "GET /_next/static/chunks/webpack-c210acfdad42a157.js": 4,
+      "GET /_next/static/chunks/1b11581d-e2de9005c9e17dbe.js": 4,
+      "GET /_next/static/chunks/8540-1329e8ebb14cfd2d.js": 4,
+      "GET /_next/static/chunks/main-app-1db3a43c17bcced3.js": 4,
+      "GET /_next/static/chunks/6897-22c6fe5cf098a3f3.js": 4,
+      "GET /_next/static/chunks/app/agent-chat/page-4a31404b8561db27.js": 4,
+      "GET /_next/static/chunks/351-909e179bbcdd8193.js": 4,
+      "GET /_next/static/chunks/7799-d720d339887cc5d4.js": 4,
+      "GET /_next/static/chunks/6599-62074b911d340332.js": 4,
+      "GET /_next/static/chunks/1665-dbaf7d1ca861dda5.js": 4,
+      "GET /_next/static/chunks/app/layout-894ac66c49287697.js": 4,
+      "GET /api/conversations": 8,
+      "GET /": 8,
+      "GET /docs": 8,
+      "GET /publish": 8,
+      "GET /lab": 6,
+      "GET /_next/static/css/4e4037f9a99165e1.css": 4,
+      "GET /_next/static/css/ea23aba9a82a670f.css": 4,
+      "GET /_next/static/chunks/4491-a1ce20d3c51f9dc9.js": 4,
+      "GET /_next/static/chunks/7689-9c643768873deee6.js": 4,
+      "GET /_next/static/chunks/app/page-dcc3d708dfe88de8.js": 4,
+      "GET /_next/static/chunks/app/docs/page-368e51103c69676c.js": 4,
+      "GET /_next/static/chunks/app/lab/page-0ce60de2a537c7bb.js": 3,
+      "GET /catalogo": 8,
+      "GET /hub": 6,
+      "GET /history": 8,
+      "GET /_next/static/css/69e23a0148244697.css": 4,
+      "GET /_next/static/css/8a3b719ad1a25005.css": 4,
+      "GET /_next/static/chunks/app/catalogo/page-0f8da415c2b1c745.js": 4,
+      "GET /_next/static/chunks/app/hub/page-34596800beef93a1.js": 3,
+      "GET /_next/static/chunks/3947-309e430cc7737a16.js": 4,
+      "GET /_next/static/chunks/6879-9e27a4ad33bafd0e.js": 4,
+      "GET /_next/static/chunks/app/history/page-79043280ce4b129d.js": 4,
+      "GET /api/operations": 3,
+      "GET /history/review": 4,
+      "GET /_next/static/chunks/app/history/review/page-7473628f17a16177.js": 2,
+      "GET /api/activity": 14,
+      "GET /api/deliveries": 2
+    }
+  },
+  "cases": [
+    {
+      "name": "agent-chat-390-text100",
+      "samples": 42,
+      "minRatio": 1,
+      "maxRatio": 1,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "overflowing": []
+    },
+    {
+      "name": "agent-chat-390-text200",
+      "samples": 42,
+      "minRatio": 2,
+      "maxRatio": 2,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "overflowing": []
+    },
+    {
+      "name": "agent-chat-1366-text100",
+      "samples": 42,
+      "minRatio": 1,
+      "maxRatio": 1,
+      "viewport": 1366,
+      "scrollWidth": 1366,
+      "overflowing": []
+    },
+    {
+      "name": "agent-chat-1366-text200",
+      "samples": 42,
+      "minRatio": 2,
+      "maxRatio": 2,
+      "viewport": 1366,
+      "scrollWidth": 1366,
+      "overflowing": []
+    },
+    {
+      "name": "history-390-text100",
+      "samples": 126,
+      "minRatio": 1,
+      "maxRatio": 1,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "overflowing": []
+    },
+    {
+      "name": "history-390-text200",
+      "samples": 126,
+      "minRatio": 2,
+      "maxRatio": 2,
+      "viewport": 390,
+      "scrollWidth": 390,
+      "overflowing": []
+    },
+    {
+      "name": "history-1366-text100",
+      "samples": 126,
+      "minRatio": 1,
+      "maxRatio": 1,
+      "viewport": 1366,
+      "scrollWidth": 1366,
+      "overflowing": []
+    },
+    {
+      "name": "history-1366-text200",
+      "samples": 126,
+      "minRatio": 2,
+      "maxRatio": 2,
+      "viewport": 1366,
+      "scrollWidth": 1366,
+      "overflowing": []
+    }
+  ],
+  "pageErrors": [],
+  "externalBlocked": [],
+  "lateProbe": {
+    "ignoresAbortSignalAtTransport": true,
+    "responseDeliveredAfterLock": true,
+    "contentRemainedLocked": true
+  },
+  "assertions": [
+    "fragment removed",
+    "access absent from browser storage",
+    "text computed 2x",
+    "keyboard lock",
+    "draft retired",
+    "same-tab reentry",
+    "late response delivered and ignored",
+    "same records after restart",
+    "inline original JSON matches fixture",
+    "simulation badge visible when technical details are opened",
+    "library lock and reentry"
+  ],
+  "simulationLabelVerifiedInTechnicalDetails": true,
+  "limitations": [
+    "Synthetic file storage; real Redis remains separate",
+    "Chromium viewport emulation; physical device untested",
+    "Computed text doubling; browser zoom not claimed",
+    "Main delivery view shows no payment; simulation badge is in technical details"
+  ]
+}
