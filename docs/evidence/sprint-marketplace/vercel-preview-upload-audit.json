@@ -5,8 +5,8 @@
   "target": "preview",
   "phase": "marketplace-closed-candidate",
   "fileCount": 266,
-  "totalBytes": 4666880,
-  "payloadFingerprint": "cc394558ded2909d3ae86649dc95984bc639b10778ba238af18e7fbec356e6c1",
+  "totalBytes": 4668026,
+  "payloadFingerprint": "94c4c75933f603acf48d8cbcb9f183a70e6cf9b9352308f1bdef3c6c96c64da3",
   "excluded": [
     "docs",
     "scripts",
@@ -708,8 +708,8 @@
     },
     {
       "path": "lib/acceptance-meter.ts",
-      "bytes": 4309,
-      "sha256": "36df6f6b33ac5c94c69971f23aad4e7b2d5ad3ccae780941e2b50dc5d310878d"
+      "bytes": 5455,
+      "sha256": "21583f34c0033c8f6edc035db5dd3b4942cbf77436e9672be667435ab1cfc308"
     },
     {
       "path": "lib/activity-client.ts",

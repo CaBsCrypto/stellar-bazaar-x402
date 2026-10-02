@@ -1,0 +1,17 @@
+{
+  "phase": "hosted-readonly-counter-probe",
+  "deploymentId": "dpl_31zm4ZRxHC537BQAuEnznvDSGCDv",
+  "status": "PASS",
+  "appRequests": 1,
+  "redisWrites": 0,
+  "payments": 0,
+  "retries": 0,
+  "httpStatus": 401,
+  "redisRequests": 1,
+  "commandsUpperBound": 4,
+  "requestId": "b8536288-1e74-406a-8bdd-37b66d27ba57",
+  "readonlyRealSdkMeterVerified": true,
+  "outboundPayloadBytes": 451,
+  "inboundPayloadBytes": 21,
+  "logConfirmed": true
+}

@@ -5,7 +5,7 @@
   },
   "basePath": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation",
   "fileCount": 266,
-  "totalSize": 4666880,
+  "totalSize": 4668026,
   "ignoredCount": 18,
   "ignored": [
     ".env.example",
@@ -36,7 +36,7 @@
     {
       "path": "lib",
       "fileCount": 107,
-      "size": 545958
+      "size": 547104
     },
     {
       "path": "components",
@@ -986,9 +986,9 @@
     },
     {
       "path": "lib/acceptance-meter.ts",
-      "size": 4309,
+      "size": 5455,
       "mode": 33206,
-      "sha": "d3028791175e72cf1a6ed3366028d32cc9f5e160"
+      "sha": "fb330f13c24f4397abf8f8cb5878c9a5bfb6eaa3"
     },
     {
       "path": "lib/activity-client.ts",

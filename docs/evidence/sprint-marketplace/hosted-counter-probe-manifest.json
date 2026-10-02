@@ -26,5 +26,6 @@
     "body": null,
     "expectedStatus": 401
   },
-  "phase": "hosted-readonly-counter-probe"
+  "phase": "hosted-readonly-counter-probe",
+  "sourceSha": "4d73af3b2160e641f3c4c385c342d394babcc608"
 }

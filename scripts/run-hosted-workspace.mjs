@@ -17,8 +17,9 @@ const origin=new URL(deployment.url).origin;assert.match(origin,/^https:\/\/stel
 const packet=await loadPacket();assert.equal(packet.planId,manifest.planId);assert.ok(!packet.completed.includes(phase),'PHASE_ALREADY_COMPLETE_DO_NOT_REPLAY');
 const auth=await readJson(join(tmpdir(),'bazaar-vercel-auth-preview','auth.json'));
 const reportPath='docs/evidence/sprint-marketplace/hosted-workspace-http.json';
-let report;try{report=await readJson(reportPath);}catch(e){if(e.code!=='ENOENT')throw e;report={version:1,planId:packet.planId,status:'IN_PROGRESS',appRequests:0,redisRequests:0,commandsUpperBound:0,outboundPayloadBytes:0,inboundPayloadBytes:0,activeExecutionMs:0,ledgerRequests:0,facilitatorRequests:0,retries:0,attempts:[],phases:[]};}
+let report;try{report=await readJson(reportPath);}catch(e){if(e.code!=='ENOENT')throw e;const probe=await readJson('docs/evidence/sprint-marketplace/hosted-counter-probe.json');assert.equal(probe.status,'PASS');report={version:1,planId:packet.planId,status:'IN_PROGRESS',appRequests:probe.appRequests,redisRequests:probe.redisRequests,commandsUpperBound:probe.commandsUpperBound,outboundPayloadBytes:probe.outboundPayloadBytes,inboundPayloadBytes:probe.inboundPayloadBytes,activeExecutionMs:12000,ledgerRequests:0,facilitatorRequests:0,retries:0,attempts:[{phase:'readonly-counter-probe',requestId:probe.requestId,deploymentId:probe.deploymentId,status:'CONFIRMED'}],phases:[]};}
 assert.equal(report.planId,packet.planId);assert.notEqual(report.status,'UNCERTAIN','STOPPED_DO_NOT_RETRY');
+report.workspaceStoredBytesUpperBound??=0;
 const start=Date.now(),baseMs=report.activeExecutionMs;
 async function persist(){report.activeExecutionMs=baseMs+Date.now()-start;await writeFile(reportPath,JSON.stringify(report,null,2)+'\n');}
 const quoted=v=>'"'+v.replaceAll('\\','\\\\').replaceAll('"','\\"').replaceAll('\r','\\r').replaceAll('\n','\\n')+'"';
@@ -36,6 +37,7 @@ async function appFetch(input,init={}){
  attempt.httpStatus=Number(block[1]);attempt.requestId=responseHeaders.get('x-bazaar-acceptance-request-id');
  const values={redisRequests:'x-bazaar-redis-requests',commandsUpperBound:'x-bazaar-redis-commands-upper-bound',outboundPayloadBytes:'x-bazaar-redis-outbound-payload-bytes',inboundPayloadBytes:'x-bazaar-redis-inbound-payload-bytes'};
  for(const [name,header]of Object.entries(values)){const value=responseHeaders.get(header);if(!/^\d+$/.test(value??'')){report.status='UNCERTAIN';await persist();throw Error('METER_MISSING_STOP');}attempt[name]=Number(value);report[name]+=Number(value);}
+ const stored=responseHeaders.get('x-bazaar-workspace-stored-bytes-upper-bound');if(!/^\d+$/.test(stored??'')){report.status='UNCERTAIN';await persist();throw Error('STORAGE_METER_MISSING_STOP');}report.workspaceStoredBytesUpperBound=Math.max(report.workspaceStoredBytesUpperBound,Number(stored));assert.ok(report.workspaceStoredBytesUpperBound<=manifest.limits.newStoredBytes);
  if(responseHeaders.get('x-bazaar-redis-uncertain')!=='false'){attempt.status='UNCERTAIN';report.status='UNCERTAIN';await persist();throw Error('REDIS_OUTCOME_UNCONFIRMED_STOP');}
  for(const [name,limit]of [['redisRequests','redisRestExchanges'],['commandsUpperBound','redisCommandsUpperBound'],['outboundPayloadBytes','outboundPayloadBytes'],['inboundPayloadBytes','inboundPayloadBytes']])assert.ok(report[name]<=manifest.limits[limit]);
  attempt.status='CONFIRMED';await persist();

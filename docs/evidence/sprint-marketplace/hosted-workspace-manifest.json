@@ -2,7 +2,7 @@
   "version": 1,
   "planId": "1e98ed37-df4f-43af-9fb0-8135e5b07293",
   "phase": "hosted-workspace-before-effects",
-  "sourceSha": "31079bf3ea3eca7a35909c7d6a9f146e8a113abb",
+  "sourceSha": "4d73af3b2160e641f3c4c385c342d394babcc608",
   "projectId": "prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3",
   "teamId": "team_XjolcoWJ9V9yamVnCdpC7EMY",
   "redis": {
@@ -159,7 +159,8 @@
     "privatePayloadsBound": true,
     "countersNativeVerified": true,
     "freeMarginRefreshed": true,
-    "canExecute": false
+    "canExecute": true,
+    "countersHostedReadVerified": true
   },
   "stop": [
     "Any lost acknowledgement or unknown transport outcome; preserve identifiers and reconcile by explicit reads only.",
@@ -174,5 +175,5 @@
     "appRequests": 16,
     "outboundPayloadBytes": 1048576
   },
-  "hostedReadOnlyProbe": "PENDING; canExecute remains false until one real read confirms the server meter"
+  "hostedReadOnlyProbe": "PASS: one real Redis EVAL read; 4 command upper bound; 451 outbound and 21 inbound JSON bytes; headers and Vercel metadata log agree; writes=0"
 }

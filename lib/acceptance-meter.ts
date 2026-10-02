@@ -2,7 +2,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import type { Redis } from '@upstash/redis';
 
-type Counts = { redis: number; commandsUpperBound: number; outboundPayloadBytes: number; inboundPayloadBytes: number; uncertain: boolean };
+type Counts = { redis: number; commandsUpperBound: number; outboundPayloadBytes: number; inboundPayloadBytes: number; workspaceStoredBytesUpperBound: number; uncertain: boolean };
 const scope = new AsyncLocalStorage<Counts>();
 const enabled = () => process.env.BAZAAR_ACCEPTANCE_METER === 'true';
 const limits = { redis: 32, commandsUpperBound: 224, outboundPayloadBytes: 4 * 1048576, inboundPayloadBytes: 8 * 1048576 };
@@ -11,7 +11,7 @@ const limits = { redis: 32, commandsUpperBound: 224, outboundPayloadBytes: 4 * 1
 export function measuredHandler<A extends unknown[]>(handler: (...args: A) => Response | Promise<Response>) {
   return async (...args: A): Promise<Response> => {
     if (!enabled() || scope.getStore()) return handler(...args);
-    const counts: Counts = { redis: 0, commandsUpperBound: 0, outboundPayloadBytes: 0, inboundPayloadBytes: 0, uncertain: false };
+    const counts: Counts = { redis: 0, commandsUpperBound: 0, outboundPayloadBytes: 0, inboundPayloadBytes: 0, workspaceStoredBytesUpperBound: 0, uncertain: false };
     return scope.run(counts, async () => {
       const response = await handler(...args);
       const requestId = randomUUID();
@@ -22,6 +22,7 @@ export function measuredHandler<A extends unknown[]>(handler: (...args: A) => Re
       response.headers.set('X-Bazaar-Redis-Commands-Upper-Bound', String(counts.commandsUpperBound));
       response.headers.set('X-Bazaar-Redis-Outbound-Payload-Bytes', String(counts.outboundPayloadBytes));
       response.headers.set('X-Bazaar-Redis-Inbound-Payload-Bytes', String(counts.inboundPayloadBytes));
+      response.headers.set('X-Bazaar-Workspace-Stored-Bytes-Upper-Bound', String(counts.workspaceStoredBytesUpperBound));
       response.headers.set('X-Bazaar-Redis-Uncertain', String(counts.uncertain));
       return response;
     });
@@ -49,6 +50,15 @@ export function meteredRedis(redis: Redis): Redis {
       // These reviewed scripts contain no loops; count EVAL plus every possible redis.call.
       if (/\b(for|while|repeat)\b/.test(script) || !/redis\.call/.test(script)) throw Error('ACCEPTANCE_SCRIPT_UNBOUNDED');
       commandBound = 1 + (script.match(/redis\.call\s*\(/g)?.length ?? 0);
+      if (keys.length === 3 && script.includes("'workspace-v1'") && keys.every(key => typeof key === 'string' && key.startsWith(prefix! + ':'))) {
+        const registryRaw = body[3 + Number(body[2]) + 3];
+        if (typeof registryRaw !== 'string') throw Error('ACCEPTANCE_REGISTRY_REQUIRED');
+        const registry = JSON.parse(registryRaw) as { workspaces: { documentBytes: number }[] };
+        if (!Array.isArray(registry.workspaces) || registry.workspaces.some(owner => !Number.isSafeInteger(owner.documentBytes) || owner.documentBytes < 0)) throw Error('ACCEPTANCE_STORAGE_BOUND_REQUIRED');
+        const stored = Buffer.byteLength(registryRaw) + registry.workspaces.reduce((sum, owner) => sum + owner.documentBytes, 0) + Buffer.byteLength('workspace-v1');
+        if (stored > 49164) throw Error('ACCEPTANCE_STORAGE_BUDGET');
+        counts.workspaceStoredBytesUpperBound = Math.max(counts.workspaceStoredBytesUpperBound, stored);
+      }
     } else if (['get', 'mget', 'smembers'].includes(command)) {
       keys = body.slice(1); commandBound = 1;
     } else throw Error('ACCEPTANCE_COMMAND_DENIED');
