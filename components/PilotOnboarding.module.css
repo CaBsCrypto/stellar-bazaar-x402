@@ -1,0 +1,23 @@
+.page { max-width: 52rem; margin: 0 auto; padding: 1.5rem; color: var(--ink); font-family: var(--font-ui); line-height: 1.6; overflow-wrap: anywhere; }
+.nav { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; margin-bottom: 3rem; }
+.page a { color: var(--violet); text-decoration: underline; text-underline-offset: .2em; }
+.page h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.5rem); line-height: 1.15; max-width: 16ch; margin: .5rem 0 1.5rem; }
+.caption { color: var(--mint); font-weight: 700; }
+.page header p { max-width: 60ch; }
+.flow { margin-top: 2.5rem; padding-top: 1rem; border-top: 3px solid var(--violet); }
+.flow h3 { margin-top: 2rem; }
+.page button, .open { display: inline-block; padding: .8rem 1.2rem; font: inherit; font-weight: 600; border: 1px solid var(--violet); border-radius: var(--radius-sm); background: var(--violet); color: white; cursor: pointer; max-width: 100%; white-space: normal; }
+.page .open { color: white; }
+.page button:disabled { opacity: .55; cursor: default; }
+.page :is(button, a, input, textarea):focus-visible { outline: 3px solid var(--blue); outline-offset: 4px; }
+.page label { display: block; }
+.page textarea { width: 100%; box-sizing: border-box; resize: vertical; font: inherit; color: var(--ink); background: white; border: 1px solid var(--muted); padding: .75rem; }
+.page input[type=file] { display: block; width: 100%; max-width: 100%; font: inherit; margin-top: .5rem; }
+.import, .check { margin-top: 1.5rem; }
+.page .check { display: flex; align-items: baseline; gap: .6rem; }
+.check input { flex-shrink: 0; }
+.ready { margin-top: 2rem; padding: 1rem; background: var(--surface-mint); border-left: 3px solid var(--mint); }
+.page .lock { background: transparent; color: var(--ink); border-color: var(--muted); margin-top: 2rem; }
+.notice { min-height: 1.6em; font-weight: 600; }
+.page footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); }
+@media (max-width: 420px) { .page { padding: 1rem; } .page button, .open { width: 100%; box-sizing: border-box; } }

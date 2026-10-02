@@ -4,4 +4,14 @@ node_modules
 target
 contracts/**/target
 *.log
-.env*.local
+.env*
+docs
+scripts
+examples
+contracts
+.github
+AGENTS.md
+CLAUDE.md
+README*.md
+WEBMCP_SUBMISSION.md
+*.tsbuildinfo

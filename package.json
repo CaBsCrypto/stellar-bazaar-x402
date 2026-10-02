@@ -4,8 +4,13 @@
   "private": true,
   "license": "Apache-2.0",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "test:workspace:core": "node scripts/test-open-workspace-core.mjs",
+    "test:workspace:admission": "node --experimental-strip-types scripts/test-workspace-admission.mjs",
+    "test:workspace:global-quota": "node --experimental-strip-types scripts/test-workspace-global-quota.mjs",
     "test:workspace:chat": "node scripts/test-workspace-chat.mjs && node scripts/test-private-workspace-chat-ui.mjs",
     "test:workspace:independent": "node scripts/test-open-bazaar-independent.mjs",
     "test:identity:pilot": "node scripts/test-history-rotation.mjs && node scripts/test-history-identity-pilot.mjs && node scripts/test-private-history-lifecycle.mjs",

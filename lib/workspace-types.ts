@@ -17,6 +17,7 @@ export type WorkspaceTask = { taskId: string; conversationId: string; humanMessa
 export class WorkspaceError extends Error {
   readonly code: string;
   readonly status: number;
-  constructor(code: string, status = 503) { super(code); this.code = code; this.status = status; }
+  readonly retryAfter?: number;
+  constructor(code: string, status = 503, retryAfter?: number) { super(code); this.code = code; this.status = status; this.retryAfter = retryAfter; }
 }
 export const WORKSPACE_LIMITS = Object.freeze({ dailyCreations: 50, hourlyCreationsPerIp: 50, owners: 100, ownerBytes: 128 * 1024, globalBytes: 12 * 1024 * 1024, registryBytes: 1024 * 1024, requestsPerMinute: 120 });

@@ -19,7 +19,8 @@ function failure(error: unknown) {
 function allowedRequest(request: Request): boolean {
   const url = new URL(request.url);
   const origin = request.headers.get("origin");
-  return (!origin || origin === workspaceRequestOrigin(request)) && [...url.searchParams.keys()].every((key) => key === "limit");
+  const expectedOrigin = workspaceRequestOrigin(request);
+  return (!origin || origin === expectedOrigin) && [...url.searchParams.keys()].every((key) => key === "limit");
 }
 
 /** Dependency injection is explicit; deployed routes always use durable configured storage. */

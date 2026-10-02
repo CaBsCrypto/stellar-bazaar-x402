@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { authenticateHistory, HistoryAuthError, type HistoryPrincipal } from "./operation-history-auth.ts";
 import { configuredWorkspaceStore, assertWorkspaceEnabled, openWorkspacesEnabled } from "./workspace-store.ts";
 import { WorkspaceError, type WorkspacePrincipal, type WorkspaceRole } from "./workspace-types.ts";
+import { workspaceGlobalRequestLimits } from "./workspace-admission.ts";
 if (typeof window !== "undefined") throw new Error("Workspace authorization is server-only");
 export function workspaceBearerHash(authorization: string | null) {
   const match = /^Bearer ([a-zA-Z0-9_-]{32,128})$/.exec(authorization ?? "");
@@ -10,6 +11,7 @@ export function workspaceBearerHash(authorization: string | null) {
   return createHash("sha256").update(match[1]).digest("hex");
 }
 export async function requireWorkspacePrincipal(authorization: string | null, role?: WorkspaceRole): Promise<WorkspacePrincipal> {
+  workspaceGlobalRequestLimits();
   assertWorkspaceEnabled(); const principal = await configuredWorkspaceStore().resolveHash(workspaceBearerHash(authorization));
   if (role ? principal.role !== role : principal.role === "bootstrap") throw new WorkspaceError("FORBIDDEN", 403);
   return principal;

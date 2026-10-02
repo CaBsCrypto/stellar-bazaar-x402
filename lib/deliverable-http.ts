@@ -71,7 +71,8 @@ export function createDeliverableHandlers(
     try {
       const url = new URL(request.url),
         origin = request.headers.get("origin");
-      if (origin && origin !== workspaceRequestOrigin(request))
+      const expectedOrigin = workspaceRequestOrigin(request);
+      if (origin && origin !== expectedOrigin)
         throw new DeliverableError("INVALID_ORIGIN", 400);
       const principal: ResolvedHistoryPrincipal = await auth(
         request.headers.get("authorization"),

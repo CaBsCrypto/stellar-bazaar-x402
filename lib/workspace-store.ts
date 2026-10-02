@@ -9,13 +9,14 @@ import { activitySchema, type ActivityInput, type ActivityEvent } from "./activi
 import { canonicalOperationJson, parseOperationHistoryInput, operationHistoryInputSchema, type OperationHistoryInput, type OperationHistoryRecord } from "./operation-history.ts";
 import { WORKSPACE_LIMITS, WorkspaceError, createWorkspaceSchema, workspaceAccessSchema, workspaceHashSchema, workspaceIdentifierSchema, workspaceTextSchema, type WorkspacePrincipal, type WorkspaceRole, type WorkspaceConversation, type WorkspaceTask } from "./workspace-types.ts";
 import { legacyHistoryReservations } from "./operation-history-auth.ts";
+import { workspaceGlobalRequestLimits } from "./workspace-admission.ts";
 
 if (typeof window !== "undefined") throw new Error("Workspace storage is server-only");
 const fileDiagnostics = channel("bazaar.workspace.file");
 const uuid = z.string().uuid(), iso = z.string().datetime();
 const accessIntentSchema = z.object({ expectedGeneration: z.number().int().min(1), digest: workspaceHashSchema, generation: z.number().int().min(2), revoked: z.boolean() }).strict();
 const metaSchema = z.object({ creationId: uuid, workspaceId: uuid, ownerId: z.string().regex(/^ow_[a-f0-9]{32}$/), agentId: z.string().regex(/^agent_[a-f0-9]{32}$/), bootstrapHash: workspaceHashSchema, initialHumanHash: workspaceHashSchema, initialAgentHash: workspaceHashSchema, humanHash: workspaceHashSchema.nullable(), agentHash: workspaceHashSchema.nullable(), retiredHashes: z.array(workspaceHashSchema).max(4096), accessIntents: z.array(accessIntentSchema).max(4094), generation: z.number().int().min(1), revoked: z.boolean(), createdAt: iso, documentRevision: uuid, documentBytes: z.number().int().min(0).max(WORKSPACE_LIMITS.ownerBytes) }).strict();
-const registrySchema = z.object({ version: z.literal(1), revision: uuid, workspaces: z.array(metaSchema).max(WORKSPACE_LIMITS.owners), creationWindows: z.array(z.object({ key: z.string().max(100), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()).max(102), requestWindows: z.array(z.object({ ownerId: z.string(), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()).max(100) }).strict();
+const registrySchema = z.object({ version: z.literal(1), revision: uuid, workspaces: z.array(metaSchema).max(WORKSPACE_LIMITS.owners), creationWindows: z.array(z.object({ key: z.string().max(100), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()).max(102), requestWindows: z.array(z.object({ ownerId: z.string(), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()).max(100), globalRequestQuota: z.object({ minute: z.number().int().min(0), minuteCount: z.number().int().min(0).max(1000), day: z.number().int().min(0), dayCount: z.number().int().min(0).max(10000) }).strict().refine(q => q.day === Math.floor(q.minute / 1440) && q.dayCount >= q.minuteCount).optional() }).strict();
 const messageSchema = z.object({ messageId: workspaceIdentifierSchema, conversationId: workspaceIdentifierSchema, taskId: workspaceIdentifierSchema, actor: z.enum(["human", "agent"]), text: workspaceTextSchema, recordedAt: iso, operationId: workspaceIdentifierSchema.optional() }).strict();
 const conversationSchema = z.object({ conversationId: workspaceIdentifierSchema, title: z.string().min(1).max(160), createdAt: iso, messages: z.array(messageSchema).max(500) }).strict();
 const taskSchema = z.object({ taskId: workspaceIdentifierSchema, conversationId: workspaceIdentifierSchema, humanMessageId: workspaceIdentifierSchema, text: workspaceTextSchema, status: z.enum(["pending", "claimed", "responded", "uncertain"]), createdAt: iso, attemptId: workspaceIdentifierSchema.optional(), agentId: z.string().optional(), responseMessageId: workspaceIdentifierSchema.optional(), operationId: workspaceIdentifierSchema.optional() }).strict();
@@ -44,6 +45,19 @@ const bytes = (v: string) => Buffer.byteLength(v, "utf8");
 const emptyRegistry = (): Registry => ({ version: 1, revision: randomUUID(), workspaces: [], creationWindows: [], requestWindows: [] });
 const emptyDocument = (ownerId: string): Document => ({ version: 1, ownerId, revision: randomUUID(), conversations: [], tasks: [], operations: [], events: [] });
 const unavailable = (phase = "store-unavailable") => { fileDiagnostics.publish({ phase, code: "UNAVAILABLE" }); return new WorkspaceError("WORKSPACE_UNAVAILABLE"); };
+function consumeGlobalQuota(registry: Registry, now: number, limits: ReturnType<typeof workspaceGlobalRequestLimits>) {
+  if (!limits) return;
+  const minute = Math.floor(now / 60000), day = Math.floor(now / 86400000);
+  const quota = registry.globalRequestQuota ?? { minute, minuteCount: 0, day, dayCount: 0 };
+  if (quota.minute > minute || quota.day > day) throw unavailable("quota-clock-regression");
+  if (quota.minute < minute) { quota.minute = minute; quota.minuteCount = 0; }
+  if (quota.day < day) { quota.day = day; quota.dayCount = 0; }
+  if (quota.minuteCount >= limits.minute || quota.dayCount >= limits.day) {
+    const resetAt = Math.max(quota.minuteCount >= limits.minute ? (minute + 1) * 60000 : 0, quota.dayCount >= limits.day ? (day + 1) * 86400000 : 0);
+    throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429, Math.max(1, Math.ceil((resetAt - now) / 1000)));
+  }
+  quota.minuteCount++; quota.dayCount++; registry.globalRequestQuota = quota;
+}
 function validateRegistry(raw: string, marker: string, legacy: WorkspaceLegacyRegistry): Registry {
   if (!raw) { if (marker) throw unavailable("registry-missing"); return emptyRegistry(); }
   if (marker !== "workspace-v1" || bytes(raw) > WORKSPACE_LIMITS.registryBytes) throw unavailable("registry-envelope");
@@ -103,7 +117,7 @@ type Snapshot = { registryRaw: string; documentRaw: string; marker: string };
 interface Backend { read(ownerId?: string): Promise<Snapshot>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string) => Promise<void>) => Promise<T>): Promise<T> }
 // Only this error proves the Lua comparison rejected a write before any effect.
 class RedisCompareConflict extends WorkspaceError { constructor() { super("WORKSPACE_CONFLICT", 409); } }
-function validatePrefix(prefix: string) { if (!/^bazaar-workspace:(local-test|preview|production|isolated-[a-f0-9]{32})$/.test(prefix)) throw unavailable(); return prefix; }
+function validatePrefix(prefix: string) { if (!/^bazaar-workspace:(local-test|preview|production|pilot-[a-f0-9]{32}|isolated-[a-f0-9]{32})$/.test(prefix)) throw unavailable(); return prefix; }
 function redisBackend(redis: WorkspaceRedis, prefix: string, allowedOwners?: readonly string[]): Backend {
   validatePrefix(prefix);
   const tag = prefix.split(":")[1];
@@ -206,6 +220,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       throw new WorkspaceError("UNAUTHORIZED", 401);
     }); },
     async createWorkspace(input: z.infer<typeof createWorkspaceSchema>, bootstrapHash: string, trustedIp = "untrusted") { return safe(async () => {
+      const globalLimits = workspaceGlobalRequestLimits();
       createWorkspaceSchema.parse(input); workspaceHashSchema.parse(bootstrapHash);
       const frozen = frozenOwners?.find(owner => owner.creationId === input.creationId);
       // The server freezes ownership and the whole creation intent before any
@@ -235,8 +250,15 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         const hashes = [bootstrapHash, input.humanAccessHash, input.agentAccessHash];
         if (new Set(hashes).size !== 3 || hashes.some(h => legacy.hashes.includes(h) || registry.workspaces.some(m => [m.bootstrapHash, m.initialHumanHash, m.initialAgentHash, m.humanHash, m.agentHash, ...m.retiredHashes].includes(h)))) throw new WorkspaceError("WORKSPACE_COLLISION", 409);
         if (legacy.ownerIds.includes(ownerId) || s.documentRaw) throw new WorkspaceError("WORKSPACE_COLLISION", 409);
-        if (registry.workspaces.length >= WORKSPACE_LIMITS.owners) throw new WorkspaceError("WORKSPACE_CAPACITY", 409);
-        const now = Date.now(); registry.creationWindows = registry.creationWindows.filter(w => w.until > now);
+        // Retained/revoked records still occupy a pilot slot. Changing the
+        // invitation list must not expand the pilot's lifetime owner capacity.
+        const ownerLimit = process.env.BAZAAR_WORKSPACE_ADMISSION === "invite-only" ? 5 : WORKSPACE_LIMITS.owners;
+        if (registry.workspaces.length >= ownerLimit) throw new WorkspaceError("WORKSPACE_CAPACITY", 409);
+        const now = Date.now(); consumeGlobalQuota(registry, now, globalLimits); registry.creationWindows = registry.creationWindows.filter(w => w.until > now);
+        if (globalLimits) {
+          registry.requestWindows = registry.requestWindows.filter(w => w.until > now);
+          registry.requestWindows.push({ ownerId, count: 1, until: now + 60000 });
+        }
         const windows = [{ key: "global:" + Math.floor(now / 86400000), until: (Math.floor(now / 86400000) + 1) * 86400000, max: WORKSPACE_LIMITS.dailyCreations }, { key: "ip:" + digest(trustedIp) + ":" + Math.floor(now / 3600000), until: (Math.floor(now / 3600000) + 1) * 3600000, max: WORKSPACE_LIMITS.hourlyCreationsPerIp }];
         for (const w of windows) { let old = registry.creationWindows.find(v => v.key === w.key); if (old && old.count >= w.max) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429); if (!old) { old = { key: w.key, count: 0, until: w.until }; registry.creationWindows.push(old); } old.count++; }
         const d = emptyDocument(ownerId), raw = JSON.stringify(d);
@@ -282,6 +304,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       meta.generation++; meta.accessIntents.push({ expectedGeneration: input.expectedGeneration, digest: intentDigest, generation: meta.generation, revoked: meta.revoked }); registry.revision = randomUUID(); const reg = JSON.stringify(registry); if (bytes(reg) > WORKSPACE_LIMITS.registryBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, ""); return { record: receipt(meta), current: { generation: meta.generation, revoked: meta.revoked }, created: true };
     }); }); },
     async consumeRequest(ownerId: string, generation: number, bootstrapHash?: string) { return safe(async () => {
+      const globalLimits = workspaceGlobalRequestLimits();
       // Only the request counter can retry, and only after Lua's definite CAS0.
       // Every attempt reads and validates current identity, document and quota.
       for (let attempt = 0; attempt < 8; attempt++) {
@@ -291,10 +314,12 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
           const administration = bootstrapHash !== undefined && bootstrapHash === meta.bootstrapHash;
           if ((bootstrapHash !== undefined && !administration) || (!administration && (meta.generation !== generation || meta.revoked))) throw new WorkspaceError("UNAUTHORIZED", 401);
           validateDocument(s.documentRaw, meta);
-          const now = Date.now(); registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
+          const now = Date.now();
+          consumeGlobalQuota(registry, now, globalLimits);
+          registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
           if (!w) { w = { ownerId, count: 0, until: now + 60000 }; registry.requestWindows.push(w); }
           if (w.count >= WORKSPACE_LIMITS.requestsPerMinute) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429);
-          w.count++; registry.revision = randomUUID(); await commit(JSON.stringify(registry), "");
+          w.count++; registry.revision = randomUUID(); const reg = JSON.stringify(registry); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, "");
         }); return; }
         catch (e) { if (!(e instanceof RedisCompareConflict)) throw e; }
       }

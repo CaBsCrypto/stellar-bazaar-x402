@@ -50,7 +50,8 @@ export function createActivityHandlers(
     async GET(request: Request) {
       try {
         const url = new URL(request.url), origin = request.headers.get("origin");
-        if (origin && origin !== workspaceRequestOrigin(request)) return fail("INVALID_REQUEST", 400);
+        const expectedOrigin = workspaceRequestOrigin(request);
+        if (origin && origin !== expectedOrigin) return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await auth(request.headers.get("authorization"));
         if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
         const workspaceStore = principal.workspace ? configuredWorkspaceStore().forPrincipal(principal.workspace) : undefined;
@@ -261,7 +262,8 @@ export function createActivityHandlers(
       try {
         const url = new URL(request.url),
           origin = request.headers.get("origin");
-        if ((origin && origin !== workspaceRequestOrigin(request)) || url.search)
+        const expectedOrigin = workspaceRequestOrigin(request);
+        if ((origin && origin !== expectedOrigin) || url.search)
           return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await auth(request.headers.get("authorization"), true);
         if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }

@@ -5,13 +5,14 @@ import { providerMcpContext } from "@/lib/mcp-provider-context";
 import { readBoundedSubmission } from "@/lib/provider-submission-http";
 import { MCP_MODE, MCP_TOOLS, MCP_VERSION, MCP_WRITES } from "@/lib/mcp-tool-contract";
 import { workspaceMcpContext } from "@/lib/mcp-workspace-context";
+import { workspaceHeaders } from "@/lib/workspace-http";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
   try { await readBoundedSubmission(request.clone(), 64 * 1024); }
-  catch (error) { return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Invalid or oversized MCP request" } }, { status: error instanceof Error && error.message === "PAYLOAD_TOO_LARGE" ? 413 : 400 }); }
+  catch (error) { return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Invalid or oversized MCP request" } }, { status: error instanceof Error && error.message === "PAYLOAD_TOO_LARGE" ? 413 : 400, headers: workspaceHeaders }); }
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
@@ -30,7 +31,7 @@ export async function POST(request: Request) {
   }, providerMcpContext(request), workspaceMcpContext(request));
   await server.connect(transport);
   const response = await transport.handleRequest(request);
-  response.headers.set("Cache-Control", "private, no-store");
+  for (const [name, value] of Object.entries(workspaceHeaders)) response.headers.set(name, value);
   return response;
 }
 
