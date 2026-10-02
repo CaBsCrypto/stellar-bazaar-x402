@@ -1,0 +1,35 @@
+﻿{
+  "status": "ok",
+  "deployment": {
+    "id": "dpl_wASY6jpNsQ2zD5yCj7swvWYsz42U",
+    "url": "https://stellar-bazaar-x402-9495o7673-cabscryptocontacto-6028s-projects.vercel.app",
+    "productionUrl": null,
+    "inspectorUrl": "https://vercel.com/cabscryptocontacto-6028s-projects/stellar-bazaar-x402/wASY6jpNsQ2zD5yCj7swvWYsz42U",
+    "readyState": "INITIALIZING",
+    "target": null,
+    "deploymentApiUrl": "https://api.vercel.com/v13/deployments/dpl_wASY6jpNsQ2zD5yCj7swvWYsz42U",
+    "buildMachine": {
+      "machine": "standard",
+      "selectionType": "elastic",
+      "selectionSource": "elastic-algorithm"
+    },
+    "deploymentProtection": [
+      "vercel_authentication"
+    ]
+  },
+  "message": "Deployment stellar-bazaar-x402-9495o7673-cabscryptocontacto-6028s-projects.vercel.app ready.",
+  "next": [
+    {
+      "command": "vercel curl https://stellar-bazaar-x402-9495o7673-cabscryptocontacto-6028s-projects.vercel.app",
+      "when": "Verify deployment, including when Deployment Protection is enabled"
+    },
+    {
+      "command": "vercel inspect stellar-bazaar-x402-9495o7673-cabscryptocontacto-6028s-projects.vercel.app --scope cabscryptocontacto-6028s-projects --global-config C:\\Users\\MGC\\AppData\\Local\\Temp\\bazaar-vercel-auth-preview",
+      "when": "Inspect deployment"
+    },
+    {
+      "command": "vercel deploy --prod --scope cabscryptocontacto-6028s-projects --global-config C:\\Users\\MGC\\AppData\\Local\\Temp\\bazaar-vercel-auth-preview",
+      "when": "Promote to production"
+    }
+  ]
+}

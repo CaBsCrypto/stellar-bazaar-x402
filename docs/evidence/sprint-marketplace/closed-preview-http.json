@@ -1,0 +1,57 @@
+{
+  "status": "PASS",
+  "deploymentId": "dpl_wASY6jpNsQ2zD5yCj7swvWYsz42U",
+  "url": "https://stellar-bazaar-x402-9495o7673-cabscryptocontacto-6028s-projects.vercel.app",
+  "checks": [
+    {
+      "path": "/pilot",
+      "method": "GET",
+      "status": 200,
+      "bytes": 10338,
+      "headers": [
+        "Cache-Control: private, no-cache, no-store, max-age=0, must-revalidate",
+        "Referrer-Policy: no-referrer",
+        "X-Content-Type-Options: nosniff"
+      ]
+    },
+    {
+      "path": "/api/market/orders",
+      "method": "POST",
+      "status": 404,
+      "bytes": 41,
+      "headers": [
+        "Cache-Control: private, no-store",
+        "Referrer-Policy: no-referrer",
+        "X-Content-Type-Options: nosniff"
+      ]
+    },
+    {
+      "path": "/api/workspaces",
+      "method": "POST",
+      "status": 503,
+      "bytes": 42,
+      "headers": [
+        "Cache-Control: private, no-store",
+        "Referrer-Policy: no-referrer",
+        "X-Content-Type-Options: nosniff"
+      ]
+    },
+    {
+      "path": "/",
+      "method": "GET",
+      "status": 307,
+      "bytes": 15,
+      "headers": [
+        "Cache-Control: private, no-store",
+        "Location: /pilot",
+        "Referrer-Policy: no-referrer",
+        "X-Content-Type-Options: nosniff"
+      ]
+    }
+  ],
+  "httpRequests": 4,
+  "retries": 0,
+  "redisRequests": 0,
+  "payments": 0,
+  "limitation": "Closed HTTPS exposure checks only; no private workspace, MCP seller, Redis or ledger acceptance."
+}

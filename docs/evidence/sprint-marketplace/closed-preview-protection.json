@@ -1,0 +1,9 @@
+{
+  "deploymentId": "dpl_wASY6jpNsQ2zD5yCj7swvWYsz42U",
+  "unauthenticatedStatus": 302,
+  "redirectHost": "vercel.com",
+  "redirectPath": "/sso-api",
+  "credentialsSent": false,
+  "protectionChanged": false,
+  "confirmed": true
+}

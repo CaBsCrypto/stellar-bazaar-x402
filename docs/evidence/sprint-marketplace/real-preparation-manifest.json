@@ -1,0 +1,106 @@
+{
+  "version": 1,
+  "id": "7e7653bf-772c-4bbb-8516-1ba04b59a2b1",
+  "phase": "REAL-preparation-NOT-EXECUTED",
+  "sourceSha": "a3f1d847b0d69f8e193225cb4887e0945219dbf6",
+  "closedDeployment": "dpl_wASY6jpNsQ2zD5yCj7swvWYsz42U",
+  "projectId": "prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3",
+  "teamId": "team_XjolcoWJ9V9yamVnCdpC7EMY",
+  "redis": {
+    "databaseId": "1f90faef-48d7-49b3-916a-c378e13a8c23",
+    "url": "https://smooth-dory-323957.upstash.io",
+    "plan": "Free",
+    "credentialScope": "whole database; prefixes are logical isolation only",
+    "observedRoundedCommands": "2.9k / 500k",
+    "observedRoundedStorage": "6 KB / 256 MB",
+    "observedAt": "2026-10-02",
+    "mustRefreshBeforeEffects": true
+  },
+  "config": {
+    "workspacePrefix": "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "marketPrefix": "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "reviewPrefix": "bazaar-review:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "dynamicPrefix": "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0:catalog",
+    "admission": "invite-only",
+    "ownerLifetimeLimit": 5,
+    "syntheticParticipants": 2,
+    "invitedDevelopers": 3,
+    "requestsPerMinute": 120,
+    "requestsPerDay": 1000,
+    "transportRetries": 0,
+    "facilitatorRequests": 0
+  },
+  "keys": {
+    "written": [
+      "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:registry",
+      "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:initialized",
+      "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0:state",
+      "bazaar-review:pilot-be8432d7255e0a3b0dca564d8aa769a0:state",
+      "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0:catalog:index",
+      "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0:catalog:card:market-text-acceptance-seller"
+    ],
+    "serverAssignedOwnerKeys": {
+      "pattern": "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:owner:ow_<32hex>",
+      "maximumSynthetic": 2,
+      "maximumLifetime": 5,
+      "bindFromAuthenticatedReceiptBeforeOwnerWrites": true
+    },
+    "readOnlySentinel": "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:owner:none",
+    "historicalKeys": "DENIED; no migration, overwrites or deletes"
+  },
+  "payloads": {
+    "creation": "UUID + bootstrap bearer; human/agent SHA256 hashes. Exact private packets not prepared yet.",
+    "service": "market-text-acceptance-seller; existing HTTPS endpoint; new owned text/plain contract; seller destination/payer and proof still unresolved",
+    "order": "saved UUID + cardHash + payer + scalar input, immutable before wallet signing",
+    "delivery": "saved attemptId, text <=2000 chars, SHA256, same operationId",
+    "pause": {
+      "action": "pause"
+    },
+    "exactPayloadHashes": "PENDING; do not execute from this preparation"
+  },
+  "measuredLocal": {
+    "appRequests": 27,
+    "redisRestExchanges": 115,
+    "redisCommands": 371,
+    "ledgerRequests": 3,
+    "externalRequests": 0,
+    "buildId": "f835l-qTCKIp6mcpzEDe7",
+    "limitations": [
+      "seeded protocol double only",
+      "native HTTP signed transaction with local Horizon double; no funds moved",
+      "configured Redis SDK redirected to protocol double; no real durability proof"
+    ]
+  },
+  "proposedRealLimits": {
+    "appRequests": 128,
+    "redisRestExchanges": 1024,
+    "redisCommands": 4096,
+    "ledgerReads": 12,
+    "testnetSubmissions": 2,
+    "totalTransferXlm": "0.02",
+    "maxFeeStroopsPerTransaction": 1000,
+    "realMoney": 0,
+    "outboundPayloadBytes": 16777216,
+    "inboundPayloadBytes": 33554432,
+    "newStoredBytes": 1048576,
+    "executionSeconds": 300,
+    "automaticRetries": 0,
+    "facilitatorRequests": 0
+  },
+  "readiness": {
+    "credentialsConfigured": false,
+    "privatePayloadsBound": false,
+    "realCountersReady": false,
+    "endpointProofReady": false,
+    "sellerAgentConnected": false,
+    "syntheticWalletsReady": false,
+    "canExecute": false
+  },
+  "stop": [
+    "Any lost acknowledgement or unknown transport outcome; preserve identifiers and reconcile by explicit reads only.",
+    "Measured limit reached or missing counter.",
+    "Wrong namespace/recipient/network/card version/price/hash.",
+    "No current Free margin or bound payload."
+  ],
+  "openingGate": "Only after hosted complete acceptance and reversal; retain history, deliveries and revocations; no invitations sent."
+}
