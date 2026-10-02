@@ -1,0 +1,31 @@
+{
+  "id": "dpl_3uJrUQ1YAzn1S65RGAVWHGFAz6Ai",
+  "name": "stellar-bazaar-x402",
+  "url": "stellar-bazaar-x402-qdgmh7ikh-cabscryptocontacto-6028s-projects.vercel.app",
+  "target": "preview",
+  "readyState": "BLOCKED",
+  "readyStateReason": "The deployment was blocked because the commit author doesn’t have permission to create deployments for this project.",
+  "createdAt": 1790917858056,
+  "duration": {},
+  "buildMachine": {
+    "machine": "standard",
+    "selectionType": "elastic",
+    "selectionSource": "elastic-algorithm"
+  },
+  "builds": [
+    {
+      "id": "bld_byc73q9zp",
+      "deploymentId": "dpl_3uJrUQ1YAzn1S65RGAVWHGFAz6Ai",
+      "entrypoint": ".",
+      "readyState": "READY",
+      "readyStateAt": 1790917857730,
+      "createdAt": 1790917857730,
+      "createdIn": "sfo1",
+      "use": "@vercel/vc-build",
+      "config": {},
+      "output": [],
+      "fingerprint": null
+    }
+  ],
+  "contextName": "cabscryptocontacto-6028s-projects"
+}

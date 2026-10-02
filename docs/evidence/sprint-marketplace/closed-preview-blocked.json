@@ -1,0 +1,12 @@
+{
+  "deploymentId": "dpl_3uJrUQ1YAzn1S65RGAVWHGFAz6Ai",
+  "state": "BLOCKED",
+  "reason": "Commit author permission",
+  "effects": {
+    "redisRequests": 0,
+    "buildExecuted": false,
+    "productionChanged": false,
+    "payments": 0
+  },
+  "correction": "Use author/committer identity of verified prior Ready source f4b4691"
+}
