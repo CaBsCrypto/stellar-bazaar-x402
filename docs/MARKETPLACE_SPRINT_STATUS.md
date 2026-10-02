@@ -114,3 +114,14 @@ privado. Leer la respuesta y verificar nuevas altas/compras rechazadas y la mism
 entrega legible antes de declarar reversión. Respuesta perdida exige consulta de
 estado y comprobación; no borrar registros. Variables del último despliegue por
 sí solas no cierran instancias antiguas.
+
+## Configuración de Preview — 2026-10-02
+
+Autorización recibida para las credenciales de Redis Free en Preview. Se guardaron como Secret las cuatro variables BAZAAR_WORKSPACE_REDIS_REST_{URL,TOKEN} y BAZAAR_REVIEW_REDIS_REST_{URL,TOKEN}. No se cambiaron las variables de producción.
+
+Nuevo candidato cerrado: dpl_3FXPifvMdxBcAvjuL4SFH48XiWYF, fuente 0a3c1f9, https://stellar-bazaar-x402-bhwkphap5-cabscryptocontacto-6028s-projects.vercel.app. Hereda los secretos únicamente en runtime; build recibe valores vacíos. Namespaces pilot-be8432d7255e0a3b0dca564d8aa769a0. Altas, marketplace, compras, intake y activación siguen deshabilitados. Configuración no demuestra aún persistencia real.
+
+La revisión automática rechazó almacenar el token completo de Redis en un archivo temporal de texto. No se creó esa copia ni se reintentó por otro mecanismo. El camino de validación usa los secretos de Vercel sin copiar el token a archivos locales.
+
+El manifiesto real sigue canExecute=false: faltan payloads exactos, contadores hospedados y prueba de control/conexión del agente vendedor. No se ejecutaron solicitudes Redis, pagos ni invitaciones en esta fase.
+`nResultado: Preview Ready; cuatro comprobaciones HTTP PASS y navegación /pilot correcta. Sin verificación de persistencia real todavía.
