@@ -51,7 +51,7 @@ un producto nuevo de texto sin modelos remotos. Adaptación local probada con tr
 entradas: 490/677/440 caracteres; igualdad al repetir entrada y rechazo de límites
 inválidos. Cero llamadas de red/modelo/pago. No se ha desplegado la adaptación ni
 alterado las rutas USDC/JSON existentes. Fuente preservada en
-`evidence/sprint-marketplace/provider-text-adapter.ts` y prueba reproducible
+`evidence/sprint-marketplace/provider-text-adapter.ts.txt` y prueba reproducible
 `node scripts/test-recovered-provider-text.mjs` después de recuperar fuentes.
 
 Los registros de fases cerradas anteriores se conservan abajo como antecedentes.
