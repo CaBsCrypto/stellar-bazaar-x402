@@ -95,7 +95,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo, childr
           try {
             const response = await fetch("/api/operations?limit=20", {
               headers: { Authorization: `Bearer ${clean}` },
-              cache: "no-store", credentials: "omit", signal: controller.signal, redirect: "error",
+              cache: "no-store", credentials: "same-origin", signal: controller.signal, redirect: "error",
             });
             if (request !== generation.current) return;
             if (!response.ok) {
@@ -132,7 +132,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo, childr
           if (!connected || !input || Object.keys(input).length !== 0) return failure;
           const controller = new AbortController(); requests.add(controller);
           try {
-            const response = await fetch("/api/operations?limit=20", { headers: { Authorization: `Bearer ${token.trim()}` }, credentials: "omit", cache: "no-store", redirect: "error", signal: controller.signal });
+            const response = await fetch("/api/operations?limit=20", { headers: { Authorization: `Bearer ${token.trim()}` }, credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal });
             if (!response.ok || !connected) return failure;
             const data = await response.json();
             if (!connected || data.version !== "1" || !Array.isArray(data.records)) return failure;
@@ -163,7 +163,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo, childr
     try {
       const response = await fetch("/api/operations?limit=20", {
         headers: { Authorization: `Bearer ${token.trim()}` },
-        cache: "no-store", credentials: "omit", signal: controller.signal, redirect: "error",
+        cache: "no-store", credentials: "same-origin", signal: controller.signal, redirect: "error",
       });
       if (request !== generation.current) return;
       if (!response.ok) {

@@ -63,7 +63,7 @@ export default function PilotOnboarding() {
       const response = await fetch('/api/workspaces', {
         method: 'POST', headers: { Authorization: `Bearer ${access.bootstrap}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ creationId: access.creationId, humanAccessHash, agentAccessHash }),
-        cache: 'no-store', credentials: 'omit', redirect: 'error', signal: controller.signal,
+        cache: 'no-store', credentials: 'same-origin', redirect: 'error', signal: controller.signal,
       });
       if (current !== generation.current) return;
       if (!response.ok) {

@@ -5,7 +5,7 @@
   },
   "basePath": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation",
   "fileCount": 266,
-  "totalSize": 4668026,
+  "totalSize": 4668061,
   "ignoredCount": 18,
   "ignored": [
     ".env.example",
@@ -41,7 +41,7 @@
     {
       "path": "components",
       "fileCount": 49,
-      "size": 397938
+      "size": 397973
     },
     {
       "path": "app",
@@ -830,9 +830,9 @@
     },
     {
       "path": "components/OperationHistory.tsx",
-      "size": 29062,
+      "size": 29083,
       "mode": 33206,
-      "sha": "2204d242458d9f25c0eafcd243b27256c09756d9"
+      "sha": "3660a653bc82375229c0970cdb9908a76176f549"
     },
     {
       "path": "components/PaymentDemo.tsx",
@@ -854,15 +854,15 @@
     },
     {
       "path": "components/PilotOnboarding.tsx",
-      "size": 9219,
+      "size": 9226,
       "mode": 33206,
-      "sha": "fd8e0abed354f974183e8a6bc1b0ce7dd64580b6"
+      "sha": "b19db2040d989c84390ee894cad7b192bdd81568"
     },
     {
       "path": "components/PrivateAgentChat.tsx",
-      "size": 8882,
+      "size": 8889,
       "mode": 33206,
-      "sha": "19ccb536bc7721510ab22a0de31c6e51a3ae2743"
+      "sha": "527adc9dbd822ff9bceaf5f14185cef5ea8560c2"
     },
     {
       "path": "components/PrivatePurchase.tsx",

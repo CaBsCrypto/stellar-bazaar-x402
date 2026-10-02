@@ -17,7 +17,7 @@ export function PrivateAgentChat() {
  async function api(path:string, access:string, body?:Record<string,string>) {
   const controller=new AbortController(); requests.current.add(controller);
   try {
-   const res=await fetch(path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${access}`,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal:controller.signal,credentials:'omit',cache:'no-store',redirect:'error'});
+   const res=await fetch(path,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${access}`,...(body?{'Content-Type':'application/json'}:{})},body:body?JSON.stringify(body):undefined,signal:controller.signal,credentials:'same-origin',cache:'no-store',redirect:'error'});
    if(res.status===401 || res.status===403) throw new Error('ACCESS_REJECTED');
    if(!res.ok) throw new Error('REQUEST_UNCONFIRMED');
    return await res.json();

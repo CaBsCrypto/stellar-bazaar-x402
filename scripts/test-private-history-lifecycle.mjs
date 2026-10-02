@@ -16,9 +16,9 @@ async function scenario(mode) {
   const module = { exports: {} };
   const jsx = (type, props) => ({ type, props });
   vm.runInNewContext(compiled, {
-    module, exports: module.exports, AbortController, URLSearchParams,
+    module, exports: module.exports, AbortController, URLSearchParams, process: {env:{NEXT_PUBLIC_BAZAAR_MARKETPLACE:'true'}},
     window: { modelContext: undefined, location: { hash: '', search: '' } }, navigator: { modelContext: registry },
-    fetch: async (_url, options) => { calls++; signal = options.signal; return waiting; },
+    fetch: async (_url, options) => { assert.equal(options.credentials,'same-origin'); assert.equal(_url,'/api/operations?limit=20'); assert.match(options.headers.Authorization,/^Bearer /); calls++; signal = options.signal; return waiting; },
     require(name) {
       if (name === 'react') return {
         useState(initial) { const index = si++; if (!(index in states)) states[index] = initial; return [states[index], next => { states[index] = next; }]; },

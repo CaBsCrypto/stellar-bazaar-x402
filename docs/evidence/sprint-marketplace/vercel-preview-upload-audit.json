@@ -5,8 +5,8 @@
   "target": "preview",
   "phase": "marketplace-closed-candidate",
   "fileCount": 266,
-  "totalBytes": 4668026,
-  "payloadFingerprint": "94c4c75933f603acf48d8cbcb9f183a70e6cf9b9352308f1bdef3c6c96c64da3",
+  "totalBytes": 4668061,
+  "payloadFingerprint": "b0d93096fd2d4c47019ccd2ee1c05633a5436dc6ccd81e50086ced1068e36a6e",
   "excluded": [
     "docs",
     "scripts",
@@ -578,8 +578,8 @@
     },
     {
       "path": "components/OperationHistory.tsx",
-      "bytes": 29062,
-      "sha256": "b6d4f8d11b9e3064af5cde53b2b95fd43470f7ba13899a7201cdeafb9c276c59"
+      "bytes": 29083,
+      "sha256": "52c84c18f4ebedeccea15fe0c85a58acc956a9aef27cc1a8697a9012256a328e"
     },
     {
       "path": "components/PaymentDemo.tsx",
@@ -598,13 +598,13 @@
     },
     {
       "path": "components/PilotOnboarding.tsx",
-      "bytes": 9219,
-      "sha256": "d5f2c12b397395b2bc096f94dfcd42abfc694cd61413d74f41065777ed26209f"
+      "bytes": 9226,
+      "sha256": "8ab2b91059d0ee7e3b86c1c41805c84131fc18424487af8ea47927c91c3b1380"
     },
     {
       "path": "components/PrivateAgentChat.tsx",
-      "bytes": 8882,
-      "sha256": "95f0624808ad9ec04734798e2efa82d80bde35ef1775c123ce05ca6953e9a68c"
+      "bytes": 8889,
+      "sha256": "ab8b50cde5eece0274ada8dd1cfbc72ead73a6a0334f7c41c749666501f1bfca"
     },
     {
       "path": "components/PrivatePurchase.tsx",
