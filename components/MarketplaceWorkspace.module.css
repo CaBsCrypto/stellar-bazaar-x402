@@ -1,0 +1,13 @@
+.panel { max-width: 72rem; margin: 2rem auto; padding: 1.5rem; color: #20251f; background: #faf9f5; border: 1px solid #dedbd3; border-radius: 1rem; line-height: 1.6; }
+.header { display: flex; gap: 1rem; justify-content: space-between; align-items: start; flex-wrap: wrap; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,18rem),1fr)); gap: 1rem; }
+.panel article, .panel form { margin: 1rem 0; padding: 1rem; border: 1px solid #d5d1c6; border-radius: .75rem; }
+.panel label { display: block; margin: 1rem 0; }
+.panel input, .panel textarea { display: block; width: 100%; box-sizing: border-box; padding: .75rem; font: inherit; color: inherit; background: white; border: 1px solid #797469; border-radius: .4rem; }
+.panel textarea { min-height: 8rem; }
+.panel button { padding: .65rem 1rem; margin: .35rem; font: inherit; cursor: pointer; background: #593caa; color: white; border: 0; border-radius: .4rem; }
+.panel button:disabled { opacity: .6; cursor: default; }
+.panel button:focus-visible,.panel input:focus-visible,.panel textarea:focus-visible { outline: 3px solid #168976; outline-offset: 3px; }
+.panel pre,.panel code { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; }
+.panel [role=alert] { color: #9d251b; }
+@media(max-width: 480px) { .panel { padding: .75rem; margin: 1rem .25rem; } }

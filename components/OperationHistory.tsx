@@ -2,7 +2,7 @@
 import { ActivityDashboard } from "./ActivityDashboard";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ModelContextRegistry } from "@/lib/webmcp/types";
 import { createOwnedRegistration } from "@/lib/webmcp/owned-registration";
 
@@ -59,7 +59,7 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Footer } from "@/components/Footer";
 
-export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {initialAccess?: string; onLocked?: () => void; onExploreDemo?: () => void} = {}) {
+export function OperationHistory({initialAccess, onLocked, onExploreDemo, children}: {initialAccess?: string; onLocked?: () => void; onExploreDemo?: () => void; children?: ReactNode} = {}) {
   const [locale, setLocale] = useState<Locale>("es");
   const [token, setToken] = useState("");
   const [state, setState] = useState<ViewState>("locked");
@@ -202,7 +202,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
           backLabel="← Volver al Catálogo"
           actions={
             <div style={{ display: "flex", gap: "8px" }}>
-              <Link
+              {process.env.NEXT_PUBLIC_BAZAAR_MARKETPLACE !== 'true' && <Link
                 href="/history/review"
                 prefetch={false}
                 style={{
@@ -217,7 +217,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
                 }}
               >
                 👁️ Ver Demo de Entregables
-              </Link>
+              </Link>}
               <Link
                 href={token ? `/agent-chat#token=${encodeURIComponent(token)}` : "/agent-chat"}
                 prefetch={false}
@@ -244,8 +244,9 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
               🔒 {c.heading.toUpperCase()}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <label style={{ fontSize: "0.82rem", color: "var(--muted)" }}>Idioma:</label>
+              <label htmlFor="history-locale" style={{ fontSize: "0.82rem", color: "var(--muted)" }}>Idioma:</label>
               <select
+                id="history-locale"
                 value={locale}
                 onChange={(event) => setLocale(event.target.value as Locale)}
                 style={{
@@ -532,6 +533,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
             </section>
           </details>
         )}
+        {children}
       </main>
 
       <Footer prefetch={false} />

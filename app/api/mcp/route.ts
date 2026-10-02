@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     }));
     const wait = response.headers.get("retry-after");
     return { ok: response.ok, status:response.status, body: await response.json(), ...(wait && /^\d+$/.test(wait) ? {retryAfter:Number(wait)} : {}) };
-  }, providerMcpContext(request), workspaceMcpContext(request));
+  }, providerMcpContext(request), workspaceMcpContext(request), request);
   await server.connect(transport);
   const response = await transport.handleRequest(request);
   for (const [name, value] of Object.entries(workspaceHeaders)) response.headers.set(name, value);

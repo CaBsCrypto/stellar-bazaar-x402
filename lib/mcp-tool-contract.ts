@@ -7,9 +7,11 @@ export const MCP_TOOLS = [
   "get_provider_request_status", "create_bazaar_workspace", "list_bazaar_agent_tasks",
   "claim_bazaar_agent_task", "respond_bazaar_agent_task", "record_bazaar_activity",
   "record_bazaar_operation",
+  "list_market_orders", "claim_market_order", "deliver_market_order", "fail_market_order",
 ] as const;
 export const MCP_WRITES = [
   "submit_provider_request", "create_bazaar_workspace", "claim_bazaar_agent_task",
   "respond_bazaar_agent_task", "record_bazaar_activity", "record_bazaar_operation",
+  "claim_market_order", "deliver_market_order", "fail_market_order",
 ] as const;
 export const MCP_MODE = "discovery-provider-requests-and-private-workspaces";

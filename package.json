@@ -8,6 +8,7 @@
     "node": "22.x"
   },
   "scripts": {
+    "test:marketplace": "node --experimental-strip-types scripts/test-marketplace.mjs",
     "test:workspace:core": "node scripts/test-open-workspace-core.mjs",
     "test:workspace:admission": "node --experimental-strip-types scripts/test-workspace-admission.mjs",
     "test:workspace:global-quota": "node --experimental-strip-types scripts/test-workspace-global-quota.mjs",
@@ -82,6 +83,7 @@
     "@aws-sdk/client-s3": "3.1127.0",
     "@aws-sdk/s3-request-presigner": "3.1127.0",
     "@modelcontextprotocol/sdk": "1.30.0",
+    "@stellar/freighter-api": "6.0.1",
     "@stellar/stellar-sdk": "14.4.2",
     "@upstash/redis": "^1.38.2",
     "@x402/core": "2.24.0",

@@ -1,0 +1,18 @@
+{
+  "status": "PASS",
+  "buildId": "f835l-qTCKIp6mcpzEDe7",
+  "runtime": "v22.18.0",
+  "nativeNext": true,
+  "externalMcpClient": true,
+  "appRequests": 27,
+  "redisRequests": 115,
+  "redisCommands": 371,
+  "ledgerRequests": 3,
+  "externalRequests": 0,
+  "domainProof": "seeded protocol double only",
+  "payment": "native HTTP signed transaction with local Horizon double; no funds moved",
+  "storage": "configured Redis SDK redirected to protocol double; no real durability proof",
+  "processReplacement": true,
+  "purchasePausePreservesHistory": true,
+  "deliveryExact": true
+}

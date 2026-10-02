@@ -210,6 +210,10 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     return result;
   }); });
   const store = {
+    async isOwnerActive(ownerId: string): Promise<boolean> { return safe(async () => {
+      const s = await backend.read(), registry = readRegistry(s.registryRaw, s.marker, reservations());
+      return registry.workspaces.some(m => m.ownerId === ownerId && !m.revoked);
+    }); },
     forPrincipal(p: WorkspacePrincipal) { return buildStore(backend, reservations, p, testOwnerUuid, frozenOwners); },
     async resolveHash(hash: string): Promise<WorkspacePrincipal> { return safe(async () => {
       workspaceHashSchema.parse(hash); const s = await backend.read(); const registry = readRegistry(s.registryRaw, s.marker, reservations());
@@ -219,7 +223,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       }
       throw new WorkspaceError("UNAUTHORIZED", 401);
     }); },
-    async createWorkspace(input: z.infer<typeof createWorkspaceSchema>, bootstrapHash: string, trustedIp = "untrusted") { return safe(async () => {
+    async createWorkspace(input: z.infer<typeof createWorkspaceSchema>, bootstrapHash: string, trustedIp = "untrusted", allowNew = true) { return safe(async () => {
       const globalLimits = workspaceGlobalRequestLimits();
       createWorkspaceSchema.parse(input); workspaceHashSchema.parse(bootstrapHash);
       const frozen = frozenOwners?.find(owner => owner.creationId === input.creationId);
@@ -247,6 +251,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
           validateDocument(s.documentRaw, existing);
           return { record: receipt(existing), created: false };
         }
+        if (!allowNew) throw new WorkspaceError("ADMISSIONS_PAUSED");
         const hashes = [bootstrapHash, input.humanAccessHash, input.agentAccessHash];
         if (new Set(hashes).size !== 3 || hashes.some(h => legacy.hashes.includes(h) || registry.workspaces.some(m => [m.bootstrapHash, m.initialHumanHash, m.initialAgentHash, m.humanHash, m.agentHash, ...m.retiredHashes].includes(h)))) throw new WorkspaceError("WORKSPACE_COLLISION", 409);
         if (legacy.ownerIds.includes(ownerId) || s.documentRaw) throw new WorkspaceError("WORKSPACE_COLLISION", 409);

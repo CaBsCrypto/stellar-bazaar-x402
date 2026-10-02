@@ -8,7 +8,7 @@ let injectedRedis: ReviewRedis | undefined;
 export function setReviewRedisForTests(redis: ReviewRedis | undefined) { injectedRedis = redis; }
 export function getReviewPrefix(): string {
   const prefix = process.env.BAZAAR_REVIEW_PREFIX;
-  if (!prefix || !/^bazaar-review:(?:local-test|preview|production)$/.test(prefix)) throw Error("INVALID_REVIEW_NAMESPACE");
+  if (!prefix || !/^bazaar-review:(?:local-test|preview|production|pilot-[a-f0-9]{32})$/.test(prefix)) throw Error("INVALID_REVIEW_NAMESPACE");
   return prefix;
 }
 export function getReviewRedis(): ReviewRedis | null {
@@ -22,7 +22,7 @@ export function getReviewRedis(): ReviewRedis | null {
   if (!url || !token?.trim()) throw Error("REVIEW_REDIS_REQUIRED");
   const parsed = new URL(url);
   if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash) throw Error("INVALID_REVIEW_REDIS_URL");
-  return new Redis({ url, token, automaticDeserialization: false, retry: false });
+  return new Redis({ url, token, automaticDeserialization: false, retry: false, enableAutoPipelining: false });
 }
 export function reviewSharedConfigured(): boolean {
   try { return getReviewRedis() !== null; } catch { return false; }

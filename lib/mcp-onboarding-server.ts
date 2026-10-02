@@ -16,6 +16,7 @@ import { publicProviderReviewConfigured } from "./provider-submission-http";
 import { reviewSharedConfigured } from "./provider-review-runtime";
 import { bazaarRoles, skillPackage } from "./bazaar-skills";
 import { MCP_VERSION, MCP_WRITES } from "./mcp-tool-contract";
+import {registerMarketplaceTools} from './marketplace-mcp';
 export interface ProviderMcpHandlers {
   submit(body: unknown): Promise<McpHttpResult>;
   status(submissionId: string): Promise<McpHttpResult>;
@@ -70,7 +71,7 @@ const decodeCursor = (raw: string): number | null => {
   }
 };
 
-export function createOnboardingMcpServer(readOperationHistory?: () => Promise<McpHttpResult>, provider?: ProviderMcpHandlers, workspace?:WorkspaceMcpHandlers) {
+export function createOnboardingMcpServer(readOperationHistory?: () => Promise<McpHttpResult>, provider?: ProviderMcpHandlers, workspace?:WorkspaceMcpHandlers, incoming?:Request) {
   const server = new McpServer({
     name: "stellar-bazaar-discovery",
     version: MCP_VERSION,
@@ -94,7 +95,8 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           creationTool: "create_bazaar_workspace", enabled:process.env.BAZAAR_ENABLE_OPEN_WORKSPACES==='true',
           humanView:"/agent-chat", guide:"/WORKSPACE_AGENT.md", agentRunsExternally:true,
           emailRequired:false, operatorApprovalRequired:false, automaticPolling:false,
-          payments:false, fileUploads:false,
+          payments:process.env.BAZAAR_ENABLE_MARKETPLACE==='true'?'native-XLM-testnet-direct':'disabled', fileUploads:false,
+          marketplace: {enabled:process.env.BAZAAR_ENABLE_MARKETPLACE==='true',orders:'/api/market/orders',sellerTools:['list_market_orders','claim_market_order','deliver_market_order','fail_market_order'],feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
           storage:process.env.BAZAAR_WORKSPACE_BACKEND??'not-configured',
           creationAccess:"Save UUID, bootstrap/human/agent accesses privately before creation. Send hashes only; bootstrap uses Authorization. Server assigns owner.",
         },
@@ -120,15 +122,15 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           whenUnavailable: "Keep the validated ServiceCard locally and ask the Bazaar operator for a review channel. Do not report it as submitted or published.",
         },
         architecture: {
-          standard: "x402 (HTTP 402 Payment Required)",
+          standard: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? 'Stellar native testnet payment + seller MCP delivery' : "x402 (HTTP 402 Payment Required)",
           network: "stellar:testnet",
-          settlementAsset: "USDC (CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA)",
-          facilitatorUrl: "https://channels.openzeppelin.com/x402/testnet",
+          settlementAsset: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? 'XLM native testnet' : "USDC (CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA)",
+          facilitatorUrl: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? null : "https://channels.openzeppelin.com/x402/testnet",
           monetization: {
-            takeRateFeeBps: 100, // 1% treasury, 99% provider
-            defindexStaking: "85% yield provider / 15% platform performance fee",
+            takeRateFeeBps: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? 0 : 100,
+            defindexStaking: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? null : "85% yield provider / 15% platform performance fee",
           },
-          providerStepsToDeliver: [
+          providerStepsToDeliver: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? ['Publish through your private space; verify endpoint control and manual review.','Buyer signs a native XLM testnet payment bound to this order.','Use your external seller agent to list, claim and deliver the paid order through MCP.'] : [
             "1. Expose HTTP endpoint that challenges requests without payment-signature with HTTP 402 + PAYMENT-REQUIRED header.",
             "2. Define deterministic ServiceCard manifest with name, routeTemplate, inputs, price and Stellar destination wallet.",
             "3. Validate ServiceCard conformance via validate_service_card tool or POST /api/conformance/service-card.",
@@ -399,5 +401,6 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
     description:"Register an owned response already conserved privately, using the native operation handler. Anonymous beta only allows unpaid fixture/mock inline results. Retry registration, never the purchase.",
     inputSchema:z.object({operation:z.record(z.string(),z.unknown())}).strict(),annotations:writeHints,
   },async({operation})=>workspace?mcpHttpResult(await workspace.recordOperation(operation)):missingWorkspace());
+  registerMarketplaceTools(server,incoming);
   return server;
 }

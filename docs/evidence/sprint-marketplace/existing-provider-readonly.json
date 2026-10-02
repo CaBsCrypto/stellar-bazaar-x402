@@ -1,0 +1,55 @@
+{
+  "results": [
+    {
+      "provider": "scriptwriter",
+      "url": "https://ai-video-scriptwriter.vercel.app/api/service-card",
+      "method": "GET",
+      "checkedAt": "2026-10-02T05:06:52.501Z",
+      "retry": 0,
+      "status": 200,
+      "bytes": 1741,
+      "publicContract": {
+        "id": "ai-video-scriptwriter",
+        "version": "bazaar.service-card/v0",
+        "kind": "http",
+        "network": "stellar:testnet",
+        "routeTemplate": "/api/script?topic={topic}&durationSeconds={durationSeconds}&tone={tone}",
+        "payment": {
+          "scheme": "exact",
+          "asset": "USDC",
+          "amount": "0.02",
+          "enabled": null
+        },
+        "contentType": "application/json"
+      }
+    },
+    {
+      "provider": "website-intelligence",
+      "url": "https://website-intelligence-provider.vercel.app/v1/service-card",
+      "method": "GET",
+      "checkedAt": "2026-10-02T05:06:53.195Z",
+      "retry": 0,
+      "status": 200,
+      "bytes": 1506,
+      "publicContract": {
+        "id": "website-intelligence",
+        "version": "1.0.0",
+        "kind": null,
+        "network": null,
+        "routeTemplate": null,
+        "payment": {
+          "scheme": "exact",
+          "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+          "amount": null,
+          "enabled": true
+        },
+        "contentType": null
+      }
+    }
+  ],
+  "requests": 2,
+  "writes": 0,
+  "executionRequests": 0,
+  "payments": 0,
+  "limitation": "Read-only public contract lookup; no ownership proof or seller MCP execution."
+}

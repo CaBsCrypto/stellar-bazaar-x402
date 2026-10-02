@@ -227,7 +227,7 @@ export async function submitProviderDraft(
 }
 
 export async function getSubmissionStatus(submissionId:string,submissionToken?:string){return safe(()=>transaction((queue,state)=>{const r=state.records.find(r=>r.submission.submissionId===submissionId);if(!r || typeof submissionToken!=="string" || !tokenMatches(submissionToken,r.tokenHash))return failure("SUBMISSION_NOT_FOUND","Submission access denied.");expireOldSubmissions(queue);const s=queue.get(submissionId)!;return {ok:true as const,value:{version:s.version,submissionId:s.submissionId,status:s.status,publiclyActive:s.publiclyActive,submittedAt:s.submittedAt,updatedAt:s.updatedAt,expiresAt:s.expiresAt,serviceCardId:s.card.id,control:clone(s.control),...(s.review?{review:{decision:s.review.decision,reasons:clone(s.review.reasons),reviewedAt:s.review.reviewedAt}}:{})}};},false));}
-export async function getSubmissionForOperator(id:string):Promise<SelfListingResult<ProviderSubmission>>{return safe(()=>transaction(q=>{const s=q.get(id);return s?{ok:true,value:clone(s)}:failure("SUBMISSION_NOT_FOUND","Submission unknown.");}));}
+export async function getSubmissionForOperator(id:string,expire=true):Promise<SelfListingResult<ProviderSubmission>>{return safe(()=>transaction(q=>{const s=q.get(id);return s?{ok:true,value:clone(s)}:failure("SUBMISSION_NOT_FOUND","Submission unknown.");},expire));}
 export async function recordControlProofResult(
   submissionId: string,
   result: { challengeId: string; domain: string; verified: boolean; observedAt?:string;source?:string;challengeHash?:string;cardHash?:string },

@@ -13,10 +13,11 @@ export function proxy(request: NextRequest) {
     return response;
   }
   if (request.nextUrl.pathname.startsWith('/api/')) {
+    const publicCatalog = process.env.BAZAAR_ENABLE_MARKETPLACE === 'true' && request.method === 'GET' && request.nextUrl.pathname === '/api/discovery/resources';
     if (process.env.BAZAAR_ENABLE_OPEN_WORKSPACES !== 'true' && !(request.nextUrl.pathname === '/api/mcp' && request.method === 'GET')) {
       return NextResponse.json({ error: { code: 'WORKSPACE_UNAVAILABLE' } }, { status: 503, headers: privacy });
     }
-    if (request.nextUrl.pathname !== '/api/mcp' && !/^Bearer [a-zA-Z0-9_-]{32,128}$/.test(request.headers.get('authorization') ?? '')) {
+    if (!publicCatalog && request.nextUrl.pathname !== '/api/mcp' && !/^Bearer [a-zA-Z0-9_-]{32,128}$/.test(request.headers.get('authorization') ?? '')) {
       return NextResponse.json({ error: { code: 'UNAUTHORIZED' } }, { status: 401, headers: privacy });
     }
   }

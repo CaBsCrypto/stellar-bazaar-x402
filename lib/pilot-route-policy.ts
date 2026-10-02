@@ -1,5 +1,16 @@
 // An exposure boundary, not authorization. Native handlers still verify owners.
 export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redirect' | 'deny' {
+  if (process.env.BAZAAR_ENABLE_MARKETPLACE === 'true') {
+    if (['GET','HEAD'].includes(method) && path === '/') return 'allow';
+    if (['GET','HEAD'].includes(method) && path === '/MARKETPLACE_PILOT.md') return 'allow';
+    if (['GET','HEAD'].includes(method) && ['/catalogo','/hub','/publish'].includes(path)) return 'allow';
+    if (['GET','HEAD'].includes(method) && /^\/resources\/[a-z0-9-]+$/.test(path)) return 'allow';
+    if (method === 'GET' && path === '/api/discovery/resources') return 'allow';
+    if (['GET','POST'].includes(method) && ['/api/market/services','/api/market/orders'].includes(path)) return 'allow';
+    if (method === 'POST' && ['/api/market/review','/api/market/control'].includes(path)) return 'allow';
+    if (/^\/api\/market\/(services|orders)\/[a-f0-9-]{36}$/i.test(path) && (method === 'POST' || method === 'GET' && path.startsWith('/api/market/orders/'))) return 'allow';
+    if (['GET','HEAD'].includes(method) && /^\/(images|icons|fonts)\//.test(path)) return 'allow';
+  }
   if ((method === 'GET' || method === 'HEAD') && path === '/') return 'redirect';
   if (method === 'GET' || method === 'HEAD') {
     if (['/pilot', '/history', '/agent-chat', '/favicon.ico'].includes(path) || path.startsWith('/_next/static/')) return 'allow';

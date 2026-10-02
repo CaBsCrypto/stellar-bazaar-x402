@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import PilotOnboarding from '@/components/PilotOnboarding';
+import {workspacePublicOrigin} from '@/lib/workspace-public-origin';
 
 export const dynamic = 'force-dynamic';
 export function generateMetadata(): Metadata {
-  const origin = process.env.BAZAAR_WORKSPACE_PUBLIC_ORIGIN;
+  const origin = workspacePublicOrigin();
   if (origin) {
     const url = new URL(origin);
     if (url.protocol !== 'https:' || url.origin !== origin || url.username || url.password) throw new Error('Invalid pilot public origin');

@@ -17,7 +17,7 @@ return 1`;
 /** Callbacks execute once and must not perform network or other external side effects. */
 export function createRedisReviewStore<T>(redis: ReviewRedis, prefix: string,
   validate: (value: unknown) => asserts value is ReviewState<T>): ProviderReviewStore<T> {
-  if (!/^bazaar-review:(?:local-test|preview|production)$/.test(prefix)) throw new ReviewStoreError("Invalid review namespace.");
+  if (!/^bazaar-review:(?:local-test|preview|production|pilot-[a-f0-9]{32})$/.test(prefix)) throw new ReviewStoreError("Invalid review namespace.");
   const key = `${prefix}:state`;
   return { async transact<R>(operation: (state: ReviewState<T>) => R | Promise<R>): Promise<R> {
     const raw = await redis.get(key);

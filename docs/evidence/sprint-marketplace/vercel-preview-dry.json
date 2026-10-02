@@ -1,0 +1,1756 @@
+{
+  "framework": {
+    "name": "Next.js",
+    "slug": "nextjs"
+  },
+  "basePath": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation",
+  "fileCount": 265,
+  "totalSize": 4660407,
+  "ignoredCount": 18,
+  "ignored": [
+    ".env.example",
+    ".git",
+    ".github",
+    ".gitignore",
+    ".next",
+    ".vercel",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "README.es.md",
+    "README.md",
+    "WEBMCP_SUBMISSION.md",
+    "app\\docs",
+    "contracts",
+    "docs",
+    "examples",
+    "node_modules",
+    "scripts",
+    "tsconfig.tsbuildinfo"
+  ],
+  "directories": [
+    {
+      "path": "public",
+      "fileCount": 12,
+      "size": 3318390
+    },
+    {
+      "path": "lib",
+      "fileCount": 106,
+      "size": 541302
+    },
+    {
+      "path": "components",
+      "fileCount": 49,
+      "size": 397938
+    },
+    {
+      "path": "app",
+      "fileCount": 86,
+      "size": 224176
+    },
+    {
+      "path": "package-lock.json",
+      "fileCount": 1,
+      "size": 139225
+    },
+    {
+      "path": "styles",
+      "fileCount": 3,
+      "size": 28336
+    },
+    {
+      "path": "package.json",
+      "fileCount": 1,
+      "size": 6580
+    },
+    {
+      "path": "proxy.ts",
+      "fileCount": 1,
+      "size": 1870
+    },
+    {
+      "path": "tsconfig.json",
+      "fileCount": 1,
+      "size": 781
+    },
+    {
+      "path": "LICENSE",
+      "fileCount": 1,
+      "size": 664
+    },
+    {
+      "path": "vercel.json",
+      "fileCount": 1,
+      "size": 432
+    },
+    {
+      "path": "next-env.d.ts",
+      "fileCount": 1,
+      "size": 295
+    },
+    {
+      "path": ".gitattributes",
+      "fileCount": 1,
+      "size": 243
+    },
+    {
+      "path": ".vercelignore",
+      "fileCount": 1,
+      "size": 175
+    }
+  ],
+  "largestFiles": [
+    {
+      "path": "public/brand/bazaar-cover.png",
+      "size": 1997172,
+      "mode": 33206,
+      "sha": "4296903e92d43a84471b50e3ecd9777c3d5f1032"
+    },
+    {
+      "path": "public/cover.jpg",
+      "size": 969424,
+      "mode": 33206,
+      "sha": "fb5ddb611253d6fc172a81f0c3aa69492d9e8f1c"
+    },
+    {
+      "path": "public/demo-deliveries/clip-demostracion.mp4",
+      "size": 219483,
+      "mode": 33206,
+      "sha": "af112ceaa5c19c20727fb15f3786d72b70274a01"
+    },
+    {
+      "path": "package-lock.json",
+      "size": 139225,
+      "mode": 33206,
+      "sha": "071c5cc8b1ce57fc003079121d0359627aad867e"
+    },
+    {
+      "path": "lib/workspace-store.ts",
+      "size": 48606,
+      "mode": 33206,
+      "sha": "2360e896bf24f2b3db089da35837d97630783b06"
+    },
+    {
+      "path": "components/WebMCPProvider.tsx",
+      "size": 40884,
+      "mode": 33206,
+      "sha": "cb6f23db89c60b156a0f48185436cedee6ce10c9"
+    },
+    {
+      "path": "public/demo-deliveries/afiche-orbita.png",
+      "size": 38183,
+      "mode": 33206,
+      "sha": "c320dc7bc999fb6e3c722a893f00d33cc6d000a9"
+    },
+    {
+      "path": "components/DeliverableViewer.tsx",
+      "size": 37473,
+      "mode": 33206,
+      "sha": "e86827de58ab280c404b1ce37bbad981183068c7"
+    },
+    {
+      "path": "public/demo-deliveries/afiche-pulso.png",
+      "size": 34473,
+      "mode": 33206,
+      "sha": "7520af4579d3299be6ff7aab4c572504be809260"
+    },
+    {
+      "path": "components/AdminOperationsDashboard.tsx",
+      "size": 31070,
+      "mode": 33206,
+      "sha": "faf16e59fba20a61597e009493b3ee2599379800"
+    }
+  ],
+  "files": [
+    {
+      "path": ".gitattributes",
+      "size": 243,
+      "mode": 33206,
+      "sha": "19ae61260287b9ff900f26d1dcbdc1fc3329f89a"
+    },
+    {
+      "path": ".vercelignore",
+      "size": 175,
+      "mode": 33206,
+      "sha": "5ef20149905f81d34667818796a810ffcb3ec869"
+    },
+    {
+      "path": "app/admin/operations/page.tsx",
+      "size": 1786,
+      "mode": 33206,
+      "sha": "9c288b1750a67f44e4f849d517158c718cd04d25"
+    },
+    {
+      "path": "app/admin/page.tsx",
+      "size": 1854,
+      "mode": 33206,
+      "sha": "eab76a2b3156370e7d73f8dc6e4bceb82e97aca2"
+    },
+    {
+      "path": "app/agent-chat/page.tsx",
+      "size": 599,
+      "mode": 33206,
+      "sha": "a734cec51594304b2c7972565da31a1bd59a11d3"
+    },
+    {
+      "path": "app/api/activity/connection/route.ts",
+      "size": 1872,
+      "mode": 33206,
+      "sha": "7f2342bff70b2642e2528ce5176db818ff0cda27"
+    },
+    {
+      "path": "app/api/activity/route.ts",
+      "size": 262,
+      "mode": 33206,
+      "sha": "72a0f0e1190231c5eadc7202203050773b996207"
+    },
+    {
+      "path": "app/api/admin/magic-link/route.ts",
+      "size": 4105,
+      "mode": 33206,
+      "sha": "aa22f9dd733a98c9e9186a0fd51724143abba93b"
+    },
+    {
+      "path": "app/api/admin/provider-submissions/[id]/route.ts",
+      "size": 3563,
+      "mode": 33206,
+      "sha": "b3080dfaaed4185b0abee9493ad17f0e48995ce5"
+    },
+    {
+      "path": "app/api/admin/provider-submissions/route.ts",
+      "size": 832,
+      "mode": 33206,
+      "sha": "7e55b44922e46071c085add3526f1ef705faed45"
+    },
+    {
+      "path": "app/api/admin/review-session/route.ts",
+      "size": 1371,
+      "mode": 33206,
+      "sha": "bcbf0dab9bf076e9744d83b8a6f3d2b09a7b1ec1"
+    },
+    {
+      "path": "app/api/admin/stats/route.ts",
+      "size": 4012,
+      "mode": 33206,
+      "sha": "5f493a83d7fbe58e4b34fd7af8b82e1f312f2a2f"
+    },
+    {
+      "path": "app/api/agent-tasks/[id]/response/route.ts",
+      "size": 367,
+      "mode": 33206,
+      "sha": "13878722719f20a41749bda26cd13b49ea03db0e"
+    },
+    {
+      "path": "app/api/agent-tasks/route.ts",
+      "size": 288,
+      "mode": 33206,
+      "sha": "7f6c02123a1a7f6c9918099bcbfcf5768fd2f621"
+    },
+    {
+      "path": "app/api/buyer-execution/reference/route.ts",
+      "size": 2400,
+      "mode": 33206,
+      "sha": "9fc5c1c84d1359e9fce94981f980f2edb4f2afdc"
+    },
+    {
+      "path": "app/api/buyer-execution/website-intelligence/route.ts",
+      "size": 4468,
+      "mode": 33206,
+      "sha": "f1a6dfe0e593d34417d2c987a843c98c7ba44ee1"
+    },
+    {
+      "path": "app/api/capabilities/route.ts",
+      "size": 231,
+      "mode": 33206,
+      "sha": "ff7fdfb4fe92b66d3aa350ceb74b927583f9fc0f"
+    },
+    {
+      "path": "app/api/conformance/service-card/route.ts",
+      "size": 2288,
+      "mode": 33206,
+      "sha": "4fe51970ccbba9b88d8ebb32643d7ce84b8fff5a"
+    },
+    {
+      "path": "app/api/conversations/[id]/messages/route.ts",
+      "size": 524,
+      "mode": 33206,
+      "sha": "e7918b128081e9fc544563db2119ef4455b400c2"
+    },
+    {
+      "path": "app/api/conversations/route.ts",
+      "size": 304,
+      "mode": 33206,
+      "sha": "2f5ac7823d46f82db7089f077def1846defa4cdc"
+    },
+    {
+      "path": "app/api/deliveries/access/route.ts",
+      "size": 214,
+      "mode": 33206,
+      "sha": "232ecdb9aa7ee105ed40a879718bd167435520cb"
+    },
+    {
+      "path": "app/api/deliveries/confirm/route.ts",
+      "size": 215,
+      "mode": 33206,
+      "sha": "e460eeb18b05e64fb774e7c2005113a97653f1f8"
+    },
+    {
+      "path": "app/api/deliveries/route.ts",
+      "size": 271,
+      "mode": 33206,
+      "sha": "3374d6bc5c47c0ef4ed64c8f473be3f4bf701463"
+    },
+    {
+      "path": "app/api/deliveries/uploads/route.ts",
+      "size": 214,
+      "mode": 33206,
+      "sha": "71c0e3aeb1f130afb327a284d3c28ae69aa4eee5"
+    },
+    {
+      "path": "app/api/discovery/external-providers/stellar-defi-quote-service/route.ts",
+      "size": 649,
+      "mode": 33206,
+      "sha": "2cef6f6050f9016c001fab6b5ca446c10e17706d"
+    },
+    {
+      "path": "app/api/discovery/pilots/route.ts",
+      "size": 819,
+      "mode": 33206,
+      "sha": "fce0d4b52c260151d18584e8d91d75e2928cc1a5"
+    },
+    {
+      "path": "app/api/discovery/resources/route.ts",
+      "size": 1357,
+      "mode": 33206,
+      "sha": "dc63ad4fafc7411dabec8b6f08122d0f2e2fbb27"
+    },
+    {
+      "path": "app/api/discovery/search/route.ts",
+      "size": 2303,
+      "mode": 33206,
+      "sha": "9f4858b3bc8cf2d0a1a097e1552da652a7b1079e"
+    },
+    {
+      "path": "app/api/ingest/route.ts",
+      "size": 1667,
+      "mode": 33206,
+      "sha": "9f9fd1ebf7c27e3d5e16a1518b81679277edcf7d"
+    },
+    {
+      "path": "app/api/market/control/route.ts",
+      "size": 141,
+      "mode": 33206,
+      "sha": "d6ce5844e939fd264a5509717824bfa14368362e"
+    },
+    {
+      "path": "app/api/market/orders/[id]/route.ts",
+      "size": 395,
+      "mode": 33206,
+      "sha": "2af321bb0563c09858ee25bf30ef925b02b9a56b"
+    },
+    {
+      "path": "app/api/market/orders/route.ts",
+      "size": 218,
+      "mode": 33206,
+      "sha": "597ab7e1e8f3cff523a5e4f23f26947476385e6e"
+    },
+    {
+      "path": "app/api/market/review/route.ts",
+      "size": 140,
+      "mode": 33206,
+      "sha": "1612e7ccd1d73516e853a1c2e582ba0676dcdb31"
+    },
+    {
+      "path": "app/api/market/services/[id]/route.ts",
+      "size": 252,
+      "mode": 33206,
+      "sha": "f186db803d0a70b30500846f1c2b450b64c02c1b"
+    },
+    {
+      "path": "app/api/market/services/route.ts",
+      "size": 220,
+      "mode": 33206,
+      "sha": "2cad1ff06892c5899b02bdc9c1c17c77131b986b"
+    },
+    {
+      "path": "app/api/mcp/route.ts",
+      "size": 2782,
+      "mode": 33206,
+      "sha": "494ec551d4950e7752e1af340069b233b8335387"
+    },
+    {
+      "path": "app/api/openapi/route.ts",
+      "size": 12875,
+      "mode": 33206,
+      "sha": "b9bc25dbf3e838eb6d89bdd4658c994699abd904"
+    },
+    {
+      "path": "app/api/operations/route.ts",
+      "size": 271,
+      "mode": 33206,
+      "sha": "dd6e0bdcb2de48589e2a99aaef2ac2f4495fc868"
+    },
+    {
+      "path": "app/api/provider-self-listing/[id]/route.ts",
+      "size": 1280,
+      "mode": 33206,
+      "sha": "ad12d1ea5b03f049a876284dcab0c6675e082b3e"
+    },
+    {
+      "path": "app/api/provider-self-listing/route.ts",
+      "size": 4478,
+      "mode": 33206,
+      "sha": "176fde5b93aa61e5b7802918e3c786f4f4c7aebf"
+    },
+    {
+      "path": "app/api/publish/route.ts",
+      "size": 176,
+      "mode": 33206,
+      "sha": "e64e18525a1eee04a07ae246da4b8a04ef593329"
+    },
+    {
+      "path": "app/api/publisher/ingest/[id]/route.ts",
+      "size": 639,
+      "mode": 33206,
+      "sha": "c3b855ddca3849a3b2b151e00d02ea8278ed0e45"
+    },
+    {
+      "path": "app/api/publisher/ingest/route.ts",
+      "size": 2661,
+      "mode": 33206,
+      "sha": "d92cce7c6fcf42a056192f2d43216866ea57f4be"
+    },
+    {
+      "path": "app/api/reference/swap-risk/route.ts",
+      "size": 957,
+      "mode": 33206,
+      "sha": "6e0fd0fc4d651417d2357c3451e6bec536316e55"
+    },
+    {
+      "path": "app/api/webmcp/spec/route.ts",
+      "size": 4957,
+      "mode": 33206,
+      "sha": "7afe62cc105645100b2fb5e85394e34dfd9e36f2"
+    },
+    {
+      "path": "app/api/workspaces/[id]/access/route.ts",
+      "size": 329,
+      "mode": 33206,
+      "sha": "b252e3cc6354b94c85c2b54aea15aec43f582815"
+    },
+    {
+      "path": "app/api/workspaces/route.ts",
+      "size": 203,
+      "mode": 33206,
+      "sha": "e40621a97fd29deb5a110f9fa00ebf0cb6e25358"
+    },
+    {
+      "path": "app/api/x402/contract-safety/route.ts",
+      "size": 6945,
+      "mode": 33206,
+      "sha": "80db70188e335d8c897186cd1b80a7aaa763a8af"
+    },
+    {
+      "path": "app/api/x402/demo-pay/route.ts",
+      "size": 2423,
+      "mode": 33206,
+      "sha": "4164c2b87603ededaa02b8a528e5324513e41f2c"
+    },
+    {
+      "path": "app/api/x402/ledger-brief/route.ts",
+      "size": 6781,
+      "mode": 33206,
+      "sha": "6c7954431647cf66298e70ff19a5585d4aaad59a"
+    },
+    {
+      "path": "app/api/x402/market-window/route.ts",
+      "size": 6658,
+      "mode": 33206,
+      "sha": "1f86a635327e5a3e6e455ae7d7211cb89a0668ef"
+    },
+    {
+      "path": "app/api/x402/swap-risk/route.ts",
+      "size": 192,
+      "mode": 33206,
+      "sha": "f422680a6f24a983dee5a608527e39fcb64d3c46"
+    },
+    {
+      "path": "app/buyer-execution-additions.css",
+      "size": 2319,
+      "mode": 33206,
+      "sha": "7b43698171b91045b955e845365ca826e6d92be7"
+    },
+    {
+      "path": "app/buyer-execution.css",
+      "size": 3710,
+      "mode": 33206,
+      "sha": "10b73f69b9bbd7d1e85c4c09ea9f3573059acd9a"
+    },
+    {
+      "path": "app/buyer-execution/page.tsx",
+      "size": 2132,
+      "mode": 33206,
+      "sha": "593ead2fc4f4e17deaad660f8de8232e5d85ac72"
+    },
+    {
+      "path": "app/catalogo/page.tsx",
+      "size": 309,
+      "mode": 33206,
+      "sha": "6aedcb3320ec26c881f231ea28bd1cd19e36df0a"
+    },
+    {
+      "path": "app/docs.css",
+      "size": 3431,
+      "mode": 33206,
+      "sha": "686a31c11712890197708261d3e1715aaa26a5ee"
+    },
+    {
+      "path": "app/fee-split/fee-split.css",
+      "size": 2817,
+      "mode": 33206,
+      "sha": "767723048f3d74bf39aeb8c9510a3b5b0c57e58c"
+    },
+    {
+      "path": "app/fee-split/page.tsx",
+      "size": 5789,
+      "mode": 33206,
+      "sha": "0764e1252a8b720ca4376a7bcf154cbda9bb3d09"
+    },
+    {
+      "path": "app/globals.css",
+      "size": 16349,
+      "mode": 33206,
+      "sha": "d875b406a8bd41a31932e4f0cd6d036ee0a68ea5"
+    },
+    {
+      "path": "app/history/deliveries.css",
+      "size": 22118,
+      "mode": 33206,
+      "sha": "be5cab307250b4d866a2e083c63d5d4884e7f617"
+    },
+    {
+      "path": "app/history/history.css",
+      "size": 8789,
+      "mode": 33206,
+      "sha": "e1f93367905e2e2286a2fdda755949f0d4bcffb0"
+    },
+    {
+      "path": "app/history/page.tsx",
+      "size": 483,
+      "mode": 33206,
+      "sha": "676055ff422959bbe88648b406000e722363ced1"
+    },
+    {
+      "path": "app/history/review/page.tsx",
+      "size": 204,
+      "mode": 33206,
+      "sha": "bc391d698de0375aa83c4841c14a4982366f50a2"
+    },
+    {
+      "path": "app/hub/page.tsx",
+      "size": 524,
+      "mode": 33206,
+      "sha": "b1bc76677e8d991718e4f594428547c12f120bb9"
+    },
+    {
+      "path": "app/lab/page.tsx",
+      "size": 1127,
+      "mode": 33206,
+      "sha": "8377dd514cd3466df2793012a84f3ba4ea3a3ef1"
+    },
+    {
+      "path": "app/layout.tsx",
+      "size": 1838,
+      "mode": 33206,
+      "sha": "a98753d656269bdf5fd78d7eae78bd2e3beb18be"
+    },
+    {
+      "path": "app/not-found.tsx",
+      "size": 376,
+      "mode": 33206,
+      "sha": "c069db8dc04641f7643120c05d9fc574d9fe7345"
+    },
+    {
+      "path": "app/onboarding.css",
+      "size": 1169,
+      "mode": 33206,
+      "sha": "5da6e64b8a85ab524288bfe40bc3a532c8b1e01f"
+    },
+    {
+      "path": "app/onboarding/page.tsx",
+      "size": 3908,
+      "mode": 33206,
+      "sha": "0bd7e76383f6f85f812de5b6036c0a0234915db0"
+    },
+    {
+      "path": "app/page.tsx",
+      "size": 1268,
+      "mode": 33206,
+      "sha": "3b2335605bcc7e435c1c31fa2f4e5439a09e2bff"
+    },
+    {
+      "path": "app/payment-flow.css",
+      "size": 4157,
+      "mode": 33206,
+      "sha": "a74c6fbf40fc98ed14e41336b8dc1559fc752533"
+    },
+    {
+      "path": "app/payment-flow/page.tsx",
+      "size": 1062,
+      "mode": 33206,
+      "sha": "8b3bde04a44c566f6d5c02d2eb44fb8fa7fb0bab"
+    },
+    {
+      "path": "app/payment-receipt.css",
+      "size": 1662,
+      "mode": 33206,
+      "sha": "750413cfa06839db94cc4f7c000e3ace4462eb22"
+    },
+    {
+      "path": "app/pilot/page.tsx",
+      "size": 1359,
+      "mode": 33206,
+      "sha": "9ce8bd7ae622d98ef208f487f5075b6840e69c8a"
+    },
+    {
+      "path": "app/product.css",
+      "size": 3328,
+      "mode": 33206,
+      "sha": "686c1803143a3884ca53019d13fabceaa09de1c7"
+    },
+    {
+      "path": "app/providers/stellar-defi-quote-service/page.tsx",
+      "size": 1586,
+      "mode": 33206,
+      "sha": "61a40dc003af106b26a1021baf58642dfa956d0c"
+    },
+    {
+      "path": "app/publish/page.tsx",
+      "size": 2387,
+      "mode": 33206,
+      "sha": "5a497668d1383cc2915f7cbf338b26087b72e82a"
+    },
+    {
+      "path": "app/publish/publish.css",
+      "size": 2251,
+      "mode": 33206,
+      "sha": "1cbf0e9b2907804b98c539d4c48ed0ab91b41f3d"
+    },
+    {
+      "path": "app/publisher.css",
+      "size": 10126,
+      "mode": 33206,
+      "sha": "4f6402b8cdfc73aff04727a3cd00b2387a88d632"
+    },
+    {
+      "path": "app/reference.css",
+      "size": 533,
+      "mode": 33206,
+      "sha": "9af577384cc8428d71d461bee25de1350c0f4696"
+    },
+    {
+      "path": "app/resources/[id]/page.tsx",
+      "size": 5510,
+      "mode": 33206,
+      "sha": "e57159a2e735b99760343e0a92dbe92252e31fdb"
+    },
+    {
+      "path": "app/resources/portfolio.css",
+      "size": 5170,
+      "mode": 33206,
+      "sha": "797438c5c7a5a6febd973e7cc77b7ea4787f8950"
+    },
+    {
+      "path": "app/skills/[role]/SKILL.md/route.ts",
+      "size": 488,
+      "mode": 33206,
+      "sha": "2e803df4bcab51d1cc21473630453ebd04777c70"
+    },
+    {
+      "path": "app/testnet.css",
+      "size": 1177,
+      "mode": 33206,
+      "sha": "c0cb6457e6b91586c9aa74743fd907c1e1a91fd2"
+    },
+    {
+      "path": "app/verified-providers.css",
+      "size": 2036,
+      "mode": 33206,
+      "sha": "47402ce157049ce8ba2ea5be597a583d24fd1ecf"
+    },
+    {
+      "path": "app/webmcp-playground/page.tsx",
+      "size": 2277,
+      "mode": 33206,
+      "sha": "f6f8e3cd7d6debcd688ebdb02f7461490e9ef37b"
+    },
+    {
+      "path": "app/workflow-showcase.css",
+      "size": 5599,
+      "mode": 33206,
+      "sha": "ccacb12e9647a32ffad40ea46ec209c44a02faeb"
+    },
+    {
+      "path": "components/ActivityDashboard.tsx",
+      "size": 24389,
+      "mode": 33206,
+      "sha": "5051963fcd6fed5ec8a3513f4587afe2bf844e63"
+    },
+    {
+      "path": "components/AdminOperationsDashboard.tsx",
+      "size": 31070,
+      "mode": 33206,
+      "sha": "faf16e59fba20a61597e009493b3ee2599379800"
+    },
+    {
+      "path": "components/AgentChatDemo.tsx",
+      "size": 2243,
+      "mode": 33206,
+      "sha": "6d46db67860d3937289ab37b2fd3d000ddaca4d6"
+    },
+    {
+      "path": "components/AgentConnectModal.tsx",
+      "size": 11355,
+      "mode": 33206,
+      "sha": "ee9ffd2b8acd086a647b83d5f5408afa3e54daac"
+    },
+    {
+      "path": "components/AgentDirectConnectCard.tsx",
+      "size": 7961,
+      "mode": 33206,
+      "sha": "940c0a8aceaa8732e9a9fea37563b8fe4b5bf0e1"
+    },
+    {
+      "path": "components/AgentHub.tsx",
+      "size": 2062,
+      "mode": 33206,
+      "sha": "4d391caf3feeb2f970a1a74e641303879474ad03"
+    },
+    {
+      "path": "components/Breadcrumbs.tsx",
+      "size": 966,
+      "mode": 33206,
+      "sha": "da2a9c6fa5bf36e4064ad56cf6de3a8d7d25e4fb"
+    },
+    {
+      "path": "components/BuyerExecutionDemo.tsx",
+      "size": 8849,
+      "mode": 33206,
+      "sha": "645309ca016b0aaee563c28429b6ac19e6a0dc3c"
+    },
+    {
+      "path": "components/Catalog.tsx",
+      "size": 6408,
+      "mode": 33206,
+      "sha": "a537a58d11a06c114fbad1bf34862eb357cc533e"
+    },
+    {
+      "path": "components/DeliverableReview.tsx",
+      "size": 4195,
+      "mode": 33206,
+      "sha": "554c59eb5ed59b08758d817db4041e76d2d2d6cf"
+    },
+    {
+      "path": "components/DeliverableViewer.tsx",
+      "size": 37473,
+      "mode": 33206,
+      "sha": "e86827de58ab280c404b1ce37bbad981183068c7"
+    },
+    {
+      "path": "components/DocsCodeTabs.tsx",
+      "size": 5195,
+      "mode": 33206,
+      "sha": "478b2a5e34f98ffb486a08625562a6e339a89e12"
+    },
+    {
+      "path": "components/Footer.tsx",
+      "size": 831,
+      "mode": 33206,
+      "sha": "1d8b65c367cff02ad4c1ba1861d4f91bb8537f3e"
+    },
+    {
+      "path": "components/HistoryEntry.tsx",
+      "size": 2441,
+      "mode": 33206,
+      "sha": "55df496b1033df1f669b1efcbf9550a4a9bbb449"
+    },
+    {
+      "path": "components/LandingClientWrapper.tsx",
+      "size": 1009,
+      "mode": 33206,
+      "sha": "883f74b799629ab7edbc9be135329d536206838e"
+    },
+    {
+      "path": "components/LandingConnect.tsx",
+      "size": 501,
+      "mode": 33206,
+      "sha": "f209b41825cc5f2c2617e2941506c7af1d231bca"
+    },
+    {
+      "path": "components/LandingHero.tsx",
+      "size": 2500,
+      "mode": 33206,
+      "sha": "98097f601b51335f97e14423e2788e5758d74cfa"
+    },
+    {
+      "path": "components/ListingStakingSection.tsx",
+      "size": 14705,
+      "mode": 33206,
+      "sha": "be6f05d5e97dfef55a9fe7369e547af15709bcca"
+    },
+    {
+      "path": "components/MarketplaceWorkspace.module.css",
+      "size": 1351,
+      "mode": 33206,
+      "sha": "86cbf3a1050df97a14a319e3ba4abd37e6c5fac2"
+    },
+    {
+      "path": "components/MarketplaceWorkspace.tsx",
+      "size": 12370,
+      "mode": 33206,
+      "sha": "8385608211f7102d88dd7334e746dc7fc22b7ad9"
+    },
+    {
+      "path": "components/MarketScene.tsx",
+      "size": 12637,
+      "mode": 33206,
+      "sha": "b87ab6f643d84a3e5d1eb9ea11acbaa967780703"
+    },
+    {
+      "path": "components/MarketVillage.tsx",
+      "size": 9216,
+      "mode": 33206,
+      "sha": "3679b6f1077cef10ea2ba6408ec8d8024e0c909c"
+    },
+    {
+      "path": "components/Navbar.tsx",
+      "size": 1681,
+      "mode": 33206,
+      "sha": "df6e8a8c61793d8dcb1cc2f2e8bd94302f8da66f"
+    },
+    {
+      "path": "components/OperationHistory.tsx",
+      "size": 29062,
+      "mode": 33206,
+      "sha": "2204d242458d9f25c0eafcd243b27256c09756d9"
+    },
+    {
+      "path": "components/PaymentDemo.tsx",
+      "size": 2519,
+      "mode": 33206,
+      "sha": "d2d57858b1d6c0d87bc8270919003d8cf0aaa48e"
+    },
+    {
+      "path": "components/PaymentFlowVisualizer.tsx",
+      "size": 8344,
+      "mode": 33206,
+      "sha": "888a3b8cac69b335347e72fd586ba7b505cdaaee"
+    },
+    {
+      "path": "components/PilotOnboarding.module.css",
+      "size": 2106,
+      "mode": 33206,
+      "sha": "6807276a45b82d7718050afb930b289f7a89dcfd"
+    },
+    {
+      "path": "components/PilotOnboarding.tsx",
+      "size": 9219,
+      "mode": 33206,
+      "sha": "fd8e0abed354f974183e8a6bc1b0ce7dd64580b6"
+    },
+    {
+      "path": "components/PrivateAgentChat.tsx",
+      "size": 8882,
+      "mode": 33206,
+      "sha": "19ccb536bc7721510ab22a0de31c6e51a3ae2743"
+    },
+    {
+      "path": "components/PrivatePurchase.tsx",
+      "size": 5571,
+      "mode": 33206,
+      "sha": "b3565c6b535ff0b10ffb53e8be16000a2d42ca96"
+    },
+    {
+      "path": "components/PromiseSummarySection.tsx",
+      "size": 2418,
+      "mode": 33206,
+      "sha": "818e099a349fe986bff1845e29d6f60e49abf985"
+    },
+    {
+      "path": "components/ProviderReviewAdmin.tsx",
+      "size": 11014,
+      "mode": 33206,
+      "sha": "21a2b34841230df9e8a91a842b17ebe22cfc2532"
+    },
+    {
+      "path": "components/ProviderReviewControls.tsx",
+      "size": 6666,
+      "mode": 33206,
+      "sha": "673e55a9e9d2341847ee5c36d800eb00f6bb4ca3"
+    },
+    {
+      "path": "components/PublisherBrief.tsx",
+      "size": 6134,
+      "mode": 33206,
+      "sha": "d78487d549c5dc59e2928a33fea5e3929b68efff"
+    },
+    {
+      "path": "components/PublisherForm.tsx",
+      "size": 8038,
+      "mode": 33206,
+      "sha": "d4be4f6e3a4b2640a451749d53308e1b08d048cd"
+    },
+    {
+      "path": "components/RecoveryStatus.tsx",
+      "size": 1076,
+      "mode": 33206,
+      "sha": "e4bc03f4cf8f185b6e5fc1f55957eb317eac8075"
+    },
+    {
+      "path": "components/ServicePortfolioSample.tsx",
+      "size": 2149,
+      "mode": 33206,
+      "sha": "551fc1257a97f4378a93d2bedea1f18dbdb67550"
+    },
+    {
+      "path": "components/ServicePortfolioTools.tsx",
+      "size": 667,
+      "mode": 33206,
+      "sha": "6635b09bf6c0eb93fe0be5338d62381269ada0df"
+    },
+    {
+      "path": "components/TestnetPaymentDemo.tsx",
+      "size": 4828,
+      "mode": 33206,
+      "sha": "b33ce436478ab2050b56213e793dacba35c706fe"
+    },
+    {
+      "path": "components/ui/CopyText.tsx",
+      "size": 1406,
+      "mode": 33206,
+      "sha": "fb7c2a193b8bd48deeaac9d2a25ed53c5558f1f4"
+    },
+    {
+      "path": "components/ui/index.tsx",
+      "size": 1675,
+      "mode": 33206,
+      "sha": "8c2681f51d9f7f8580aac0b1e4dffbe5073deffc"
+    },
+    {
+      "path": "components/ui/Modal.tsx",
+      "size": 1920,
+      "mode": 33206,
+      "sha": "16a49a79453fd958370ea8f8cbf12d698e453cd0"
+    },
+    {
+      "path": "components/ui/ServiceCard.tsx",
+      "size": 1422,
+      "mode": 33206,
+      "sha": "77fc3d679c360e68fe1dfe5a613f2af270d37667"
+    },
+    {
+      "path": "components/useBazaarOrigin.ts",
+      "size": 414,
+      "mode": 33206,
+      "sha": "691667f2b432b469f01abd10d7750341e4265767"
+    },
+    {
+      "path": "components/VerifiedProviderCatalog.tsx",
+      "size": 4685,
+      "mode": 33206,
+      "sha": "e53e523d2eec806d8c51a0298529cd7cf4f5ef63"
+    },
+    {
+      "path": "components/WebMCPPlayground.tsx",
+      "size": 12881,
+      "mode": 33206,
+      "sha": "40e6d057ed00bdb7ca92ca75be548c21200c9882"
+    },
+    {
+      "path": "components/WebMCPProvider.tsx",
+      "size": 40884,
+      "mode": 33206,
+      "sha": "cb6f23db89c60b156a0f48185436cedee6ce10c9"
+    },
+    {
+      "path": "components/WebsiteIntelligenceConsumption.tsx",
+      "size": 12351,
+      "mode": 33206,
+      "sha": "ed690fadf8f0af68a446def30583deb70b694bd0"
+    },
+    {
+      "path": "components/WorkflowShowcase.tsx",
+      "size": 10199,
+      "mode": 33206,
+      "sha": "46d065f11799b98d81102807fbaac7a8fc53068b"
+    },
+    {
+      "path": "lib/activity-client.ts",
+      "size": 1007,
+      "mode": 33206,
+      "sha": "d714b23bce4ced2876c816aba37ab2e843697edb"
+    },
+    {
+      "path": "lib/activity-http.ts",
+      "size": 12009,
+      "mode": 33206,
+      "sha": "d7294942d9250ae7fa5c74a137fb968f03f24159"
+    },
+    {
+      "path": "lib/activity-store.ts",
+      "size": 3518,
+      "mode": 33206,
+      "sha": "68dc26815737fc546eb6f1d470bb5580927df0c4"
+    },
+    {
+      "path": "lib/activity.ts",
+      "size": 3126,
+      "mode": 33206,
+      "sha": "e334eb84dcf34e3bf82ad888f50ff0c94de9bbad"
+    },
+    {
+      "path": "lib/admin-guard.ts",
+      "size": 4742,
+      "mode": 33206,
+      "sha": "442155c61ecb82864286b100d5c75f9b42920ab6"
+    },
+    {
+      "path": "lib/admin-notifier.ts",
+      "size": 2828,
+      "mode": 33206,
+      "sha": "da93012020869c3554a74e9bab099c9e8767817a"
+    },
+    {
+      "path": "lib/bazaar-agent-client.ts",
+      "size": 27055,
+      "mode": 33206,
+      "sha": "7c1dfa51b710313485b5e697b5bf467ddaf24dbc"
+    },
+    {
+      "path": "lib/bazaar-skills.ts",
+      "size": 7001,
+      "mode": 33206,
+      "sha": "e90db73bef7e759f27d2573c045a64bc29d6d78e"
+    },
+    {
+      "path": "lib/buyer-execution.ts",
+      "size": 11125,
+      "mode": 33206,
+      "sha": "b0f31b884d3da0f06d3cf132b8c9844d42d0d18f"
+    },
+    {
+      "path": "lib/canonical-service-card.ts",
+      "size": 907,
+      "mode": 33206,
+      "sha": "84593fd0f20da94936e05887372d312f3da50193"
+    },
+    {
+      "path": "lib/catalog.ts",
+      "size": 2307,
+      "mode": 33206,
+      "sha": "509693c84ddc1b426aea896db4021dc02a7fa3c7"
+    },
+    {
+      "path": "lib/deliverable-client.ts",
+      "size": 5146,
+      "mode": 33206,
+      "sha": "00c96ca281dfa857bd1718a164bd6d26ff6e357f"
+    },
+    {
+      "path": "lib/deliverable-http.ts",
+      "size": 8416,
+      "mode": 33206,
+      "sha": "8e66218d6d2ae8c54ae5494bc4f13719ef896564"
+    },
+    {
+      "path": "lib/deliverable-s3.ts",
+      "size": 4512,
+      "mode": 33206,
+      "sha": "fd1ab29575fc42d503332174bad36d88c7d266ca"
+    },
+    {
+      "path": "lib/deliverable-store.ts",
+      "size": 5524,
+      "mode": 33206,
+      "sha": "bd967eba3f9dd331f2680bacfd6b5b4103f62df7"
+    },
+    {
+      "path": "lib/deliverable.ts",
+      "size": 6050,
+      "mode": 33206,
+      "sha": "96103f5908f2cc74327e43d775bc8a2529974465"
+    },
+    {
+      "path": "lib/delivery-boundaries.ts",
+      "size": 2146,
+      "mode": 33206,
+      "sha": "6312f94704852681f6a09e05fa248e796a997a29"
+    },
+    {
+      "path": "lib/delivery-contract.ts",
+      "size": 1681,
+      "mode": 33206,
+      "sha": "cd59b76625aa0e88c33162f7c05cb9a01e53239b"
+    },
+    {
+      "path": "lib/delivery-recovery-handoff.ts",
+      "size": 4364,
+      "mode": 33206,
+      "sha": "16fe551e4018098172035182b426e49d62909997"
+    },
+    {
+      "path": "lib/delivery-result.ts",
+      "size": 1237,
+      "mode": 33206,
+      "sha": "b2acbfe17d1d903618644749dad15302d318ed05"
+    },
+    {
+      "path": "lib/demo-credentials.ts",
+      "size": 375,
+      "mode": 33206,
+      "sha": "d6a2970064559b092e167a7c7d336e072ad8f188"
+    },
+    {
+      "path": "lib/discovery.ts",
+      "size": 6383,
+      "mode": 33206,
+      "sha": "7aabeb06057184ec17908538386a060336f0489f"
+    },
+    {
+      "path": "lib/dynamic-registry.ts",
+      "size": 6601,
+      "mode": 33206,
+      "sha": "485432690115d96aeff9516b3e1c3869854e90c3"
+    },
+    {
+      "path": "lib/external-provider.ts",
+      "size": 2286,
+      "mode": 33206,
+      "sha": "46e7dd890403bf8cf08c14d9dd2705503f07b9b4"
+    },
+    {
+      "path": "lib/fee-split-design.ts",
+      "size": 8538,
+      "mode": 33206,
+      "sha": "1a04c2b8294d3259395f561fae66851b8af5727e"
+    },
+    {
+      "path": "lib/history-connection.ts",
+      "size": 1413,
+      "mode": 33206,
+      "sha": "c5b80e7f85b98ed537dbd47737e38cbee27845d2"
+    },
+    {
+      "path": "lib/market-stalls.ts",
+      "size": 812,
+      "mode": 33206,
+      "sha": "59f629299dff286f25cff8eb36354ff4dc324457"
+    },
+    {
+      "path": "lib/market-visitor.ts",
+      "size": 1846,
+      "mode": 33206,
+      "sha": "d5638e41a7563e63dfa5ba5253da6ea8a7384061"
+    },
+    {
+      "path": "lib/marketplace-http.ts",
+      "size": 6418,
+      "mode": 33206,
+      "sha": "da0b5874266a2818dd062eee3501b1fdd396d938"
+    },
+    {
+      "path": "lib/marketplace-identity.ts",
+      "size": 548,
+      "mode": 33206,
+      "sha": "81ee43681755df5b4822370631fda4efaa77781e"
+    },
+    {
+      "path": "lib/marketplace-mcp.ts",
+      "size": 2928,
+      "mode": 33206,
+      "sha": "c5315aeb237b8cc73c2257e82e08f86624e83b76"
+    },
+    {
+      "path": "lib/marketplace-payment.ts",
+      "size": 5868,
+      "mode": 33206,
+      "sha": "c2ff4250e30f7c97e81432d29e1766f4b49e8d4d"
+    },
+    {
+      "path": "lib/marketplace-store.ts",
+      "size": 6274,
+      "mode": 33206,
+      "sha": "c0a3023e07b2d25c72cfb6396602d7a0615500d7"
+    },
+    {
+      "path": "lib/marketplace.ts",
+      "size": 10395,
+      "mode": 33206,
+      "sha": "22f9fd5e6d44486c9b5ebef87d751ee7db69455a"
+    },
+    {
+      "path": "lib/mcp-onboarding-server.ts",
+      "size": 20754,
+      "mode": 33206,
+      "sha": "bf777cfc54c00f1f2dc1bdae45671a82661625ed"
+    },
+    {
+      "path": "lib/mcp-provider-context.ts",
+      "size": 1568,
+      "mode": 33206,
+      "sha": "62109e66adfdca9c2ef26cc1211480d0b30d10e3"
+    },
+    {
+      "path": "lib/mcp-tool-contract.ts",
+      "size": 1019,
+      "mode": 33206,
+      "sha": "bfbaa0b5632fbac15462821f291d061a43bf7936"
+    },
+    {
+      "path": "lib/mcp-workspace-context.ts",
+      "size": 2164,
+      "mode": 33206,
+      "sha": "5e21a07c8f3742c9f8e0f5ba76d3ee86ce796fef"
+    },
+    {
+      "path": "lib/operation-history-auth.ts",
+      "size": 3949,
+      "mode": 33206,
+      "sha": "e8b1a0441a91bcd821f85e4b53f0c6e12437f48c"
+    },
+    {
+      "path": "lib/operation-history-client.ts",
+      "size": 1582,
+      "mode": 33206,
+      "sha": "f6fe910e41998c6c7299b3a4468de1e66a505056"
+    },
+    {
+      "path": "lib/operation-history-http.ts",
+      "size": 4692,
+      "mode": 33206,
+      "sha": "198cd30bc06100a9774e95cd7d600442f36bc3e6"
+    },
+    {
+      "path": "lib/operation-history-store.ts",
+      "size": 4938,
+      "mode": 33206,
+      "sha": "dd5bdd5c8ed4d0f0332df1d9df2791546f2985c1"
+    },
+    {
+      "path": "lib/operation-history.ts",
+      "size": 5541,
+      "mode": 33206,
+      "sha": "b863e18ba1ebe9f7e402129ab9b2e06aeea22a29"
+    },
+    {
+      "path": "lib/paid-delivery-envelope.ts",
+      "size": 6962,
+      "mode": 33206,
+      "sha": "92ae8aad165d45c150a930e0d0fa37bf6445cba0"
+    },
+    {
+      "path": "lib/payment-flow.ts",
+      "size": 10783,
+      "mode": 33206,
+      "sha": "c3a2c16da03f6a418986605fe20bf93727716edd"
+    },
+    {
+      "path": "lib/payment-options.ts",
+      "size": 2850,
+      "mode": 33206,
+      "sha": "4d59b0d0faefadf935a4da391723a32457330a76"
+    },
+    {
+      "path": "lib/pilot-access.ts",
+      "size": 1688,
+      "mode": 33206,
+      "sha": "9dd06cb3d855615d0657a5dc3f49a8c2018f5e1c"
+    },
+    {
+      "path": "lib/pilot-cards.ts",
+      "size": 13539,
+      "mode": 33206,
+      "sha": "49ba09961dc617e8783ce9d1e514b6713fc3264e"
+    },
+    {
+      "path": "lib/pilot-payment-store.ts",
+      "size": 3645,
+      "mode": 33206,
+      "sha": "d1f76a365490de378c3695294d22f4905c109c3f"
+    },
+    {
+      "path": "lib/pilot-route-policy.ts",
+      "size": 2264,
+      "mode": 33206,
+      "sha": "e5740419153c5c235c02bf0edd5df9e206042a20"
+    },
+    {
+      "path": "lib/pilot-settlement.ts",
+      "size": 1821,
+      "mode": 33206,
+      "sha": "d2612b2cc0aca4fe7a2c8ed73f1ab213039ae7de"
+    },
+    {
+      "path": "lib/promise-summary.ts",
+      "size": 1235,
+      "mode": 33206,
+      "sha": "2d7675221c4f31b58b94ae76bb0609def00614eb"
+    },
+    {
+      "path": "lib/provider-admin-session.ts",
+      "size": 5283,
+      "mode": 33206,
+      "sha": "1a11e5e71e4bf4ab252b7a0c89bacdaf03e5bfac"
+    },
+    {
+      "path": "lib/provider-kit/delivery-builder.ts",
+      "size": 1237,
+      "mode": 33206,
+      "sha": "298fca2c7f84fbe8436ac40a968f1bf9328fac2b"
+    },
+    {
+      "path": "lib/provider-kit/index.ts",
+      "size": 115,
+      "mode": 33206,
+      "sha": "951fcac78a53f3afd53d77556a3e3089727a6bf7"
+    },
+    {
+      "path": "lib/provider-kit/service-card-generator.ts",
+      "size": 1156,
+      "mode": 33206,
+      "sha": "309e4137c02660cabd73ebab81e9d027c3dfd9c8"
+    },
+    {
+      "path": "lib/provider-kit/types.ts",
+      "size": 1197,
+      "mode": 33206,
+      "sha": "e72f73d42e7b16d5f02f8f94b117c3ae45fa1a70"
+    },
+    {
+      "path": "lib/provider-request-url.ts",
+      "size": 1452,
+      "mode": 33206,
+      "sha": "60cb32e2912da7cda8ed2ccfd9d7a34952f8b174"
+    },
+    {
+      "path": "lib/provider-review-audit.ts",
+      "size": 806,
+      "mode": 33206,
+      "sha": "5f64de48e7d3fe221f5663e8333220bb6e6a7e16"
+    },
+    {
+      "path": "lib/provider-review-limits.ts",
+      "size": 3616,
+      "mode": 33206,
+      "sha": "89d72f2b75dee3a2f765468b24213c257072044f"
+    },
+    {
+      "path": "lib/provider-review-operator.ts",
+      "size": 9958,
+      "mode": 33206,
+      "sha": "5efb72929940c1df58e3d80953f8680723aacb44"
+    },
+    {
+      "path": "lib/provider-review-redis.ts",
+      "size": 2464,
+      "mode": 33206,
+      "sha": "33af20c87ecc3143b7cbc407616425eef84200c3"
+    },
+    {
+      "path": "lib/provider-review-runtime.ts",
+      "size": 1518,
+      "mode": 33206,
+      "sha": "56c0f68de30c2e92000ee37677ef8d58e3aba6f1"
+    },
+    {
+      "path": "lib/provider-review-store.ts",
+      "size": 2779,
+      "mode": 33206,
+      "sha": "cbe3a7ccd4e8f48c2dc72fd1239cb593c55f40d1"
+    },
+    {
+      "path": "lib/provider-self-listing.ts",
+      "size": 22742,
+      "mode": 33206,
+      "sha": "1905202252ab269141c48666ffa7b42cd72f8b60"
+    },
+    {
+      "path": "lib/provider-submission-http.ts",
+      "size": 2577,
+      "mode": 33206,
+      "sha": "a7555700fac7e2975536b37860d0b0053abd676f"
+    },
+    {
+      "path": "lib/public-discovery.ts",
+      "size": 1497,
+      "mode": 33206,
+      "sha": "89986223690810e3051ab1e33febd937992607ad"
+    },
+    {
+      "path": "lib/recovery-summary.ts",
+      "size": 1365,
+      "mode": 33206,
+      "sha": "7c0fb89759a832790db1c53ad2cb8f15194cc785"
+    },
+    {
+      "path": "lib/redis-payment-settlement.ts",
+      "size": 3831,
+      "mode": 33206,
+      "sha": "1f4517f67903340e80b6dec2d9ff6820a11596b0"
+    },
+    {
+      "path": "lib/review-deliveries.ts",
+      "size": 8092,
+      "mode": 33206,
+      "sha": "c3d6fbb51b96d56b224be82ef188caf3aacc578b"
+    },
+    {
+      "path": "lib/sandbox-payment-handler.ts",
+      "size": 9280,
+      "mode": 33206,
+      "sha": "5ffa967445a87b2c5db665105b18a66d86f1eb9e"
+    },
+    {
+      "path": "lib/service-card-schema.ts",
+      "size": 4186,
+      "mode": 33206,
+      "sha": "0bed0a4c2dc8fd168041cf0f3c1dfe6224203f16"
+    },
+    {
+      "path": "lib/service-card.ts",
+      "size": 1889,
+      "mode": 33206,
+      "sha": "2a5de9a4d7d771902d8bedf391751731f2bed10c"
+    },
+    {
+      "path": "lib/service-ingest.ts",
+      "size": 5498,
+      "mode": 33206,
+      "sha": "e1c4e0df809b1ccaafc5d4b03f70da3c79d0b821"
+    },
+    {
+      "path": "lib/service-order.ts",
+      "size": 3159,
+      "mode": 33206,
+      "sha": "2efa9a7eeb5c7f487f9db475627d038a51f52957"
+    },
+    {
+      "path": "lib/service-portfolio.ts",
+      "size": 1944,
+      "mode": 33206,
+      "sha": "34a335e5cc85e58d405df9d82eb197b4cd8bec72"
+    },
+    {
+      "path": "lib/service-registry-spec.ts",
+      "size": 3801,
+      "mode": 33206,
+      "sha": "0432374421306e2874851283e0d3b9ea8165b00e"
+    },
+    {
+      "path": "lib/swap-risk.ts",
+      "size": 1315,
+      "mode": 33206,
+      "sha": "327bbdbc02a3ff9cc126f810447af4022c76be28"
+    },
+    {
+      "path": "lib/testnet-balances.ts",
+      "size": 1702,
+      "mode": 33206,
+      "sha": "02bab949581b1bd1b0e5b02b80fa47b4ba981fa8"
+    },
+    {
+      "path": "lib/testnet-funding.ts",
+      "size": 2444,
+      "mode": 33206,
+      "sha": "eb01696e4a417e96b37060d21ce479599f5b9bd3"
+    },
+    {
+      "path": "lib/testnet-payer-safety.ts",
+      "size": 667,
+      "mode": 33206,
+      "sha": "b835bbf1285617f6d71a548f2b8c57ee263df473"
+    },
+    {
+      "path": "lib/types.ts",
+      "size": 1945,
+      "mode": 33206,
+      "sha": "d33ea6134c29df484b5c89a13f9020654c2726f0"
+    },
+    {
+      "path": "lib/verify-testnet-transfer.ts",
+      "size": 2436,
+      "mode": 33206,
+      "sha": "1f94a232c8e4d4871d22d3e3f96aaacd7bc9a11a"
+    },
+    {
+      "path": "lib/webmcp-client-adapter.ts",
+      "size": 2874,
+      "mode": 33206,
+      "sha": "e9dc9ec784fe8c07ff09f49484465886c4b394cb"
+    },
+    {
+      "path": "lib/webmcp/owned-registration.ts",
+      "size": 1484,
+      "mode": 33206,
+      "sha": "11235c39927c64c79a0b0e70ab13042a4febcdb4"
+    },
+    {
+      "path": "lib/webmcp/polyfill.ts",
+      "size": 9034,
+      "mode": 33206,
+      "sha": "ef47e62aa6ce0bf2c7fff81d158e0f31783054f9"
+    },
+    {
+      "path": "lib/webmcp/private-history.ts",
+      "size": 5089,
+      "mode": 33206,
+      "sha": "a1763376b8dd72948c05ccaaff8d95f8dc9fce17"
+    },
+    {
+      "path": "lib/webmcp/register.ts",
+      "size": 15121,
+      "mode": 33206,
+      "sha": "01cad31c92375cba33564fa9e0050c21103c000a"
+    },
+    {
+      "path": "lib/webmcp/types.ts",
+      "size": 2449,
+      "mode": 33206,
+      "sha": "61cb008d204206f3cf672e301efb61565222f17e"
+    },
+    {
+      "path": "lib/website-intelligence-consumption.ts",
+      "size": 4401,
+      "mode": 33206,
+      "sha": "7b0aa503940808fc9ed1133c452784e705e082fa"
+    },
+    {
+      "path": "lib/website-intelligence-history.ts",
+      "size": 11504,
+      "mode": 33206,
+      "sha": "211916d30b8b3b975eff04df381d037fd992374c"
+    },
+    {
+      "path": "lib/website-intelligence-one-shot.ts",
+      "size": 14984,
+      "mode": 33206,
+      "sha": "15240c8d4a4cd998db6937d4bb5e8350fb201388"
+    },
+    {
+      "path": "lib/website-intelligence-readiness.ts",
+      "size": 8348,
+      "mode": 33206,
+      "sha": "711e8fd9976e28710551f0f72bdce4e92c0b9a6f"
+    },
+    {
+      "path": "lib/website-intelligence-recovery-client.ts",
+      "size": 4444,
+      "mode": 33206,
+      "sha": "2a229fa5a656ca4c2ce8e8cc6f305e15d79eecad"
+    },
+    {
+      "path": "lib/workflow-bundle.ts",
+      "size": 8193,
+      "mode": 33206,
+      "sha": "cc9ac2220cea604ec438e28b1203281db3b89e18"
+    },
+    {
+      "path": "lib/workflow-bundles.ts",
+      "size": 4960,
+      "mode": 33206,
+      "sha": "b9b70dc99474c4f66202859f1a4b3b6c0f96573a"
+    },
+    {
+      "path": "lib/workspace-admission.ts",
+      "size": 2366,
+      "mode": 33206,
+      "sha": "da04e7c2dd0ba235821fd2168a1aa93d85fadbd0"
+    },
+    {
+      "path": "lib/workspace-auth.ts",
+      "size": 1973,
+      "mode": 33206,
+      "sha": "8e6dfbd89f873ead5c1e85fafc264c8b69430b94"
+    },
+    {
+      "path": "lib/workspace-chat-http.ts",
+      "size": 4126,
+      "mode": 33206,
+      "sha": "74b17a910f7177ae9978f0e9db5ced0bd111b327"
+    },
+    {
+      "path": "lib/workspace-http.ts",
+      "size": 7041,
+      "mode": 33206,
+      "sha": "5f8526bd41278c6d83feedb01cde8156a023d986"
+    },
+    {
+      "path": "lib/workspace-public-origin.ts",
+      "size": 571,
+      "mode": 33206,
+      "sha": "12317d91055ece676b41f2714727c2a86b3dcdc8"
+    },
+    {
+      "path": "lib/workspace-store.ts",
+      "size": 48606,
+      "mode": 33206,
+      "sha": "2360e896bf24f2b3db089da35837d97630783b06"
+    },
+    {
+      "path": "lib/workspace-types.ts",
+      "size": 2360,
+      "mode": 33206,
+      "sha": "b0ce93c4b705a2997c63693b9f3586316b92f26a"
+    },
+    {
+      "path": "lib/x402-config.ts",
+      "size": 1343,
+      "mode": 33206,
+      "sha": "6d6bc2ca329c426cc0d22ff555589c982ce92268"
+    },
+    {
+      "path": "lib/x402-facilitator.ts",
+      "size": 451,
+      "mode": 33206,
+      "sha": "347de59684af36b454a60f899aa86e2bc15d86c5"
+    },
+    {
+      "path": "lib/x402-requirements.ts",
+      "size": 1249,
+      "mode": 33206,
+      "sha": "3c81f8f11840e17a4b8cb53d67cd722b29101803"
+    },
+    {
+      "path": "LICENSE",
+      "size": 664,
+      "mode": 33206,
+      "sha": "83d32e087bc91559a24d7a9e70e68e3af865f90f"
+    },
+    {
+      "path": "next-env.d.ts",
+      "size": 295,
+      "mode": 33206,
+      "sha": "d3fc80b7fae627e01dce199d12132aa4fc32d773"
+    },
+    {
+      "path": "package-lock.json",
+      "size": 139225,
+      "mode": 33206,
+      "sha": "071c5cc8b1ce57fc003079121d0359627aad867e"
+    },
+    {
+      "path": "package.json",
+      "size": 6580,
+      "mode": 33206,
+      "sha": "df54bb2330144eb4be96405a76193f2f64bc101b"
+    },
+    {
+      "path": "proxy.ts",
+      "size": 1870,
+      "mode": 33206,
+      "sha": "a1ba7ff06ff3140b064107c5088df1df8354215a"
+    },
+    {
+      "path": "public/bazaar-qr.svg",
+      "size": 18223,
+      "mode": 33206,
+      "sha": "71b46eb9de44542b2fe3ad9753c41b610c516c87"
+    },
+    {
+      "path": "public/brand/bazaar-cover.png",
+      "size": 1997172,
+      "mode": 33206,
+      "sha": "4296903e92d43a84471b50e3ecd9777c3d5f1032"
+    },
+    {
+      "path": "public/cover.jpg",
+      "size": 969424,
+      "mode": 33206,
+      "sha": "fb5ddb611253d6fc172a81f0c3aa69492d9e8f1c"
+    },
+    {
+      "path": "public/demo-deliveries/afiche-orbita.png",
+      "size": 38183,
+      "mode": 33206,
+      "sha": "c320dc7bc999fb6e3c722a893f00d33cc6d000a9"
+    },
+    {
+      "path": "public/demo-deliveries/afiche-pulso.png",
+      "size": 34473,
+      "mode": 33206,
+      "sha": "7520af4579d3299be6ff7aab4c572504be809260"
+    },
+    {
+      "path": "public/demo-deliveries/clip-demostracion.mp4",
+      "size": 219483,
+      "mode": 33206,
+      "sha": "af112ceaa5c19c20727fb15f3786d72b70274a01"
+    },
+    {
+      "path": "public/demo-deliveries/subtitulos.vtt",
+      "size": 125,
+      "mode": 33206,
+      "sha": "f0c7f4400952449825965e2d40d7c096f1aafc5d"
+    },
+    {
+      "path": "public/HISTORY_CONNECTION.md",
+      "size": 5550,
+      "mode": 33206,
+      "sha": "0ac9fef1590cfe28033ad711905b7b012caaa21d"
+    },
+    {
+      "path": "public/llms.txt",
+      "size": 8606,
+      "mode": 33206,
+      "sha": "08880e31b29f0d5ad048e19b83f1714f01b2dd32"
+    },
+    {
+      "path": "public/MARKETPLACE_PILOT.md",
+      "size": 3531,
+      "mode": 33206,
+      "sha": "bbd630d7dcd8e69e4e41b48cff776303f03ccd24"
+    },
+    {
+      "path": "public/PROVIDER_ONBOARDING.md",
+      "size": 12473,
+      "mode": 33206,
+      "sha": "c78c745609b60690d3dcacd347a20dee4fd32d9a"
+    },
+    {
+      "path": "public/WORKSPACE_AGENT.md",
+      "size": 11147,
+      "mode": 33206,
+      "sha": "9360defc03c59071ce53a71b5e60cd3699dedaee"
+    },
+    {
+      "path": "styles/market-village.css",
+      "size": 12341,
+      "mode": 33206,
+      "sha": "db085e6e77cf14717e730680ef3afa97f040a6fe"
+    },
+    {
+      "path": "styles/tokens.css",
+      "size": 908,
+      "mode": 33206,
+      "sha": "fea90810f91221c02bea649f1c01434da1e016df"
+    },
+    {
+      "path": "styles/ui.css",
+      "size": 15087,
+      "mode": 33206,
+      "sha": "2f22e7bbaea4a739b998d3bfb08992e73914cff7"
+    },
+    {
+      "path": "tsconfig.json",
+      "size": 781,
+      "mode": 33206,
+      "sha": "2e57793c7fd4461978a7d6ee600a6e98aab53334"
+    },
+    {
+      "path": "vercel.json",
+      "size": 432,
+      "mode": 33206,
+      "sha": "a640a469c8a119626130811e6be292718709f11d"
+    }
+  ]
+}
