@@ -59,7 +59,7 @@ export function PrivatePurchase({
           {
             headers: { Authorization: "Bearer " + token },
             cache: "no-store",
-            credentials: "omit",
+            credentials: "same-origin",
             redirect: "error",
             signal: controller.signal,
           },
@@ -117,7 +117,7 @@ export function PrivatePurchase({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ versionId, fileId: file.id, download }),
-        credentials: "omit",
+        credentials: "same-origin",
         cache: "no-store",
         redirect: "error",
         signal,

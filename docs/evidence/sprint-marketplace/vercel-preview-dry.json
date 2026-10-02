@@ -5,7 +5,7 @@
   },
   "basePath": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation",
   "fileCount": 266,
-  "totalSize": 4668061,
+  "totalSize": 4668205,
   "ignoredCount": 18,
   "ignored": [
     ".env.example",
@@ -36,17 +36,17 @@
     {
       "path": "lib",
       "fileCount": 107,
-      "size": 547104
+      "size": 547111
     },
     {
       "path": "components",
       "fileCount": 49,
-      "size": 397973
+      "size": 398008
     },
     {
       "path": "app",
       "fileCount": 86,
-      "size": 225993
+      "size": 226095
     },
     {
       "path": "package-lock.json",
@@ -296,9 +296,9 @@
     },
     {
       "path": "app/api/deliveries/route.ts",
-      "size": 271,
+      "size": 373,
       "mode": 33206,
-      "sha": "3374d6bc5c47c0ef4ed64c8f473be3f4bf701463"
+      "sha": "aee7829b3d0b29e79bef1c4471f58893a81f419c"
     },
     {
       "path": "app/api/deliveries/uploads/route.ts",
@@ -692,9 +692,9 @@
     },
     {
       "path": "components/ActivityDashboard.tsx",
-      "size": 24389,
+      "size": 24410,
       "mode": 33206,
-      "sha": "5051963fcd6fed5ec8a3513f4587afe2bf844e63"
+      "sha": "bf5c8c1786badd0f581d597852dfe0a209934035"
     },
     {
       "path": "components/AdminOperationsDashboard.tsx",
@@ -866,9 +866,9 @@
     },
     {
       "path": "components/PrivatePurchase.tsx",
-      "size": 5571,
+      "size": 5585,
       "mode": 33206,
-      "sha": "b3565c6b535ff0b10ffb53e8be16000a2d42ca96"
+      "sha": "739e5e9e596fd5819f80527b088215780f6c9fe6"
     },
     {
       "path": "components/PromiseSummarySection.tsx",
@@ -1388,9 +1388,9 @@
     },
     {
       "path": "lib/public-discovery.ts",
-      "size": 1497,
+      "size": 1504,
       "mode": 33206,
-      "sha": "89986223690810e3051ab1e33febd937992607ad"
+      "sha": "9eb71c3d7d5e7d7aa0a143f4079f3f8f444d6bdc"
     },
     {
       "path": "lib/recovery-summary.ts",

@@ -6,7 +6,7 @@ export type DiscoverySnapshot = { cards: ServiceCard[]; partialResults: boolean;
 export async function readPublicDiscovery(): Promise<DiscoverySnapshot> {
   // Offline adapters disclose incomplete discovery; browsers use the public registry endpoint.
   if (typeof window === "undefined" || !window.location?.origin) return { cards: services.map(toServiceCard), partialResults: true, dynamicRegistry: "unavailable" };
-  const response = await fetch(new URL("/api/discovery/resources", window.location.origin), { method: "GET", credentials: "omit", redirect: "error", cache: "no-store", signal: AbortSignal.timeout(10000) });
+  const response = await fetch(new URL("/api/discovery/resources", window.location.origin), { method: "GET", credentials: "same-origin", redirect: "error", cache: "no-store", signal: AbortSignal.timeout(10000) });
   if (!response.ok) throw new Error("DISCOVERY_UNAVAILABLE");
   const body = await response.json();
   if (!body || !Array.isArray(body.results) || typeof body.partialResults !== "boolean" || !["available", "unavailable"].includes(body.dynamicRegistry)) throw new Error("DISCOVERY_INVALID_RESPONSE");

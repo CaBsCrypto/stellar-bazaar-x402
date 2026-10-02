@@ -2,12 +2,12 @@
   "version": 1,
   "planId": "1e98ed37-df4f-43af-9fb0-8135e5b07293",
   "status": "PASS_EXECUTED_PHASES",
-  "appRequests": 23,
-  "redisRequests": 73,
-  "commandsUpperBound": 358,
-  "outboundPayloadBytes": 171418,
-  "inboundPayloadBytes": 148124,
-  "activeExecutionMs": 78231,
+  "appRequests": 26,
+  "redisRequests": 85,
+  "commandsUpperBound": 415,
+  "outboundPayloadBytes": 197398,
+  "inboundPayloadBytes": 180434,
+  "activeExecutionMs": 89313,
   "ledgerRequests": 0,
   "facilitatorRequests": 0,
   "retries": 0,
@@ -325,12 +325,59 @@
       "commandsUpperBound": 19,
       "outboundPayloadBytes": 6924,
       "inboundPayloadBytes": 7327
+    },
+    {
+      "phase": "replacement",
+      "path": "/api/conversations/f7141c9e-2eee-4674-aa8e-c0960d9a85d7/messages",
+      "method": "GET",
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "deploymentId": "dpl_67WZhj85NTZ2GUcdVKsFoGGYU8hA",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "7a5498d1-a5e0-4525-bfd2-c833c24dd20c",
+      "redisRequests": 4,
+      "commandsUpperBound": 19,
+      "outboundPayloadBytes": 9530,
+      "inboundPayloadBytes": 12540
+    },
+    {
+      "phase": "replacement",
+      "path": "/api/operations",
+      "method": "GET",
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "deploymentId": "dpl_67WZhj85NTZ2GUcdVKsFoGGYU8hA",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "843d77ef-071d-4dc5-97c8-e1b8ffed3cf8",
+      "redisRequests": 4,
+      "commandsUpperBound": 19,
+      "outboundPayloadBytes": 9529,
+      "inboundPayloadBytes": 12538
+    },
+    {
+      "phase": "replacement",
+      "path": "/api/conversations/f7141c9e-2eee-4674-aa8e-c0960d9a85d7/messages",
+      "method": "GET",
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "deploymentId": "dpl_67WZhj85NTZ2GUcdVKsFoGGYU8hA",
+      "status": "CONFIRMED",
+      "httpStatus": 404,
+      "requestId": "67a3536a-0b23-48bd-821a-40724e1baee9",
+      "redisRequests": 4,
+      "commandsUpperBound": 19,
+      "outboundPayloadBytes": 6921,
+      "inboundPayloadBytes": 7232
     }
   ],
   "phases": [
     {
       "phase": "journey",
       "deploymentId": "dpl_ETfLX3YUnhqEpybkt7cjSJEBfH8B",
+      "passed": true
+    },
+    {
+      "phase": "replacement",
+      "deploymentId": "dpl_67WZhj85NTZ2GUcdVKsFoGGYU8hA",
       "passed": true
     }
   ],

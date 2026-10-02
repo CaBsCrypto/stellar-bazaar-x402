@@ -5,8 +5,8 @@
   "target": "preview",
   "phase": "marketplace-closed-candidate",
   "fileCount": 266,
-  "totalBytes": 4668061,
-  "payloadFingerprint": "b0d93096fd2d4c47019ccd2ee1c05633a5436dc6ccd81e50086ced1068e36a6e",
+  "totalBytes": 4668205,
+  "payloadFingerprint": "4e536961ae50a37961d64682f149c98b2c09b519239b9a318b0cdc167e621e12",
   "excluded": [
     "docs",
     "scripts",
@@ -133,8 +133,8 @@
     },
     {
       "path": "app/api/deliveries/route.ts",
-      "bytes": 271,
-      "sha256": "e159dd8ffdf88292b64416b6b5f8e3d29aba2a19e55a0140591d82eebc8dae96"
+      "bytes": 373,
+      "sha256": "a09a924a8c6ccf8b7d887e0411413a00a1122694bdc22ff4fbb0f347636d1972"
     },
     {
       "path": "app/api/deliveries/uploads/route.ts",
@@ -463,8 +463,8 @@
     },
     {
       "path": "components/ActivityDashboard.tsx",
-      "bytes": 24389,
-      "sha256": "9680de6df9a0c34007c371f858146ba710f55500f57497acc491050adc0aa5be"
+      "bytes": 24410,
+      "sha256": "c314084d04fa1071a2b8beca3996531f198ae6a366ffadd2a21d1d9f7ba4d147"
     },
     {
       "path": "components/AdminOperationsDashboard.tsx",
@@ -608,8 +608,8 @@
     },
     {
       "path": "components/PrivatePurchase.tsx",
-      "bytes": 5571,
-      "sha256": "2366de03dbe1b20ba6474f3b14abd66f798caf016523e213f31f8bf33a4534be"
+      "bytes": 5585,
+      "sha256": "7d93de6e037b7a77173fca2e0d4b4a1e4e3d6102889a816c71e0b7e5d298b556"
     },
     {
       "path": "components/PromiseSummarySection.tsx",
@@ -1043,8 +1043,8 @@
     },
     {
       "path": "lib/public-discovery.ts",
-      "bytes": 1497,
-      "sha256": "82ce4aebcf101a0db653d7762930f672ae6187f714bf3fe1bfa8b8cbe7110316"
+      "bytes": 1504,
+      "sha256": "3a1ac12e98cf3d38c2bba56a8e4fbd2974e786b56d7a6ce1f88b74819e589d4f"
     },
     {
       "path": "lib/recovery-summary.ts",

@@ -168,7 +168,7 @@ export function ActivityDashboard({
       try {
         const res = await fetch("/api/activity?" + q, {
           headers: { Authorization: "Bearer " + token },
-          credentials: "omit",
+          credentials: "same-origin",
           cache: "no-store",
           redirect: "error",
           signal: controller.signal,
@@ -327,7 +327,7 @@ export function ActivityDashboard({
               encodeURIComponent(record.id),
             {
               headers: { Authorization: "Bearer " + token },
-              credentials: "omit",
+              credentials: "same-origin",
               cache: "no-store",
               redirect: "error",
               signal: controller.signal,
@@ -575,7 +575,7 @@ function PrivateConnection({ readToken }: { readToken: string }) {
           Authorization: "Bearer " + readToken,
           "X-History-Write-Access": "Bearer " + writeToken,
         },
-        credentials: "omit",
+        credentials: "same-origin",
         cache: "no-store",
         redirect: "error",
       });
