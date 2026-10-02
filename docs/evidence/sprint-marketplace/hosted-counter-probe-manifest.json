@@ -1,0 +1,30 @@
+{
+  "openingGate": "Counter probe only; no creation or acceptance execution until a confirmed real meter response",
+  "redis": {
+    "writes": 0,
+    "keys": [
+      "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:registry",
+      "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:owner:none",
+      "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:initialized"
+    ],
+    "commandsUpperBound": 4,
+    "exchanges": 1
+  },
+  "canExecuteWrites": false,
+  "limits": {
+    "redisWrites": 0,
+    "payments": 0,
+    "retries": 0,
+    "appRequests": 1,
+    "productionChanges": 0,
+    "timeoutSeconds": 12
+  },
+  "request": {
+    "path": "/api/conversations",
+    "principal": "unregistered synthetic human",
+    "method": "GET",
+    "body": null,
+    "expectedStatus": 401
+  },
+  "phase": "hosted-readonly-counter-probe"
+}

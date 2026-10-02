@@ -1,3 +1,4 @@
+import { meteredRedis } from './acceptance-meter.ts';
 import { Redis } from "@upstash/redis";
 import { computeCanonicalServiceCardHash } from "./canonical-service-card.ts";
 import type { ServiceCard } from "./types.ts";
@@ -27,7 +28,7 @@ const INDEX_KEY = pilot ? namespace + ':index' : "bazaar:index";
 
 const redisUrl = pilot ? process.env.BAZAAR_WORKSPACE_REDIS_REST_URL : process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
 const redisToken = pilot ? process.env.BAZAAR_WORKSPACE_REDIS_REST_TOKEN : process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
-const redis: Redis | null = redisUrl && redisToken ? new Redis({ url: redisUrl, token: redisToken, retry: false, enableAutoPipelining: false }) : null;
+const redis: Redis | null = redisUrl && redisToken ? meteredRedis(new Redis({ url: redisUrl, token: redisToken, retry: false, enableAutoPipelining: false })) : null;
 if (pilot && !redis) throw Error('CATALOG_REDIS_REQUIRED');
 
 const globalRegistry = globalThis as unknown as {

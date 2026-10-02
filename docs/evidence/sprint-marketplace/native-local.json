@@ -1,9 +1,10 @@
 {
   "status": "PASS",
-  "buildId": "f835l-qTCKIp6mcpzEDe7",
+  "buildId": "4Dx92BjIkfzLFs8g9JpUF",
   "runtime": "v22.18.0",
   "nativeNext": true,
   "externalMcpClient": true,
+  "serverMeterMatchesProtocol": true,
   "appRequests": 27,
   "redisRequests": 115,
   "redisCommands": 371,

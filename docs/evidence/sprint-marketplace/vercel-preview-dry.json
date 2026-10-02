@@ -4,8 +4,8 @@
     "slug": "nextjs"
   },
   "basePath": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\mission-consolidation",
-  "fileCount": 265,
-  "totalSize": 4660407,
+  "fileCount": 266,
+  "totalSize": 4666880,
   "ignoredCount": 18,
   "ignored": [
     ".env.example",
@@ -35,8 +35,8 @@
     },
     {
       "path": "lib",
-      "fileCount": 106,
-      "size": 541302
+      "fileCount": 107,
+      "size": 545958
     },
     {
       "path": "components",
@@ -46,7 +46,7 @@
     {
       "path": "app",
       "fileCount": 86,
-      "size": 224176
+      "size": 225993
     },
     {
       "path": "package-lock.json",
@@ -126,9 +126,9 @@
     },
     {
       "path": "lib/workspace-store.ts",
-      "size": 48606,
+      "size": 48688,
       "mode": 33206,
-      "sha": "2360e896bf24f2b3db089da35837d97630783b06"
+      "sha": "848c6689d7c32f54329238fd2230289f068cb675"
     },
     {
       "path": "components/WebMCPProvider.tsx",
@@ -200,9 +200,9 @@
     },
     {
       "path": "app/api/activity/route.ts",
-      "size": 262,
+      "size": 364,
       "mode": 33206,
-      "sha": "72a0f0e1190231c5eadc7202203050773b996207"
+      "sha": "f13e59e39742cccd692e984d4e1bb5009b439218"
     },
     {
       "path": "app/api/admin/magic-link/route.ts",
@@ -236,15 +236,15 @@
     },
     {
       "path": "app/api/agent-tasks/[id]/response/route.ts",
-      "size": 367,
+      "size": 490,
       "mode": 33206,
-      "sha": "13878722719f20a41749bda26cd13b49ea03db0e"
+      "sha": "c9a9a2cc69f1a73db20dfcd01d4988658b2fa2f2"
     },
     {
       "path": "app/api/agent-tasks/route.ts",
-      "size": 288,
+      "size": 390,
       "mode": 33206,
-      "sha": "7f6c02123a1a7f6c9918099bcbfcf5768fd2f621"
+      "sha": "aced7de5f3f33193a5e832be58f3dbb36eab90c9"
     },
     {
       "path": "app/api/buyer-execution/reference/route.ts",
@@ -272,15 +272,15 @@
     },
     {
       "path": "app/api/conversations/[id]/messages/route.ts",
-      "size": 524,
+      "size": 694,
       "mode": 33206,
-      "sha": "e7918b128081e9fc544563db2119ef4455b400c2"
+      "sha": "e80268f4f4aa9e91d6bec5e3a0094f0d9b5a1aad"
     },
     {
       "path": "app/api/conversations/route.ts",
-      "size": 304,
+      "size": 406,
       "mode": 33206,
-      "sha": "2f5ac7823d46f82db7089f077def1846defa4cdc"
+      "sha": "1ccd4173349fd576e370c8677f364e3bbc5106e1"
     },
     {
       "path": "app/api/deliveries/access/route.ts",
@@ -338,45 +338,45 @@
     },
     {
       "path": "app/api/market/control/route.ts",
-      "size": 141,
+      "size": 231,
       "mode": 33206,
-      "sha": "d6ce5844e939fd264a5509717824bfa14368362e"
+      "sha": "1e2008ba1dc32b114f4202682d7aa9ad935479b0"
     },
     {
       "path": "app/api/market/orders/[id]/route.ts",
-      "size": 395,
+      "size": 565,
       "mode": 33206,
-      "sha": "2af321bb0563c09858ee25bf30ef925b02b9a56b"
+      "sha": "4851f2b3f02d5acf64fdbafad35c76a188a5df97"
     },
     {
       "path": "app/api/market/orders/route.ts",
-      "size": 218,
+      "size": 327,
       "mode": 33206,
-      "sha": "597ab7e1e8f3cff523a5e4f23f26947476385e6e"
+      "sha": "dc2e381b4cf3adb6d995f2ae91b10a02d5efea46"
     },
     {
       "path": "app/api/market/review/route.ts",
-      "size": 140,
+      "size": 230,
       "mode": 33206,
-      "sha": "1612e7ccd1d73516e853a1c2e582ba0676dcdb31"
+      "sha": "3d2fefa233339e60633bb3745221c63b8b8b9e1d"
     },
     {
       "path": "app/api/market/services/[id]/route.ts",
-      "size": 252,
+      "size": 375,
       "mode": 33206,
-      "sha": "f186db803d0a70b30500846f1c2b450b64c02c1b"
+      "sha": "2e1bacce1ff266bd199ee43da81286bb2058c99a"
     },
     {
       "path": "app/api/market/services/route.ts",
-      "size": 220,
+      "size": 329,
       "mode": 33206,
-      "sha": "2cad1ff06892c5899b02bdc9c1c17c77131b986b"
+      "sha": "173fc81ab1e69771dd79fb0bc1a2aa94f7238701"
     },
     {
       "path": "app/api/mcp/route.ts",
-      "size": 2782,
+      "size": 2999,
       "mode": 33206,
-      "sha": "494ec551d4950e7752e1af340069b233b8335387"
+      "sha": "d0630cca4ac8fe4abe43a19640a3cc27f34d9ff2"
     },
     {
       "path": "app/api/openapi/route.ts",
@@ -386,9 +386,9 @@
     },
     {
       "path": "app/api/operations/route.ts",
-      "size": 271,
+      "size": 373,
       "mode": 33206,
-      "sha": "dd6e0bdcb2de48589e2a99aaef2ac2f4495fc868"
+      "sha": "1ad177993249157f3fd55941cf8a3c4ef681df26"
     },
     {
       "path": "app/api/provider-self-listing/[id]/route.ts",
@@ -434,15 +434,15 @@
     },
     {
       "path": "app/api/workspaces/[id]/access/route.ts",
-      "size": 329,
+      "size": 452,
       "mode": 33206,
-      "sha": "b252e3cc6354b94c85c2b54aea15aec43f582815"
+      "sha": "16b63e0949a9e611fec311e65502d266634ffa20"
     },
     {
       "path": "app/api/workspaces/route.ts",
-      "size": 203,
+      "size": 288,
       "mode": 33206,
-      "sha": "e40621a97fd29deb5a110f9fa00ebf0cb6e25358"
+      "sha": "32c1ca9ddc92827e0f6818061b65f976502e75c7"
     },
     {
       "path": "app/api/x402/contract-safety/route.ts",
@@ -985,6 +985,12 @@
       "sha": "46d065f11799b98d81102807fbaac7a8fc53068b"
     },
     {
+      "path": "lib/acceptance-meter.ts",
+      "size": 4309,
+      "mode": 33206,
+      "sha": "d3028791175e72cf1a6ed3366028d32cc9f5e160"
+    },
+    {
       "path": "lib/activity-client.ts",
       "size": 1007,
       "mode": 33206,
@@ -1118,9 +1124,9 @@
     },
     {
       "path": "lib/dynamic-registry.ts",
-      "size": 6601,
+      "size": 6669,
       "mode": 33206,
-      "sha": "485432690115d96aeff9516b3e1c3869854e90c3"
+      "sha": "cc90f32743ba2b45c773a276ccf1e0a62ecfabd7"
     },
     {
       "path": "lib/external-provider.ts",
@@ -1178,9 +1184,9 @@
     },
     {
       "path": "lib/marketplace-store.ts",
-      "size": 6274,
+      "size": 6342,
       "mode": 33206,
-      "sha": "c0a3023e07b2d25c72cfb6396602d7a0615500d7"
+      "sha": "5bfa8174c86633bdee0087cd4aa8d9a3e0f23d8e"
     },
     {
       "path": "lib/marketplace.ts",
@@ -1358,9 +1364,9 @@
     },
     {
       "path": "lib/provider-review-runtime.ts",
-      "size": 1518,
+      "size": 1586,
       "mode": 33206,
-      "sha": "56c0f68de30c2e92000ee37677ef8d58e3aba6f1"
+      "sha": "04c689238e3e2ff8e865d1ca89887392f3388449"
     },
     {
       "path": "lib/provider-review-store.ts",
@@ -1580,9 +1586,9 @@
     },
     {
       "path": "lib/workspace-http.ts",
-      "size": 7041,
+      "size": 7102,
       "mode": 33206,
-      "sha": "5f8526bd41278c6d83feedb01cde8156a023d986"
+      "sha": "70987eb6a9c08c90355a2fc96d609b1af058aed3"
     },
     {
       "path": "lib/workspace-public-origin.ts",
@@ -1592,9 +1598,9 @@
     },
     {
       "path": "lib/workspace-store.ts",
-      "size": 48606,
+      "size": 48688,
       "mode": 33206,
-      "sha": "2360e896bf24f2b3db089da35837d97630783b06"
+      "sha": "848c6689d7c32f54329238fd2230289f068cb675"
     },
     {
       "path": "lib/workspace-types.ts",

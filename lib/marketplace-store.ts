@@ -1,3 +1,4 @@
+import { meteredRedis } from './acceptance-meter.ts';
 import { randomUUID } from 'node:crypto';
 import { Redis } from '@upstash/redis';
 import { z } from 'zod';
@@ -71,5 +72,5 @@ export function configuredMarketStore():MarketStore {
   if(injected)return injected;
   const url=process.env.BAZAAR_WORKSPACE_REDIS_REST_URL,token=process.env.BAZAAR_WORKSPACE_REDIS_REST_TOKEN;
   if(!url||!token||new URL(url).protocol!=='https:')throw new WorkspaceError('MARKET_UNAVAILABLE');
-  return createMarketStore(new Redis({url,token,automaticDeserialization:false,retry:false,enableAutoPipelining:false}),marketPrefix());
+  return createMarketStore(meteredRedis(new Redis({url,token,automaticDeserialization:false,retry:false,enableAutoPipelining:false})),marketPrefix());
 }

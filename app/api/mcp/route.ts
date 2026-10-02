@@ -1,3 +1,4 @@
+import { measuredHandler } from '../../../lib/acceptance-meter.ts';
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createOnboardingMcpServer } from "@/lib/mcp-onboarding-server";
 import { GET as readOperations } from "@/app/api/operations/route";
@@ -10,7 +11,7 @@ import { workspaceHeaders } from "@/lib/workspace-http";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request) {
+async function handlePOST(request: Request) {
   try { await readBoundedSubmission(request.clone(), 64 * 1024); }
   catch (error) { return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Invalid or oversized MCP request" } }, { status: error instanceof Error && error.message === "PAYLOAD_TOO_LARGE" ? 413 : 400, headers: workspaceHeaders }); }
   const transport = new WebStandardStreamableHTTPServerTransport({
@@ -35,7 +36,7 @@ export async function POST(request: Request) {
   return response;
 }
 
-export function GET() {
+function handleGET() {
   return Response.json({
     ok: true,
     name: "stellar-bazaar-discovery",
@@ -52,6 +53,12 @@ export function GET() {
   });
 }
 
-export function DELETE() {
+function handleDELETE() {
   return new Response(null, { status: 405, headers: { Allow: "GET, POST" } });
 }
+
+export const POST = measuredHandler(handlePOST);
+
+export const GET = measuredHandler(handleGET);
+
+export const DELETE = measuredHandler(handleDELETE);

@@ -1,3 +1,4 @@
+import { meteredRedis } from './acceptance-meter.ts';
 // Server-only persistence. No legacy aliases, fallback, expiry or uncertain-outcome retry.
 import { createHash, randomUUID } from "node:crypto";
 import { channel } from "node:diagnostics_channel";
@@ -409,8 +410,8 @@ export function configuredWorkspaceStore(reservations?: () => WorkspaceLegacyReg
   if (process.env.BAZAAR_WORKSPACE_BACKEND !== "redis") throw unavailable();
   const url = process.env.BAZAAR_WORKSPACE_REDIS_REST_URL, token = process.env.BAZAAR_WORKSPACE_REDIS_REST_TOKEN;
   const prefix = workspacePrefix(), frozenOwners = isolatedWorkspaceOwners(prefix, url, token);
-  if (frozenOwners) return buildStore(redisBackend(new Redis({ url: url!, token: token!, automaticDeserialization: false, retry: { retries: 0 }, enableAutoPipelining: false }), prefix, frozenOwners.map(owner => owner.ownerId)), reservations, undefined, undefined, frozenOwners);
+  if (frozenOwners) return buildStore(redisBackend(meteredRedis(new Redis({ url: url!, token: token!, automaticDeserialization: false, retry: { retries: 0 }, enableAutoPipelining: false })), prefix, frozenOwners.map(owner => owner.ownerId)), reservations, undefined, undefined, frozenOwners);
   if (!url?.startsWith("https://") || !token) throw unavailable();
   const parsed = new URL(url); if (parsed.username || parsed.password || parsed.search || parsed.hash) throw unavailable();
-  return createRedisWorkspaceStore(new Redis({ url, token, automaticDeserialization: false, retry: { retries: 0 }, enableAutoPipelining: false }), prefix, reservations);
+  return createRedisWorkspaceStore(meteredRedis(new Redis({ url, token, automaticDeserialization: false, retry: { retries: 0 }, enableAutoPipelining: false })), prefix, reservations);
 }

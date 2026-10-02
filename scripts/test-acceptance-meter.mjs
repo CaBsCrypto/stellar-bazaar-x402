@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {measuredHandler,meteredRedis} from '../lib/acceptance-meter.ts';
+process.env.BAZAAR_ACCEPTANCE_METER='true';
+process.env.BAZAAR_WORKSPACE_PREFIX='bazaar-workspace:pilot-'+'a'.repeat(32);
+const key=process.env.BAZAAR_WORKSPACE_PREFIX+':state';
+let middleware,effects=0;
+meteredRedis({use(fn){middleware=fn;}});
+async function command(body,fail=false){return middleware({body},async()=>{effects++;await new Promise(done=>setImmediate(done));if(fail)throw Error('ACK_LOST');return {result:1};});}
+const run=measuredHandler(async(n)=>{for(let i=0;i<n;i++)await command(['get',key]);return new Response('ok');});
+const parallel=await Promise.all([run(3),run(5)]);
+assert.deepEqual(parallel.map(r=>r.headers.get('x-bazaar-redis-requests')),['3','5']);
+assert.equal(effects,8);
+await assert.rejects(command(['get',key]),/SCOPE_REQUIRED/);
+let before=effects;
+await assert.rejects(measuredHandler(async()=>{await command(['get','bazaar:historical']);return new Response();})(),/KEY_DENIED/);
+assert.equal(effects,before);
+await assert.rejects(run(33),/REQUEST_BUDGET/);
+assert.equal(effects,before+32);
+const lost=await measuredHandler(async()=>{try{await command(['get',key],true);}catch{}return new Response();})();
+assert.equal(lost.headers.get('x-bazaar-redis-uncertain'),'true');
+assert.equal(lost.headers.get('x-bazaar-redis-requests'),'1');
+const lua=await measuredHandler(async()=>{await command(['eval',"local old=redis.call('GET',KEYS[1]);redis.call('SET',KEYS[1],ARGV[1]);return 1",1,key,'text']);return new Response();})();
+assert.equal(lua.headers.get('x-bazaar-redis-commands-upper-bound'),'3');
+before=effects;
+await assert.rejects(measuredHandler(async()=>{await command(['eval',"while true do redis.call('GET',KEYS[1]) end",1,key]);return new Response();})(),/SCRIPT_UNBOUNDED/);
+assert.equal(effects,before);
+console.log('PASS: request isolation, namespace denial, effect budget, uncertain response and Lua command bound. No external requests.');

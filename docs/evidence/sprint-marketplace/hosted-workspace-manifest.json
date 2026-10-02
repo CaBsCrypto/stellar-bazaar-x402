@@ -1,0 +1,178 @@
+{
+  "version": 1,
+  "planId": "1e98ed37-df4f-43af-9fb0-8135e5b07293",
+  "phase": "hosted-workspace-before-effects",
+  "sourceSha": "31079bf3ea3eca7a35909c7d6a9f146e8a113abb",
+  "projectId": "prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3",
+  "teamId": "team_XjolcoWJ9V9yamVnCdpC7EMY",
+  "redis": {
+    "databaseId": "1f90faef-48d7-49b3-916a-c378e13a8c23",
+    "url": "https://smooth-dory-323957.upstash.io",
+    "plan": "Free",
+    "credentialScope": "whole database; prefixes are logical isolation only",
+    "observedRoundedCommands": "2.9k / 500k",
+    "observedRoundedStorage": "6 KB / 256 MB",
+    "observedAt": "2026-10-02",
+    "mustRefreshBeforeEffects": true
+  },
+  "config": {
+    "workspacePrefix": "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "marketPrefix": "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "reviewPrefix": "bazaar-review:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "dynamicPrefix": "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0:catalog",
+    "admission": "invite-only",
+    "ownerLifetimeLimit": 5,
+    "syntheticParticipants": 2,
+    "invitedDevelopers": 3,
+    "requestsPerMinute": 120,
+    "requestsPerDay": 1000,
+    "transportRetries": 0,
+    "facilitatorRequests": 0,
+    "marketplace": false,
+    "purchases": false,
+    "meter": true
+  },
+  "keys": {
+    "written": [
+      "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:registry",
+      "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:initialized"
+    ],
+    "serverAssignedOwnerKeys": {
+      "pattern": "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:owner:ow_<32hex>",
+      "maximumSynthetic": 2,
+      "maximumLifetime": 5,
+      "bindFromAuthenticatedReceiptBeforeOwnerWrites": true
+    },
+    "readOnlySentinel": "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0:{pilot-be8432d7255e0a3b0dca564d8aa769a0}:owner:none",
+    "historicalKeys": "DENIED"
+  },
+  "payloads": {
+    "creations": [
+      {
+        "creationId": "b88f4449-e4c2-451f-b7c2-0ac255c6f31e",
+        "humanAccessHash": "2cc23e2a06ea91644a6fb749e26a57bbbc5ae5f8e5820affc0a25d661ddbccce",
+        "agentAccessHash": "e10c279ca7cffc6768ac1597ae9db5bdefa44e0a6a49807761a9e872091c55a7"
+      },
+      {
+        "creationId": "1544cf75-f934-41b6-8639-cb5431e25578",
+        "humanAccessHash": "2d5351afb0733b47c484bdcfe7d9e0fa7088ec4dac455f7895cd32f2174b4e6a",
+        "agentAccessHash": "7b31127328b5683a7c67793e0ba06e9ea73013638a4f1db71ebc2bd3ad040a82"
+      }
+    ],
+    "inviteHashes": [
+      "e1c944d64e80835b61c5932e43ea20260d430c1c43d9ef5c0f326186039cadec",
+      "58599d6a9719cbc6bf3f4a5ef86bdb226d7b59b87f5f5fe3df98615ea57aa420"
+    ],
+    "conversation": {
+      "conversationId": "f7141c9e-2eee-4674-aa8e-c0960d9a85d7",
+      "title": "Aceptación hospedada con Redis real"
+    },
+    "message": {
+      "messageId": "df7bba83-4100-4c09-870c-100658b4dd08",
+      "taskId": "3f099693-8943-436c-9c70-0cd5bc735607",
+      "text": "Conserva esta conversación y entrega de texto al sustituir Vercel."
+    },
+    "claim": {
+      "taskId": "3f099693-8943-436c-9c70-0cd5bc735607",
+      "attemptId": "cae60cf6-612e-4b2c-9d53-b602d97f7f1a"
+    },
+    "response": {
+      "attemptId": "cae60cf6-612e-4b2c-9d53-b602d97f7f1a",
+      "messageId": "e3a849bb-c606-4940-8530-88ac451f3806",
+      "text": "Entrega sintética exacta: Redis real, MCP externo y recuperación."
+    },
+    "hashes": {
+      "creations": [
+        "b812ef95e9ae39a334853167263562647ff8ef067cb586b859151716e51db6cf",
+        "64adeb61324f7575b782dacf65d9c69d90893628a554bcb98730fe3e42a22172"
+      ],
+      "conversation": "2a728871f839ef64ab2d3b338b8de32458b712c52fc246beeb091de7de3956b2",
+      "message": "cc2dcf2ea4815e4b998f9ad92ad8190da76781e30dd07c3341be71558d19f52a",
+      "operation": "75b1d61cfa8d9704757065001477d7619e189c09d902d00effcc576e3f4a8de6"
+    },
+    "operation": {
+      "clientOperationId": "c569f44f-b8f3-4dd8-b06c-e10a11068c5b",
+      "mode": "fixture",
+      "taskId": "3f099693-8943-436c-9c70-0cd5bc735607",
+      "service": {
+        "id": "hosted-workspace-text-acceptance",
+        "title": "Entrega MCP sintética hospedada",
+        "provider": "Agente sintético externo",
+        "url": "https://bazaar.browns.studio"
+      },
+      "payment": {
+        "status": "not-requested",
+        "network": "stellar:testnet",
+        "asset": "XLM",
+        "amountAtomic": "0",
+        "recipient": "GBVSKBTQPBLAULSGUFDN3V2RBSOSVIMYDQU7DKVSNVOBIWCUEN6XO6LQ"
+      },
+      "delivery": {
+        "status": "reported-delivered",
+        "result": {
+          "text": "Entrega sintética exacta: Redis real, MCP externo y recuperación."
+        }
+      }
+    },
+    "rotation": [
+      {
+        "human": "86a704bbf1db0d0696e8e9b3eff560d7cd0ae7bb68ca7dc06d66d533d3aa53da",
+        "agent": "8fe109ca7c650e028a2d17d932bb3ef83199163265cf4ede88c16f88e5fa9d3a"
+      },
+      {
+        "human": "5563e19b51e4ff752ad514c91a62bf6fba17f8b164a0586b0ce8a6d5808d2f0d",
+        "agent": "bcf0e6d914093b33a98f5ae39c1d127abe6aaa9a4d291c2b6a7d02232860368a"
+      }
+    ],
+    "pauseProbe": {
+      "creationId": "8b1d6e53-77cd-431e-8ee4-444bb1c4aafe",
+      "humanAccessHash": "2d5351afb0733b47c484bdcfe7d9e0fa7088ec4dac455f7895cd32f2174b4e6a",
+      "agentAccessHash": "7b31127328b5683a7c67793e0ba06e9ea73013638a4f1db71ebc2bd3ad040a82"
+    }
+  },
+  "privateAccess": {
+    "format": "Windows DPAPI CurrentUser; encrypted file outside repository",
+    "packetPath": "C:\\Users\\MGC\\AppData\\Local\\Temp\\bazaar-marketplace-acceptance-encrypted\\workspace-v1.dpapi",
+    "plaintextRedisCredential": "never stored locally"
+  },
+  "limits": {
+    "appRequests": 64,
+    "redisRestExchanges": 400,
+    "redisCommandsUpperBound": 2400,
+    "outboundPayloadBytes": 16777216,
+    "inboundPayloadBytes": 33554432,
+    "newStoredBytes": 49164,
+    "activeExecutionSeconds": 300,
+    "ownerCount": 2,
+    "transportRetries": 0,
+    "ledgerRequests": 0,
+    "facilitatorRequests": 0,
+    "deployments": 4
+  },
+  "measurement": {
+    "redisRequests": "SDK middleware, per-request and executor aggregate",
+    "commands": "EVAL + static redis.call upper bound; reviewed scripts without loops",
+    "bytes": "JSON payloads only, excluding HTTP/TLS framing",
+    "browser": "server metadata logs, no payloads or access values"
+  },
+  "readiness": {
+    "privatePayloadsBound": true,
+    "countersNativeVerified": true,
+    "freeMarginRefreshed": true,
+    "canExecute": false
+  },
+  "stop": [
+    "Any lost acknowledgement or unknown transport outcome; preserve identifiers and reconcile by explicit reads only.",
+    "Measured limit reached or missing counter.",
+    "Wrong namespace/recipient/network/card version/price/hash.",
+    "No current Free margin or bound payload."
+  ],
+  "browserReserve": {
+    "inboundPayloadBytes": 2097152,
+    "redisRestExchanges": 64,
+    "redisCommandsUpperBound": 448,
+    "appRequests": 16,
+    "outboundPayloadBytes": 1048576
+  },
+  "hostedReadOnlyProbe": "PENDING; canExecute remains false until one real read confirms the server meter"
+}
