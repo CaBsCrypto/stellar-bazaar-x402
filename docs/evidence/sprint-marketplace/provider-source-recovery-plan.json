@@ -1,0 +1,27 @@
+{
+  "deploymentId": "dpl_8Pv5kWHWzkYVCiV7ouBUM9NQsWVC",
+  "destination": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\provider-guionista-recovered",
+  "allowed": [
+    "api/index.ts",
+    "server.ts",
+    "package.json",
+    "package-lock.json",
+    "service-card.json",
+    "tsconfig.json",
+    "vercel.json",
+    "src/app.ts",
+    "src/crypto/canonical-hash.ts",
+    "src/crypto/delivery-envelope.ts",
+    "src/engine/gemini-client.ts",
+    "src/engine/script-generator.ts",
+    "src/engine/wpm-calculator.ts",
+    "src/middleware/x402.ts",
+    "src/types.ts",
+    "src/views/landing-template.ts",
+    "src/views/teleprompter-template.ts"
+  ],
+  "requestsUpperBound": 18,
+  "bytesUpperBound": 2097152,
+  "remoteMutations": 0,
+  "excluded": "Environment files, secrets, documentation instructions and compiled files"
+}

@@ -1,8 +1,60 @@
 # Marketplace testnet — candidato implementado
 
-Estado 2026-10-02: implementación local verificada; apertura pendiente. Producción
-no se ha sustituido ni se han enviado invitaciones. No se afirma aceptación real
-de Redis, dominio del vendedor, pago ni wallet a partir de dobles locales.
+Estado 2026-10-02: recorrido de espacios y MCP hospedado con Redis real PASS;
+apertura del marketplace pendiente. Producción no se ha sustituido ni se han
+enviado invitaciones. No hay todavía una venta hospedada ni pago testnet real.
+
+Preview actual protegida: `dpl_6jZfgXCqt28X1jwyiw4JKUcX75qQ`, fuente comprobada
+en metadatos Vercel `61dfbe17a41ea059f991adac18de59429124302f`.
+URL: https://stellar-bazaar-x402-cnauhic63-cabscryptocontacto-6028s-projects.vercel.app.
+BUILD_ID de la compilación local de ese código: `4T7ze_3W-wu7HzcnRX9TR`;
+no se presenta como BUILD_ID remoto. Node 22.18.0 / Next 16.3.1.
+
+Dos propietarios creados; reenvíos idénticos sin duplicación, conflictos de
+contenido, aislamiento B/tercero, cliente SDK MCP externo por HTTPS, conversación
+y entrega exactas tras sustituir el despliegue PASS. Magic Link elimina fragmento;
+acceso humano y agente rotados invalidan los anteriores; recuperación del acceso
+rotado y bloqueo que retira toda la vista privada PASS en navegador real.
+La entrega se distingue como reportada por agente, sin pago ni verificación
+independiente. Prueba móvil 390×844 y foco visible PASS; texto real al 200 % sigue
+pendiente. Evidencia: `evidence/sprint-marketplace/hosted-redis-delivery-mobile.jpg`.
+
+Pausa de creación en la Preview actual PASS: alta nueva 503, replay idéntico
+conserva propietario, conversación/historial exactos siguen accesibles. Marketplace,
+compras y activación siguen deshabilitados. Esto no certifica aún el control de
+pausa compartido del marketplace en todas las instancias. Revocación completa
+pospuesta hasta terminar la venta: ambos participantes siguen activos y no se
+consumen espacios adicionales para reemplazarlos.
+
+Contadores de cuatro despliegues conciliados con todos los IDs del ejecutor:
+53 solicitudes API (41 ejecutor + 12 navegador), 186 intercambios Redis,
+888 comandos como cota superior, 427.433/510.898 bytes JSON enviados/recibidos;
+5.379 bytes almacenados como cota superior y cero resultados inciertos/reintentos,
+pagos o solicitudes al facilitador. El tráfico HTML, recursos estáticos y
+redirecciones de la plataforma no se midió por completo; no afirmar conteo HTTP
+total. Límites del manifiesto se conservan y los namespaces históricos no se usan.
+Evidencia: `hosted-workspace-http.json` y `hosted-server-meter.json`.
+
+Se corrigió el transporte del navegador a APIs del mismo origen para conservar
+la cookie SSO de Vercel; cada API privada sigue exigiendo su bearer. La protección
+de Preview no se desactivó. Las lecturas de detalles de actividad son secuenciales
+para evitar conflictos de cuota; no hay polling ni reintentos automáticos.
+
+Guionista existente localizado en el mismo equipo: proyecto `ai-video-scriptwriter`,
+despliegue `dpl_8Pv5kWHWzkYVCiV7ouBUM9NQsWVC`. Inventario y fuente principal
+confirman HTTP x402 (`/api/script`, `/v1/script`) y ficha pública; no incluyen
+MCP ni well-known de control. Fuentes recuperadas: 17 archivos, 18 lecturas API,
+268.630 bytes, cero archivos de entorno y cero cambios remotos. Recuperación local
+en `../provider-guionista-recovered`, con hashes por archivo en
+`provider-source-recovery.json`. Su generador algorítmico existente permite ofrecer
+un producto nuevo de texto sin modelos remotos. Adaptación local probada con tres
+entradas: 490/677/440 caracteres; igualdad al repetir entrada y rechazo de límites
+inválidos. Cero llamadas de red/modelo/pago. No se ha desplegado la adaptación ni
+alterado las rutas USDC/JSON existentes. Fuente preservada en
+`evidence/sprint-marketplace/provider-text-adapter.ts` y prueba reproducible
+`node scripts/test-recovered-provider-text.mjs` después de recuperar fuentes.
+
+Los registros de fases cerradas anteriores se conservan abajo como antecedentes.
 
 Preview protegida READY y HTTPS cerrado comprobado:
 `https://stellar-bazaar-x402-9495o7673-cabscryptocontacto-6028s-projects.vercel.app`.
@@ -66,17 +118,18 @@ liquidación/entrega; el candidato XLM/texto no se etiqueta como compatible.
 
 ## Condiciones que faltan para abrir
 
-1. Configurar secretos privados nuevos para la base Free existente en Preview,
-   origen exacto, namespaces nuevos y cinco hashes de admisión (dos sintéticos,
-   tres participantes). Nunca reutilizar hashes/credenciales de los dobles.
+1. Secretos Preview, origen HTTPS y namespaces nuevos configurados y comprobados
+   con dos admisiones sintéticas. Añadir las tres admisiones reales antes de abrir;
+   nunca reutilizar hashes/credenciales de los dobles.
 2. Manifiesto REAL definitivo: claves/payloads, valores y márgenes medidos,
    contadores de app/MCP/navegador/Redis/Horizon; parar ante incertidumbre/límite.
 3. Demostrar control del endpoint real reutilizado y conectar su agente vendedor
    externo. Revisión manual y activación de su ficha nueva de texto testnet.
 4. Aceptación hospedada con firma de wallet, destinatario y activo reales testnet,
    fallo de entrega, reenvíos/conflictos y aislamiento de tercero.
-5. Sustituir despliegue conservando Redis real; verificar Magic Link, bloqueo,
-   rotación/revocación y recuperación exacta; comprobar pausa hospedada.
+5. Espacios: sustitución, Magic Link, bloqueo, rotación y pausa PASS con Redis real.
+   Completar recuperación de las compras/ventas, revocación íntegra y control de
+   pausa compartido después del recorrido pagado.
 6. Teclado, móvil y texto al 200 % sobre candidato hospedado; guía de soporte y
    conservación de datos acordada antes de participantes reales.
 7. Registrar SHA, despliegue/configuración y resultados. Sólo entonces publicar
@@ -85,9 +138,9 @@ liquidación/entrega; el candidato XLM/texto no se etiqueta como compatible.
 La preparación REAL está en `evidence/sprint-marketplace/real-preparation-manifest.json`.
 Tiene prefixes nuevos, límites propuestos frente al recorrido medido y lista de
 claves; `canExecute=false`: no constituye payloads exactos ni aceptación hospedada.
-Pendiente confirmación de acceso por navegador para conectar la credencial de la
-base Free a Preview, manteniendo las altas y pagos cerrados. La política de control
-del navegador exige confirmación al ampliar acceso a un sistema sensible.
+La conexión de Redis Free a Preview ya está autorizada y completada. El manifiesto
+de espacios separado sí se ejecutó con medición real; el manifiesto de venta
+todavía requiere payloads, prueba del vendedor y límites de liquidación definitivos.
 
 ## Configuración del nuevo candidato
 

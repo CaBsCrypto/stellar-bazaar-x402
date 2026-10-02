@@ -7,7 +7,7 @@ import {createHash} from 'node:crypto';
 import {Client} from '@modelcontextprotocol/sdk/client/index.js';
 import {StreamableHTTPClientTransport} from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {loadPacket,savePacket} from './marketplace-private-packet.mjs';
-const phase=process.argv[2];assert.ok(['journey','replacement','rotate','revoke','verify-revoked'].includes(phase));
+const phase=process.argv[2];assert.ok(['journey','replacement','rotate','pause','revoke','verify-revoked'].includes(phase));
 const hash=v=>createHash('sha256').update(typeof v==='string'?v:JSON.stringify(v)).digest('hex');
 const readJson=async p=>JSON.parse((await readFile(p,'utf8')).replace(/^\uFEFF/,''));
 const manifest=await readJson('docs/evidence/sprint-marketplace/hosted-workspace-manifest.json');
@@ -66,6 +66,14 @@ try{
   const path='/api/workspaces/'+packet.receipt[0].workspaceId+'/access';
   const human={action:'rotate',role:'human',accessHash:hash(a.rotatedHuman),expectedGeneration:1};await http(path,a.bootstrap,human);await http(path,a.bootstrap,human);await http('/api/operations',a.human,undefined,401);assert.deepEqual((await http('/api/operations',a.rotatedHuman)).records,packet.originalHistory);
   await http(path,a.bootstrap,{action:'rotate',role:'agent',accessHash:hash(a.rotatedAgent),expectedGeneration:2});await http('/api/agent-tasks',a.agent,undefined,401);await mcp(a.rotatedAgent,client=>tool(client,'list_bazaar_agent_tasks',{}));
+ } else if(phase==='pause'){
+  assert.ok(packet.completed.includes('rotate'));
+  assert.deepEqual((await http('/api/conversations/'+packet.conversation.conversationId+'/messages',a.rotatedHuman)).conversation,packet.originalConversation);
+  assert.deepEqual((await http('/api/operations',a.rotatedHuman)).records,packet.originalHistory);
+  assert.equal((await http('/api/operations',b.human)).records.length,0);
+  const replay=(await http('/api/workspaces',a.bootstrap,packet.creations[0])).record;
+  assert.equal(replay.ownerId,packet.receipt[0].ownerId);assert.equal(replay.revoked,false);
+  await http('/api/workspaces',b.bootstrap,packet.pauseProbe,503);
  } else if(phase==='revoke'){
   assert.ok(packet.completed.includes('rotate'));
   await http('/api/workspaces/'+packet.receipt[0].workspaceId+'/access',a.bootstrap,{action:'revoke',expectedGeneration:3});await http('/api/operations',a.rotatedHuman,undefined,401);await http('/api/agent-tasks',a.rotatedAgent,undefined,401);assert.equal((await http('/api/operations',b.human)).records.length,0);

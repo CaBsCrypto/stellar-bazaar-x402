@@ -1,0 +1,19 @@
+{
+  "status": "PASS_LOCAL_REAL_RECOVERED_ENGINE",
+  "results": [
+    {
+      "characters": 490
+    },
+    {
+      "characters": 677
+    },
+    {
+      "characters": 440
+    }
+  ],
+  "networkRequests": 0,
+  "modelCalls": 0,
+  "payments": 0,
+  "legacyProviderModified": false,
+  "limitation": "Text adapter local only: hosted control proof, signed testnet payment and external MCP seller execution still pending."
+}
