@@ -1,0 +1,212 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import express, { type Express, type Request, type Response, type NextFunction } from 'express';
+import cors from 'cors';
+import * as dotenv from 'dotenv';
+
+import { computeCanonicalSha256 } from './crypto/canonical-hash.js';
+import { buildDeliveryEnvelope } from './crypto/delivery-envelope.js';
+import { x402PaymentMiddleware } from './middleware/x402.js';
+import { generateScript, generateAlgorithmicScript, type VideoScriptResult } from './engine/script-generator.js';
+import { renderTeleprompterHtml } from './views/teleprompter-template.js';
+import { renderLandingPageHtml } from './views/landing-template.js';
+import { registerMarketplaceTextRoutes } from './marketplace-routes.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+function getProjectRootDir(): string {
+  let current = __dirname;
+  for (let i = 0; i < 5; i++) {
+    if (fs.existsSync(path.join(current, 'service-card.json'))) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  if (fs.existsSync(path.join(process.cwd(), 'service-card.json'))) {
+    return process.cwd();
+  }
+  return process.cwd();
+}
+
+const rootDir = getProjectRootDir();
+
+// Load environment variables
+dotenv.config({ path: path.join(rootDir, '.env') });
+
+export function createApp(): Express {
+  const app = express();
+
+  // Enable CORS with x402 headers exposed to browsers & agents
+  app.use(
+    cors({
+      origin: '*',
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'PAYMENT-SIGNATURE', 'payment-signature', 'Idempotency-Key'],
+      exposedHeaders: ['PAYMENT-REQUIRED', 'payment-required', 'PAYMENT-RESPONSE', 'payment-response'],
+    })
+  );
+
+  registerMarketplaceTextRoutes(app);
+
+  // Body parsing
+  app.use(express.json({ limit: '1mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+  // Handle JSON parse errors gracefully
+  app.use((err: any, _req: Request, res: Response, next: NextFunction) => {
+    if (err) {
+      return res.status(400).json({
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'Request body must be a valid JSON object',
+        },
+      });
+    }
+    next(err);
+  });
+
+  // Load ServiceCard for GET /api/service-card
+  const serviceCardPath = path.join(rootDir, 'service-card.json');
+  let serviceCardJson: any = null;
+  try {
+    if (fs.existsSync(serviceCardPath)) {
+      serviceCardJson = JSON.parse(fs.readFileSync(serviceCardPath, 'utf-8'));
+    }
+  } catch {}
+
+  // 1. GET / — Cyberpunk Studio Glow Landing Page & Interactive Playground
+  app.get('/', (_req: Request, res: Response) => {
+    const html = renderLandingPageHtml();
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.status(200).send(html);
+  });
+
+  // 2. GET /health — Liveness & readiness probe
+  app.get('/health', (_req: Request, res: Response) => {
+    res.status(200).json({
+      status: 'ok',
+      service: 'ai-video-scriptwriter',
+      version: '1.0.0',
+      uptime: process.uptime(),
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  // 3. GET /api/service-card & GET /v1/service-card — Catalog discovery endpoints
+  const handleServiceCard = (_req: Request, res: Response) => {
+    if (!serviceCardJson) {
+      try {
+        if (fs.existsSync(serviceCardPath)) {
+          serviceCardJson = JSON.parse(fs.readFileSync(serviceCardPath, 'utf-8'));
+        }
+      } catch {}
+    }
+    if (serviceCardJson) {
+      res.status(200).json(serviceCardJson);
+    } else {
+      res.status(404).json({ ok: false, error: 'service-card.json not found' });
+    }
+  };
+  app.get('/api/service-card', handleServiceCard);
+  app.get('/v1/service-card', handleServiceCard);
+
+  // 3. GET /teleprompter — Standalone interactive viewer UI
+  app.get('/teleprompter', (req: Request, res: Response) => {
+    const topic = (req.query.topic as string) || undefined;
+    const durationSeconds = req.query.duration ? Number(req.query.duration) : req.query.durationSeconds ? Number(req.query.durationSeconds) : undefined;
+    const tone = (req.query.tone as string) || undefined;
+
+    let scriptData: VideoScriptResult | undefined;
+    if (topic && topic.trim().length > 0) {
+      scriptData = generateAlgorithmicScript({ topic, durationSeconds, tone });
+    }
+
+    const html = renderTeleprompterHtml(scriptData);
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.status(200).send(html);
+  });
+
+  // 4. Input validation middleware for POST /api/script & POST /v1/script
+  const validateScriptInput = (req: Request, res: Response, next: NextFunction) => {
+    const body = req.body;
+
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return res.status(400).json({
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message: 'Request body must be a valid JSON object',
+        },
+      });
+    }
+
+    const { topic, durationSeconds, tone } = body;
+
+    if (
+      typeof topic !== 'string' ||
+      topic.trim().length === 0 ||
+      typeof durationSeconds !== 'number' ||
+      isNaN(durationSeconds) ||
+      durationSeconds < 15 ||
+      durationSeconds > 120 ||
+      typeof tone !== 'string' ||
+      tone.trim().length === 0
+    ) {
+      return res.status(400).json({
+        ok: false,
+        error: {
+          code: 'INVALID_INPUT',
+          message:
+            'Invalid parameters: topic (non-empty string), durationSeconds (15-120), and tone (non-empty string) are required',
+        },
+      });
+    }
+
+    const validatedInput = {
+      topic: topic.trim(),
+      durationSeconds,
+      tone: tone.trim(),
+    };
+
+    req.validatedInput = validatedInput;
+    req.inputHash = computeCanonicalSha256(validatedInput);
+    next();
+  };
+
+  // 5. Script generation & cryptographic delivery handler (invoked after x402 settlement)
+  const handleScriptGeneration = async (req: Request, res: Response) => {
+    const input = req.validatedInput!;
+    const settlement = req.settlement!;
+
+    // Generate high-retention 5-scene script
+    const scriptResult = await generateScript(input);
+
+    // Build bazaar.delivery-envelope/v1 delivery envelope
+    const deliveryResponse = buildDeliveryEnvelope({
+      result: scriptResult,
+      inputData: input,
+      inputHash: req.inputHash,
+      transactionHash: settlement.transactionHash,
+      ledger: settlement.ledger,
+      timestamp: settlement.timestamp,
+    });
+
+    return res.status(200).json(deliveryResponse);
+  };
+
+  // Monetized routes under x402 v2 protocol
+  app.post('/api/script', validateScriptInput, x402PaymentMiddleware, handleScriptGeneration);
+  app.post('/v1/script', validateScriptInput, x402PaymentMiddleware, handleScriptGeneration);
+
+  // Serve static assets downstream of explicit routes
+  app.use(express.static(path.join(rootDir, 'public')));
+
+  return app;
+}
+
+export const app: Express = createApp();
+export default app;

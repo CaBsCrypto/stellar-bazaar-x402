@@ -149,5 +149,7 @@ export async function getAllDynamicServiceCards(): Promise<DynamicEntry[]> {
 /** Tombstone preserves references used by paid orders. Never delete the card. */
 export async function withdrawDynamicServiceCard(id: string) {
   if (!pilot || !redis) throw Error('CATALOG_REDIS_REQUIRED');
-  await redis.eval("local old=redis.call('GET',KEYS[1]); if not old then return 0 end; local card=cjson.decode(old); card.withdrawn=true; redis.call('SET',KEYS[1],cjson.encode(card)); return 1", [CARD_KEY_PREFIX + id], []);
+  const bound=process.env.BAZAAR_ACCEPTANCE_SALE==='true'?" if string.len(next)>7936 then return -1 end;":"";
+  const result=await redis.eval("local old=redis.call('GET',KEYS[1]); if not old then return 0 end; local card=cjson.decode(old); card.withdrawn=true; local next=cjson.encode(card);"+bound+" redis.call('SET',KEYS[1],next); return 1", [CARD_KEY_PREFIX + id], []);
+  if(result!==1)throw Error('CATALOG_WITHDRAWAL_UNCONFIRMED');
 }

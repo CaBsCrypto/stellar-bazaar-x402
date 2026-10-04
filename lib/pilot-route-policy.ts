@@ -5,7 +5,8 @@ export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redir
     if (['GET','HEAD'].includes(method) && path === '/MARKETPLACE_PILOT.md') return 'allow';
     if (['GET','HEAD'].includes(method) && ['/catalogo','/hub','/publish'].includes(path)) return 'allow';
     if (['GET','HEAD'].includes(method) && /^\/resources\/[a-z0-9-]+$/.test(path)) return 'allow';
-    if (method === 'GET' && path === '/api/discovery/resources') return 'allow';
+    if (method === 'GET' && ['/api/discovery/resources','/api/discovery/search'].includes(path)) return 'allow';
+    if (method === 'OPTIONS' && path === '/api/discovery/search') return 'allow';
     if (['GET','POST'].includes(method) && ['/api/market/services','/api/market/orders'].includes(path)) return 'allow';
     if (method === 'POST' && ['/api/market/review','/api/market/control'].includes(path)) return 'allow';
     if (/^\/api\/market\/(services|orders)\/[a-f0-9-]{36}$/i.test(path) && (method === 'POST' || method === 'GET' && path.startsWith('/api/market/orders/'))) return 'allow';

@@ -3,8 +3,10 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
 import { createOwnedRegistration } from '../lib/webmcp/owned-registration.ts';
+import { createPrivateReadQueue } from '../lib/private-read-queue.ts';
 const compiled = ts.transpileModule(readFileSync('components/OperationHistory.tsx', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText;
 async function scenario(mode) {
+  const serializedPrivateRead=createPrivateReadQueue();
   const tools = new Map(), removals = [], states = [], refs = [], effects = [];
   let si = 0, ri = 0, ei = 0, calls = 0, signal, resolveFetch;
   const waiting = new Promise(resolve => { resolveFetch = resolve; });
@@ -27,6 +29,7 @@ async function scenario(mode) {
       };
       if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
       if (name === '@/lib/webmcp/owned-registration') return { createOwnedRegistration };
+      if (name === '@/lib/private-read-queue') return { serializedPrivateRead };
       if (name === 'next/link') return { default: 'a' };
       if (name.startsWith('@/components/') || name === './ActivityDashboard') return {};
       throw Error('Unexpected dependency: ' + name);

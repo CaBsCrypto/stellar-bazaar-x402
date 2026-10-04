@@ -9,6 +9,7 @@ import {validateCardRules} from './service-ingest.ts';
 import {isReservedServiceId,withdrawDynamicServiceCard} from './dynamic-registry.ts';
 import {submitProviderDraft,getSubmissionForOperator} from './provider-self-listing.ts';
 import type {ServiceCard} from './types.ts';
+import {isCanonicalUsdcTestnet} from './payment-assets.ts';
 
 import {sha,canonical,orderMemo} from './marketplace-identity.ts';
 import {configuredWorkspaceStore} from './workspace-store.ts';
@@ -24,14 +25,15 @@ export const orderActionSchema=z.discriminatedUnion('action',[
  z.object({action:z.literal('claim'),attemptId:z.string().uuid()}).strict(),
  z.object({action:z.literal('deliver'),attemptId:z.string().uuid(),text:z.string().min(1).max(2000)}).strict(),
  z.object({action:z.literal('fail'),attemptId:z.string().uuid(),reason:z.string().min(1).max(500)}).strict(),
+ z.object({action:z.literal('execution-uncertain'),attemptId:z.string().uuid(),reason:z.string().min(1).max(500)}).strict(),
 ]);
 function submissionToken(id:string,owner:string){const secret=process.env.BAZAAR_MARKET_REVIEW_SECRET;if(!secret||secret.length<32)throw new WorkspaceError('MARKET_UNAVAILABLE');return createHmac('sha256',secret).update(`${owner}:${id}`).digest('hex');}
 function human(p:WorkspacePrincipal){if(p.role!=='human')throw new WorkspaceError('FORBIDDEN',403);}
 export function marketCard(raw:unknown):ServiceCard {
  const parsed=parseServiceCardShape(raw);if(!parsed.ok)throw new WorkspaceError('INVALID_SERVICE',400);
  const c=parsed.card,u=new URL(c.url);
- // v1 sells text through the seller's external MCP worker; native XLM testnet is the payment rail.
- if(c.kind!=='http'||u.protocol!=='https:'||u.username||u.password||u.search||u.hash||(u.port&&u.port!=='443')||!StrKey.isValidEd25519PublicKey(c.payment.destination)||c.payment.scheme!=='exact'||c.payment.asset!=='XLM'||c.paymentOptions||Number(c.payment.amount)>1||!c.delivery||c.delivery.result.contentType!=='text/plain'||!c.delivery.idempotency.required||isReservedServiceId(c.id)||validateCardRules(c).failedOutcomes.length)throw new WorkspaceError('INVALID_SERVICE',400);
+ // The pilot accepts only Circle's exact USDC identity; code alone is insufficient.
+ if(c.kind!=='http'||u.protocol!=='https:'||u.username||u.password||u.search||u.hash||(u.port&&u.port!=='443')||!StrKey.isValidEd25519PublicKey(c.payment.destination)||c.payment.scheme!=='exact'||c.payment.asset!=='USDC'||!isCanonicalUsdcTestnet(c.payment.identity)||c.paymentOptions||Number(c.payment.amount)>1||!c.delivery||c.delivery.result.contentType!=='text/plain'||!c.delivery.idempotency.required||isReservedServiceId(c.id)||validateCardRules(c).failedOutcomes.length)throw new WorkspaceError('INVALID_SERVICE',400);
  return c;
 }
 export async function submitMarketService(p:WorkspacePrincipal,input:z.infer<typeof newServiceSchema>){
@@ -57,8 +59,9 @@ export async function createMarketOrder(p:WorkspacePrincipal,input:z.infer<typeo
  const service=await configuredMarketStore().transact(s=>s.services.find(v=>v.card.id===input.serviceId&&!v.withdrawn));
  if(!service||service.cardHash!==input.cardHash||(await reviewed(service))?.status!=='activated')throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);
  if(!await configuredWorkspaceStore().isOwnerActive(service.ownerId))throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);
+ marketCard(service.card); // Legacy records remain readable, but cannot start another legacy payment.
  if(service.ownerId===p.ownerId)throw new WorkspaceError('SELF_PURCHASE_DISABLED',409);validateInput(service.card,input.input);
- const now=new Date().toISOString(),order:MarketOrder={...input,buyerOwnerId:p.ownerId,sellerOwnerId:service.ownerId,card:service.card,destination:service.card.payment.destination,amount:service.card.payment.amount,memoHash:orderMemo(p.ownerId,input.operationId,input.cardHash,input.input),phase:'awaiting-payment',createdAt:now,updatedAt:now};
+ const now=new Date().toISOString(),order:MarketOrder={...input,buyerOwnerId:p.ownerId,sellerOwnerId:service.ownerId,card:service.card,destination:service.card.payment.destination,amount:service.card.payment.amount,settlement:{...service.card.payment.identity!},memoHash:orderMemo(p.ownerId,input.operationId,input.cardHash,input.input),phase:'awaiting-payment',createdAt:now,updatedAt:now};
  return configuredMarketStore().transact(s=>{if(s.paused)throw new WorkspaceError('MARKET_PAUSED');if(s.orders.some(v=>v.operationId===input.operationId))throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.orders.length>=100)throw new WorkspaceError('MARKET_CAPACITY',409);if(s.services.find(v=>v.submissionId===service.submissionId)?.withdrawn)throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);s.orders.push(order);return order;});
 }
 export async function readMarketOrder(p:WorkspacePrincipal,id:string){return configuredMarketStore().transact(s=>{const o=s.orders.find(v=>v.operationId===id);if(!o)throw new WorkspaceError('NOT_FOUND',404);authorizeOrder(o,p);return o;});}
@@ -68,8 +71,9 @@ export async function sellerOrderAction(p:WorkspacePrincipal,id:string,action:Ex
  return configuredMarketStore().transact(s=>{const o=s.orders.find(v=>v.operationId===id&&v.sellerOwnerId===p.ownerId);if(!o)throw new WorkspaceError('NOT_FOUND',404);
  if(action.action==='claim') {if(o.attemptId){if(o.attemptId!==action.attemptId||o.agentId!==p.agentId)throw new WorkspaceError('CLAIM_CONFLICT',409);return o;}if(o.phase!=='paid')throw new WorkspaceError('PAYMENT_REQUIRED',409);o.attemptId=action.attemptId;o.agentId=p.agentId;o.phase='executing';}
  else {if(o.attemptId!==action.attemptId||o.agentId!==p.agentId)throw new WorkspaceError('CLAIM_CONFLICT',409);
- if(action.action==='deliver'){if(o.delivery){if(o.delivery.text!==action.text)throw new WorkspaceError('DELIVERY_CONFLICT',409);return o;}if(o.phase!=='executing')throw new WorkspaceError('INVALID_TRANSITION',409);o.delivery={text:action.text,sha256:sha(action.text),recordedAt:new Date().toISOString(),reference:`bazaar-order:${o.operationId}`};o.phase='delivered';}
- else {if(o.phase==='delivery-failed'&&o.failure===action.reason)return o;if(o.phase!=='executing')throw new WorkspaceError('INVALID_TRANSITION',409);o.failure=action.reason;o.phase='delivery-failed';}}
+ if(action.action==='deliver'){if(o.delivery){if(o.delivery.text!==action.text)throw new WorkspaceError('DELIVERY_CONFLICT',409);return o;}if(!['executing','execution-uncertain'].includes(o.phase))throw new WorkspaceError('INVALID_TRANSITION',409);o.delivery={text:action.text,sha256:sha(action.text),recordedAt:new Date().toISOString(),reference:`bazaar-order:${o.operationId}`};o.phase='delivered';}
+ else if(action.action==='execution-uncertain'){if(o.phase==='execution-uncertain'&&o.executionUncertainty===action.reason)return o;if(o.phase!=='executing')throw new WorkspaceError('INVALID_TRANSITION',409);o.executionUncertainty=action.reason;o.phase='execution-uncertain';}
+ else {if(o.phase==='delivery-failed'&&o.failure===action.reason)return o;if(!['executing','execution-uncertain'].includes(o.phase))throw new WorkspaceError('INVALID_TRANSITION',409);o.failure=action.reason;o.phase='delivery-failed';}}
  o.updatedAt=new Date().toISOString();return o;});
 }
 export function marketOperator(authorization:string|null){const expected=process.env.BAZAAR_MARKET_OPERATOR_HASH,match=/^Bearer ([a-zA-Z0-9_-]{43})$/.exec(authorization??'');if(!expected||!match||!/^[a-f0-9]{64}$/.test(expected)||!timingSafeEqual(Buffer.from(sha(match[1]),'hex'),Buffer.from(expected,'hex')))throw new WorkspaceError('UNAUTHORIZED',401);}

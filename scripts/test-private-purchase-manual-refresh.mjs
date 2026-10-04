@@ -2,13 +2,15 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import ts from 'typescript';
+import {createPrivateReadQueue} from '../lib/private-read-queue.ts';
 const source=readFileSync(new URL('../components/PrivatePurchase.tsx',import.meta.url),'utf8');assert(!source.includes('setInterval'));
 const compiled=ts.transpileModule(source,{compilerOptions:{jsx:ts.JsxEmit.ReactJSX,module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 let cursor=0,tree;const slots=[],effects=[],requests=[];
 const hooks={useState(initial){const i=cursor++;if(!(i in slots))slots[i]={value:initial};return[slots[i].value,value=>{slots[i].value=typeof value==='function'?value(slots[i].value):value}];},useRef(initial){const i=cursor++;return slots[i]??={current:initial};},useEffect(fn,deps){const i=cursor++;const prior=slots[i];if(!prior||deps.some((v,j)=>v!==prior.deps[j]))effects.push(()=>{prior?.cleanup?.();slots[i]={deps,cleanup:fn()};});},useCallback(fn){cursor++;return fn;}};
 const originalFetch=globalThis.fetch;globalThis.fetch=(url,options)=>new Promise(resolve=>requests.push({url,options,resolve}));
 const module={exports:{}},require=createRequire(import.meta.url),Workspace=()=>null;
-new Function('require','module','exports',compiled)(name=>name==='react'?hooks:name==='./DeliverableViewer'?{PurchaseWorkspace:Workspace,ReadableLegacy:()=>null,OriginalResult:()=>null}:require(name),module,module.exports);
+const serializedPrivateRead=createPrivateReadQueue();
+new Function('require','module','exports',compiled)(name=>name==='react'?hooks:name==='@/lib/private-read-queue'?{serializedPrivateRead}:name==='./DeliverableViewer'?{PurchaseWorkspace:Workspace,ReadableLegacy:()=>null,OriginalResult:()=>null}:require(name),module,module.exports);
 let props={record:{clientOperationId:'operation-a',delivery:{result:{simulation:true}}},token:'synthetic-a',events:[],legacyDownload:null};
 function render(){cursor=0;tree=module.exports.PrivatePurchase(props);while(effects.length)effects.shift()();return tree;}
 function children(){return tree.props.children;}

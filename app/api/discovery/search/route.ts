@@ -3,11 +3,12 @@ import { services } from "@/lib/catalog";
 import { filterServices, rankServices } from "@/lib/discovery";
 import { toServiceCard, toPaidService } from "@/lib/service-card";
 import { readDynamicServiceCards } from "@/lib/dynamic-registry";
+import { measuredHandler } from "@/lib/acceptance-meter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export const GET = measuredHandler(async (req: NextRequest) => {
   const p = req.nextUrl.searchParams;
   const q = p.get("query")?.trim();
 
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest) {
           stage: "discover",
         },
       },
-      { status: 400 },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
 
@@ -56,14 +57,14 @@ export async function GET(req: NextRequest) {
     },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=20, stale-while-revalidate=60",
+        "Cache-Control": process.env.BAZAAR_ACCEPTANCE_METER === "true" ? "no-store" : "public, s-maxage=20, stale-while-revalidate=60",
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     },
   );
-}
+});
 
 export async function OPTIONS() {
   return new NextResponse(null, {

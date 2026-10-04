@@ -13,7 +13,10 @@ export function proxy(request: NextRequest) {
     return response;
   }
   if (request.nextUrl.pathname.startsWith('/api/')) {
-    const publicCatalog = process.env.BAZAAR_ENABLE_MARKETPLACE === 'true' && request.method === 'GET' && request.nextUrl.pathname === '/api/discovery/resources';
+    const publicCatalog = process.env.BAZAAR_ENABLE_MARKETPLACE === 'true' && (
+      request.method === 'GET' && ['/api/discovery/resources','/api/discovery/search'].includes(request.nextUrl.pathname) ||
+      request.method === 'OPTIONS' && request.nextUrl.pathname === '/api/discovery/search'
+    );
     if (process.env.BAZAAR_ENABLE_OPEN_WORKSPACES !== 'true' && !(request.nextUrl.pathname === '/api/mcp' && request.method === 'GET')) {
       return NextResponse.json({ error: { code: 'WORKSPACE_UNAVAILABLE' } }, { status: 503, headers: privacy });
     }

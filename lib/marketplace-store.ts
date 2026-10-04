@@ -3,10 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { Redis } from '@upstash/redis';
 import { z } from 'zod';
 import { WorkspaceError } from './workspace-types.ts';
-import { parseServiceCardShape } from './service-card-schema.ts';
+import { parseServiceCardShape,stellarCreditIdentitySchema } from './service-card-schema.ts';
 import type { ServiceCard } from './types.ts';
 import {computeCanonicalServiceCardHash} from './canonical-service-card.ts';
 import {sha,orderMemo} from './marketplace-identity.ts';
+import {isCanonicalUsdcTestnet,sameCreditIdentity} from './payment-assets.ts';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const account = z.string().regex(/^G[A-Z2-7]{55}$/);
@@ -15,12 +16,14 @@ export const marketOrderSchema = z.object({
   operationId: z.string().uuid(), buyerOwnerId: z.string(), sellerOwnerId: z.string(),
   serviceId: z.string(), cardHash: hash, card: z.unknown(), input: z.record(z.string(), z.union([z.string().max(2000),z.number().finite(),z.boolean()])),
   payer: account, destination: account, amount: z.string(), memoHash: hash,
-  phase: z.enum(['awaiting-payment','payment-submitting','payment-uncertain','paid','executing','delivered','delivery-failed']),
+  settlement:stellarCreditIdentitySchema.optional(),
+  phase: z.enum(['awaiting-payment','payment-submitting','payment-uncertain','paid','executing','execution-uncertain','delivered','delivery-failed']),
   createdAt: z.string().datetime(), updatedAt: z.string().datetime(),
   transactionHash: hash.optional(), paymentVerifiedAt: z.string().datetime().optional(),
   attemptId: z.string().uuid().optional(), agentId: z.string().optional(),
   delivery: z.object({text,sha256:hash,recordedAt:z.string().datetime(),reference:z.string()}).strict().optional(),
   failure: text.optional(),
+  executionUncertainty: text.optional(),
 }).strict();
 export type MarketOrder = Omit<z.infer<typeof marketOrderSchema>, 'card'> & {card:ServiceCard};
 export type MarketService = {submissionId:string;ownerId:string;cardHash:string;card:ServiceCard;withdrawn:boolean;createdAt:string};
@@ -37,11 +40,15 @@ export function validateMarketState(raw:unknown):asserts raw is MarketState {
   for(const v of [...s.services,...s.orders]) if(!parseServiceCardShape(v.card).ok||computeCanonicalServiceCardHash(v.card as ServiceCard)!==v.cardHash) throw Error('INVALID_MARKET_CARD');
   for(const o of s.orders) {
     const c=o.card as ServiceCard;
-    if(o.serviceId!==c.id||o.destination!==c.payment.destination||o.amount!==c.payment.amount||c.payment.asset!=='XLM'||o.memoHash!==orderMemo(o.buyerOwnerId,o.operationId,o.cardHash,o.input))throw Error('INVALID_ORDER_BINDING');
+    const paymentBound=o.settlement
+      ?isCanonicalUsdcTestnet(o.settlement)&&c.payment.asset===o.settlement.code&&c.network===o.settlement.network&&sameCreditIdentity(c.payment.identity,o.settlement)
+      :c.payment.asset==='XLM'&&!c.payment.identity;
+    if(o.serviceId!==c.id||o.destination!==c.payment.destination||o.amount!==c.payment.amount||!paymentBound||o.memoHash!==orderMemo(o.buyerOwnerId,o.operationId,o.cardHash,o.input))throw Error('INVALID_ORDER_BINDING');
     if(o.delivery&&(o.delivery.sha256!==sha(o.delivery.text)||o.delivery.reference!==`bazaar-order:${o.operationId}`))throw Error('INVALID_DELIVERY_BINDING');
     if(o.phase!=='awaiting-payment'&&!o.transactionHash) throw Error('MISSING_TRANSACTION');
-    if(['paid','executing','delivered','delivery-failed'].includes(o.phase)&&!o.paymentVerifiedAt) throw Error('MISSING_VERIFICATION');
-    if(['executing','delivered','delivery-failed'].includes(o.phase)&&(!o.attemptId||!o.agentId)) throw Error('MISSING_CLAIM');
+    if(['paid','executing','execution-uncertain','delivered','delivery-failed'].includes(o.phase)&&!o.paymentVerifiedAt) throw Error('MISSING_VERIFICATION');
+    if(['executing','execution-uncertain','delivered','delivery-failed'].includes(o.phase)&&(!o.attemptId||!o.agentId)) throw Error('MISSING_CLAIM');
+    if(o.phase==='execution-uncertain'&&!o.executionUncertainty)throw Error('MISSING_EXECUTION_UNCERTAINTY');
     if((o.phase==='delivered')!==Boolean(o.delivery)) throw Error('INVALID_DELIVERY_PHASE');
   }
 }

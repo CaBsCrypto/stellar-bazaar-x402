@@ -1,0 +1,121 @@
+{
+  "target": "provider",
+  "phase": "USDC-first-sale-preview",
+  "files": [
+    {
+      "path": ".vercelignore",
+      "bytes": 147,
+      "sha256": "66ea5b8cac209afb4f4b4d828d6c2cf50c18f1ec7bc32392a64a199165a33d61"
+    },
+    {
+      "path": "api/index.ts",
+      "bytes": 58,
+      "sha256": "940b001b385f865d5ad160505f81f0e31e538d12b0487e232f56d2b1cd3618ab"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 81399,
+      "sha256": "cdd508f3d971dd6e892ef87994ffd09936420c5f618cc4ca0cfef65371af1215"
+    },
+    {
+      "path": "package.json",
+      "bytes": 1143,
+      "sha256": "3c052bb66db245bf08dc55183d490171ff2f772d10d9adff01e8dd38c1b7b597"
+    },
+    {
+      "path": "public/index.html",
+      "bytes": 63486,
+      "sha256": "ff36502eed6a54a51874eb8d7babb2c84a673c5fdbd365b3da0d17bc67f5ecf9"
+    },
+    {
+      "path": "public/teleprompter.html",
+      "bytes": 47565,
+      "sha256": "7cc08968bd50253887c22b587cf3ca1d790180d40f0367c6a2fcd1d77acdc317"
+    },
+    {
+      "path": "server.ts",
+      "bytes": 900,
+      "sha256": "79577515941a426d8ffbfedb1f21efec9b6c5647fa7f4a8d61fc36eca3eafcda"
+    },
+    {
+      "path": "service-card.json",
+      "bytes": 2267,
+      "sha256": "65468ac7c0957a16be92a9b6fb57e2fbbf79f9a666b9676fe26bdc8c67980d48"
+    },
+    {
+      "path": "src/app.ts",
+      "bytes": 7108,
+      "sha256": "719034003181d4618157fef4903fac964100240051b81fc50131c8f744ae2dfa"
+    },
+    {
+      "path": "src/crypto/canonical-hash.ts",
+      "bytes": 1732,
+      "sha256": "950c58602de69cbd9cf16c3c6a587aa53500c75c6f2d3011e33c89b808a10ddd"
+    },
+    {
+      "path": "src/crypto/delivery-envelope.ts",
+      "bytes": 5338,
+      "sha256": "13b83380734d3c876a0797d8231f3d78b5ecceadc9236e1752cba9f7847403ac"
+    },
+    {
+      "path": "src/engine/gemini-client.ts",
+      "bytes": 13640,
+      "sha256": "9efec723c34473b452881ed6c2c089e28e34165f8c75ceaea79e3e31fd9ccfa8"
+    },
+    {
+      "path": "src/engine/script-generator.ts",
+      "bytes": 24982,
+      "sha256": "78bd3035f46a9ce2c3512e6ce06ea0d9f48ad7065040c18791982a0fb1c4199f"
+    },
+    {
+      "path": "src/engine/wpm-calculator.ts",
+      "bytes": 6081,
+      "sha256": "e475becd845bcf38e04dd2a617e0c1058060d0204ffc7e8871636456eece2d4d"
+    },
+    {
+      "path": "src/marketplace-routes.ts",
+      "bytes": 2389,
+      "sha256": "ec23ee9be752d7f4719f79335f38012e687edebbc2bc6f1b3d644f48bc36f6c1"
+    },
+    {
+      "path": "src/marketplace-text.ts",
+      "bytes": 1257,
+      "sha256": "98d22d8a4f05fadc78515b40d8677aceb29bc20034a2309abf8e7f10cafcd765"
+    },
+    {
+      "path": "src/middleware/x402.ts",
+      "bytes": 10808,
+      "sha256": "9cd5b057d3f8dc6ab09335bc630ec8a784776cea0ce7ae60adb1d66843df8e14"
+    },
+    {
+      "path": "src/types.ts",
+      "bytes": 1754,
+      "sha256": "6aec009f2f8bb66d21aea7c803efd3258552285f67d1b9144df7532d05dec2cd"
+    },
+    {
+      "path": "src/views/landing-template.ts",
+      "bytes": 64282,
+      "sha256": "b11409b1e67e3201e5bc668a209ecf19a0cf7bafa4045a7f8992422cb315b84d"
+    },
+    {
+      "path": "src/views/teleprompter-template.ts",
+      "bytes": 46451,
+      "sha256": "26f57653ee226a1f41af2e3820f307bacc563c3dce636461ce86a61727f4ce4d"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 463,
+      "sha256": "48e10d6f5ea2ff79d1023106116419a12f69427c73b15ed45a5a475c1e91e8a1"
+    },
+    {
+      "path": "vercel.json",
+      "bytes": 336,
+      "sha256": "b81a1fce63e91997752ae14b1c6dcf0e74a05015f68bea64b0222e40c721e64f"
+    }
+  ],
+  "fileCount": 22,
+  "totalBytes": 383586,
+  "payloadFingerprint": "c8a59203f6a68a263ee650f61513dce525453ab9ad90c513b3097abec293f37c",
+  "secretsFound": 0,
+  "environmentFilesRead": 0
+}

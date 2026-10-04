@@ -3,11 +3,12 @@ import { services } from "@/lib/catalog";
 import { filterServices } from "@/lib/discovery";
 import { toServiceCard, toPaidService } from "@/lib/service-card";
 import { readDynamicServiceCards } from "@/lib/dynamic-registry";
+import { measuredHandler } from "@/lib/acceptance-meter";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
+export const GET = measuredHandler(async (req: NextRequest) => {
   const p = req.nextUrl.searchParams;
   const registry = await readDynamicServiceCards();
   const dynamicServices = registry.entries.map((d) => toPaidService(d.card));
@@ -32,8 +33,8 @@ export async function GET(req: NextRequest) {
     },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=120",
+        "Cache-Control": process.env.BAZAAR_ACCEPTANCE_METER === "true" ? "no-store" : "public, s-maxage=30, stale-while-revalidate=120",
       },
     },
   );
-}
+});

@@ -2,6 +2,11 @@ import { assertPaymentOptions } from "./payment-options.ts";
 import * as z from "zod/v4";
 import type { ServiceCard } from "./types.ts";
 
+export const stellarCreditIdentitySchema=z.object({
+  kind:z.literal('stellar-classic-credit'),network:z.enum(['stellar:testnet','stellar:mainnet']),
+  code:z.string().regex(/^[A-Za-z0-9]{1,12}$/),issuer:z.string().regex(/^G[A-Z2-7]{55}$/),sacContract:z.string().regex(/^C[A-Z2-7]{55}$/),
+}).strict();
+
 const deliverySchema = z.object({
   mode: z.enum(["sync", "async"]),
   estimatedDurationMs: z.number().int().positive(),
@@ -67,6 +72,7 @@ const serviceCardSchema = z.object({
       .regex(/^\d+(\.\d{1,7})?$/, "amount debe ser decimal positivo (máximo 7 decimales).")
       .refine((value) => Number(value) > 0, "amount debe ser mayor que cero."),
     destination: z.string().regex(/^G[A-Z2-7]{55}$/, "destination debe ser una cuenta Stellar pública G… de 56 caracteres."),
+    identity:stellarCreditIdentitySchema.optional(),
   }),
   paymentOptions: z.array(z.object({scheme:z.literal("exact"), asset:z.enum(["USDC","XLM"]), contract:z.string(), amount:z.string(), destination:z.string()})).min(1).max(2).optional(),
   provider: z.object({

@@ -6,6 +6,7 @@ import { computeCanonicalServiceCardHash } from "./canonical-service-card.ts";
 import * as review from "./provider-self-listing.ts";
 import { createService, getServiceById, registryMutationConfigured } from "./service-ingest.ts";
 import type { ServiceCard } from "./types.ts";
+import {meteredExternal} from './acceptance-meter.ts';
 
 type Entry = { id: string; hash: string; card: ServiceCard };
 export interface OperatorRegistry {
@@ -31,11 +32,18 @@ function publicIpv4(address: string): boolean {
     || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && (b === 168 || b === 0 || (b === 88 && c === 99)))
     || (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) || (a === 203 && b === 0 && c === 113));
 }
-type HttpTarget = { hostname: string; address: string; path: string; timeoutMs: number; maxBytes: number };
+type HttpTarget = { hostname: string; address: string; path: string; timeoutMs: number; maxBytes: number; onBytes?:(bytes:number)=>void };
+function proofHeaders(hostname:string):Record<string,string>|undefined {
+  const target=process.env.BAZAAR_PROVIDER_PREVIEW_HOST,secret=process.env.BAZAAR_PROVIDER_PREVIEW_BYPASS;
+  if(!target||hostname!==target)return undefined;
+  if(!/^[a-z0-9-]+\.vercel\.app$/.test(target)||!secret||!/^[A-Za-z0-9_-]{16,256}$/.test(secret))fail('PROVIDER_PREVIEW_AUTH_UNAVAILABLE');
+  return {'x-vercel-protection-bypass':secret};
+}
 async function pinnedHttps(target: HttpTarget): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
     const request = httpsRequest({ hostname: target.hostname, servername: target.hostname, port: 443,
       path: target.path, method: "GET", agent: false, family: 4,
+      headers:proofHeaders(target.hostname),
       lookup: (_hostname, _options, callback) => callback(null, target.address, 4),
     }, (response) => {
       if (response.statusCode !== 200) { response.destroy(); reject(new Error("HTTP_PROOF_STATUS")); return; }
@@ -43,6 +51,7 @@ async function pinnedHttps(target: HttpTarget): Promise<{ status: number; body: 
       let bytes = 0;
       response.on("data", (chunk: Buffer) => {
         bytes += chunk.length;
+        target.onBytes?.(bytes);
         if (bytes > target.maxBytes) { response.destroy(); reject(new Error("HTTP_PROOF_TOO_LARGE")); }
         else chunks.push(chunk);
       });
@@ -70,23 +79,26 @@ export async function verifySubmissionHttp(id: string, options: {
     || hostname !== submission.control.domain || submission.control.verificationPath !== "/.well-known/stellar-bazaar-provider.txt") fail("UNSAFE_PROOF_URL");
   const timeoutMs = options.timeoutMs ?? 5000;
   if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 5000) fail("INVALID_TIMEOUT");
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  let expired = false;
-  try {
-    const response = await Promise.race([
-      (async () => {
-        const addresses = await (options.lookup ?? ((host) => systemLookup(host, { all: true })))(hostname);
-        if (expired) fail("HTTP_PROOF_TIMEOUT");
-        if (!addresses.length || addresses.length > 32 || addresses.some((value) => value.family !== 4 || !publicIpv4(value.address))) fail("UNSAFE_PROOF_ADDRESS");
-        return (options.transport ?? pinnedHttps)({ hostname, address: addresses[0].address,
-          path: "/.well-known/stellar-bazaar-provider.txt", timeoutMs, maxBytes: 4096 });
-      })(),
-      new Promise<never>((_, reject) => { timer = setTimeout(() => { expired = true; reject(new Error("HTTP_PROOF_TIMEOUT")); }, timeoutMs); }),
-    ]);
+  const deadline=Date.now()+timeoutMs;
+  const bounded=async<T>(operation:()=>Promise<T>):Promise<T>=>{
+    const remaining=deadline-Date.now();if(remaining<=0)fail('HTTP_PROOF_TIMEOUT');
+    let timer:ReturnType<typeof setTimeout>|undefined;
+    try{return await Promise.race([operation(),new Promise<never>((_,reject)=>{timer=setTimeout(()=>reject(Error('HTTP_PROOF_TIMEOUT')),remaining);})]);}
+    finally{clearTimeout(timer);}
+  };
+  const addresses = await meteredExternal('proof-dns',()=>bounded(()=> (options.lookup ?? ((host) => systemLookup(host, { all: true })))(hostname)));
+  if (!addresses.length || addresses.length > 32 || addresses.some((value) => value.family !== 4 || !publicIpv4(value.address))) fail("UNSAFE_PROOF_ADDRESS");
+  const remaining=deadline-Date.now();if(remaining<=0)fail('HTTP_PROOF_TIMEOUT');
+  // The real transport settles on its own remaining deadline before the meter logs.
+  let proofBytes=0;
+  const target:HttpTarget={hostname,address:addresses[0].address,path:'/.well-known/stellar-bazaar-provider.txt',timeoutMs:remaining,maxBytes:4096,onBytes:bytes=>{proofBytes=bytes;}};
+  const response = await meteredExternal('proof-http',async()=>{
+    const value=await(options.transport?bounded(()=>options.transport!(target)):pinnedHttps(target));
+    proofBytes=Buffer.byteLength(value.body);return value;
+  },undefined,()=>({outboundBytes:0,inboundBytes:proofBytes}));
     if (response.status !== 200) fail("HTTP_PROOF_STATUS");
     if (typeof response.body !== "string" || Buffer.byteLength(response.body) > 4096) fail("HTTP_PROOF_TOO_LARGE");
     if (response.body !== submission.control.expectedRecord) fail("CONTROL_PROOF_MISMATCH");
-  } finally { clearTimeout(timer); }
   return unwrap(await review.recordControlProofResult(id, {
     challengeId: submission.control.challengeId, domain: hostname, verified: true,
     challengeHash: createHash("sha256").update(submission.control.expectedRecord).digest("hex"),
@@ -108,10 +120,10 @@ export async function verifySubmissionDns(id: string, options: {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let records: string[][];
   try {
-    records = await Promise.race([
+    records = await meteredExternal('proof-dns',()=>Promise.race([
       (options.resolveTxt ?? systemResolveTxt)(hostname),
       new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("DNS_PROOF_TIMEOUT")), timeoutMs); }),
-    ]);
+    ]));
   } catch { fail("DNS_PROOF_UNAVAILABLE"); }
   finally { clearTimeout(timer); }
   if (!Array.isArray(records) || records.length > 100 || records.some((record) =>

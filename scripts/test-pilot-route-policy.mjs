@@ -8,4 +8,14 @@ for (const path of ['/admin', '/publish', '/catalogo', '/api/admin/magic-link', 
 }
 assert.equal(pilotRoutePolicy('/', 'GET'), 'redirect');
 assert.equal(pilotRoutePolicy('/pilot', 'POST'), 'deny');
+const prior=process.env.BAZAAR_ENABLE_MARKETPLACE;
+process.env.BAZAAR_ENABLE_MARKETPLACE='true';
+try {
+  for(const path of ['/api/discovery/resources','/api/discovery/search']) assert.equal(pilotRoutePolicy(path,'GET'),'allow');
+  assert.equal(pilotRoutePolicy('/api/discovery/search','OPTIONS'),'allow');
+  assert.equal(pilotRoutePolicy('/api/discovery/search','POST'),'deny');
+  assert.equal(pilotRoutePolicy('/api/discovery/private','GET'),'deny');
+  assert.equal(pilotRoutePolicy('/resources/guionista-text','GET'),'allow');
+  assert.equal(pilotRoutePolicy('/api/publish','POST'),'deny');
+}finally{if(prior===undefined)delete process.env.BAZAAR_ENABLE_MARKETPLACE;else process.env.BAZAAR_ENABLE_MARKETPLACE=prior;}
 console.log(JSON.stringify({ ok: true, scope: 'route exposure policy only', excludesPaymentProviderAdminUploadPaths: true, allowsPilotWorkflowRoutes: true, externalRequests: 0, limitation: 'Needs native Next proxy integration; does not authorize owners or rate-limit random valid-shaped credentials' }));

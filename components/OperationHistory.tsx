@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ModelContextRegistry } from "@/lib/webmcp/types";
 import { createOwnedRegistration } from "@/lib/webmcp/owned-registration";
+import { serializedPrivateRead } from "@/lib/private-read-queue";
 
 type Locale = "es" | "en";
 type Entry = {
@@ -93,10 +94,10 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo, childr
           const request = ++generation.current;
           setState("loading"); setEntries([]);
           try {
-            const response = await fetch("/api/operations?limit=20", {
+            const response = await serializedPrivateRead(clean, controller.signal, () => fetch("/api/operations?limit=20", {
               headers: { Authorization: `Bearer ${clean}` },
               cache: "no-store", credentials: "same-origin", signal: controller.signal, redirect: "error",
-            });
+            }));
             if (request !== generation.current) return;
             if (!response.ok) {
               setState(response.status === 401 || response.status === 403 ? "unauthorized" : response.status === 503 ? "unavailable" : "error");
@@ -132,7 +133,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo, childr
           if (!connected || !input || Object.keys(input).length !== 0) return failure;
           const controller = new AbortController(); requests.add(controller);
           try {
-            const response = await fetch("/api/operations?limit=20", { headers: { Authorization: `Bearer ${token.trim()}` }, credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal });
+            const response = await serializedPrivateRead(token.trim(), controller.signal, () => fetch("/api/operations?limit=20", { headers: { Authorization: `Bearer ${token.trim()}` }, credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal }));
             if (!response.ok || !connected) return failure;
             const data = await response.json();
             if (!connected || data.version !== "1" || !Array.isArray(data.records)) return failure;
@@ -161,10 +162,10 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo, childr
     const request = ++generation.current;
     setState("loading"); setEntries([]);
     try {
-      const response = await fetch("/api/operations?limit=20", {
+      const response = await serializedPrivateRead(token.trim(), controller.signal, () => fetch("/api/operations?limit=20", {
         headers: { Authorization: `Bearer ${token.trim()}` },
         cache: "no-store", credentials: "same-origin", signal: controller.signal, redirect: "error",
-      });
+      }));
       if (request !== generation.current) return;
       if (!response.ok) {
         setState(response.status === 401 || response.status === 403 ? "unauthorized" : response.status === 503 ? "unavailable" : "error");

@@ -10,16 +10,18 @@ import {parseServiceCardShape} from '../lib/service-card-schema.ts';
 import {filterServices} from '../lib/discovery.ts';
 import {readPublicDiscovery} from '../lib/public-discovery.ts';
 import {registerBazaarTools} from '../lib/webmcp/register.ts';
+import {meteredRedis,measuredHandler} from '../lib/acceptance-meter.ts';
 const require=createRequire(import.meta.url);
 let ids=[], values=[], writes=0;
-class FakeRedis { async smembers(){return ids} async mget(){return values} async eval(){writes++;throw Error('unexpected write')} }
+class FakeRedis { use(){} async smembers(){return ids} async mget(){return values} async eval(){writes++;throw Error('unexpected write')} }
 function load(file,deps){
  const module={exports:{}};
  const compiled=ts.transpileModule(readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
  vm.runInNewContext(compiled,{module,exports:module.exports,process:{env:{UPSTASH_REDIS_REST_URL:'https://fixture.invalid',UPSTASH_REDIS_REST_TOKEN:'synthetic',BAZAAR_ENABLE_REGISTRY_MUTATIONS:'true',BAZAAR_PROVIDER_SECRET:'synthetic'}},Buffer,require:name=>deps[name]??require(name)});
  return module.exports;
 }
-const shared={'./catalog.ts':{getService},'./pilot-cards.ts':{pilotCards},'./service-card-schema.ts':{parseServiceCardShape}};
+const unused=()=>{throw Error('Unexpected pilot-only dependency in legacy registry test')};
+const shared={'./catalog.ts':{getService},'./pilot-cards.ts':{pilotCards},'./service-card-schema.ts':{parseServiceCardShape},'./acceptance-meter.ts':{meteredRedis},'./marketplace-store.ts':{configuredMarketStore:unused},'./workspace-store.ts':{configuredWorkspaceStore:unused},'./provider-self-listing.ts':{getSubmissionForOperator:unused}};
 const registry=load('lib/dynamic-registry.ts',{...shared,'@upstash/redis':{Redis:FakeRedis},'./canonical-service-card.ts':{computeCanonicalServiceCardHash:()=> 'fixture'}});
 const card={...toServiceCard(services[0]),id:'valid-dynamic',name:'Valid dynamic'};
 const entry={id:card.id,card,hash:'fixture',revision:1};
@@ -45,7 +47,7 @@ for (const pilot of pilotCards) {
  assert.equal(writes,0,'reserved pilot must be rejected before storage');
 }
 await check([card.id,collision.id],[entry,collision],false,1);
-const resources=load('app/api/discovery/resources/route.ts',{'next/server':{NextResponse:Response},'@/lib/catalog':{services},'@/lib/discovery':{filterServices},'@/lib/service-card':{toServiceCard,toPaidService},'@/lib/dynamic-registry':registry});
+const resources=load('app/api/discovery/resources/route.ts',{'next/server':{NextResponse:Response},'@/lib/catalog':{services},'@/lib/discovery':{filterServices},'@/lib/service-card':{toServiceCard,toPaidService},'@/lib/dynamic-registry':registry,'@/lib/acceptance-meter':{measuredHandler}});
 const response=await resources.GET({nextUrl:new URL('http://127.0.0.1/api/discovery/resources')});const body=await response.json();
 assert.equal(body.partialResults,true);assert.equal(body.dynamicRegistry,'unavailable');
 assert.equal(body.results.filter(item=>item.id===collision.id).length,1);assert.equal(body.results.find(item=>item.id===collision.id).name,services[0].name);

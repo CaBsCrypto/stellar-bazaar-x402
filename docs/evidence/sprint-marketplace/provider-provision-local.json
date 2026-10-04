@@ -1,0 +1,32 @@
+{
+  "status": "PASS_LOCAL_PROVISION_DOUBLES",
+  "actualNetworkRequests": 0,
+  "actualFriendbotClaims": 0,
+  "actualTrustlineSubmissions": 0,
+  "actualUsdcFaucetClaims": 0,
+  "modelCalls": 0,
+  "automaticRetries": 0,
+  "doubles": {
+    "horizonReads": 7,
+    "friendbotClaims": 2,
+    "trustlines": 2,
+    "faucetApiRequests": 2,
+    "faucetClaims": 1
+  },
+  "checks": [
+    "exact Circle identity and wallet public binding",
+    "DPAPI state and public hash journal before effects",
+    "Friendbot and trustline lost replies stop without resubmission",
+    "Sozu minimal success receipt confirmed by exact account/issuer balance",
+    "seeds and signed XDR excluded from public journal",
+    "PoW exact recipient/prefix, bounded difficulty/hash/time"
+  ],
+  "source": {
+    "package": "@sozu/faucet",
+    "version": "0.2.0",
+    "url": "https://registry.npmjs.org/@sozu/faucet/-/faucet-0.2.0.tgz",
+    "integrity": "sha512-dep6xeK8s7RHtj+Cxt3zr7jgrmPBfIwadhgkbp3X+oqPCYWWPP3TGZLaU1yu6R69wiD3i2G4kHoH9YQtuT4P5A==",
+    "sourceOnlyRead": true,
+    "executed": false
+  }
+}

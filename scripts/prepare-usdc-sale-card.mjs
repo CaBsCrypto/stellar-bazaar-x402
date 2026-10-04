@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {readFile,writeFile} from 'node:fs/promises';
+import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts';
+import {parseServiceCardShape} from '../lib/service-card-schema.ts';
+import {validateCardRules} from '../lib/service-ingest.ts';
+import {syncDeliveryContract} from '../lib/delivery-contract.ts';
+const path='docs/evidence/sprint-marketplace/usdc-sale-manifest.json',m=JSON.parse(await readFile(path,'utf8'));
+assert.equal(m.readiness.canExecute,false);assert.equal(m.payloads.card,undefined,'CARD_ALREADY_FROZEN');
+const delivery=syncDeliveryContract();delivery.result.contentType='text/plain';delivery.result.schemaVersion='guionista-text/v1';delivery.retention={resultTtlHours:24,durable:true};delivery.retry={retryable:false,maxAttempts:0,failureSemantics:'terminal-error'};
+const card={version:'bazaar.service-card/v0',id:m.payloads.serviceId,name:'Guionista algorítmico de texto',description:'Guion algorítmico de 15 a 30 segundos, por tema y tono. Entrega de texto de hasta 2000 caracteres mediante el agente vendedor. Piloto USDC testnet.',kind:'http',url:m.config.providerOrigin,routeTemplate:'/v1/marketplace-text',input:[{name:'topic',type:'string',required:true},{name:'tone',type:'string',required:true},{name:'durationSeconds',type:'number',required:true}],network:'stellar:testnet',payment:{scheme:'exact',asset:'USDC',amount:'0.01',destination:m.participants[0].wallet,identity:m.config.identity},provider:{name:'Guionista algorítmico · participante A'},tags:['guionista','texto','algorítmico','testnet'],delivery};
+const parsed=parseServiceCardShape(card);assert.equal(parsed.ok,true);assert.deepEqual(parsed.card,card);assert.deepEqual(validateCardRules(card).failedOutcomes,[]);
+m.payloads.card=card;m.payloads.cardHash=computeCanonicalServiceCardHash(card);m.payloads.resume={action:'resume'};m.payloads.failureReason='Fallo de entrega declarado por el vendedor durante la segunda compra de aceptación.';m.payloads.controlProof={method:'http-well-known',domain:new URL(card.url).hostname};
+m.payloads.orderIntents=m.payloads.orders.map(({operationId})=>({operationId,serviceId:card.id,cardHash:m.payloads.cardHash,payer:m.participants[1].wallet,input:m.payloads.input}));
+await writeFile(path,JSON.stringify(m,null,2)+'\n');console.log(JSON.stringify({cardId:card.id,cardHash:m.payloads.cardHash,price:card.payment.amount,asset:card.payment.identity,remoteEffects:0}));

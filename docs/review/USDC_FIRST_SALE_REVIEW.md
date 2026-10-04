@@ -1,0 +1,33 @@
+# Revisión de la primera venta USDC
+
+Fecha: 2026-10-04. Revisión local de la rama de trabajo; todavía no acredita una venta hospedada ni autoriza la apertura del piloto.
+
+El agente que redacta esta revisión implementó la liquidación. Su revisión independiente cubre el trabajador externo, privacidad de la interfaz y medición; la liquidación requiere además revisión por otro agente antes de abrir.
+
+## Resultados locales
+
+- `scripts/test-marketplace.mjs`: PASS con 110 intercambios Redis de doble, 24 escrituras y dos envíos de liquidación de doble. La identidad Circle testnet incluye red, código, emisor y SAC; ambos SAC publicados se derivan con el SDK en la prueba. USDT0 mainnet conserva pagos desactivados. Se rechazan sustituciones de activo, emisor, destino, importe, memo y firma mainnet; se verifican firma Ed25519, umbral, secuencia, trustlines, responsabilidades de saldo, capacidad receptora y XLM para reservas/comisión.
+- Registros XLM anteriores: lectura exacta y hash conservado sin escritura ni migración; preparación de nuevos pagos XLM rechazada antes de consultar Horizon.
+- `scripts/test-guionista-marketplace-worker.mjs`: PASS, 11 escenarios. El trabajador conserva intención antes de reclamar o invocar, reconstruye el hash de la ficha y comprueba liquidación Circle, importe y destino congelados. Genera una sola vez; una respuesta perdida conserva el intento y exige recuperación explícita. Reenviar el texto conservado no vuelve a invocar al proveedor.
+- `scripts/test-marketplace-workspace-lifecycle.mjs`: PASS con los hooks del componente real. Lecturas secuenciales; claves de React por acceso; respuestas HTTP, archivos, wallet y firmas tardías descartadas después de bloquear o cambiar propietario. La firma tardía no envía un pago.
+- `scripts/test-usdc-acceptance-meter.mjs`: PASS sin solicitudes externas. Los cuatro topes de persistencia incluyen claves y valores, se comprueban antes de efectos y suman 49.152 bytes: espacios 12.288, mercado 16.384, revisión 12.288 y catálogo 8.192. Se validan los nombres e identidades exactos de los propietarios; el catálogo admite sólo el identificador previsto. Se comprueban aislamiento de namespaces, límites de transporte, bytes crudos y lectura parcial, incertidumbre, SSR y scopes anidados.
+- La prueba HTTPS ejecuta el código real con transporte de doble: IPv4 fijada, hostname TLS exacto, sin redirección, cabecera de automatización únicamente al host Vercel fijado. Otros hosts y nombres parecidos no reciben la credencial. La lectura parcial que agota el plazo conserva bytes y marca incertidumbre antes de emitir los contadores. Los logs sólo contienen metadatos.
+- TypeScript: PASS con `tsc --noEmit --incremental false`.
+
+## Hallazgos corregidos durante la revisión
+
+1. El trabajador validaba sólo el texto `USDC`: ahora comprueba identidad completa y hash canónico de la ficha, además de conservar liquidación, importe y destinatario en su diario.
+2. Los contadores omitían excepciones sin respuesta: ahora se registra el scope incluso cuando el handler lanza.
+3. La serialización del resultado podía contar menos bytes que el cuerpo HTTP: Horizon registra el cuerpo recibido antes de analizar JSON, también en errores de lectura parcial.
+4. La prueba HTTP podía agotar el plazo exterior mientras seguía vivo el transporte: ahora DNS y HTTPS comparten un plazo y el transporte real se resuelve antes del registro final. La prueba DNS-TXT también conserva su timeout dentro del scope de transporte; ambos plazos se probaron sin conexiones externas.
+5. Los topes sumaban sólo valores mientras el manifiesto contaba también claves: ahora ambos usan claves más valores. Los nombres de claves se derivan del namespace y los propietarios validados antes de efectos.
+
+## Presupuesto y condiciones todavía pendientes
+
+El manifiesto de venta mantiene `canExecute=false` hasta vincular el SHA y los despliegues exactos, congelar payloads, comprobar contadores y refrescar el margen Free. `usdc-native-local.json`, build `FQk6yiPvFJW0TXQAtYVhO`, ya midió las dos compras, el trabajador/generador real, la prueba HTTP nativa mediante transportes locales, lectura privada de A/B, sustitución de proceso y pausa: 39 API, una página SSR, 188 intercambios Redis, 590 comandos como cota superior, 16 solicitudes Horizon (14 GET y dos POST de pago), un generador y una prueba DNS/HTTP. Máximo persistido: 17.051 bytes; payloads: 408.820 de salida y 633.793 de entrada. La suma de los contadores API y SSR coincide con el protocolo. Es evidencia local; no acredita fondos ni propiedad HTTPS hospedada. La cola privada y los contadores de claves añadidos después requieren reconstrucción y nueva corrida antes de fijar el SHA.
+
+La reserva conservadora propuesta para recuperación en navegador, retirada, revocación, comprobación de B y lecturas finales es 24 API, 180 intercambios Redis y 1.200 comandos adicionales: total previsto 63 API, 368 Redis y 1.790 comandos. Se reserva también hasta 2 MiB de salida y 4 MiB de entrada adicionales. Es una reserva limitada, no una medición de esas acciones; deben congelarse los pasos exactos y detenerse al consumirla. Las páginas y recursos estáticos, provisión y control de Vercel se cuentan por separado. La provisión de dos wallets nuevas requiere como máximo siete GET Horizon, dos Friendbot, dos POST de trustline y dos llamadas de faucet (un desafío y un claim); una inspección adicional previa suma dos GET y debe disponer de reserva propia. No consumir una inspección prescindible y después agotar el límite al confirmar el faucet.
+
+Antes de efectos hospedados, sumar las dos compras, la prueba HTTPS real, publicación, reenvíos, lectura de ambos participantes, sustitución de despliegue, pausa, retirada y revocación; añadir por separado SSR, navegador, provisión y cabeceras/estáticos. La cota de comandos debe proceder de los contadores de cada request, no del recuento de comandos efectivamente ejecutados por el doble. No extrapolar una compra a dos y presentarlo como medición completa.
+
+La aceptación hospedada todavía debe demostrar wallets testnet financiadas y autorizadas, dos pagos exactos de 0,01 USDC, entrega y fallo declarados separados del pago, recuperación exacta, prueba real de control del proveedor protegido, cuota/margen, pausa entre despliegues, retirada y revocación sin borrar registros. También faltan revisión independiente de liquidación, comprobación humana Freighter, móvil/teclado y ampliación real al 200 %. Mantener la protección de Preview; la apertura requiere todas esas condiciones. Cualquier publicación anterior para validación humana deberá conservar cerradas las altas y compras.

@@ -11,6 +11,7 @@ import {
 import type { DeliveryFile, SavedDeliverable } from "@/lib/deliverable";
 
 import type { ActivityEvent } from "@/lib/activity";
+import { serializedPrivateRead } from "@/lib/private-read-queue";
 
 import {
   PurchaseWorkspace,
@@ -53,7 +54,7 @@ export function PrivatePurchase({
       busy = true;
       setRefreshing(true);
       try {
-        const res = await fetch(
+        const res = await serializedPrivateRead(token, controller.signal, () => fetch(
           "/api/deliveries?operationId=" +
             encodeURIComponent(record.clientOperationId),
           {
@@ -63,7 +64,7 @@ export function PrivatePurchase({
             redirect: "error",
             signal: controller.signal,
           },
-        );
+        ));
         if (current !== generation.current) return;
         if (res.status === 401 || res.status === 403) {
           onUnauthorized?.();

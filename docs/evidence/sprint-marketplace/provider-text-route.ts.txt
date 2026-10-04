@@ -1,0 +1,39 @@
+import {createHash, timingSafeEqual} from 'node:crypto';
+import express, {type Express, type Request, type Response, type NextFunction} from 'express';
+import {generateMarketplaceText} from './marketplace-text.js';
+
+const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const hash=(text:string)=>createHash('sha256').update(text).digest('hex');
+function noStore(res:Response){res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');}
+
+/** Separate product. The existing USDC/JSON x402 routes remain unchanged. */
+export function registerMarketplaceTextRoutes(app:Express):void {
+ app.get('/.well-known/stellar-bazaar-provider.txt',(_req,res)=>{
+  noStore(res);
+  const proof=process.env.BAZAAR_MARKETPLACE_CONTROL_PROOF;
+  if(!/^stellar-bazaar-verification=[A-Za-z0-9_-]{24}$/.test(proof??'')){res.status(404).end();return;}
+  // Return the exact public challenge, without JSON quoting or a trailing newline.
+  res.type('text/plain').status(200).send(proof);
+ });
+ const authorize=(req:Request,res:Response,next:NextFunction)=>{
+  noStore(res);
+  if(process.env.BAZAAR_MARKETPLACE_TEXT_ENABLED!=='true'){res.status(503).json({ok:false,error:{code:'PRODUCT_DISABLED'}});return;}
+  const expected=process.env.BAZAAR_MARKETPLACE_WORKER_TOKEN_SHA256;
+  const token=/^Bearer ([A-Za-z0-9_-]{43})$/.exec(req.header('authorization')??'')?.[1];
+  if(!/^[a-f0-9]{64}$/.test(expected??'')||!token||!timingSafeEqual(Buffer.from(hash(token),'hex'),Buffer.from(expected!,'hex'))){res.status(401).json({ok:false,error:{code:'UNAUTHORIZED'}});return;}
+  next();
+ };
+ app.post('/v1/marketplace-text',authorize,express.json({limit:'8kb'}),(req,res)=>{
+  const body=req.body;
+  if(!body||typeof body!=='object'||Array.isArray(body)||Object.keys(body).sort().join(',')!=='attemptId,input,operationId'||!uuid.test(body.operationId??'')||!uuid.test(body.attemptId??'')){
+   res.status(400).json({ok:false,error:{code:'INVALID_INTENT'}});return;
+  }
+  try{
+   const text=generateMarketplaceText(body.input);
+   // No model, payment, filesystem or network call occurs in this handler.
+   res.status(200).json({ok:true,operationId:body.operationId,attemptId:body.attemptId,text,textHash:hash(text),engine:'algorithmic',contentType:'text/plain'});
+  }catch{
+   res.status(400).json({ok:false,error:{code:'INVALID_INPUT'}});
+  }
+ });
+}

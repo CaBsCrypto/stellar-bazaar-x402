@@ -1,0 +1,24 @@
+{
+  "status": "PASS_LOCAL_ONLY",
+  "date": "2026-10-04",
+  "transport": "createAutomationPreviewFetch",
+  "sourceSha256": "695951d5451a5425b6e7de92b20fe0e7c2269d19f855d429d1824fb03875a627",
+  "testSha256": "5c144f63ee1631983da65c849d376f5f687cd70cb9ba0a2f1761c015b3f1a4ae",
+  "commands": [
+    "node scripts/test-automation-preview-client.mjs",
+    "node scripts/test-protected-preview-client.mjs"
+  ],
+  "checks": [
+    "One fetch call per attempted exchange; no CLI lookup or child process",
+    "Exact HTTPS origin; refuse other hostname, URL credentials, query and fragment before any exchange",
+    "Caller cannot override automation bypass, host or cookies; private bearer preserved",
+    "Redirects and retries disabled; refused redirect becomes uncertainty",
+    "Timeout at most 12000 ms; streamed body and exposed UTF-8 headers at most 1048576 bytes",
+    "UTF-8 request payload hash and response body/header byte counters",
+    "Bypass and bearer absent from measurement metadata and sanitized transport errors",
+    "Oversized stream cancelled; aborted caller produces no exchange",
+    "Existing CLI transport regression passed"
+  ],
+  "externalRequests": 0,
+  "remoteProof": "PENDING"
+}
