@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {createAutomationPreviewFetch} from '../examples/protected-preview-client.mjs';
+import {createAutomationPreviewFetch,serializePreviewFetch,withProtectedPrivateMcp} from '../examples/protected-preview-client.mjs';
 
 const origin='https://fixed-preview.vercel.app',bypassSecret='synthetic-automation-secret-only-memory',privateToken='synthetic-private-agent-token';
 let calls=0,spawnCalls=0,responseFactory=()=>new Response('{"ok":true,"text":"á"}',{headers:{'content-type':'application/json','x-bazaar-redis-requests':'2'}});
@@ -44,4 +44,32 @@ const aborted=new AbortController();aborted.abort();await assert.rejects(fetcher
 let requestCalls=0;const requestFetcher=createAutomationPreviewFetch({origin,bypassSecret,fetchImpl:async(_url,init)=>{requestCalls++;assert.equal(init.headers.get('authorization'),'Bearer '+privateToken);assert.equal(init.body,body);return new Response('accepted');}});
 assert.equal(await(await requestFetcher(new Request(origin+'/api/mcp',{method:'POST',headers:{authorization:'Bearer '+privateToken},body}))).text(),'accepted');assert.equal(requestCalls,1);
 for(const options of [{origin:'http://localhost',bypassSecret},{origin,bypassSecret:'short'},{origin,bypassSecret,timeoutMs:12001},{origin,bypassSecret,maxResponseBytes:1048577}])assert.throws(()=>createAutomationPreviewFetch(options));
-console.log(JSON.stringify({status:'PASS',exactOrigin:true,oneFetchPerAttempt:true,redirects:0,retries:0,secretsInMetadata:false,processes:0,boundedBytes:true,externalRequests:0}));
+
+// The installed MCP SDK starts GET in the background after initialized receives
+// 202. Delaying that GET forces the first tool POST to queue behind all its hooks.
+let releaseBackground,startBackground,activeHooks=0,maxActiveHooks=0,actionEntered=false;
+const backgroundStarted=new Promise(resolve=>{startBackground=resolve;}),mcpAttempts=[],mcpNetwork=[];
+const mcpFetch=serializePreviewFetch(createAutomationPreviewFetch({origin,bypassSecret,
+ beforeRequest:meta=>{activeHooks++;maxActiveHooks=Math.max(maxActiveHooks,activeHooks);mcpAttempts.push({...meta,status:'PENDING'});},
+ onResponse:async meta=>{await Promise.resolve();const attempt=mcpAttempts.at(-1);assert.equal(attempt.payloadHash,meta.payloadHash);assert.equal(attempt.method,meta.method);attempt.status='CONFIRMED';activeHooks--;},
+ onUncertain:()=>assert.fail('Synthetic MCP request must be confirmed'),
+ fetchImpl:async(_url,init)=>{
+  mcpNetwork.push(init.method);if(init.method==='GET'){startBackground();await new Promise(resolve=>{releaseBackground=resolve;});return new Response('{"discovery":true}',{headers:{'content-type':'application/json'}});}
+  const message=JSON.parse(init.body);
+  if(message.method==='initialize')return new Response(JSON.stringify({jsonrpc:'2.0',id:message.id,result:{protocolVersion:message.params.protocolVersion,capabilities:{tools:{}},serverInfo:{name:'synthetic-preview',version:'1'}}}),{headers:{'content-type':'application/json'}});
+  if(message.method==='notifications/initialized')return new Response(null,{status:202});
+  assert.equal(message.method,'tools/call');return new Response(JSON.stringify({jsonrpc:'2.0',id:message.id,result:{content:[{type:'text',text:'accepted'}]}}),{headers:{'content-type':'application/json'}});
+ }
+}));
+const mcpRun=withProtectedPrivateMcp(origin,'a'.repeat(43),mcpFetch,async client=>{actionEntered=true;return client.callTool({name:'synthetic_tool',arguments:{}},undefined,{timeout:5000});});
+await Promise.race([backgroundStarted,new Promise((_,reject)=>setTimeout(()=>reject(Error('Background GET not started: '+JSON.stringify(mcpNetwork)+' attempts '+JSON.stringify(mcpAttempts))),1000))]);await new Promise(resolve=>setTimeout(resolve,0));assert.equal(actionEntered,true);assert.deepEqual(mcpNetwork,['POST','POST','GET']);assert.equal(activeHooks,1);
+releaseBackground();assert.equal((await mcpRun).content[0].text,'accepted');assert.deepEqual(mcpNetwork,['POST','POST','GET','POST']);assert.equal(maxActiveHooks,1);assert.equal(activeHooks,0);assert.ok(mcpAttempts.every(attempt=>attempt.status==='CONFIRMED'));
+
+// A queued cancellation has no hooks/effect. Failure reaches its caller, while
+// the queue itself remains usable for the caller's explicit recovery decision.
+let releaseQueue,queueStarted,queuedCalls=0;const queueStartedPromise=new Promise(resolve=>{queueStarted=resolve;}),queueAbort=new AbortController();
+const queued=serializePreviewFetch(async()=>{queuedCalls++;if(queuedCalls===1){queueStarted();await new Promise(resolve=>{releaseQueue=resolve;});}return new Response('confirmed');});
+const queuedFirst=queued(origin+'/api/mcp');await queueStartedPromise;const queuedSecond=queued(origin+'/api/mcp',{signal:queueAbort.signal});queueAbort.abort();releaseQueue();await queuedFirst;await assert.rejects(queuedSecond,/TRANSPORT_ABORTED/);assert.equal(queuedCalls,1);
+let recoverCalls=0;const originalFailure=Error('original failure'),recoverable=serializePreviewFetch(async()=>{if(++recoverCalls===1)throw originalFailure;return new Response('explicit next decision');});
+await assert.rejects(recoverable(origin+'/api/mcp'),error=>error===originalFailure);assert.equal(await(await recoverable(origin+'/api/mcp')).text(),'explicit next decision');assert.equal(recoverCalls,2);
+console.log(JSON.stringify({status:'PASS',exactOrigin:true,oneFetchPerAttempt:true,redirects:0,retries:0,secretsInMetadata:false,processes:0,boundedBytes:true,sdk202BackgroundGetSerialized:true,queuedAbortHasNoEffect:true,externalRequests:0}));

@@ -5,7 +5,7 @@ import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 import {Asset,FeeBumpTransaction,Keypair,Networks,TransactionBuilder} from '@stellar/stellar-sdk';
 import {loadPacket,savePacket,packetDirectory} from './marketplace-private-packet.mjs';
-import {createAutomationPreviewFetch,withProtectedPrivateMcp} from '../examples/protected-preview-client.mjs';
+import {createAutomationPreviewFetch,serializePreviewFetch,withProtectedPrivateMcp} from '../examples/protected-preview-client.mjs';
 import {createGuionistaIntent,executeGuionistaIntent,failGuionistaIntent,deliverGuionistaIntent} from '../examples/guionista-marketplace-worker.mjs';
 import {acquireSaleEffectLock} from '../examples/sale-effect-lock.mjs';
 const dir='docs/evidence/sprint-marketplace',readJson=async p=>JSON.parse((await readFile(p,'utf8')).replace(/^\uFEFF/,''));
@@ -29,10 +29,11 @@ const reserves=m.browserReserve??{apiRequests:20,redis:80,commandsUpperBound:400
 const requestCosts=new Map();
 async function provisioning(){
  let setup;try{setup=await readJson(dir+'/usdc-wallet-provision.json');}catch(e){if(e.code!=='ENOENT')throw e;setup={counts:{horizonReads:0,friendbotClaims:0,trustlineSubmissions:0,faucetApiRequests:0},outboundPayloadBytes:0,inboundPayloadBytes:0};}
- try{const proof=await readJson(dir+'/usdc-provider-proof-check.json');assert.equal(proof.status,'PASS','PROOF_CHECK_UNCONFIRMED');setup.counts.providerProofChecks=proof.proofHttpRequests;setup.outboundPayloadBytes+=proof.outboundPayloadBytes;setup.inboundPayloadBytes+=proof.inboundPayloadBytes;setup.activeExecutionMs=(setup.activeExecutionMs??0)+(proof.activeExecutionMs??0);}catch(e){if(e.code!=='ENOENT')throw e;}
+ for(const name of ['usdc-provider-proof-check','usdc-bazaar-protection-check']){try{const proof=await readJson(dir+'/'+name+'.json');assert.equal(proof.status,'PASS','PROOF_CHECK_UNCONFIRMED');assert.equal(proof.planId,m.planId);if(name==='usdc-provider-proof-check')setup.counts.providerProofChecks=proof.proofHttpRequests;else setup.counts.bazaarProtectionChecks=proof.apiRequests;setup.outboundPayloadBytes+=proof.outboundPayloadBytes;setup.inboundPayloadBytes+=proof.inboundPayloadBytes;setup.activeExecutionMs=(setup.activeExecutionMs??0)+(proof.activeExecutionMs??0);}catch(e){if(e.code!=='ENOENT')throw e;}}
  return setup;
 }
 async function guard(kind,meta){
+ assert.notEqual(report.status,'UNCERTAIN','UNCERTAIN_STOP_NO_QUEUED_EFFECT');
  const setup=await provisioning();assert.notEqual(setup.status,'UNCERTAIN');
  const cost=requestCosts.get(meta.path+':'+meta.payloadHash)??{},futureHorizon=cost.horizon??0,futureProof=cost.proof??0;
  const apiTotal=report.apiRequests+Object.values(report.external).reduce((s,v)=>s+v,0)+Object.entries(setup.counts).filter(([key])=>key!=='usdcFaucetClaims').reduce((n,[,v])=>n+v,0);
@@ -44,7 +45,7 @@ async function guard(kind,meta){
  assert.ok(baseMs+Date.now()-started+(setup.activeExecutionMs??0)+13500<=m.limits.activeExecutionSeconds*1000,'EXECUTION_TIME_BUDGET');
  if(kind==='provider')assert.ok(report.external.provider<m.limits.providerExecutionRequests,'PROVIDER_SINGLE_EXECUTION');
 }
-async function transport(target,kind,id=deployment.id){return createAutomationPreviewFetch({origin:target,bypassSecret:kind==='provider'?sale.providerBypass:sale.bazaarBypass,timeoutMs:12000,maxResponseBytes:1048576,
+async function transport(target,kind,id=deployment.id){return serializePreviewFetch(await createAutomationPreviewFetch({origin:target,bypassSecret:kind==='provider'?sale.providerBypass:sale.bazaarBypass,timeoutMs:12000,maxResponseBytes:1048576,
  beforeRequest:async meta=>{await guard(kind,meta);if(kind==='provider')report.external.provider++;else report.apiRequests++;report.attempts.push({...meta,kind,phase,deploymentId:kind==='provider'?m.deployments?.providerProof?.id:id,status:'PENDING'});report.outboundPayloadBytes+=meta.requestBytes;await persist();},
  onResponse:async(meta,response)=>{
   const attempt=report.attempts.at(-1);assert.equal(attempt.payloadHash,meta.payloadHash);attempt.httpStatus=response.status;report.inboundPayloadBytes+=meta.responseBytes;
@@ -62,7 +63,7 @@ async function transport(target,kind,id=deployment.id){return createAutomationPr
   }
   attempt.status='CONFIRMED';await persist();
  },onUncertain:async(meta)=>{const attempt=report.attempts.at(-1);attempt.status='UNCERTAIN';report.status='UNCERTAIN';await persist();}
-});}
+}));}
 const appFetch=await transport(origin,'api'),providerFetch=await transport(sale.providerOrigin,'provider');
 async function http(path,token,body,expected=200,at={origin,fetcher:appFetch}){const payload=body===undefined?'':JSON.stringify(body);requestCosts.set(path+':'+sha(payload),{horizon:body?.action==='prepare'?3:body?.action==='pay'?5:body?.action==='reconcile'?1:0,proof:body?.action==='verify-http'||body?.action==='verify-dns'?2:0});const response=await at.fetcher(at.origin+path,{method:body===undefined?'GET':'POST',headers:{authorization:'Bearer '+token,...(body===undefined?{}:{'content-type':'application/json'})},...(body===undefined?{}:{body:payload})});assert.equal(response.status,expected,'STATUS_MISMATCH:'+path);return response.json();}
 const a=packet.identities[0],b=packet.identities[1],aHuman=a.rotatedHuman,aAgent=a.rotatedAgent;

@@ -135,7 +135,7 @@ async function main(){
  try{report=await json(reportPath);}catch(error){if(error.code!=='ENOENT')throw error;report={version:1,planId:manifest.planId,sourceSha:manifest.sourceSha,provisioningBinding:provisioningBinding(manifest),status:'IN_PROGRESS',counts:{horizonReads:0,friendbotClaims:0,trustlineSubmissions:0,faucetApiRequests:0,usdcFaucetClaims:0},outboundPayloadBytes:0,inboundPayloadBytes:0,activeExecutionMs:0,automaticRetries:0,attempts:[]};}
  assert.equal(report.planId,manifest.planId);assert.equal(report.provisioningBinding,provisioningBinding(manifest),'PROVISION_REPORT_BINDING_MISMATCH');
  const otherReports=async()=>{
-  const reports=[];for(const name of ['usdc-hosted-http','usdc-provider-proof-check']){try{const value=await json('docs/evidence/sprint-marketplace/'+name+'.json');assert.equal(value.planId,manifest.planId);assert.notEqual(value.status,'UNCERTAIN');reports.push(value);}catch(error){if(error.code!=='ENOENT')throw error;}}
+  const reports=[];for(const name of ['usdc-hosted-http','usdc-provider-proof-check','usdc-bazaar-protection-check']){try{const value=await json('docs/evidence/sprint-marketplace/'+name+'.json');assert.equal(value.planId,manifest.planId);assert.notEqual(value.status,'UNCERTAIN');reports.push(value);}catch(error){if(error.code!=='ENOENT')throw error;}}
   return reports;
  };
  const otherActiveExecutionMs=async()=>(await otherReports()).reduce((total,value)=>total+(value.activeExecutionMs??0),0);

@@ -16,7 +16,8 @@ function parseEnvelope(raw){
  const status=Number(block[1]),headers=new Headers();
  for(const line of block[2].split(/\r?\n/)){const colon=line.indexOf(':');if(colon>0)headers.append(line.slice(0,colon),line.slice(colon+1).trim());}
  if(status>=300&&status<400)throw Error('REDIRECT_DENIED');
- return new Response([204,205,304].includes(status)?null:raw.slice(offset),{status,headers});
+ const body=raw.slice(offset);
+ return new Response([204,205,304].includes(status)||!body.length?null:body,{status,headers});
 }
 
 /**
@@ -63,7 +64,7 @@ export async function createProtectedPreviewFetch(options){
     child.stdin.end(config);
    });
    const response=parseEnvelope(raw);
-   await options.onResponse?.({...metadata,status:response.status,responseBytes:Buffer.byteLength(raw)},response.clone());
+   await options.onResponse?.({...metadata,status:response.status,responseBytes:Buffer.byteLength(raw)},parseEnvelope(raw));
    return response;
   }catch(error){await options.onUncertain?.({...metadata,code:error.message});throw error;}
  };
@@ -119,8 +120,11 @@ export function createAutomationPreviewFetch(options){
     }
    }catch(error){await reader?.cancel().catch(()=>{});throw error;}finally{reader?.releaseLock();}
    if(controller.signal.aborted)throw Error(timedOut?'TRANSPORT_UNCONFIRMED':'TRANSPORT_ABORTED');
-   const result=new Response([204,205,304].includes(response.status)?null:Buffer.concat(parts),{status:response.status,statusText:response.statusText,headers:response.headers});
-   await options.onResponse?.({...metadata,status:response.status,responseBytes:responseBodyBytes+responseHeaderBytes,responseBodyBytes,responseHeaderBytes},result.clone());
+   const responseBody=[204,205,304].includes(response.status)||!responseBodyBytes?null:Buffer.concat(parts),responseInit={status:response.status,statusText:response.statusText,headers:response.headers};
+   const result=new Response(responseBody,responseInit);
+   // An independent snapshot avoids coupling a caller's body.cancel() to an
+   // unread hook clone (MCP explicitly cancels accepted notifications).
+   await options.onResponse?.({...metadata,status:response.status,responseBytes:responseBodyBytes+responseHeaderBytes,responseBodyBytes,responseHeaderBytes},new Response(responseBody,responseInit));
    return result;
   }catch(error){
    const allowed=new Set(['REDIRECT_DENIED','UNBOUND_TRANSPORT_RESPONSE','RESPONSE_OVERSIZE','TRANSPORT_ABORTED','TRANSPORT_UNCONFIRMED']);
@@ -128,6 +132,23 @@ export function createAutomationPreviewFetch(options){
    await options.onUncertain?.({...metadata,code});
    throw Error(code);
   }finally{clearTimeout(timer);callerSignal?.removeEventListener('abort',abort);}
+ };
+}
+
+/** Serialize hooks, transport and body reads, including background MCP GETs. */
+export function serializePreviewFetch(fetcher){
+ if(typeof fetcher!=='function')throw Error('INVALID_FETCH_IMPLEMENTATION');
+ let tail=Promise.resolve();
+ return (input,init={})=>{
+  const execute=()=>{
+   const signal=init.signal??(input instanceof Request?input.signal:undefined);
+   if(signal?.aborted)throw Error('TRANSPORT_ABORTED');
+   return fetcher(input,init);
+  };
+  const result=tail.then(execute);
+  // This settles only the queue gate. The original result rejects to its caller.
+  tail=result.then(()=>undefined,()=>undefined);
+  return result;
  };
 }
 
