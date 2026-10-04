@@ -6,6 +6,7 @@ import {tmpdir} from 'node:os';
 import {createHash} from 'node:crypto';
 import {loadPacket,savePacket,packetDirectory} from './marketplace-private-packet.mjs';
 import {acquireSaleEffectLock} from '../examples/sale-effect-lock.mjs';
+import {parseVercelMeterExport} from './parse-usdc-vercel-meter.mjs';
 const directory='docs/evidence/sprint-marketplace',manifestPath=directory+'/usdc-sale-manifest.json';
 const readJson=async p=>JSON.parse((await readFile(p,'utf8')).replace(/^\uFEFF/,''));
 const digest=value=>createHash('sha256').update(typeof value==='string'||Buffer.isBuffer(value)?value:JSON.stringify(value)).digest('hex');
@@ -30,7 +31,7 @@ async function command(args,{body,cwd=process.cwd(),effect,decode='json'}={}){
 }
 const api=(path,method='GET',body)=>command(['api',path,'--method',method,...(body===undefined?[]:['--input','-'])],{body:body===undefined?undefined:JSON.stringify(body)});
 function deployGate(){assert.equal(manifest.readiness.localSaleMeasured,true);assert.equal(manifest.readiness.payloadsFrozen,true);assert.equal(manifest.readiness.freeMarginRefreshed,true);assert.equal(manifest.readiness.canDeployPreview,true);assert.match(manifest.sourceSha,/^[a-f0-9]{40}$/);assert.equal(journal.projects?.provider.protection,true,'PROVIDER_PROTECTION_REQUIRED');assert.equal(journal.projects?.bazaar.protection,true,'BAZAAR_PROTECTION_REQUIRED');}
-function summaryDeployment(value){return {id:value.id??value.uid,url:value.url?.startsWith('https://')?value.url:'https://'+value.url,readyState:value.readyState??value.state,sourceSha:value.meta?.usdcSourceSha??value.meta?.gitCommitSha??value.meta?.githubCommitSha,gitCommitSha:value.meta?.gitCommitSha??value.meta?.githubCommitSha,payloadFingerprint:value.meta?.usdcPayloadFingerprint,target:value.target??'preview',protectionEnabled:Boolean(value.ssoProtection||value.passwordProtection||value.deploymentProtection?.length)};}
+function summaryDeployment(value){const protectionMetadataReported=['ssoProtection','passwordProtection','deploymentProtection'].some(key=>Object.hasOwn(value,key));return {id:value.id??value.uid,url:value.url?.startsWith('https://')?value.url:'https://'+value.url,readyState:value.readyState??value.state,sourceSha:value.meta?.usdcSourceSha??value.meta?.gitCommitSha??value.meta?.githubCommitSha,gitCommitSha:value.meta?.gitCommitSha??value.meta?.githubCommitSha,payloadFingerprint:value.meta?.usdcPayloadFingerprint,target:value.target??'preview',protectionEnabled:protectionMetadataReported?Boolean(value.ssoProtection||value.passwordProtection||value.deploymentProtection?.length):null,protectionObservation:protectionMetadataReported?'reported':'unknown'};}
 async function deploy(target,step){
  deployGate();const label=target+'-'+step;assert.ok(!journal.deployments[label],'DEPLOYMENT_ALREADY_CREATED_USE_STATUS');
  assert.ok(journal.creates+1<=manifest.limits.vercelDeploymentCreates);
@@ -66,6 +67,14 @@ try{
   if(bypass){packet.sale.providerBypass=bypass[0];await savePacket(packet);}
   const bazaarBypass=Object.entries(bazaar.protectionBypass??{}).find(([,v])=>v.scope==='automation-bypass');if(bazaarBypass){packet.sale.bazaarBypass=bazaarBypass[0];await savePacket(packet);}
   journal.projects={provider:{id:provider.id,name:provider.name,protection:Boolean(provider.ssoProtection),automationBypassExists:Boolean(bypass)},bazaar:{id:bazaar.id,name:bazaar.name,protection:Boolean(bazaar.ssoProtection),automationBypassExists:Boolean(bazaarBypass)}};await persist();console.log(JSON.stringify(journal.projects));
+ }else if(phase==='preview-toolbar-off'){
+  deployGate();const plan=manifest.previewToolbarControl;assert.equal(plan?.projectId,manifest.projectId);assert.equal(plan.maxWrites,1);assert.deepEqual(plan.payload,{enablePreviewFeedback:false});assert.ok(!journal.previewToolbar,'TOOLBAR_CONTROL_ALREADY_COMPLETE');
+  const before=await api('/v9/projects/'+manifest.projectId);assert.ok(before.ssoProtection,'PREVIEW_PROTECTION_REQUIRED');
+  const protectionHash=digest(before.ssoProtection),productionFeedback=before.enableProductionFeedback??null;
+  journal.previewToolbar={previousEnablePreviewFeedback:before.enablePreviewFeedback??null,previousEnableProductionFeedback:productionFeedback,protectionHash,status:'PREPARED',writes:0};await persist();
+  if(before.enablePreviewFeedback!==false){journal.previewToolbar.writes++;await persist();await api('/v9/projects/'+manifest.projectId,'PATCH',plan.payload);}
+  const after=await api('/v9/projects/'+manifest.projectId);assert.equal(after.enablePreviewFeedback,false);assert.equal(digest(after.ssoProtection),protectionHash);assert.equal(after.enableProductionFeedback??null,productionFeedback);
+  journal.previewToolbar.status='CONFIRMED';await persist();console.log(JSON.stringify({previewFeedback:false,protectionUnchanged:true,productionFeedbackUnchanged:true,writes:journal.previewToolbar.writes}));
  }else if(phase==='bypass'){
   deployGate();const packet=await loadPacket();assert.equal(packet.sale.providerBypass,undefined,'EXISTING_BYPASS_DO_NOT_REPLACE');assert.ok(journal.bypassCreates+1<=manifest.limits.vercelBypassCreates);journal.bypassCreates++;await persist();
   const result=await api('/v1/projects/'+manifest.providerProjectId+'/protection-bypass','PATCH',{}),entry=Object.entries(result.protectionBypass??{}).find(([,v])=>v.scope==='automation-bypass');assert.ok(entry,'BYPASS_RESPONSE_UNCONFIRMED');packet.sale.providerBypass=entry[0];await savePacket(packet);console.log(JSON.stringify({automationBypassPrepared:true,protectionDisabled:false}));
@@ -82,15 +91,17 @@ try{
   if(summary.readyState==='READY'){const evidence={...summary,planId:manifest.planId,runtimeHash:binding.runtimeHash,buildHash:binding.buildHash,runtimeFlags:binding.runtimeFlags,buildFlags:binding.buildFlags};await writeFile(directory+'/usdc-'+label+'.json',JSON.stringify(evidence,null,2)+'\n');if(label.startsWith('bazaar-'))await writeFile(directory+'/usdc-bazaar-current.json',JSON.stringify(evidence,null,2)+'\n');const manifestKey=label.replace(/-([a-z])/g,(_,character)=>character.toUpperCase());manifest.deployments??={};manifest.deployments[manifestKey]=evidence;await writeFile(manifestPath,JSON.stringify(manifest,null,2)+'\n');}
   console.log(JSON.stringify(summary));
  }else if(phase==='alias'){
-  deployGate();const label=process.argv[3],value=journal.deployments[label];assert.ok(label.startsWith('provider-')&&value?.readyState==='READY');assert.ok(journal.aliases+1<=manifest.limits.vercelAliasWrites);journal.aliases++;await persist();await api('/v2/deployments/'+value.id+'/aliases','POST',{alias:new URL(manifest.config.providerOrigin).hostname});
+  deployGate();const label=process.argv[3],value=journal.deployments[label];assert.ok(['provider-initial','provider-proof'].includes(label)&&value?.readyState==='READY');const protection=await readJson(directory+(label==='provider-initial'?'/usdc-provider-protection-check.json':'/usdc-provider-proof-protection-check.json'));assert.equal(protection.status,'PASS');assert.equal(protection.unauthenticatedDenied,true);assert.equal(protection.deploymentId,value.id);assert.equal(protection.sourceSha,manifest.sourceSha);assert.ok(journal.aliases+1<=manifest.limits.vercelAliasWrites);journal.aliases++;await persist();await api('/v2/deployments/'+value.id+'/aliases','POST',{alias:new URL(manifest.config.providerOrigin).hostname});
   const actual=await api('/v4/aliases/'+new URL(manifest.config.providerOrigin).hostname);assert.equal(actual.projectId,manifest.providerProjectId);assert.equal(actual.deploymentId,value.id);assert.ok(!actual.redirect);journal.providerAlias={alias:actual.alias,projectId:actual.projectId,deploymentId:actual.deploymentId,verifiedAt:new Date().toISOString()};await persist();console.log(JSON.stringify({...journal.providerAlias,productionAliasChanged:false}));
  }else if(phase==='logs'){
   const label=process.argv[3],value=journal.deployments[label];assert.ok(value?.readyState==='READY');
-  const raw=await command(['logs',value.id,'--query','acceptanceMeter','--json','--limit','100'],{decode:'text'}),records=[];
-  for(const line of raw.split(/\r?\n/)){let row,count;try{row=JSON.parse(line);count=JSON.parse(row.message);}catch{continue;}if(count.acceptanceMeter!=='v1'||!['api','ssr'].includes(count.source)||!/^[a-f0-9-]{36}$/.test(count.requestId))continue;
-   const keys=['redis','commandsUpperBound','outboundPayloadBytes','inboundPayloadBytes','workspaceStoredBytesUpperBound','marketStoredBytesUpperBound','reviewStoredBytesUpperBound','catalogStoredBytesUpperBound','externalOutboundPayloadBytes','externalInboundPayloadBytes'];assert.ok(keys.every(k=>Number.isSafeInteger(count[k])&&count[k]>=0));assert.ok(Object.values(count.external??{}).every(v=>Number.isSafeInteger(v)&&v>=0));records.push({deploymentId:value.id,source:count.source,requestId:count.requestId,path:String(row.requestPath??'').split('?')[0],...Object.fromEntries(keys.map(k=>[k,count[k]])),external:count.external,uncertain:count.uncertain});
-  }
-  await writeFile(directory+'/usdc-meter-'+label+'.json',JSON.stringify({planId:manifest.planId,sourceSha:manifest.sourceSha,deploymentId:value.id,records:[...new Map(records.map(v=>[v.requestId,v])).values()]},null,2)+'\n');console.log(JSON.stringify({label,deploymentId:value.id,records:records.length,uncertain:records.some(v=>v.uncertain)}));
+  const since='2026-10-04T20:00:00.000Z';
+  const raw=await command(['logs',value.id,'--query','acceptanceMeter','--json','--limit','100','--since',since],{decode:'text'});
+  const {records,rawRecords,skipped}=parseVercelMeterExport(raw,{deploymentId:value.id});
+  const collectionComplete=rawRecords<100&&skipped.every(v=>['non-json-message','non-v1-meter-message'].includes(v.type));
+  const reportPath=directory+'/usdc-meter-'+label+'.json';
+  try{const prior=await readFile(reportPath);await writeFile(directory+'/usdc-meter-'+label+'-snapshot-'+journal.requests+'.json',prior,{flag:'wx'});}catch(error){if(error.code!=='ENOENT')throw error;}
+  await writeFile(reportPath,JSON.stringify({planId:manifest.planId,sourceSha:manifest.sourceSha,deploymentId:value.id,collection:{complete:collectionComplete,limit:100,rawRecords,meterObservationCount:records.length,since},records,skipped},null,2)+'\n');console.log(JSON.stringify({label,deploymentId:value.id,records:records.length,rawRecords,collectionComplete,uncertain:records.some(v=>v.uncertain),skippedMessages:skipped.length}));
  }else if(phase?.startsWith('provider-'))await deploy('provider',phase.slice(9));
  else if(phase?.startsWith('bazaar-'))await deploy('bazaar',phase.slice(7));
  else throw Error('EXPLICIT_CONTROL_PHASE_REQUIRED');

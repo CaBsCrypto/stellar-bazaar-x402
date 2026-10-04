@@ -44,6 +44,10 @@ const aborted=new AbortController();aborted.abort();await assert.rejects(fetcher
 let requestCalls=0;const requestFetcher=createAutomationPreviewFetch({origin,bypassSecret,fetchImpl:async(_url,init)=>{requestCalls++;assert.equal(init.headers.get('authorization'),'Bearer '+privateToken);assert.equal(init.body,body);return new Response('accepted');}});
 assert.equal(await(await requestFetcher(new Request(origin+'/api/mcp',{method:'POST',headers:{authorization:'Bearer '+privateToken},body}))).text(),'accepted');assert.equal(requestCalls,1);
 for(const options of [{origin:'http://localhost',bypassSecret},{origin,bypassSecret:'short'},{origin,bypassSecret,timeoutMs:12001},{origin,bypassSecret,maxResponseBytes:1048577}])assert.throws(()=>createAutomationPreviewFetch(options));
+let unreadHookSnapshot;
+const notificationFetcher=createAutomationPreviewFetch({origin,bypassSecret,fetchImpl:async()=>new Response('ignored notification body',{status:202}),onResponse:(_meta,value)=>{unreadHookSnapshot=value;}});
+const notification=await notificationFetcher(origin+'/api/mcp');
+await notification.body.cancel();assert.equal(unreadHookSnapshot.bodyUsed,false);assert.equal(await unreadHookSnapshot.text(),'ignored notification body');
 
 // The installed MCP SDK starts GET in the background after initialized receives
 // 202. Delaying that GET forces the first tool POST to queue behind all its hooks.

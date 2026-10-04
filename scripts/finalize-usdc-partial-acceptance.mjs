@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {readFile,writeFile} from 'node:fs/promises';
+const dir='docs/evidence/sprint-marketplace/',read=async n=>JSON.parse(await readFile(dir+n+'.json','utf8'));
+const m=await read('usdc-sale-manifest'),control=await read('usdc-vercel-control'),closed=await read('usdc-bazaar-closed'),protection=await read('usdc-bazaar-closed-protection-check'),counters=await read('usdc-counter-reconciliation'),browser=await read('usdc-browser-functional');
+assert.equal(control.creates,6);assert.equal(control.status,'PREPARATION');assert.ok(control.attempts.every(v=>v.status==='CONFIRMED'));assert.equal(closed.readyState,'READY');assert.equal(closed.sourceSha,m.sourceSha);assert.equal(protection.status,'PASS');assert.equal(protection.deploymentId,closed.id);assert.equal(protection.unauthenticatedDenied,true);
+assert.equal(counters.complete,false);assert.equal(counters.status,'INCOMPLETE_EVIDENCE');assert.equal(browser.cleanupApproved,false);assert.equal(m.readiness.canRetireSynthetic,false);
+for(const key of ['canExecute','canDeployPreview','canProbe','canProvision','canRecoverFaucet','canInspect','canRetireSynthetic','canOpen','hostedBrowserPassed'])m.readiness[key]=false;
+m.browserReadOnlyExecution.finished=true;
+m.executionConclusion={status:'PARTIAL_ACCEPTANCE_STOPPED',reason:'Complete browser transport bound unavailable; no further Redis or payment effects permitted by this acceptance manifest.',backendSale:'PASS',backendReplacement:'PASS',browserFunctional:'PASS_LIMITED',syntheticCleanup:'PENDING_MEASUREMENT',nativeZoom200:'PENDING_MANUAL',humanFreighter:'PENDING_MANUAL',publicPromotion:'NOT_PERFORMED',sellerRevoked:false,buyerAccessPreserved:true,closedDeploymentId:closed.id,observedApiRequests:counters.totals.apiRequests,knownUnmeteredApiUpper:1,remoteUncertainAttempts:0,openingApproved:false};
+await writeFile(dir+'usdc-sale-manifest.json',JSON.stringify(m,null,2)+'\n');console.log(JSON.stringify({status:m.executionConclusion.status,observedApiRequests:counters.totals.apiRequests,creates:control.creates,canOpen:false,canExecute:false,canRetireSynthetic:false}));

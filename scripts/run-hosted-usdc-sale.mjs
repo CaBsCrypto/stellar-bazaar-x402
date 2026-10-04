@@ -8,6 +8,7 @@ import {loadPacket,savePacket,packetDirectory} from './marketplace-private-packe
 import {createAutomationPreviewFetch,serializePreviewFetch,withProtectedPrivateMcp} from '../examples/protected-preview-client.mjs';
 import {createGuionistaIntent,executeGuionistaIntent,failGuionistaIntent,deliverGuionistaIntent} from '../examples/guionista-marketplace-worker.mjs';
 import {acquireSaleEffectLock} from '../examples/sale-effect-lock.mjs';
+import {assertCanRetireSynthetic} from './usdc-synthetic-cleanup-guard.mjs';
 const dir='docs/evidence/sprint-marketplace',readJson=async p=>JSON.parse((await readFile(p,'utf8')).replace(/^\uFEFF/,''));
 const sha=v=>createHash('sha256').update(v).digest('hex');
 async function main(){
@@ -19,7 +20,7 @@ const deployment=await readJson(dir+'/usdc-bazaar-current.json'),packet=await lo
 assert.equal(sale.planId,m.planId);assert.equal(deployment.planId,m.planId);assert.equal(deployment.sourceSha,m.sourceSha);assert.equal(deployment.payloadFingerprint,m.uploads.bazaar.payloadFingerprint);
 const origin=new URL(deployment.url).origin;assert.match(origin,/^https:\/\/stellar-bazaar-x402-[a-z0-9]+-cabscryptocontacto-6028s-projects\.vercel\.app$/);
 assert.ok(!sale.completed.includes(phase),'PHASE_ALREADY_COMPLETED_DO_NOT_REPLAY');
-assert.equal(m.readiness[phase==='probe'?'canProbe':'canExecute'],true,'MANIFEST_GATE_CLOSED');
+assert.equal(m.readiness[phase==='probe'?'canProbe':phase==='retire'?'canRetireSynthetic':'canExecute'],true,'MANIFEST_GATE_CLOSED');
 const reportPath=dir+'/usdc-hosted-http.json';
 try{report=await readJson(reportPath);}catch(e){if(e.code!=='ENOENT')throw e;report={version:1,planId:m.planId,sourceSha:m.sourceSha,status:'IN_PROGRESS',apiRequests:0,redis:0,commandsUpperBound:0,outboundPayloadBytes:0,inboundPayloadBytes:0,external:{horizon:0,'proof-dns':0,'proof-http':0,provider:0},storage:{workspace:0,market:0,review:0,catalog:0},paymentSubmissionIntents:0,activeExecutionMs:0,automaticRetries:0,facilitatorRequests:0,attempts:[],phases:[]};}
 assert.equal(report.planId,m.planId);assert.notEqual(report.status,'UNCERTAIN','UNCERTAIN_STOP_USE_EXPLICIT_READ_RECOVERY');
@@ -29,7 +30,7 @@ const reserves=m.browserReserve??{apiRequests:20,redis:80,commandsUpperBound:400
 const requestCosts=new Map();
 async function provisioning(){
  let setup;try{setup=await readJson(dir+'/usdc-wallet-provision.json');}catch(e){if(e.code!=='ENOENT')throw e;setup={counts:{horizonReads:0,friendbotClaims:0,trustlineSubmissions:0,faucetApiRequests:0},outboundPayloadBytes:0,inboundPayloadBytes:0};}
- for(const name of ['usdc-provider-proof-check','usdc-bazaar-protection-check']){try{const proof=await readJson(dir+'/'+name+'.json');assert.equal(proof.status,'PASS','PROOF_CHECK_UNCONFIRMED');assert.equal(proof.planId,m.planId);if(name==='usdc-provider-proof-check')setup.counts.providerProofChecks=proof.proofHttpRequests;else setup.counts.bazaarProtectionChecks=proof.apiRequests;setup.outboundPayloadBytes+=proof.outboundPayloadBytes;setup.inboundPayloadBytes+=proof.inboundPayloadBytes;setup.activeExecutionMs=(setup.activeExecutionMs??0)+(proof.activeExecutionMs??0);}catch(e){if(e.code!=='ENOENT')throw e;}}
+ for(const name of ['usdc-provider-proof-check','usdc-bazaar-protection-check','usdc-provider-protection-check','usdc-provider-proof-protection-check','usdc-bazaar-candidate-protection-check','usdc-bazaar-replacement-protection-check','usdc-bazaar-closed-protection-check','usdc-toolbar-assets']){try{const proof=await readJson(dir+'/'+name+'.json');assert.equal(proof.status,'PASS','PROOF_CHECK_UNCONFIRMED');assert.equal(proof.planId,m.planId);if(name==='usdc-provider-proof-check')setup.counts.providerProofChecks=proof.proofHttpRequests;else if(name==='usdc-toolbar-assets')setup.counts.browserResourceProbes=proof.apiRequests;else setup.counts.protectionChecks=(setup.counts.protectionChecks??0)+proof.apiRequests;setup.outboundPayloadBytes+=proof.outboundPayloadBytes;setup.inboundPayloadBytes+=proof.inboundPayloadBytes;setup.activeExecutionMs=(setup.activeExecutionMs??0)+(proof.activeExecutionMs??0);}catch(e){if(e.code!=='ENOENT')throw e;}}
  return setup;
 }
 async function guard(kind,meta){
@@ -115,7 +116,7 @@ try{
   const old=m.deployments.bazaarCandidate;assert.ok(old.id!==deployment.id);const previous={origin:new URL(old.url).origin,fetcher:await transport(new URL(old.url).origin,'api',old.id)};
   await http(ordersPath,b.human,{...m.payloads.orderIntents[0],operationId:m.payloads.pauseOperationId},503,previous);assert.deepEqual((await http(ordersPath+'/'+sale.orders[0].operationId,b.human,undefined,200,previous)).order,sale.orders[0].original);
  }else{
-  assert.ok(sale.completed.includes('pause'));assert.equal(m.readiness.hostedBrowserPassed,true,'BROWSER_ACCEPTANCE_REQUIRED_BEFORE_REVOKE');
+  assert.ok(sale.completed.includes('pause'));assertCanRetireSynthetic({manifest:m,deployment,receiptBytes:await readFile(dir+'/usdc-browser-functional.json'),completedPhases:sale.completed,workspaceReceipts:packet.receipt});
   await http(servicesPath+'/'+sale.submissionId,aHuman,{action:'withdraw'});await http('/api/workspaces/'+packet.receipt[0].workspaceId+'/access',a.bootstrap,{action:'revoke',expectedGeneration:3});await http(ordersPath,aHuman,undefined,401);await http(ordersPath,aAgent,undefined,401);assert.deepEqual((await http(ordersPath,b.human)).orders,sale.histories.b);
  }
  sale.completed.push(phase);await savePacket(packet);report.phases.push({phase,deploymentId:deployment.id,passed:true});report.status='PASS_EXECUTED_PHASES';await persist();console.log(JSON.stringify({status:'PASS',phase,apiRequests:report.apiRequests,redis:report.redis,commandsUpperBound:report.commandsUpperBound,external:report.external,storage:report.storage,paymentSubmissionIntents:report.paymentSubmissionIntents,productionChanges:0}));

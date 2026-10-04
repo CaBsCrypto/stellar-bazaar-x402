@@ -28,6 +28,6 @@ if(phase==='local'){
 }else if(phase==='provider'){
  const control=await json(dir+'/usdc-vercel-control.json'),deployment=await json(dir+'/usdc-provider-proof.json'),proof=await json(dir+'/usdc-provider-proof-check.json');assert.equal(control.providerAlias.projectId,m.providerProjectId);assert.equal(control.providerAlias.deploymentId,deployment.id);assert.equal(proof.deploymentId,deployment.id);assert.equal(proof.unauthenticatedDenied,true);assert.equal(proof.exactChallenge,true);assert.equal(proof.automaticRetries,0);m.deployments??={};m.deployments.providerProof=deployment;m.readiness.providerProofReady=true;m.readiness.canProvision=true;m.provisioningBinding=provisioningBinding(m);
 }else{
- const report=await json(dir+'/usdc-wallet-provision.json');assert.equal(report.status,'PASS_PROVISIONED');assert.equal(report.provisioningBinding,m.provisioningBinding);assert.equal(report.planId,m.planId);m.readiness.walletProvisioned=true;m.readiness.canProvision=false;
+ const report=await json(dir+'/usdc-wallet-provision.json');assert.equal(report.status,'PASS_PROVISIONED');assert.equal(report.provisioningBinding,m.provisioningBinding);assert.equal(report.planId,m.planId);m.readiness.walletProvisioned=true;m.readiness.canProvision=false;m.readiness.canRecoverFaucet=false;
 }
 await writeFile(path,JSON.stringify(m,null,2)+'\n');console.log(JSON.stringify({phase,sourceSha:m.sourceSha,readiness:m.readiness,remoteEffects:0}));

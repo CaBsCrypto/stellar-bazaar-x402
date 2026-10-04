@@ -1,0 +1,186 @@
+{
+  "version": 1,
+  "status": "PASS",
+  "purpose": "exact-provider-preview-source-archive",
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "payloadFingerprint": "c8a59203f6a68a263ee650f61513dce525453ab9ad90c513b3097abec293f37c",
+  "fileCount": 22,
+  "totalBytes": 383586,
+  "archiveDirectory": "provider-usdc-source",
+  "originalUploadDryReceipt": "usdc-provider-upload-dry.json",
+  "originalUploadDryReceiptSha256": "a0c34d70d6fc86906be21b24b5575ea00eb31d5bf527277ead365a570a535169",
+  "originalUploadAudit": "usdc-provider-upload-audit.json",
+  "originalUploadAuditSha256": "5ab70991c55fe3e9fc6002f9d244d7c447ef5fd497955f6c4298677251d1f7fc",
+  "manifestSnapshotSha256": "16816e3f603027476720843a3310a98e782ff31a6e353936854af63399959ca9",
+  "archivePathsSha256": "cb5324f36cf199968b61cdead9bd642c14232d3d83b1ba9490ce041b192c0482",
+  "runtimeSafety": {
+    "suffix": ".source",
+    "typescriptFilesCopiedWithSourceSuffix": true,
+    "packageFilesCopiedWithSourceSuffix": true,
+    "appSourceModified": false,
+    "externalProviderModified": false
+  },
+  "files": [
+    {
+      "originalPath": ".vercelignore",
+      "archivePath": "provider-usdc-source/.vercelignore.source",
+      "bytes": 147,
+      "sha1": "92a0fe80407941f9fcd23bd84bf6f3ca0decc911",
+      "sha256": "66ea5b8cac209afb4f4b4d828d6c2cf50c18f1ec7bc32392a64a199165a33d61"
+    },
+    {
+      "originalPath": "api/index.ts",
+      "archivePath": "provider-usdc-source/api/index.ts.source",
+      "bytes": 58,
+      "sha1": "73205e26f574f32b0cf9253a6c13ef425b93f2a9",
+      "sha256": "940b001b385f865d5ad160505f81f0e31e538d12b0487e232f56d2b1cd3618ab"
+    },
+    {
+      "originalPath": "package-lock.json",
+      "archivePath": "provider-usdc-source/package-lock.json.source",
+      "bytes": 81399,
+      "sha1": "91fe4b734641efa4558a05dd5a5b15c7928c9560",
+      "sha256": "cdd508f3d971dd6e892ef87994ffd09936420c5f618cc4ca0cfef65371af1215"
+    },
+    {
+      "originalPath": "package.json",
+      "archivePath": "provider-usdc-source/package.json.source",
+      "bytes": 1143,
+      "sha1": "0ce7d1ddcf61f615c2f1b293c91582fe817f79ab",
+      "sha256": "3c052bb66db245bf08dc55183d490171ff2f772d10d9adff01e8dd38c1b7b597"
+    },
+    {
+      "originalPath": "public/index.html",
+      "archivePath": "provider-usdc-source/public/index.html.source",
+      "bytes": 63486,
+      "sha1": "ba23b17bd050fd862c2bf9b92dc935b38dce2166",
+      "sha256": "ff36502eed6a54a51874eb8d7babb2c84a673c5fdbd365b3da0d17bc67f5ecf9"
+    },
+    {
+      "originalPath": "public/teleprompter.html",
+      "archivePath": "provider-usdc-source/public/teleprompter.html.source",
+      "bytes": 47565,
+      "sha1": "d1abcf8ccba8090bab37b90bae9ca02ec6659dd3",
+      "sha256": "7cc08968bd50253887c22b587cf3ca1d790180d40f0367c6a2fcd1d77acdc317"
+    },
+    {
+      "originalPath": "server.ts",
+      "archivePath": "provider-usdc-source/server.ts.source",
+      "bytes": 900,
+      "sha1": "cd5cddb794610d3464b16263006a913b68da6782",
+      "sha256": "79577515941a426d8ffbfedb1f21efec9b6c5647fa7f4a8d61fc36eca3eafcda"
+    },
+    {
+      "originalPath": "service-card.json",
+      "archivePath": "provider-usdc-source/service-card.json.source",
+      "bytes": 2267,
+      "sha1": "f0091e4e17020b6eaf18c13c7b19feca89db3190",
+      "sha256": "65468ac7c0957a16be92a9b6fb57e2fbbf79f9a666b9676fe26bdc8c67980d48"
+    },
+    {
+      "originalPath": "src/app.ts",
+      "archivePath": "provider-usdc-source/src/app.ts.source",
+      "bytes": 7108,
+      "sha1": "23755da98feeb7889859642d3c668dc591cc4d18",
+      "sha256": "719034003181d4618157fef4903fac964100240051b81fc50131c8f744ae2dfa"
+    },
+    {
+      "originalPath": "src/crypto/canonical-hash.ts",
+      "archivePath": "provider-usdc-source/src/crypto/canonical-hash.ts.source",
+      "bytes": 1732,
+      "sha1": "dac9d94b4572f795436759d2d8f4c676d7d033c3",
+      "sha256": "950c58602de69cbd9cf16c3c6a587aa53500c75c6f2d3011e33c89b808a10ddd"
+    },
+    {
+      "originalPath": "src/crypto/delivery-envelope.ts",
+      "archivePath": "provider-usdc-source/src/crypto/delivery-envelope.ts.source",
+      "bytes": 5338,
+      "sha1": "2eb5ed7fdad45ca7ef256b1b1293e1153b1d3634",
+      "sha256": "13b83380734d3c876a0797d8231f3d78b5ecceadc9236e1752cba9f7847403ac"
+    },
+    {
+      "originalPath": "src/engine/gemini-client.ts",
+      "archivePath": "provider-usdc-source/src/engine/gemini-client.ts.source",
+      "bytes": 13640,
+      "sha1": "1a26f60b6751e60f527c8c63628dbb8839c3baca",
+      "sha256": "9efec723c34473b452881ed6c2c089e28e34165f8c75ceaea79e3e31fd9ccfa8"
+    },
+    {
+      "originalPath": "src/engine/script-generator.ts",
+      "archivePath": "provider-usdc-source/src/engine/script-generator.ts.source",
+      "bytes": 24982,
+      "sha1": "d5a7cc335aba452b07897b6997cad11833b5d7c9",
+      "sha256": "78bd3035f46a9ce2c3512e6ce06ea0d9f48ad7065040c18791982a0fb1c4199f"
+    },
+    {
+      "originalPath": "src/engine/wpm-calculator.ts",
+      "archivePath": "provider-usdc-source/src/engine/wpm-calculator.ts.source",
+      "bytes": 6081,
+      "sha1": "60ac2672b9dafcd641251f3bdd384ed64765dfa0",
+      "sha256": "e475becd845bcf38e04dd2a617e0c1058060d0204ffc7e8871636456eece2d4d"
+    },
+    {
+      "originalPath": "src/marketplace-routes.ts",
+      "archivePath": "provider-usdc-source/src/marketplace-routes.ts.source",
+      "bytes": 2389,
+      "sha1": "913cb050bd958c1d53f696a18f1cbd4a6faf815c",
+      "sha256": "ec23ee9be752d7f4719f79335f38012e687edebbc2bc6f1b3d644f48bc36f6c1"
+    },
+    {
+      "originalPath": "src/marketplace-text.ts",
+      "archivePath": "provider-usdc-source/src/marketplace-text.ts.source",
+      "bytes": 1257,
+      "sha1": "0f1aef7a9b061b639d77870f0a2e04eee08fb008",
+      "sha256": "98d22d8a4f05fadc78515b40d8677aceb29bc20034a2309abf8e7f10cafcd765"
+    },
+    {
+      "originalPath": "src/middleware/x402.ts",
+      "archivePath": "provider-usdc-source/src/middleware/x402.ts.source",
+      "bytes": 10808,
+      "sha1": "c064821faa9f158d61aad687cec70350f41fc598",
+      "sha256": "9cd5b057d3f8dc6ab09335bc630ec8a784776cea0ce7ae60adb1d66843df8e14"
+    },
+    {
+      "originalPath": "src/types.ts",
+      "archivePath": "provider-usdc-source/src/types.ts.source",
+      "bytes": 1754,
+      "sha1": "c9b02af8f24e587b8867dfa0982471bb76de2308",
+      "sha256": "6aec009f2f8bb66d21aea7c803efd3258552285f67d1b9144df7532d05dec2cd"
+    },
+    {
+      "originalPath": "src/views/landing-template.ts",
+      "archivePath": "provider-usdc-source/src/views/landing-template.ts.source",
+      "bytes": 64282,
+      "sha1": "1807a6afd7ec85b48b419a0c50aa1470e6872c57",
+      "sha256": "b11409b1e67e3201e5bc668a209ecf19a0cf7bafa4045a7f8992422cb315b84d"
+    },
+    {
+      "originalPath": "src/views/teleprompter-template.ts",
+      "archivePath": "provider-usdc-source/src/views/teleprompter-template.ts.source",
+      "bytes": 46451,
+      "sha1": "be674e2acc320c184abf7dcbaeb6d12b17e7f6df",
+      "sha256": "26f57653ee226a1f41af2e3820f307bacc563c3dce636461ce86a61727f4ce4d"
+    },
+    {
+      "originalPath": "tsconfig.json",
+      "archivePath": "provider-usdc-source/tsconfig.json.source",
+      "bytes": 463,
+      "sha1": "7547bbcbd408ea09a9fd8584e77bbd0109f10e89",
+      "sha256": "48e10d6f5ea2ff79d1023106116419a12f69427c73b15ed45a5a475c1e91e8a1"
+    },
+    {
+      "originalPath": "vercel.json",
+      "archivePath": "provider-usdc-source/vercel.json.source",
+      "bytes": 336,
+      "sha1": "d7a19b8776bbb48dcd4ab062b5d593ccf547427f",
+      "sha256": "b81a1fce63e91997752ae14b1c6dcf0e74a05015f68bea64b0222e40c721e64f"
+    }
+  ],
+  "networkRequests": 0,
+  "dpapiReads": 0,
+  "environmentFilesRead": 0,
+  "secretsFound": 0,
+  "ignoredDirectoriesCopied": 0,
+  "remoteMutations": 0
+}

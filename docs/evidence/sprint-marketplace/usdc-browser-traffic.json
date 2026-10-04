@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "complete": false,
+  "requests": [],
+  "activeExecutionMs": 16186,
+  "automaticRetries": null,
+  "automaticRetriesConfigured": 0,
+  "automaticRetriesScope": "configured-application-only",
+  "status": "PARTIAL_DOM_ONLY",
+  "limitation": "DOM and action durations were observed. No wire capture of request headers, body bytes, redirects, static resources or browser/platform retransmissions is available. Empty requests means no transport records, not zero network use.",
+  "internalServerRecords": "Reconciled separately from Vercel UUIDs; API headers were not read by the browser.",
+  "knownUnmeteredUpper": {
+    "apiRequests": 1,
+    "reason": "Empty-token prime rendered UNAUTHORIZED; may precede server metering. Reserve one request rather than invent an observed UUID."
+  }
+}

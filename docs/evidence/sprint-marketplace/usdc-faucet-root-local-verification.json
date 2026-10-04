@@ -1,0 +1,12 @@
+{
+  "status": "PASS_ROOT_LOCAL_RECOVERY_CHECKS",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "runtime": "v22.18.0",
+  "tests": "scripts/test-usdc-wallet-provision.mjs",
+  "helperSha256": "ed434a6b46d97c896d7d53642c16cf89d8ea11e8996c465fa6d79087b2aca9b8",
+  "testsSha256": "80aeadc95ec367d9e5258d2b195bf02fa3b09e149a27fa6905ff9e87ce46fe1c",
+  "measurementSha256": "40c617e34b989b6160ad825c7033ce600eb4208aa2a36344bd99585f835ca610",
+  "externalRequests": 0,
+  "dpapiReads": 0,
+  "faucetRecoveryExecuted": false
+}

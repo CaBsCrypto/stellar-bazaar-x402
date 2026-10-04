@@ -1,0 +1,363 @@
+/**
+ * Google Gemini Generative Language REST API Client.
+ *
+ * Implements direct REST integration with gemini-2.5-flash and gemini-1.5-flash
+ * using native Node 20+ fetch, strict OpenAPI responseSchema, multilingual prompt
+ * engineering, and hard abortable timeouts (max 4000ms).
+ */
+
+import type { ScriptGeneratorOptions, VisualCue, AudioRhythm } from '../types.js';
+
+export const GEMINI_PRIMARY_MODEL = 'gemini-2.5-flash';
+export const GEMINI_FALLBACK_MODEL = 'gemini-1.5-flash';
+export const MAX_GEMINI_TIMEOUT_MS = 4000;
+
+/**
+ * Strict OpenAPI 3.0 / JSON Schema for Gemini structured JSON generation.
+ * Guarantees exactly 5 chronological scenes and granular directorial cues.
+ */
+export const GEMINI_RESPONSE_SCHEMA = {
+  type: 'object',
+  properties: {
+    detectedLanguage: {
+      type: 'string',
+      description: 'ISO 639-1 language code or name of the detected topic language (e.g., es, en, pt)',
+    },
+    creativeDirectorNotes: {
+      type: 'object',
+      properties: {
+        hookRetentionTactic: {
+          type: 'string',
+          description: 'Psychological pattern interrupt or curiosity hook tactic used in Scene 1',
+        },
+        visualStyle: {
+          type: 'string',
+          description: 'Cinematographic visual style, color grading, and lighting guidelines',
+        },
+        audioTrackSuggestion: {
+          type: 'string',
+          description: 'Suggested musical genre, instruments, and audio ambiance',
+        },
+        aspectRatio: {
+          type: 'string',
+          description: 'Vertical aspect ratio for mobile platforms',
+          enum: ['9:16 (Vertical)'],
+        },
+      },
+      required: ['hookRetentionTactic', 'visualStyle', 'audioTrackSuggestion', 'aspectRatio'],
+    },
+    loopTransitionPhrase: {
+      type: 'string',
+      description: 'Hypnotic lead-in phrase at the end of Scene 5 linking into Scene 1 opening phrase, including the "->" delimiter',
+    },
+    scenes: {
+      type: 'array',
+      minItems: 5,
+      maxItems: 5,
+      description: 'Array of exactly 5 chronological scenes: 1=Hook, 2=Problem/Curiosity, 3=Key Points, 4=Call to Action, 5=Infinite Loop',
+      items: {
+        type: 'object',
+        properties: {
+          sceneNumber: {
+            type: 'integer',
+            description: '1-based scene sequence number (1 to 5)',
+          },
+          name: {
+            type: 'string',
+            description: 'Official scene name: Hook, Problem / Curiosity Gap, Key Points & Visual Rhythm, High-Impact Call to Action, or Infinite Loop Mechanism',
+          },
+          spokenScript: {
+            type: 'string',
+            description: 'Punchy, natural spoken voiceover script in the detected input language',
+          },
+          visualCue: {
+            type: 'string',
+            description: 'Primary visual action, camera move, zoom punch-in, or text overlay directive',
+          },
+          visualCues: {
+            type: 'array',
+            description: 'Granular visual cues list',
+            items: {
+              type: 'object',
+              properties: {
+                type: {
+                  type: 'string',
+                  enum: ['camera', 'overlay', 'b-roll', 'gesture'],
+                },
+                instruction: {
+                  type: 'string',
+                  description: 'Visual directive instruction',
+                },
+              },
+              required: ['type', 'instruction'],
+            },
+          },
+          soundRhythm: {
+            type: 'string',
+            description: 'Audio cue, beat drop, riser, or sound effect description',
+          },
+          audioRhythm: {
+            type: 'object',
+            properties: {
+              backgroundMusicVibe: {
+                type: 'string',
+                description: 'Music mood and energy',
+              },
+              sfx: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Specific sound effect triggers',
+              },
+              tempoBpm: {
+                type: 'integer',
+                description: 'Recommended musical tempo in BPM',
+              },
+            },
+            required: ['backgroundMusicVibe', 'sfx', 'tempoBpm'],
+          },
+          pacingNote: {
+            type: 'string',
+            description: 'Vocal cadence and rhythm note',
+          },
+        },
+        required: [
+          'sceneNumber',
+          'name',
+          'spokenScript',
+          'visualCue',
+          'visualCues',
+          'soundRhythm',
+          'audioRhythm',
+          'pacingNote',
+        ],
+      },
+    },
+  },
+  required: ['detectedLanguage', 'creativeDirectorNotes', 'loopTransitionPhrase', 'scenes'],
+};
+
+export const GEMINI_SYSTEM_INSTRUCTION = `You are an elite, world-class viral short-form video creative director and multilingual screenwriter specializing in TikTok, Instagram Reels, and YouTube Shorts.
+
+CRITICAL OPERATIONAL RULES:
+1. OUTPUT FORMAT: Output ONLY valid JSON adhering strictly to the provided responseSchema. No markdown fences, no conversational preamble.
+2. 5-SCENE RETENTION ARCHITECTURE:
+   - Scene 1 (Hook, 0-3s): Immediate pattern interrupt. NEVER say "Hey guys", "In this video", or greeting fluff. Start in media res with a counter-intuitive truth, high-stakes warning, or irresistible question.
+   - Scene 2 (Problem / Curiosity Gap): Amplify the viewer's pain point or deepen the mystery. Make it urgent.
+   - Scene 3 (Key Points & Visual Rhythm): Fast-paced, high-density value delivery. Provide 2-3 actionable steps or mind-blowing facts with rapid visual cuts and kinetic text overlays.
+   - Scene 4 (High-Impact Call to Action): Clear, frictionless single action (e.g., "Save this video right now", "Comment [KEYWORD] to get the link").
+   - Scene 5 (Infinite Loop Mechanism): Unfinished sentence or cliffhanger lead-in that links grammatically and conceptually back into the very first words of Scene 1, making replaying seamless. The loopTransitionPhrase MUST include '->' showing how Scene 5 connects to Scene 1.
+3. MULTILINGUAL AUTO-DETECTION:
+   - Detect the language of the user's topic automatically.
+   - If the topic is in Spanish (e.g., "Cómo invertir en Stellar" or "Guiones para TikTok"), write the ENTIRE script (every word of spokenScript), visual cues, sound rhythm, director notes, and loop phrases in natural, idiomatic SPANISH.
+   - If the topic is in Portuguese, write EVERYTHING in PORTUGUESE.
+   - If the topic is in English, write EVERYTHING in ENGLISH.
+   - Output all directing and spoken text natively in the detected language.
+4. PACING & WORD BUDGET:
+   - Deliverable within the allotted seconds at a natural conversational cadence (140-160 WPM).`;
+
+export function buildUserPrompt(options: ScriptGeneratorOptions): string {
+  const duration = Math.max(15, Math.min(120, options.durationSeconds || 30));
+  const tone = options.tone?.trim() || 'energetic';
+  const topic = options.topic.trim();
+
+  return `Generate a viral short-form video script for the following specifications:
+- Topic: "${topic}"
+- Total Duration: ${duration} seconds
+- Creative Tone: ${tone}
+
+Scene Breakdown Requirements (Exactly 5 Scenes):
+1. Scene 1 (Hook): 0-3s pattern interrupt punchy hook, intense visual punch-in.
+2. Scene 2 (Problem / Curiosity Gap): Amplify pain point, stakes, and urgency.
+3. Scene 3 (Key Points & Visual Rhythm): Dense actionable value with fast cuts and kinetic overlays.
+4. Scene 4 (High-Impact Call to Action): Clear single engagement trigger (bookmark/follow/comment).
+5. Scene 5 (Infinite Loop Mechanism): Unfinished sentence that loops back into Scene 1 opening phrase.
+
+Directorial Rules:
+- Detect the native language of "${topic}" (e.g., Spanish, English, Portuguese).
+- Produce all spoken dialogue, visual instructions, audio vibes, and loop transitions natively in that detected language.
+- Ensure loopTransitionPhrase connects Scene 5 back to Scene 1 with the "->" symbol.`;
+}
+
+export interface GeminiScenePayload {
+  sceneNumber: number;
+  name?: string;
+  spokenScript: string;
+  visualCue?: string;
+  visualCues?: VisualCue[];
+  soundRhythm?: string;
+  audioRhythm?: AudioRhythm;
+  pacingNote?: string;
+}
+
+export interface GeminiRawResponse {
+  detectedLanguage?: string;
+  creativeDirectorNotes?: {
+    hookRetentionTactic?: string;
+    visualStyle?: string;
+    audioTrackSuggestion?: string;
+    aspectRatio?: '9:16 (Vertical)';
+  };
+  loopTransitionPhrase?: string;
+  scenes: GeminiScenePayload[];
+}
+
+export interface GeminiEnrichmentResult {
+  data: GeminiRawResponse;
+  model: 'gemini-2.5-flash' | 'gemini-1.5-flash';
+  generationTimeMs: number;
+  detectedLanguage: string;
+}
+
+/**
+ * Heuristic language detector for fallback when AI metadata omits detectedLanguage.
+ */
+export function detectLanguageFromTopic(topic: string): string {
+  const t = topic.toLowerCase();
+  // Spanish markers
+  if (/[áéíóúñ¿¡]/.test(t) || /\b(cómo|como|invertir|guion|guiones|para|por|los|las|una|con|sin|dinero|finanzas|crear|pantalla)\b/i.test(t)) {
+    return 'es';
+  }
+  // Portuguese markers
+  if (/[ãõâêôç]/.test(t) || /\b(você|não|para|com|ações|inteligência|monetizar|como)\b/i.test(t)) {
+    return 'pt';
+  }
+  return 'en';
+}
+
+/**
+ * Executes a single REST call to Google Gemini GenerateContent API.
+ */
+async function callGeminiRest(
+  model: string,
+  prompt: string,
+  apiKey: string,
+  signal: AbortSignal
+): Promise<GeminiRawResponse> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+  const generationConfig: Record<string, unknown> = {
+    responseMimeType: 'application/json',
+    responseSchema: GEMINI_RESPONSE_SCHEMA,
+    temperature: 0.7,
+    maxOutputTokens: 2048,
+  };
+
+  // Only gemini-2.5-flash supports thinkingConfig in v1beta; gemini-1.5-flash returns 400 if present.
+  if (model.includes('2.5')) {
+    generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  }
+
+  const payload = {
+    systemInstruction: {
+      parts: [{ text: GEMINI_SYSTEM_INSTRUCTION }],
+    },
+    contents: [
+      {
+        role: 'user',
+        parts: [{ text: prompt }],
+      },
+    ],
+    generationConfig,
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-goog-api-key': apiKey,
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => '');
+    const error = new Error(`Gemini API returned HTTP ${response.status}: ${errorBody}`);
+    (error as any).status = response.status;
+    throw error;
+  }
+
+  const json: any = await response.json();
+  const rawText = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!rawText || typeof rawText !== 'string') {
+    throw new Error('Gemini API response did not contain candidate text parts');
+  }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (err: any) {
+    throw new Error(`Failed to parse Gemini candidate JSON: ${err.message}`);
+  }
+
+  if (!parsed || !Array.isArray(parsed.scenes) || parsed.scenes.length !== 5) {
+    throw new Error(`Gemini response schema violation: expected 5 scenes, received ${parsed?.scenes?.length ?? 0}`);
+  }
+
+  return parsed as GeminiRawResponse;
+}
+
+/**
+ * Main Gemini client entrypoint.
+ * Executes primary model (gemini-2.5-flash) with fallback to secondary model (gemini-1.5-flash)
+ * under a strict abortable timeout (max 4000ms).
+ * Throws on failure or timeout so that the caller can cleanly fall back to algorithmic generation.
+ */
+export async function generateScriptWithGemini(
+  options: ScriptGeneratorOptions,
+  apiKey: string,
+  preferredModel?: string,
+  timeoutMs: number = MAX_GEMINI_TIMEOUT_MS
+): Promise<GeminiEnrichmentResult> {
+  const trimmedKey = apiKey?.trim();
+  if (!trimmedKey) {
+    throw new Error('GEMINI_API_KEY is empty or missing');
+  }
+
+  const effectiveTimeout = Math.max(50, Math.min(timeoutMs, MAX_GEMINI_TIMEOUT_MS));
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    const abortErr = new Error('Gemini generation timed out');
+    abortErr.name = 'AbortError';
+    controller.abort(abortErr);
+  }, effectiveTimeout);
+
+  const startTime = performance.now();
+  const prompt = buildUserPrompt(options);
+
+  const primary = preferredModel || GEMINI_PRIMARY_MODEL;
+  const secondary = primary === GEMINI_PRIMARY_MODEL ? GEMINI_FALLBACK_MODEL : GEMINI_PRIMARY_MODEL;
+
+  try {
+    let rawData: GeminiRawResponse;
+    let usedModel: 'gemini-2.5-flash' | 'gemini-1.5-flash' = primary as any;
+
+    try {
+      rawData = await callGeminiRest(primary, prompt, trimmedKey, controller.signal);
+    } catch (primaryErr: any) {
+      // If primary model failed due to abort or HTTP 401/403/429/500, don't retry if aborted or unauthorized
+      if (controller.signal.aborted || primaryErr.name === 'AbortError') {
+        throw primaryErr;
+      }
+      if (primaryErr.status === 401 || primaryErr.status === 403) {
+        throw primaryErr;
+      }
+
+      // If primary model was 404 (model not found) or 400 (e.g. thinkingConfig rejected), try secondary model
+      usedModel = secondary as any;
+      rawData = await callGeminiRest(secondary, prompt, trimmedKey, controller.signal);
+    }
+
+    const generationTimeMs = Math.round(performance.now() - startTime);
+    const detectedLanguage = rawData.detectedLanguage || detectLanguageFromTopic(options.topic);
+
+    return {
+      data: rawData,
+      model: usedModel,
+      generationTimeMs,
+      detectedLanguage,
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}

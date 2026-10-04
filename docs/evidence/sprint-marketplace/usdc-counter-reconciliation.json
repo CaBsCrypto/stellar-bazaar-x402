@@ -1,0 +1,112 @@
+{
+  "version": 1,
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "status": "INCOMPLETE_EVIDENCE",
+  "complete": false,
+  "pending": [
+    "BROWSER_TRANSPORT_COVERAGE_UNCONFIRMED",
+    "UNATTRIBUTED_SERVER_API",
+    "HOSTED_PHASES_INCOMPLETE"
+  ],
+  "totals": {
+    "apiRequests": 104,
+    "redisRestExchanges": 287,
+    "redisCommandsUpperBound": 986,
+    "storage": {
+      "workspace": 5871,
+      "market": 8518,
+      "review": 4274,
+      "catalog": 2116
+    },
+    "storedBytes": 20779,
+    "outboundPayloadBytes": 669035,
+    "inboundPayloadBytes": 1456830,
+    "activeExecutionMs": 122265,
+    "horizonRequests": 23,
+    "proofDnsRequests": 1,
+    "proofHttpRequests": 3,
+    "providerExecutionRequests": 1,
+    "paymentSubmissionIntents": 2,
+    "friendbotClaims": 2,
+    "trustlineSubmissions": 2,
+    "faucetApiRequests": 3,
+    "usdcFaucetClaims": 1
+  },
+  "coverage": {
+    "uniqueServerRecords": 61,
+    "duplicateObservationsDiscarded": 173,
+    "driverApi": 47,
+    "browserPrivateApi": 14,
+    "unattributedApi": 14,
+    "ssr": 0,
+    "browserTransport": {
+      "api": 0,
+      "html": 0,
+      "static": 0,
+      "redirect": 0
+    },
+    "browserAutomaticRetriesVerified": false,
+    "browserResourceProbes": 2,
+    "logCollections": [
+      {
+        "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+        "complete": true,
+        "rows": 35,
+        "records": 33
+      },
+      {
+        "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+        "complete": true,
+        "rows": 35,
+        "records": 33
+      },
+      {
+        "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+        "complete": true,
+        "rows": 37,
+        "records": 34
+      },
+      {
+        "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+        "complete": true,
+        "rows": 37,
+        "records": 71
+      },
+      {
+        "deploymentId": "dpl_F4o7DZP2MNp1T2Rxv9h89BkvjV8p",
+        "complete": true,
+        "rows": 1,
+        "records": 1
+      },
+      {
+        "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+        "complete": true,
+        "rows": 9,
+        "records": 17
+      },
+      {
+        "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+        "complete": true,
+        "rows": 23,
+        "records": 45
+      }
+    ],
+    "anonymousProtectionChecks": 6,
+    "additionalProtectionChecks": 4,
+    "duplicateProtectionObservationsDiscarded": 0
+  },
+  "control": {
+    "requests": 36,
+    "creates": 6,
+    "aliases": 2,
+    "secretWrites": 2,
+    "bypassCreates": 0
+  },
+  "automaticRetries": 0,
+  "automaticRetriesScope": "reconciliation-helper-and-measured-actors; browser only when coverage.browserAutomaticRetriesVerified",
+  "facilitatorRequests": 0,
+  "networkRequests": 0,
+  "secretReads": 0,
+  "limitation": "Counter reconciliation only; it does not certify the sale, browser accessibility, human Freighter or production opening. Partial totals are observed costs, not complete browser upper bounds."
+}

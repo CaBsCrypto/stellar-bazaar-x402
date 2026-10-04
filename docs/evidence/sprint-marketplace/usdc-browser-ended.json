@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+  "temporaryTabId": "2",
+  "temporaryTabCreatedByAgent": true,
+  "privateViewsLockedBeforeClose": true,
+  "tabClosedViaSupportedCUA": true,
+  "originalUserTabClosed": false,
+  "additionalNavigations": 0,
+  "additionalApiRequests": 0,
+  "limitation": "Closing the tab stops its ongoing page activity; it does not measure or repair past browser transport coverage."
+}

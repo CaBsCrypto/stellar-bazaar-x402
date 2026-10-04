@@ -1,0 +1,44 @@
+import * as crypto from 'node:crypto';
+
+/**
+ * Deterministic recursive Unicode code-point key sorting and canonical JSON serialization.
+ * Ensures consistent serialization across runtimes (Node.js, browser, Python, Go).
+ *
+ * Rules:
+ * 1. Primitives (strings, numbers, booleans, null) are serialized using standard JSON.stringify.
+ * 2. Arrays preserve element order, with each element recursively canonicalized.
+ * 3. Objects have their keys sorted strictly by Unicode code point (< and > in JS).
+ *    Each property value is recursively canonicalized.
+ */
+export function canonicalizeJson(obj: unknown): string {
+  if (obj === null || typeof obj !== 'object') {
+    return JSON.stringify(obj);
+  }
+  if (Array.isArray(obj)) {
+    return '[' + obj.map(item => canonicalizeJson(item)).join(',') + ']';
+  }
+  const sortedKeys = Object.keys(obj as Record<string, unknown>).sort((a, b) =>
+    a < b ? -1 : a > b ? 1 : 0
+  );
+  const entries = sortedKeys.map(k => {
+    return `${JSON.stringify(k)}:${canonicalizeJson((obj as Record<string, unknown>)[k])}`;
+  });
+  return '{' + entries.join(',') + '}';
+}
+
+/**
+ * Computes the 64-character lowercase hexadecimal SHA-256 digest of
+ * the canonicalized JSON representation of any data structure.
+ */
+export function computeCanonicalSha256(obj: unknown): string {
+  const canonicalStr = canonicalizeJson(obj);
+  return crypto.createHash('sha256').update(canonicalStr, 'utf-8').digest('hex');
+}
+
+/**
+ * Aliases for spec conformance and ergonomic imports.
+ */
+export const canonicalJsonStringify = canonicalizeJson;
+export const computeInputHash = computeCanonicalSha256;
+export const computeResultHash = computeCanonicalSha256;
+export const computeServiceCardHash = computeCanonicalSha256;

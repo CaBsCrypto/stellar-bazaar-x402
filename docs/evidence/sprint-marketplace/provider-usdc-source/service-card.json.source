@@ -1,0 +1,89 @@
+{
+  "version": "bazaar.service-card/v0",
+  "id": "ai-video-scriptwriter",
+  "name": "AI Video Scriptwriter & Creative Director",
+  "description": "High-retention viral video script generator with visual directing cues, audio rhythm, and interactive teleprompter viewer.",
+  "kind": "http",
+  "url": "https://ai-video-scriptwriter.vercel.app",
+  "routeTemplate": "/api/script?topic={topic}&durationSeconds={durationSeconds}&tone={tone}",
+  "input": [
+    {
+      "name": "topic",
+      "type": "string",
+      "required": true,
+      "description": "Subject or title of the video"
+    },
+    {
+      "name": "durationSeconds",
+      "type": "number",
+      "required": true,
+      "description": "Target video duration in seconds (15 to 120)"
+    },
+    {
+      "name": "tone",
+      "type": "string",
+      "required": true,
+      "description": "Creative tone (e.g. dramatic, humorous, energetic, authoritative)"
+    }
+  ],
+  "network": "stellar:testnet",
+  "scheme": "exact",
+  "amount": "0.02",
+  "asset": "USDC",
+  "destination": "GBYXQUSY7WA3DUXZSANGQ3HMER2EBMOK5IYPUJV4YY2UH7QS736J62LB",
+  "payment": {
+    "scheme": "exact",
+    "asset": "USDC",
+    "amount": "0.02",
+    "destination": "GBYXQUSY7WA3DUXZSANGQ3HMER2EBMOK5IYPUJV4YY2UH7QS736J62LB"
+  },
+  "provider": {
+    "name": "AI Creative Studio"
+  },
+  "tags": [
+    "ai",
+    "video-script",
+    "creative-director",
+    "teleprompter",
+    "shorts",
+    "tiktok",
+    "reels"
+  ],
+  "delivery": {
+    "mode": "sync",
+    "hashScheme": "sha256",
+    "idempotency": {
+      "required": true,
+      "key": "Idempotency-Key",
+      "replay": "return-original"
+    },
+    "estimatedDurationMs": 1500,
+    "result": {
+      "schemaVersion": "1.0",
+      "contentType": "application/json",
+      "terminalStatuses": ["completed", "failed"],
+      "hash": {
+        "algorithm": "sha256",
+        "required": true,
+        "scope": "canonical-result"
+      }
+    },
+    "status": {
+      "required": false
+    },
+    "callback": {
+      "supported": false,
+      "required": false,
+      "authentication": "none"
+    },
+    "retention": {
+      "resultTtlHours": 0,
+      "durable": false
+    },
+    "retry": {
+      "retryable": true,
+      "maxAttempts": 2,
+      "failureSemantics": "retry-later"
+    }
+  }
+}

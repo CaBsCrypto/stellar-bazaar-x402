@@ -1,0 +1,1099 @@
+{
+  "version": 1,
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "status": "PASS_EXECUTED_PHASES",
+  "apiRequests": 47,
+  "redis": 209,
+  "commandsUpperBound": 698,
+  "outboundPayloadBytes": 540332,
+  "inboundPayloadBytes": 896635,
+  "external": {
+    "horizon": 16,
+    "proof-dns": 1,
+    "proof-http": 1,
+    "provider": 1
+  },
+  "storage": {
+    "workspace": 5871,
+    "market": 8518,
+    "review": 4274,
+    "catalog": 2116
+  },
+  "paymentSubmissionIntents": 2,
+  "activeExecutionMs": 53192,
+  "automaticRetries": 0,
+  "facilitatorRequests": 0,
+  "attempts": [
+    {
+      "origin": "https://stellar-bazaar-x402-7sds5u7fv-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "probe",
+      "deploymentId": "dpl_F4o7DZP2MNp1T2Rxv9h89BkvjV8p",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "9b121f2e-dd92-4181-b92a-d2d45f3a62ec",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/services",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "submit",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "73c06b7f-7d07-4165-bb4a-f747de2d5315",
+      "redis": 6,
+      "commandsUpperBound": 18,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/services",
+      "method": "POST",
+      "requestBytes": 1777,
+      "payloadHash": "402435a561a58bf44f770020231b1cab7ce01e0dc46ed6515918bdbf930305da",
+      "kind": "api",
+      "phase": "submit",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 201,
+      "requestId": "cee5cd00-202c-4086-93f0-71e28ea23ed3",
+      "redis": 7,
+      "commandsUpperBound": 23,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/review",
+      "method": "POST",
+      "requestBytes": 78,
+      "payloadHash": "e4f103df7c102c9dadd566304ac0ca5e4fc0a1558a3dda145cf735cf3f7031ba",
+      "kind": "api",
+      "phase": "activate",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "0ac81b17-ad91-4de2-876f-d4ba5b314bfd",
+      "redis": 6,
+      "commandsUpperBound": 10,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 1,
+        "proof-http": 1,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/review",
+      "method": "POST",
+      "requestBytes": 232,
+      "payloadHash": "0bd84128d028131b1eea385de6e82f222f56ea1be3b4fc99ad1827044988d8e7",
+      "kind": "api",
+      "phase": "activate",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "8d796756-e938-43c8-af94-5923a85e498e",
+      "redis": 5,
+      "commandsUpperBound": 9,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/review",
+      "method": "POST",
+      "requestBytes": 75,
+      "payloadHash": "48e71bb3f088054f5d60b36c38a24fe2d8b8d744336f5342dfc8d10f05c61a24",
+      "kind": "api",
+      "phase": "activate",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "37bc2ed9-57bd-4865-b595-82d522e35663",
+      "redis": 12,
+      "commandsUpperBound": 23,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/services",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "activate",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "e15461b1-0981-4f2c-a634-ea49a61a7ee8",
+      "redis": 8,
+      "commandsUpperBound": 23,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "POST",
+      "requestBytes": 341,
+      "payloadHash": "af91f6327261a719d9a60f1219a9fab7a56421f48744ff065afbe9aacd38a23b",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 201,
+      "requestId": "90164d44-398b-4743-a5f3-859c33b2a9ac",
+      "redis": 9,
+      "commandsUpperBound": 26,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "POST",
+      "requestBytes": 341,
+      "payloadHash": "af91f6327261a719d9a60f1219a9fab7a56421f48744ff065afbe9aacd38a23b",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 201,
+      "requestId": "c5aa1f0f-4433-4230-9846-5f35c873ea06",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "POST",
+      "requestBytes": 328,
+      "payloadHash": "d0d83c09dc944e4a849a3e6617dfacd2fabcb30a7c26e7390d1d61658ecb1ad2",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 409,
+      "requestId": "c523da7d-676c-4a72-ab41-1c190c92e863",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/9d816a37-b42e-4a5b-8498-3205987814b3",
+      "method": "POST",
+      "requestBytes": 20,
+      "payloadHash": "c243f9981cb3c140301da1a4c48380a2ecac6f4471529fdb7b2dbf8561b6471d",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "67a4619d-af51-490b-a617-c336b975fe04",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 3,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/9d816a37-b42e-4a5b-8498-3205987814b3",
+      "method": "POST",
+      "requestBytes": 415,
+      "payloadHash": "e1719ab3d3d84ddd7c60cca353897c0de93892b636fa7cb2bcf35b46ba1e424b",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "e659785c-2b50-431c-bad8-049e249f299e",
+      "redis": 9,
+      "commandsUpperBound": 25,
+      "external": {
+        "horizon": 5,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/9d816a37-b42e-4a5b-8498-3205987814b3",
+      "method": "POST",
+      "requestBytes": 415,
+      "payloadHash": "e1719ab3d3d84ddd7c60cca353897c0de93892b636fa7cb2bcf35b46ba1e424b",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 409,
+      "requestId": "d33eb11e-9154-4864-a9ed-29c63834744f",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 177,
+      "payloadHash": "efa199213aabc239a264531b1c43597058194f68c4098d628bf1bdcf67c08c3f",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "a86926ae-f199-48ca-8e83-26ddadf503e2",
+      "redis": 0,
+      "commandsUpperBound": 0,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 54,
+      "payloadHash": "1991440c743375cc3f711ec3788c732cfff71984933a8bf73701ff563427860d",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 202,
+      "requestId": "88fe0e23-78dd-474a-80c3-b9af8ce39568",
+      "redis": 0,
+      "commandsUpperBound": 0,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "5cf0b3a6-b7d5-4237-9ce6-fe98eb95de46",
+      "redis": 0,
+      "commandsUpperBound": 0,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 100,
+      "payloadHash": "df1039be6bee5908439551b45d2059de9132711d5ab4b6a9d0a7902fe0a2d4b9",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "0a7d7d87-81f8-4f4e-84a2-fcff8257556f",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 203,
+      "payloadHash": "2cf50d0b24de5e091f3c638be17d160799b1b8be508a05b743edff3eac671565",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "89771168-a20b-4126-aaf0-722d77646d67",
+      "redis": 5,
+      "commandsUpperBound": 19,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://guionista-market-7f3e80bed9be.vercel.app",
+      "path": "/v1/marketplace-text",
+      "method": "POST",
+      "requestBytes": 200,
+      "payloadHash": "5d185a7a21cb64821bb029f52f7e2836b06997b40ded0bdef7165334ba0e2caa",
+      "kind": "provider",
+      "phase": "sale",
+      "deploymentId": "dpl_6vzckCnGuTd2UocjmWpjeaLRebPw",
+      "status": "CONFIRMED",
+      "httpStatus": 200
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 727,
+      "payloadHash": "1ee01f9ee99c71880d404507f104999ad244925b96504a0925eae71b847e64a4",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "97d4666e-d949-48ed-a893-eb314834a4e5",
+      "redis": 5,
+      "commandsUpperBound": 19,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 727,
+      "payloadHash": "d4abc669843ed3ab3b7d8ddb4b3c9c14fc5ba01ed702793da5cf09dacca37f0a",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "d1a279d0-2214-4e78-8533-1aae9c74b8bc",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/9d816a37-b42e-4a5b-8498-3205987814b3",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "674a5201-df16-44a7-b254-c6b503c5e1d1",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/9d816a37-b42e-4a5b-8498-3205987814b3",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "49f2bf55-b62e-4fdd-8776-135e6a92e820",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "POST",
+      "requestBytes": 341,
+      "payloadHash": "ca271af2bcac8fe44da743026f72fcf3f919e4b5737c0172992f293aa5b5de91",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 201,
+      "requestId": "64aae499-0929-4388-99a4-e31d7445336d",
+      "redis": 9,
+      "commandsUpperBound": 26,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/4dfa549a-d5e4-433d-b607-f6091948792e",
+      "method": "POST",
+      "requestBytes": 20,
+      "payloadHash": "c243f9981cb3c140301da1a4c48380a2ecac6f4471529fdb7b2dbf8561b6471d",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "77a2c45a-0ca7-464f-881a-d875bfea4969",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 3,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/4dfa549a-d5e4-433d-b607-f6091948792e",
+      "method": "POST",
+      "requestBytes": 415,
+      "payloadHash": "35279a8f965b097404f669ecd25cb2cb867a425db6cccbc7a3f86226cb38759f",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "f795aa1b-9708-4dcb-9f63-92d7069f974c",
+      "redis": 9,
+      "commandsUpperBound": 25,
+      "external": {
+        "horizon": 5,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 177,
+      "payloadHash": "efa199213aabc239a264531b1c43597058194f68c4098d628bf1bdcf67c08c3f",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "e0b041fd-b2ca-40bd-b387-002279d51ebe",
+      "redis": 0,
+      "commandsUpperBound": 0,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 54,
+      "payloadHash": "1991440c743375cc3f711ec3788c732cfff71984933a8bf73701ff563427860d",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 202,
+      "requestId": "0e0e74e8-91bb-4e0c-b801-131dc896ce9e",
+      "redis": 0,
+      "commandsUpperBound": 0,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "533449a3-0fb9-4a6d-9267-239a00fb2297",
+      "redis": 0,
+      "commandsUpperBound": 0,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 100,
+      "payloadHash": "df1039be6bee5908439551b45d2059de9132711d5ab4b6a9d0a7902fe0a2d4b9",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "dd310174-dfe3-4935-9e3b-544fb4cdd9ed",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 203,
+      "payloadHash": "837ebc021985bc764d799d7437c6fddc9b6d826efcd5e472a998a03814447dd0",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "661567c8-8549-4567-a449-dea6a7e88de3",
+      "redis": 5,
+      "commandsUpperBound": 19,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/mcp",
+      "method": "POST",
+      "requestBytes": 298,
+      "payloadHash": "3b312f38b8a5682175885c509631053cbf4dbacbffbdba4f6dbef9d24cbbf66d",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "74c21491-a375-48f1-9796-ae042f3cd87f",
+      "redis": 5,
+      "commandsUpperBound": 19,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/4dfa549a-d5e4-433d-b607-f6091948792e",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "d72c261d-4c1e-461d-96ce-3cfcec215069",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/4dfa549a-d5e4-433d-b607-f6091948792e",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "2a9ff459-23bd-4207-872d-58d45fc8e37b",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/9d816a37-b42e-4a5b-8498-3205987814b3",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 401,
+      "requestId": "4260fde2-bb97-4622-9137-47514d9ed411",
+      "redis": 1,
+      "commandsUpperBound": 4,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "fa5cc3fd-c7ea-4f81-8326-c19c6bff10f6",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "d5e2a822-a9b4-4490-b91d-72d747caeecb",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/9d816a37-b42e-4a5b-8498-3205987814b3",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "replacement",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "60813694-41b9-4b3b-a63a-a0a7df0c9e00",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/4dfa549a-d5e4-433d-b607-f6091948792e",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "replacement",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "f4c1d1bc-4d68-423a-aff7-5677eb5bae5b",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "replacement",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "4d19cd80-b188-483a-adf6-1e20f1c63d58",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "replacement",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "3e823505-11c5-45ef-9b91-d52dd8e72bae",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/control",
+      "method": "POST",
+      "requestBytes": 18,
+      "payloadHash": "0c4351cc87a128e40b4ecbcaea98d80f8d53909c398cde86c3e38540f82ee7dd",
+      "kind": "api",
+      "phase": "pause",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "a2c8561a-e9a3-4023-9b06-e5fa04ff87bb",
+      "redis": 2,
+      "commandsUpperBound": 4,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "POST",
+      "requestBytes": 341,
+      "payloadHash": "f8506ae2f0db9b502157cdaa3d186204943f060f497584c989d1f0089f6742fc",
+      "kind": "api",
+      "phase": "pause",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "status": "CONFIRMED",
+      "httpStatus": 503,
+      "requestId": "ce210f8f-f8a1-45eb-b395-f8bb14e400df",
+      "redis": 8,
+      "commandsUpperBound": 23,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/9d816a37-b42e-4a5b-8498-3205987814b3",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "pause",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "e5edad53-ea60-466e-ba59-824ed00b9b2c",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/4dfa549a-d5e4-433d-b607-f6091948792e",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "pause",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "1340a55d-7e1b-4f8d-9109-08b7f2313396",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/workspaces",
+      "method": "POST",
+      "requestBytes": 223,
+      "payloadHash": "d9abc77217b7d8ae03eccea0444ef89c1b8b74a24d2dfba430986fd3b12802b9",
+      "kind": "api",
+      "phase": "pause",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "status": "CONFIRMED",
+      "httpStatus": 503,
+      "requestId": "55741236-f306-4bf8-b14b-af001a9655eb",
+      "redis": 2,
+      "commandsUpperBound": 8,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "method": "POST",
+      "requestBytes": 341,
+      "payloadHash": "f8506ae2f0db9b502157cdaa3d186204943f060f497584c989d1f0089f6742fc",
+      "kind": "api",
+      "phase": "pause",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 503,
+      "requestId": "1be72813-1c9e-4a13-95ce-c4c7a872c0d1",
+      "redis": 8,
+      "commandsUpperBound": 23,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    },
+    {
+      "origin": "https://stellar-bazaar-x402-rnmuzim0d-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders/9d816a37-b42e-4a5b-8498-3205987814b3",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "kind": "api",
+      "phase": "pause",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "requestId": "57e133dc-1602-4004-8107-db2f5b535e87",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      }
+    }
+  ],
+  "phases": [
+    {
+      "phase": "probe",
+      "deploymentId": "dpl_F4o7DZP2MNp1T2Rxv9h89BkvjV8p",
+      "passed": true
+    },
+    {
+      "phase": "submit",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "passed": true
+    },
+    {
+      "phase": "activate",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "passed": true
+    },
+    {
+      "phase": "sale",
+      "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+      "passed": true
+    },
+    {
+      "phase": "replacement",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "passed": true
+    },
+    {
+      "phase": "pause",
+      "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+      "passed": true
+    }
+  ],
+  "probe": {
+    "requestId": "9b121f2e-dd92-4181-b92a-d2d45f3a62ec",
+    "deploymentId": "dpl_F4o7DZP2MNp1T2Rxv9h89BkvjV8p",
+    "redis": 4
+  },
+  "paymentIntents": [
+    {
+      "operationId": "9d816a37-b42e-4a5b-8498-3205987814b3",
+      "transactionHash": "2aa0ec28825fb76ae490513859de2f9f7ca4339a2ca9e082d2fc435327feb0b0",
+      "signedXdrHash": "4093523e413b895ed5ffcba8ccfd856d6aa34a8fd3c7d9e3ece6c38212038e15",
+      "feeStroops": "100",
+      "expiresAt": "1791151234",
+      "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "amount": "0.01",
+      "identity": {
+        "kind": "stellar-classic-credit",
+        "network": "stellar:testnet",
+        "code": "USDC",
+        "issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        "sacContract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+      }
+    },
+    {
+      "operationId": "4dfa549a-d5e4-433d-b607-f6091948792e",
+      "transactionHash": "646309ec29ce172b487b0cbc40cce08a58efd19e3b7a74e8108a2d5678f492b3",
+      "signedXdrHash": "0f2ae46cc3c78ea1ff423c9a29257df67b090143d296a216c35121122f4c48ad",
+      "feeStroops": "100",
+      "expiresAt": "1791151246",
+      "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "amount": "0.01",
+      "identity": {
+        "kind": "stellar-classic-credit",
+        "network": "stellar:testnet",
+        "code": "USDC",
+        "issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        "sacContract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+      }
+    }
+  ]
+}

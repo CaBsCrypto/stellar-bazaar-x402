@@ -1,0 +1,73 @@
+/**
+ * Core type definitions for the Video Script Generator and Gemini AI Engine.
+ */
+
+export type ScriptEngineType = 'gemini-2.5-flash' | 'gemini-1.5-flash' | 'algorithmic-fallback';
+
+export interface ScriptMetadata {
+  engine: ScriptEngineType;
+  detectedLanguage?: string;
+  generationTimeMs?: number;
+  model?: string;
+  fallbackReason?: string;
+}
+
+export interface ScriptGeneratorOptions {
+  topic: string;
+  durationSeconds?: number;
+  tone?: string;
+}
+
+export interface VisualCue {
+  type: 'camera' | 'overlay' | 'b-roll' | 'gesture';
+  instruction: string;
+}
+
+export interface AudioRhythm {
+  backgroundMusicVibe: string;
+  sfx: string[];
+  tempoBpm: number;
+}
+
+export interface ScriptScene {
+  sceneNumber: number;
+  name: string;
+  sceneName: string; // compatibility alias
+  timeRange: string;
+  durationSeconds: number;
+  estimatedSeconds: number; // compatibility alias
+  wordCount: number;
+  wpm: number;
+  spokenScript: string;
+  speechText: string; // compatibility alias
+  visualCue: string;
+  visualCues: VisualCue[];
+  soundRhythm: string;
+  audioRhythm: AudioRhythm;
+  pacingNote: string;
+}
+
+export interface VideoScriptResult {
+  topic: string;
+  durationSeconds: number;
+  targetDurationSeconds: number;
+  tone: string;
+  targetWpm: number;
+  actualWordCount: number;
+  totalWords: number;
+  estimatedDuration: number;
+  actualEstimatedSeconds: number;
+  overallWPM: number;
+  pacingAssessment: 'optimal' | 'fast' | 'relaxed';
+  loopTransitionPhrase: string;
+  creativeDirectorNotes: {
+    hookRetentionTactic: string;
+    visualStyle: string;
+    audioTrackSuggestion: string;
+    aspectRatio: '9:16 (Vertical)';
+  };
+  scenes: ScriptScene[];
+  teleprompterHtml?: string;
+  teleprompterText: string;
+  metadata?: ScriptMetadata;
+}

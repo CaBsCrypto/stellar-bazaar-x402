@@ -11,5 +11,5 @@ function fixture({status=302,otherApi=0,lose=false}={}){
 const denied=fixture();await denied.run();assert.equal(denied.calls,1);assert.equal(denied.report.status,'PASS');assert.equal(denied.report.unauthenticatedDenied,true);await assert.rejects(denied.run(),/ALREADY_ATTEMPTED/);assert.equal(denied.calls,1);
 const publicPage=fixture({status:200});await assert.rejects(publicPage.run(),/PROTECTION_NOT_EFFECTIVE/);assert.equal(publicPage.report.status,'FAILED_PROTECTION');assert.equal(publicPage.report.unauthenticatedDenied,false);assert.equal(publicPage.calls,1);
 const exhausted=fixture({otherApi:100});await assert.rejects(exhausted.run(),/COMBINED_API_REQUEST_LIMIT/);assert.equal(exhausted.calls,0);assert.equal(exhausted.report.apiRequests,0);
-const lost=fixture({lose:true});await assert.rejects(lost.run(),/lost response/);assert.equal(lost.report.status,'UNCERTAIN');assert.equal(lost.calls,1);assert.equal(lost.report.attempts[0].status,'PENDING');
+const lost=fixture({lose:true});await assert.rejects(lost.run(),/lost response/);assert.equal(lost.report.status,'UNCERTAIN');assert.equal(lost.calls,1);assert.equal(lost.report.attempts[0].status,'UNCERTAIN');
 console.log(JSON.stringify({status:'PASS',oneUnauthenticatedRequest:true,public200Rejected:true,budgetGuardBeforeFetch:true,lostResponsePreserved:true,networkRequests:0,secretReads:0}));

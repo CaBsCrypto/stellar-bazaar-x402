@@ -26,4 +26,5 @@ context.result={id:'dpl_public_fixture',url:'fixed-preview.vercel.app',readyStat
 const api=vm.runInContext('summaryDeployment(result)',context);
 assert.equal(api.sourceSha,'a'.repeat(40));assert.equal(api.gitCommitSha,'b'.repeat(40));
 assert.equal(api.payloadFingerprint,'c'.repeat(64));assert.equal(api.url,'https://fixed-preview.vercel.app');
+assert.equal(api.protectionEnabled,null);assert.equal(api.protectionObservation,'unknown');
 console.log(JSON.stringify({status:'PASS',publicCliReceipts:3,rawSourceBytesHashed:true,networkRequests:0,secretReads:0}));

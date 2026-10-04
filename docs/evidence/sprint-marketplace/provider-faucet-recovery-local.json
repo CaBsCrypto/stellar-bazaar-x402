@@ -1,0 +1,53 @@
+{
+  "status": "PASS_LOCAL_RECOVERY_PREPARATION",
+  "date": "2026-10-04",
+  "helperSha256": "ed434a6b46d97c896d7d53642c16cf89d8ea11e8996c465fa6d79087b2aca9b8",
+  "testSha256": "80aeadc95ec367d9e5258d2b195bf02fa3b09e149a27fa6905ff9e87ce46fe1c",
+  "command": "node scripts/test-usdc-wallet-provision.mjs",
+  "benchmark": "provider-faucet-pow-local.json",
+  "benchmarkSourceDifference": "Root repeated the difficulty-24 benchmark after exact claim payload persistence; benchmark.sourceHash matches the final helper.",
+  "networkRequests": 0,
+  "dpapiReads": 0,
+  "gateChanges": 0,
+  "commits": 0,
+  "knownOriginalStop": {
+    "status": "PAUSED_LOCAL_POW_EXHAUSTED",
+    "stopReason": "POW_LIMIT_EXHAUSTED_BEFORE_CLAIM",
+    "counts": {
+      "horizonReads": 6,
+      "friendbotClaims": 2,
+      "trustlineSubmissions": 2,
+      "faucetApiRequests": 1,
+      "usdcFaucetClaims": 0
+    },
+    "confirmedAttempts": 11,
+    "originalReportModifiedByThisPreparation": false
+  },
+  "recoveryMethod": "recover-faucet",
+  "requiredGates": {
+    "canRecoverFaucet": true,
+    "canProvision": false
+  },
+  "recoveryLimit": 1,
+  "projectedCumulativeWalletCounts": {
+    "horizonReads": 7,
+    "friendbotClaims": 2,
+    "trustlineSubmissions": 2,
+    "faucetApiRequests": 3,
+    "usdcFaucetClaims": 1
+  },
+  "checks": [
+    "Baseline hash binds old plan, SHA, provisioning binding, status, counters, all eleven receipts, bytes, elapsed time and retry count",
+    "Full baseline and from/to binding transition persisted before any recovery effect",
+    "Recovery counter stored outside HTTP counts; completed wallet setup is never invoked again",
+    "One fresh challenge for the missing original body; preserve body before CPU",
+    "Four workers maximum, empty environment, public parameters only, hard parent timeout and exact parent nonce/digest verification",
+    "Reserve at most 90 seconds CPU plus three bounded HTTP requests inside combined 300 seconds",
+    "If expiresAt is present, reserve solver and claim time before CPU and verify again before claim",
+    "Freeze exact claim JSON, its hash, nonce and claim intent in DPAPI before POST; compare actual request to frozen body in tests",
+    "Claim response lost preserves uncertainty and prevents recovery replay; second local CPU failure has no automatic next challenge",
+    "All original primary limits remain fixed, including API120, Redis400/2400, stored49164, payload16/32MiB and one faucet claim",
+    "Gate, changed baseline, uncertain receipt, claim already attempted, incomplete wallets and increased primary limits reject before effect"
+  ],
+  "hostedRecovery": "NOT_EXECUTED_BY_THIS_AGENT"
+}

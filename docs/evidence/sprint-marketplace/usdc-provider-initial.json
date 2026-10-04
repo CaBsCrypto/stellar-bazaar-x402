@@ -1,0 +1,20 @@
+{
+  "id": "dpl_AKGkaveRhLD2PLvSkDqJSLDYix6z",
+  "url": "https://ai-video-scriptwriter-4vn1hw9vm.vercel.app",
+  "readyState": "READY",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "payloadFingerprint": "c8a59203f6a68a263ee650f61513dce525453ab9ad90c513b3097abec293f37c",
+  "target": "preview",
+  "protectionEnabled": null,
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "runtimeHash": "0385aa8476ed476966dc38d18b82247fec3234592e5f72b84a25d4abcce601ab",
+  "buildHash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "runtimeFlags": {
+    "BAZAAR_MARKETPLACE_TEXT_ENABLED": "true",
+    "BAZAAR_MARKETPLACE_WORKER_TOKEN_SHA256": "d373fa1d15feb551b5f69e2d115ba78d0c01160a6496b502d64aed9a5d865c2d",
+    "BAZAAR_MARKETPLACE_CONTROL_PROOF": ""
+  },
+  "buildFlags": {},
+  "protectionObservation": "unknown",
+  "observationCorrection": "Absent v13 fields cannot establish protection state; exact anonymous GET denial separately confirmed."
+}

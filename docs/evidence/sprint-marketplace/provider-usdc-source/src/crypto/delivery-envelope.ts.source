@@ -1,0 +1,178 @@
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { computeCanonicalSha256 } from './canonical-hash.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function getProjectRootDir(): string {
+  let current = __dirname;
+  for (let i = 0; i < 5; i++) {
+    if (fs.existsSync(path.join(current, 'service-card.json'))) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+  if (fs.existsSync(path.join(process.cwd(), 'service-card.json'))) {
+    return process.cwd();
+  }
+  return process.cwd();
+}
+
+const rootDir = getProjectRootDir();
+
+let cachedServiceCardHash: string | null = null;
+let cachedServiceCardDestination: string | null = null;
+
+function getServiceCardInfo(): { cardHash: string; destination: string } {
+  if (cachedServiceCardHash && cachedServiceCardDestination) {
+    return { cardHash: cachedServiceCardHash, destination: cachedServiceCardDestination };
+  }
+  try {
+    const cardPath = path.join(rootDir, 'service-card.json');
+    if (fs.existsSync(cardPath)) {
+      const raw = fs.readFileSync(cardPath, 'utf-8');
+      const card = JSON.parse(raw);
+      cachedServiceCardHash = computeCanonicalSha256(card);
+      cachedServiceCardDestination = card.destination || card.payment?.destination || 'GBYXQUSY7WA3DUXZSANGQ3HMER2EBMOK5IYPUJV4YY2UH7QS736J62LB';
+      return { cardHash: cachedServiceCardHash, destination: cachedServiceCardDestination! };
+    }
+  } catch {}
+  return {
+    cardHash: '04bd6dcf33d6ab2e5a636869961e748f0d23bc65b1f7c05afe61df5986bab5ad',
+    destination: process.env.STELLAR_PUBLIC_KEY || 'GBYXQUSY7WA3DUXZSANGQ3HMER2EBMOK5IYPUJV4YY2UH7QS736J62LB',
+  };
+}
+
+export interface NormalizedReceipt {
+  version: 'bazaar.normalized-receipt/v1';
+  status: 'settled';
+  network: 'stellar:testnet' | string;
+  scheme: string;
+  asset: string;
+  amount: string;
+  atomicAmount: string;
+  destination: string;
+  inputHash: string;
+  resultHash: string;
+  serviceCardHash: string;
+  transactionHash: string;
+  ledger: number;
+  timestamp: string;
+}
+
+export interface BazaarDeliveryEnvelope<T = unknown> {
+  version: 'bazaar.delivery-envelope/v1';
+  result: T;
+  resultHash: string;
+  inputHash: string;
+  receipt: NormalizedReceipt;
+}
+
+export interface DeliveryEnvelopeResponse<T = unknown> {
+  ok: boolean;
+  result: T;
+  resultHash: string;
+  inputHash: string;
+  receipt: NormalizedReceipt;
+  bazaarDelivery: BazaarDeliveryEnvelope<T>;
+}
+
+export interface BuildDeliveryEnvelopeOptions<T = unknown> {
+  result: T;
+  inputData?: unknown;
+  inputHash?: string;
+  resultHash?: string;
+  serviceCardHash?: string;
+  transactionHash: string;
+  ledger: number;
+  destination?: string;
+  network?: string;
+  scheme?: string;
+  asset?: string;
+  amount?: string;
+  atomicAmount?: string;
+  timestamp?: string;
+}
+
+/**
+ * Builds the canonical normalized settlement receipt adhering to bazaar.normalized-receipt/v1.
+ */
+export function buildNormalizedReceipt(options: {
+  transactionHash: string;
+  ledger: number;
+  inputHash: string;
+  resultHash: string;
+  serviceCardHash?: string;
+  destination?: string;
+  network?: string;
+  scheme?: string;
+  asset?: string;
+  amount?: string;
+  atomicAmount?: string;
+  timestamp?: string;
+}): NormalizedReceipt {
+  const cardInfo = getServiceCardInfo();
+  return {
+    version: 'bazaar.normalized-receipt/v1',
+    status: 'settled',
+    network: options.network || 'stellar:testnet',
+    scheme: options.scheme || 'exact',
+    asset: options.asset || 'USDC',
+    amount: options.amount || '0.02',
+    atomicAmount: options.atomicAmount || '200000',
+    destination: options.destination || process.env.STELLAR_PUBLIC_KEY || cardInfo.destination,
+    inputHash: options.inputHash,
+    resultHash: options.resultHash,
+    serviceCardHash: options.serviceCardHash || cardInfo.cardHash,
+    transactionHash: options.transactionHash.toLowerCase(),
+    ledger: options.ledger,
+    timestamp: options.timestamp || new Date().toISOString(),
+  };
+}
+
+/**
+ * Builds the complete cryptographic delivery envelope under bazaar.delivery-envelope/v1
+ * with symmetric top-level accessors as specified by the Stellar Bazaar protocol.
+ */
+export function buildDeliveryEnvelope<T = unknown>(
+  options: BuildDeliveryEnvelopeOptions<T>
+): DeliveryEnvelopeResponse<T> {
+  const inputHash = options.inputHash || (options.inputData !== undefined ? computeCanonicalSha256(options.inputData) : '');
+  const resultHash = options.resultHash || computeCanonicalSha256(options.result);
+
+  const receipt = buildNormalizedReceipt({
+    transactionHash: options.transactionHash,
+    ledger: options.ledger,
+    inputHash,
+    resultHash,
+    serviceCardHash: options.serviceCardHash,
+    destination: options.destination,
+    network: options.network,
+    scheme: options.scheme,
+    asset: options.asset,
+    amount: options.amount,
+    atomicAmount: options.atomicAmount,
+    timestamp: options.timestamp,
+  });
+
+  const bazaarDelivery: BazaarDeliveryEnvelope<T> = {
+    version: 'bazaar.delivery-envelope/v1',
+    result: options.result,
+    resultHash,
+    inputHash,
+    receipt,
+  };
+
+  return {
+    ok: true,
+    result: options.result,
+    resultHash,
+    inputHash,
+    receipt,
+    bazaarDelivery,
+  };
+}

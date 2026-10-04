@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "status": "PASS",
+  "apiRequests": 2,
+  "outboundPayloadBytes": 0,
+  "inboundPayloadBytes": 204763,
+  "activeExecutionMs": 394,
+  "automaticRetries": 0,
+  "credentials": "none",
+  "attempts": [
+    {
+      "url": "https://vercel.live/_next-live/feedback/feedback.js",
+      "origin": "https://vercel.live",
+      "path": "/_next-live/feedback/feedback.js",
+      "method": "GET",
+      "authentication": "none",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "bodyBytes": 75730,
+      "headerBytes": 616,
+      "responseBytes": 76346,
+      "bodyHash": "5058dca36ec712b523c0259ae59da49315141604572ae4225517a36c9a84d995",
+      "bodySha256": "5058dca36ec712b523c0259ae59da49315141604572ae4225517a36c9a84d995"
+    },
+    {
+      "url": "https://vercel.live/_next-live/feedback/feedback.html",
+      "origin": "https://vercel.live",
+      "path": "/_next-live/feedback/feedback.html",
+      "method": "GET",
+      "authentication": "none",
+      "status": "CONFIRMED",
+      "httpStatus": 200,
+      "bodyBytes": 127810,
+      "headerBytes": 607,
+      "responseBytes": 128417,
+      "bodyHash": "01cf472795338c3a8a212f84af7237e3cf70a1506a39abc10365d4f57b74bef3",
+      "bodySha256": "01cf472795338c3a8a212f84af7237e3cf70a1506a39abc10365d4f57b74bef3"
+    }
+  ],
+  "limitation": "Anonymous bootstrap resource sizes only; prior browser retransmissions or feedback API traffic are not a complete capture."
+}

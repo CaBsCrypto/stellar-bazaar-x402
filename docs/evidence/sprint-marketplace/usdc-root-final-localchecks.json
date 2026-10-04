@@ -1,0 +1,260 @@
+{
+  "version": 1,
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "status": "PASS_LOCAL_HELPER_AND_PUBLIC_RECEIPT_CHECKS",
+  "results": [
+    {
+      "test": "test-usdc-counter-reconciliation.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "scenarios": 37,
+        "uniqueServerRecords": 3,
+        "duplicatesDiscarded": 3,
+        "anonymousProtectionChecks": 6,
+        "fixtureApiRequests": 25,
+        "nestedLogRowsCountedSeparately": true,
+        "resourceProbesCountedOnce": true,
+        "recoverySnapshotAndPriorAttemptsBound": true,
+        "recoveryClaimNotDoubleCounted": true,
+        "partialDomTimeCountedWithoutFabricatedBrowserRetryEvidence": true,
+        "networkRequests": 0,
+        "secretReads": 0
+      }
+    },
+    {
+      "test": "test-usdc-toolbar-assets.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "sharedLock": true,
+        "allPriorEffectsCounted": true,
+        "serverUuidDeduplication": true,
+        "frozenReserves": true,
+        "guardBeforeEachGet": true,
+        "partialBytesAndTimePersisted": true,
+        "uncertainLockPreserved": true,
+        "existingEvidencePreserved": true,
+        "automaticRetries": 0,
+        "networkRequests": 0,
+        "secretReads": 0
+      }
+    },
+    {
+      "test": "test-usdc-protection-counter-bound.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "baseApi": 33,
+        "observedBrowserApi": 14,
+        "toolbarRequests": 2,
+        "knownUnmeteredUpper": 1,
+        "remainingBrowserReserve": 6,
+        "aggregateDeduplicated": true,
+        "pendingCoveragePreserved": true,
+        "oneAnonymousGetPreregistered": true,
+        "networkRequests": 0,
+        "secretReads": 0
+      }
+    },
+    {
+      "test": "test-usdc-protection-scopes.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "deploymentScopes": 4,
+        "probeOnlyGateChanges": true,
+        "allPriorReportsCounted": true,
+        "sameEffectLock": true,
+        "exactReplacementReceipt": true,
+        "metadataUnknownAcceptedWithDenial": true,
+        "retries": 0,
+        "networkRequests": 0,
+        "secretReads": 0
+      }
+    },
+    {
+      "test": "test-usdc-wallet-provision.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS_LOCAL_PROVISION_AND_RECOVERY_DOUBLES",
+        "freshHorizonReads": 7,
+        "recoveryHorizonReads": 7,
+        "friendbotClaims": 2,
+        "trustlines": 2,
+        "recoveryFaucetApiRequests": 3,
+        "faucetClaims": 1,
+        "oneRecovery": true,
+        "baselinePreserved": true,
+        "challengeBeforeCpu": true,
+        "expiryGuard": true,
+        "parallelBounded": true,
+        "networkRequests": 0,
+        "automaticRetries": 0,
+        "seedsLogged": false
+      }
+    },
+    {
+      "test": "test-usdc-vercel-meter-parser.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "display201AndNestedLogs": true,
+        "duplicatesPreserved": true,
+        "contradictionsPreserved": true,
+        "truncatedAndMalformedRejected": true,
+        "strictCountersAndIds": true,
+        "skippedBodiesRedacted": true,
+        "externalRequests": 0,
+        "dpapiReads": 0
+      }
+    },
+    {
+      "test": "test-usdc-bazaar-protection.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "oneUnauthenticatedRequest": true,
+        "public200Rejected": true,
+        "budgetGuardBeforeFetch": true,
+        "lostResponsePreserved": true,
+        "networkRequests": 0,
+        "secretReads": 0
+      }
+    },
+    {
+      "test": "test-usdc-provider-protection.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "oneAnonymousGetPerLabel": true,
+        "labelAndDeploymentBound": true,
+        "public200Rejected": true,
+        "budgetsBeforeEffect": true,
+        "fixedOrigin": true,
+        "bounded128KiB": true,
+        "retries": 0,
+        "gateChanges": 0,
+        "secretReads": 0,
+        "externalRequests": 0
+      }
+    },
+    {
+      "test": "test-usdc-synthetic-cleanup-guard.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "manualPendingPermitsCleanupOnly": true,
+        "receiptBytesAndDeploymentBound": true,
+        "phaseScopeOwnerAndOrderChecks": true,
+        "openingFlagsRemainFalse": true,
+        "invalidGateDispatches": 0,
+        "networkRequests": 0,
+        "secretReads": 0
+      }
+    },
+    {
+      "test": "test-usdc-hosted-control-contract.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "publicCliReceipts": 3,
+        "rawSourceBytesHashed": true,
+        "networkRequests": 0,
+        "secretReads": 0
+      }
+    },
+    {
+      "test": "test-usdc-browser-dom-observations.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS",
+        "nativeDprAndViewportRequired": true,
+        "baseline100Required": true,
+        "pinchAndResizeRejected": true,
+        "secretUrlsRedacted": true,
+        "networkCoverageNotOverclaimed": true,
+        "browserRequests": 0,
+        "externalRequests": 0,
+        "secretReads": 0
+      }
+    },
+    {
+      "test": "audit-usdc-sale-public.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS_PUBLIC_BACKEND_SALE_AND_RECOVERY_RECEIPTS",
+        "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+        "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+        "provisionPriorAttempts": 11,
+        "provisionNewAttempts": 3,
+        "provisionClaims": 1,
+        "payments": 2,
+        "amountEach": "0.01",
+        "asset": "USDC",
+        "deliveredCharacters": 490,
+        "declaredDeliveryFailure": true,
+        "currentSaleStatesMatch": true,
+        "ownerPerspectivesCorrect": true,
+        "identicalOrderReplay": true,
+        "conflictingOrderRejected": true,
+        "paymentReplayNoSecondHorizon": true,
+        "thirdPartyDenied": true,
+        "confirmedReplacement": true,
+        "confirmedPause": true,
+        "externalRequests": 0,
+        "secretReads": 0,
+        "openingApproved": false,
+        "limitation": "Public stored assertions and frozen receipts; complete log/browser transport reconciliation and human opening gates are separate."
+      }
+    },
+    {
+      "test": "audit-usdc-browser-public.mjs",
+      "exitCode": 0,
+      "passed": true,
+      "facts": {
+        "status": "PASS_PUBLIC_FUNCTIONAL_BROWSER_RECEIPTS",
+        "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+        "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+        "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+        "ordersPerParticipant": 2,
+        "displayedTextSameForParticipants": true,
+        "normalizedDisplayHashMatchesBackend": true,
+        "displayWhitespaceNormalizedHash": "53bc7db24239d2a9bbe4a98b86436e8a1c95d01788ada9bfe0f738a28e055464",
+        "exactTextByteVerification": "separate-confirmed-backend-receipt; AX normalizes whitespace",
+        "ownerPerspectivesCorrect": true,
+        "lockClearsBothViews": true,
+        "keyboardFocusObserved": true,
+        "mobile390NoDocumentOverflow": true,
+        "activeExecutionMs": 16186,
+        "privacyScope": "owner-filtered-history-and-lock; platform privacy and transport unmeasured",
+        "toolbarObserved": true,
+        "platformJweObserved": true,
+        "actualBrowserAutomaticRetries": null,
+        "completeBrowserTransport": false,
+        "nativeZoom200": "PENDING_MANUAL",
+        "humanFreighter": "PENDING_MANUAL",
+        "cleanupApproved": false,
+        "openingApproved": false,
+        "networkRequests": 0,
+        "secretReads": 0
+      }
+    }
+  ],
+  "networkRequests": 0,
+  "secretReads": 0,
+  "openingApproved": false,
+  "limitation": "Local tests and receipt audits only; hosted browser wire coverage, cleanup, native zoom200 and human Freighter remain pending."
+}

@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "status": "FUNCTIONAL_OBSERVATIONS",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+  "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+  "observedAt": "2026-10-04T22:28:19.995Z",
+  "magicLinkA": true,
+  "magicLinkB": true,
+  "lockA": true,
+  "lockB": true,
+  "keyboardA": {
+    "expanded": [
+      "Identidad del activo"
+    ],
+    "tag": "A",
+    "text": "Transacción testnet"
+  },
+  "keyboardB": {
+    "expanded": [
+      "Identidad del activo"
+    ],
+    "tag": "A",
+    "text": "Transacción testnet"
+  },
+  "mobile": {
+    "clientWidth": 375,
+    "documentWidth": 375,
+    "height": 844,
+    "marketWidth": 345,
+    "privateInputType": "password",
+    "width": 390
+  },
+  "viewportReset": true,
+  "expectedAPI": 15,
+  "marketplaceRefreshA": 1,
+  "marketplaceRefreshB": 1,
+  "agentChatOpened": false,
+  "explorerOpened": false,
+  "activeExecutionMs": 16186,
+  "nativeZoom200": "PENDING_MANUAL",
+  "humanFreighter": "PENDING_MANUAL",
+  "completeBrowserTransport": false
+}

@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+  "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+  "status": "PASS_FUNCTIONAL_MANUAL_GATES_PENDING",
+  "purpose": "synthetic-cleanup-only",
+  "checks": {
+    "magicLinkA": "PASS",
+    "magicLinkB": "PASS",
+    "lockClearsView": "PASS",
+    "keyboard": "PASS",
+    "mobile390": "PASS",
+    "readsSameRecords": "PASS",
+    "privacy": "PASS"
+  },
+  "checkMethods": {
+    "magicLink": "Existing DPAPI-held access recovered via one-use localhost link to protected replacement; fragment removed by application.",
+    "records": "Both order IDs, transaction hashes, perspectives, amounts and separate states match the independently audited backend receipt; text visible in both views.",
+    "privacy": "B sees purchase records without seller submission/legacy activity; locked views clear IDs, wallet and text. Third-party rejection is the pre-existing hosted HTTP 401 check.",
+    "keyboard": "Space opens the native asset disclosure; Tab focuses transaction link.",
+    "mobile": "Actual 390x844 viewport; document scrollWidth does not exceed clientWidth; override reset."
+  },
+  "manual": {
+    "nativeZoom200": "PENDING_MANUAL",
+    "humanFreighter": "PENDING_MANUAL"
+  },
+  "expectedGeneration": 3,
+  "automaticRetries": 0,
+  "automaticRetriesScope": "Application transport configured with no retries; browser/platform retransmissions were not captured.",
+  "serviceId": "guionista-algorithmic-text-pilot",
+  "submissionId": "e7290d97-f5fc-41e1-a5ce-817d374dba3a",
+  "sellerOwnerId": "ow_4d899972c5f0439eab611c996b54e2e9",
+  "sellerWorkspaceId": "122de08a-ccfa-468d-8333-fcf516c2ee9a",
+  "buyerOwnerId": "ow_47431fe9e36e4538896cf94f0ca428c1",
+  "buyerWorkspaceId": "9e0a88d8-9873-46ad-be81-355c21c1c750",
+  "orderIds": [
+    "9d816a37-b42e-4a5b-8498-3205987814b3",
+    "4dfa549a-d5e4-433d-b607-f6091948792e"
+  ],
+  "activeExecutionMs": 16186,
+  "navigation": {
+    "sessionAlreadyAuthenticated": true,
+    "ssoPageObserved": false,
+    "privateOrigin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+    "additionalHostedNavigations": 3,
+    "localhostOneUseHandoffs": 2
+  },
+  "browserTransportComplete": false,
+  "cleanupApproved": false,
+  "cleanupPendingReason": "Platform feedback/JWE traffic and possible retransmissions lack a demonstrated total byte bound; do not authorize more Redis effects from the conditional model.",
+  "canOpen": false,
+  "hostedBrowserPassed": false,
+  "evidence": [
+    "usdc-browser-A-redacted.txt",
+    "usdc-browser-B-redacted.txt",
+    "usdc-browser-A-locked.txt",
+    "usdc-browser-B-locked.txt",
+    "usdc-browser-dom-observed.json",
+    "usdc-browser-resource-observed.json",
+    "usdc-browser-mobile.png",
+    "usdc-browser-desktop.png"
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "id": "dpl_6vzckCnGuTd2UocjmWpjeaLRebPw",
+  "url": "https://ai-video-scriptwriter-g0rn95s84.vercel.app",
+  "readyState": "READY",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "payloadFingerprint": "c8a59203f6a68a263ee650f61513dce525453ab9ad90c513b3097abec293f37c",
+  "target": "preview",
+  "protectionEnabled": null,
+  "protectionObservation": "unknown",
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "runtimeHash": "4dc3831379adc56d6b11ea7710e45e606ace3874c016189b879ab4d7d9723c1d",
+  "buildHash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "runtimeFlags": {
+    "BAZAAR_MARKETPLACE_TEXT_ENABLED": "true",
+    "BAZAAR_MARKETPLACE_WORKER_TOKEN_SHA256": "d373fa1d15feb551b5f69e2d115ba78d0c01160a6496b502d64aed9a5d865c2d",
+    "BAZAAR_MARKETPLACE_CONTROL_PROOF": "stellar-bazaar-verification=DyplLAl5DjOBw2pXr9SgXp2E"
+  },
+  "buildFlags": {}
+}

@@ -1,0 +1,266 @@
+{
+  "version": 1,
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+  "page": "history-locked-after-B",
+  "summary": {
+    "byKind": {
+      "font": 0,
+      "image": 0,
+      "other": 8,
+      "script": 17,
+      "stylesheet": 3,
+      "video": 0
+    },
+    "inlineSvgCount": 0,
+    "totalCount": 28
+  },
+  "assets": [
+    {
+      "kind": "stylesheet",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/css/f1d4db396e26eb98.css",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "stylesheet",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/css/ad8e00b8fdec8d9d.css",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "stylesheet",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/css/2c0299c831cdf0a2.css",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/webpack-ac292e65ae701117.js",
+      "sources": [
+        "resource",
+        "attribute",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/main-app-85b337f73862eb83.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/4bd1b696-ef441a59c2fc9271.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/8500-95cab54c3cb9a918.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/3794-7747b6ffe7d2f942.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/9941-c7836e48777728a0.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/661-06ad7fedb597bc82.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/856-dafd92defab344fc.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/5581-4da1f71ffdc2bad7.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/app/page-63a782df892f5e9e.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/7733-4256ef4f271fe7c9.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/2715-ffd1bd9b4e5daa2d.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/app/layout-8c3853772fd96e75.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/2401-c257613b434292e8.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/app/history/page-1efe2bb4a141959f.js",
+      "sources": [
+        "resource"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/_next/static/chunks/9304-5b6aff87440a1cc9.js",
+      "sources": [
+        "resource"
+      ]
+    },
+    {
+      "kind": "script",
+      "origin": "https://vercel.live",
+      "path": "/_next-live/feedback/feedback.js",
+      "sources": [
+        "resource",
+        "attribute"
+      ]
+    },
+    {
+      "kind": "other",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/services",
+      "sources": [
+        "resource",
+        "resource"
+      ]
+    },
+    {
+      "kind": "other",
+      "origin": "https://vercel.live",
+      "path": "/_next-live/feedback/feedback.html",
+      "sources": [
+        "resource"
+      ]
+    },
+    {
+      "kind": "other",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/.well-known/vercel/jwe",
+      "sources": [
+        "resource"
+      ]
+    },
+    {
+      "kind": "other",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/operations",
+      "sources": [
+        "resource"
+      ]
+    },
+    {
+      "kind": "other",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/market/orders",
+      "sources": [
+        "resource",
+        "resource"
+      ]
+    },
+    {
+      "kind": "other",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/history",
+      "sources": [
+        "resource"
+      ]
+    },
+    {
+      "kind": "other",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/activity",
+      "sources": [
+        "resource"
+      ]
+    },
+    {
+      "kind": "other",
+      "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+      "path": "/api/activity",
+      "sources": [
+        "resource"
+      ]
+    }
+  ],
+  "limitation": "Observed resource and DOM-attribute inventory, not complete network capture; no payload byte or retry inference."
+}

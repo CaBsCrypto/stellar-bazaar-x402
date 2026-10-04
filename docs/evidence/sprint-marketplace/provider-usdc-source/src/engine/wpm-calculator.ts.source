@@ -1,0 +1,199 @@
+/**
+ * Conversational Pacing and WPM Calculator for AI Video Scriptwriter.
+ * Calibrated to short-form video pacing: 140-160 WPM (2.3-2.6 words/second).
+ */
+
+export const WPM_CONSTANTS = {
+  MIN_CONVERSATIONAL_WPM: 140,
+  MAX_CONVERSATIONAL_WPM: 160,
+  DEFAULT_WPM: 150,
+  MIN_WORDS_PER_SECOND: 140 / 60, // ~2.33 words/sec
+  MAX_WORDS_PER_SECOND: 160 / 60, // ~2.67 words/sec
+  SLIDER_MIN_WPM: 80,
+  SLIDER_MAX_WPM: 260,
+} as const;
+
+export type PacingAssessment = 'optimal' | 'fast' | 'relaxed';
+
+export interface SceneAllocation {
+  sceneNumber: number;
+  name: string;
+  startSecond: number;
+  endSecond: number;
+  durationSeconds: number;
+  timeRange: string;
+  targetWordCount: number;
+  fractionOfTotal: number;
+}
+
+/**
+ * Counts total words in a given text string, normalizing whitespace and ignoring empty tokens.
+ */
+export function countWords(text: string): number {
+  if (!text || typeof text !== 'string') {
+    return 0;
+  }
+  const clean = text.trim();
+  if (clean.length === 0) {
+    return 0;
+  }
+  // Split on whitespace sequences
+  const words = clean.split(/\s+/);
+  // Filter out any purely punctuation tokens
+  const nonPunctuationWords = words.filter(w => /[a-zA-Z0-9\u00C0-\u024F\u1E00-\u1EFF]/.test(w));
+  return nonPunctuationWords.length > 0 ? nonPunctuationWords.length : words.length;
+}
+
+/**
+ * Calculates the target word count for a given duration and WPM rate.
+ * @param durationSeconds Duration of speech in seconds
+ * @param wpm Target words per minute (default 150 WPM)
+ */
+export function calculateTargetWordCount(
+  durationSeconds: number,
+  wpm: number = WPM_CONSTANTS.DEFAULT_WPM
+): number {
+  if (durationSeconds <= 0 || wpm <= 0) {
+    return 0;
+  }
+  return Math.round((durationSeconds / 60) * wpm);
+}
+
+/**
+ * Estimates duration in seconds based on word count and target WPM.
+ * @param wordCount Number of spoken words
+ * @param wpm Target words per minute (default 150 WPM)
+ */
+export function estimateDurationFromWordCount(
+  wordCount: number,
+  wpm: number = WPM_CONSTANTS.DEFAULT_WPM
+): number {
+  if (wordCount <= 0 || wpm <= 0) {
+    return 0;
+  }
+  return Number(((wordCount / wpm) * 60).toFixed(1));
+}
+
+/**
+ * Calculates actual words per minute (WPM) from word count and duration.
+ */
+export function calculateActualWpm(wordCount: number, durationSeconds: number): number {
+  if (wordCount <= 0 || durationSeconds <= 0) {
+    return 0;
+  }
+  return Math.round((wordCount / durationSeconds) * 60);
+}
+
+/**
+ * Assesses whether a given WPM is optimal for high-retention short-form video.
+ * - < 140 WPM: 'relaxed' (can risk losing audience attention)
+ * - 140 - 160 WPM: 'optimal' (high retention, natural cadence)
+ * - > 160 WPM: 'fast' (risks unintelligibility)
+ */
+export function assessPacing(wpm: number): PacingAssessment {
+  if (wpm < WPM_CONSTANTS.MIN_CONVERSATIONAL_WPM) {
+    return 'relaxed';
+  }
+  if (wpm > WPM_CONSTANTS.MAX_CONVERSATIONAL_WPM) {
+    return 'fast';
+  }
+  return 'optimal';
+}
+
+/**
+ * Maps creative tone to an optimal target WPM within the 140-160 conversational window.
+ */
+export function getToneTargetWpm(tone?: string): number {
+  if (!tone) return WPM_CONSTANTS.DEFAULT_WPM;
+  const t = tone.toLowerCase().trim();
+  if (t.includes('energetic') || t.includes('hype') || t.includes('urgent') || t.includes('fast')) {
+    return 158;
+  }
+  if (t.includes('dramatic') || t.includes('serious') || t.includes('relaxed') || t.includes('chill')) {
+    return 142;
+  }
+  if (t.includes('humorous') || t.includes('casual') || t.includes('playful')) {
+    return 148;
+  }
+  if (t.includes('authoritative') || t.includes('confident') || t.includes('professional')) {
+    return 152;
+  }
+  if (t.includes('educational') || t.includes('informative') || t.includes('tutorial')) {
+    return 146;
+  }
+  return WPM_CONSTANTS.DEFAULT_WPM;
+}
+
+/**
+ * Computes time and word budget allocations across the 5 high-retention scenes
+ * for any video duration (e.g. 15s, 30s, 60s).
+ *
+ * Scene distribution formula:
+ * 1. Hook: ~10% (0-3s on a 30s video)
+ * 2. Problem / Curiosity Gap: ~16.7% (3-8s on a 30s video)
+ * 3. Key Points: ~53.3% (8-24s on a 30s video)
+ * 4. Call to Action: ~13.3% (24-28s on a 30s video)
+ * 5. Infinite Loop: ~6.7% (28-30s on a 30s video)
+ */
+export function calculateSceneAllocations(
+  totalDurationSeconds: number,
+  wpm: number = WPM_CONSTANTS.DEFAULT_WPM
+): SceneAllocation[] {
+  const duration = Math.max(10, totalDurationSeconds);
+
+  // Exact 30s calibration matches standard template: 3s, 5s, 16s, 4s, 2s
+  let d1 = Math.round(duration * 0.10);
+  let d2 = Math.round(duration * 0.167);
+  let d4 = Math.round(duration * 0.133);
+  let d5 = Math.round(duration * 0.067);
+
+  // Clamps to ensure every scene has realistic time
+  d1 = Math.max(2, Math.min(4, d1)); // Hook: 2-4 seconds
+  d2 = Math.max(3, d2);              // Problem: at least 3 seconds
+  d4 = Math.max(3, d4);              // CTA: at least 3 seconds
+  d5 = Math.max(2, d5);              // Loop: at least 2 seconds
+  
+  // Scene 3 receives the remainder of the duration
+  let d3 = duration - (d1 + d2 + d4 + d5);
+  if (d3 < 4) {
+    d3 = 4;
+    // Readjust if needed
+    const excess = (d1 + d2 + d3 + d4 + d5) - duration;
+    if (excess > 0 && d2 > 3) d2 = Math.max(3, d2 - excess);
+  }
+
+  const durations = [d1, d2, d3, d4, d5];
+  const sceneNames = [
+    'Hook',
+    'Problem / Curiosity Gap',
+    'Key Points & Visual Rhythm',
+    'High-Impact Call to Action',
+    'Infinite Loop Mechanism'
+  ];
+
+  let currentSec = 0;
+  const allocations: SceneAllocation[] = [];
+
+  for (let i = 0; i < 5; i++) {
+    const sec = durations[i];
+    const start = currentSec;
+    const end = currentSec + sec;
+    const targetWords = calculateTargetWordCount(sec, wpm);
+    const fraction = sec / duration;
+
+    allocations.push({
+      sceneNumber: i + 1,
+      name: sceneNames[i],
+      startSecond: start,
+      endSecond: end,
+      durationSeconds: sec,
+      timeRange: `${start}-${end}s`,
+      targetWordCount: targetWords,
+      fractionOfTotal: Number(fraction.toFixed(3)),
+    });
+
+    currentSec = end;
+  }
+
+  return allocations;
+}

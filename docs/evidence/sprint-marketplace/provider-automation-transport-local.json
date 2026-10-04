@@ -2,8 +2,8 @@
   "status": "PASS_LOCAL_ONLY",
   "date": "2026-10-04",
   "transport": "createAutomationPreviewFetch",
-  "sourceSha256": "695951d5451a5425b6e7de92b20fe0e7c2269d19f855d429d1824fb03875a627",
-  "testSha256": "5c144f63ee1631983da65c849d376f5f687cd70cb9ba0a2f1761c015b3f1a4ae",
+  "sourceSha256": "a1efe3bee8b63091c2fd5d653a085018dd82ca492c9bcf9a0a055e88e6b35c89",
+  "testSha256": "ac3aae1752ca4bfe53f2e5ee502faad934e847176ae44a46b2f54f16cb0361b4",
   "commands": [
     "node scripts/test-automation-preview-client.mjs",
     "node scripts/test-protected-preview-client.mjs"
@@ -17,7 +17,10 @@
     "UTF-8 request payload hash and response body/header byte counters",
     "Bypass and bearer absent from measurement metadata and sanitized transport errors",
     "Oversized stream cancelled; aborted caller produces no exchange",
-    "Existing CLI transport regression passed"
+    "Existing CLI transport regression passed",
+    "Installed MCP SDK initialize + initialized 202 + delayed background GET + tool POST: serialized hooks, transport and response reads",
+    "Queued aborted signal produces no hook or effect; original errors propagate to caller",
+    "Empty accepted notification has null body; independent hook snapshot does not block caller body cancellation"
   ],
   "externalRequests": 0,
   "remoteProof": "PENDING"

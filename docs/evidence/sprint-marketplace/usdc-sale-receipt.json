@@ -1,0 +1,103 @@
+{
+  "status": "PASS_CONFIRMED_SALE_RECEIPT",
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "completedPhases": [
+    "probe",
+    "submit",
+    "activate",
+    "sale",
+    "replacement",
+    "pause"
+  ],
+  "orders": [
+    {
+      "operationId": "9d816a37-b42e-4a5b-8498-3205987814b3",
+      "phase": "delivered",
+      "serviceId": "guionista-algorithmic-text-pilot",
+      "cardHash": "79481f0841a38554c2bbd4c1e15997f04d8b23f87472b6144026075cc2033f2c",
+      "version": "bazaar.service-card/v0",
+      "amount": "0.01",
+      "identity": {
+        "kind": "stellar-classic-credit",
+        "network": "stellar:testnet",
+        "code": "USDC",
+        "issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        "sacContract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+      },
+      "payer": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "memoHash": "c988d32dd8b4feab51385c276e1b862b024e857ee28fe888e9f86652c684fd9a",
+      "transactionHash": "2aa0ec28825fb76ae490513859de2f9f7ca4339a2ca9e082d2fc435327feb0b0",
+      "paymentVerifiedAt": "2026-10-04T21:57:37.496Z",
+      "createdAt": "2026-10-04T21:57:32.740Z",
+      "updatedAt": "2026-10-04T21:57:43.537Z",
+      "attemptId": "bdb4175b-0538-47e4-804b-de081f6118c1",
+      "delivery": {
+        "textHash": "472769512dbfc531a0551986c36d725300c01d0f346f9aa6f1f28d005943d7b0",
+        "characters": 490,
+        "utf8Bytes": 497,
+        "displayWhitespaceNormalizedHash": "53bc7db24239d2a9bbe4a98b86436e8a1c95d01788ada9bfe0f738a28e055464",
+        "displayWhitespaceNormalizedCharacters": 485,
+        "reference": "bazaar-order:9d816a37-b42e-4a5b-8498-3205987814b3",
+        "recordedAt": "2026-10-04T21:57:43.537Z"
+      },
+      "failureReason": null,
+      "fullRecordHash": "98b63eccb1e6c487b30edfc32efd5706b124c19e082b314040e8352974007b7f"
+    },
+    {
+      "operationId": "4dfa549a-d5e4-433d-b607-f6091948792e",
+      "phase": "delivery-failed",
+      "serviceId": "guionista-algorithmic-text-pilot",
+      "cardHash": "79481f0841a38554c2bbd4c1e15997f04d8b23f87472b6144026075cc2033f2c",
+      "version": "bazaar.service-card/v0",
+      "amount": "0.01",
+      "identity": {
+        "kind": "stellar-classic-credit",
+        "network": "stellar:testnet",
+        "code": "USDC",
+        "issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+        "sacContract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+      },
+      "payer": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "memoHash": "aa31bafead1bbe8e7b4cc6a554e5eaccdd11d5c476ad9b6f05358552f7539dc2",
+      "transactionHash": "646309ec29ce172b487b0cbc40cce08a58efd19e3b7a74e8108a2d5678f492b3",
+      "paymentVerifiedAt": "2026-10-04T21:57:52.345Z",
+      "createdAt": "2026-10-04T21:57:46.335Z",
+      "updatedAt": "2026-10-04T21:57:56.056Z",
+      "attemptId": "88f6404f-1790-4f09-bb66-e21df086049f",
+      "delivery": null,
+      "failureReason": "Fallo de entrega declarado por el vendedor durante la segunda compra de aceptación.",
+      "fullRecordHash": "1b7ebc87eb2981e9cd8c29b65d74e8580a0c75f6fc9aae26150eecab62b69e41"
+    }
+  ],
+  "historyHashes": {
+    "a": "7ac411f887c341d0429f6dd336468d34e98327f43206a1651ba2d871aa5622e4",
+    "b": "c1d3f14a0332d17d96f270eb0d6512fdd292c3ab734cd0d940d67ec34ba3721b"
+  },
+  "entireHistoryViewsIdentical": false,
+  "currentSaleHistoryHashes": {
+    "a": "98d7b241e1be1364247075ba9321982e0a3d822aa05fe2293170d877fe1edcef",
+    "b": "2427200c7280af580dc8fcc010c39ca020c627a860caf087ce4fe2cfa1c981fa"
+  },
+  "currentSaleStateHashes": {
+    "a": "76f6445bf26135695ca40d8c66d32e9af273016051b28f846576fd29aeaae496",
+    "b": "76f6445bf26135695ca40d8c66d32e9af273016051b28f846576fd29aeaae496"
+  },
+  "currentSaleHistoryCounts": {
+    "a": 2,
+    "b": 2
+  },
+  "currentSaleStatesMatch": true,
+  "perspectives": {
+    "a": "sale",
+    "b": "purchase"
+  },
+  "localJsonProjectionBytes": {
+    "historyA": 6480,
+    "historyB": 6488
+  },
+  "externalRequests": 0,
+  "credentialFieldsExported": 0
+}

@@ -1,0 +1,21 @@
+- alert
+- navigation "Navegación principal":
+  - link "Bazaar x402":
+    - /url: /
+    - generic: ✦
+    - text: Bazaar
+    - superscript: x402
+  - link "Mercado":
+    - /url: /catalogo
+  - link "Crear espacio":
+    - /url: /pilot
+  - link "Publicar":
+    - /url: /publish
+  - link "Mi espacio":
+    - /url: /history
+  - generic: Stellar Testnet
+- main:
+  - heading "Biblioteca bloqueada" [level=1]
+  - paragraph: Abre nuevamente el enlace original de tu agente para recuperar tus entregas.
+  - button "Explorar demostración"
+  - generic "Tengo un acceso de lectura"

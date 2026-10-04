@@ -1,0 +1,1342 @@
+/**
+ * Standalone Teleprompter Template Builder.
+ * Generates zero-dependency, responsive HTML/CSS/JS viewer with 60fps auto-scroll,
+ * real-time WPM speed control (80-260 WPM), Web Audio API 10-bar LED VU meter,
+ * 3 high-contrast studio themes (Cyberpunk Neon, Matrix Terminal, High-Contrast Studio),
+ * mirror mode (scaleX(-1)), fullscreen mode, studio keyboard shortcuts with HUD toast feedback,
+ * 1-click multi-format exports (Markdown, TXT, JSON), and localStorage script receiver.
+ */
+
+import type { VideoScriptResult, ScriptScene } from '../engine/script-generator.js';
+
+export function getSampleScriptData(): VideoScriptResult {
+  return {
+    topic: 'Stellar Blockchain Micropayments & x402 Protocol',
+    durationSeconds: 30,
+    targetDurationSeconds: 30,
+    tone: 'energetic',
+    targetWpm: 150,
+    actualWordCount: 75,
+    totalWords: 75,
+    estimatedDuration: 30,
+    actualEstimatedSeconds: 30,
+    overallWPM: 150,
+    pacingAssessment: 'optimal',
+    loopTransitionPhrase: 'And the craziest part about this entire system is -> ...stop scrolling right now if you build web applications!',
+    creativeDirectorNotes: {
+      hookRetentionTactic: '0-3s Pattern Interrupt with crash-zoom and sub-bass drop',
+      visualStyle: 'Cyberpunk neon cyan and dark graphite, fast kinetic terminal text overlays',
+      audioTrackSuggestion: 'Driving electronic synthwave with punchy sub-bass hits (128 BPM)',
+      aspectRatio: '9:16 (Vertical)',
+    },
+    scenes: [
+      {
+        sceneNumber: 1,
+        name: 'Hook',
+        sceneName: 'Hook (Pattern Interrupt)',
+        timeRange: '0-3s',
+        durationSeconds: 3,
+        estimatedSeconds: 3,
+        wordCount: 8,
+        wpm: 160,
+        spokenScript: 'Stop scrolling right now if you build web applications!',
+        speechText: 'Stop scrolling right now if you build web applications!',
+        visualCue: 'Crash-zoom punch-in to 1.3x face crop, bold yellow font banner.',
+        visualCues: [{ type: 'camera', instruction: 'Punch-in crash-zoom to face.' }],
+        soundRhythm: 'Bass drop thud followed by sudden cut to dead silence.',
+        audioRhythm: { backgroundMusicVibe: 'Synthwave', sfx: ['Bass drop'], tempoBpm: 128 },
+        pacingNote: 'High intensity, rapid attack.',
+      },
+      {
+        sceneNumber: 2,
+        name: 'Problem / Curiosity Gap',
+        sceneName: 'Problem & Stakes Amplification',
+        timeRange: '3-8s',
+        durationSeconds: 5,
+        estimatedSeconds: 5,
+        wordCount: 13,
+        wpm: 156,
+        spokenScript: 'Traditional credit card processors take thirty cents plus three percent on every tiny swipe.',
+        speechText: 'Traditional credit card processors take thirty cents plus three percent on every tiny swipe.',
+        visualCue: 'Split screen showing the painful fee breakdown vs instant settlement.',
+        visualCues: [{ type: 'overlay', instruction: 'Red fee breakdown chart.' }],
+        soundRhythm: 'Tense ticking clock effect with rising synth.',
+        audioRhythm: { backgroundMusicVibe: 'Tension', sfx: ['Ticking clock'], tempoBpm: 128 },
+        pacingNote: 'Measured, empathetic.',
+      },
+      {
+        sceneNumber: 3,
+        name: 'Key Points & Visual Rhythm',
+        sceneName: 'Key Points (Value Delivery)',
+        timeRange: '8-24s',
+        durationSeconds: 16,
+        estimatedSeconds: 16,
+        wordCount: 39,
+        wpm: 146,
+        spokenScript: 'With the x402 HTTP protocol on Stellar, machine-to-machine payments settle in under four seconds. You can charge fractions of a cent with zero subscriptions, zero chargeback fraud, and instant cryptographic settlement directly into your wallet.',
+        speechText: 'With the x402 HTTP protocol on Stellar, machine-to-machine payments settle in under four seconds. You can charge fractions of a cent with zero subscriptions, zero chargeback fraud, and instant cryptographic settlement directly into your wallet.',
+        visualCue: 'Rapid B-roll cuts every 2.5s with neon numbered badges [1], [2], [3].',
+        visualCues: [{ type: 'b-roll', instruction: 'Stellar transaction ledger streaming in real time.' }],
+        soundRhythm: 'Driving upbeat electronic beat with digital chimes on every point.',
+        audioRhythm: { backgroundMusicVibe: 'Driving techno', sfx: ['Chime', 'Whoosh'], tempoBpm: 128 },
+        pacingNote: 'High information density, rhythmic.',
+      },
+      {
+        sceneNumber: 4,
+        name: 'High-Impact Call to Action',
+        sceneName: 'Direct Call to Action',
+        timeRange: '24-28s',
+        durationSeconds: 4,
+        estimatedSeconds: 4,
+        wordCount: 10,
+        wpm: 150,
+        spokenScript: 'Save this video and comment BUILDER to get the open-source repo!',
+        speechText: 'Save this video and comment BUILDER to get the open-source repo!',
+        visualCue: 'Point finger downward to bookmark icon with pulsing green highlight.',
+        visualCues: [{ type: 'gesture', instruction: 'Point to bookmark button.' }],
+        soundRhythm: 'Pleasant notification chime over upbeat music.',
+        audioRhythm: { backgroundMusicVibe: 'Uplifting crescendo', sfx: ['Notification chime'], tempoBpm: 128 },
+        pacingNote: 'Direct, unmistakable directive.',
+      },
+      {
+        sceneNumber: 5,
+        name: 'Infinite Loop Mechanism',
+        sceneName: 'Infinite Loop Trigger',
+        timeRange: '28-30s',
+        durationSeconds: 2,
+        estimatedSeconds: 2,
+        wordCount: 5,
+        wpm: 150,
+        spokenScript: 'And the craziest part about this entire system is...',
+        speechText: 'And the craziest part about this entire system is...',
+        visualCue: 'Motion blur whip-pan left-to-right matching hook entry position.',
+        visualCues: [{ type: 'camera', instruction: 'Whip pan to starting frame.' }],
+        soundRhythm: 'Unresolved musical beat cutting abruptly into Scene 1.',
+        audioRhythm: { backgroundMusicVibe: 'Unresolved drop', sfx: ['Whip-pan whoosh'], tempoBpm: 128 },
+        pacingNote: 'Unfinished, seamless loop.',
+      },
+    ],
+    teleprompterText: `[0-3s] HOOK\nStop scrolling right now if you build web applications!\n\n[3-8s] PROBLEM / CURIOSITY GAP\nTraditional credit card processors take thirty cents plus three percent on every tiny swipe.\n\n[8-24s] KEY POINTS & VISUAL RHYTHM\nWith the x402 HTTP protocol on Stellar, machine-to-machine payments settle in under four seconds. You can charge fractions of a cent with zero subscriptions, zero chargeback fraud, and instant cryptographic settlement directly into your wallet.\n\n[24-28s] HIGH-IMPACT CALL TO ACTION\nSave this video and comment BUILDER to get the open-source repo!\n\n[28-30s] INFINITE LOOP MECHANISM\nAnd the craziest part about this entire system is...`,
+  };
+}
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function renderSceneCardsHtml(scenes: ScriptScene[]): string {
+  const badgeClasses = [
+    'badge-scene-1',
+    'badge-scene-2',
+    'badge-scene-3',
+    'badge-scene-4',
+    'badge-scene-5',
+  ];
+
+  return scenes
+    .map((scene, idx) => {
+      const badgeCls = badgeClasses[idx % badgeClasses.length];
+      const visualCueText = scene.visualCue || (scene.visualCues?.[0]?.instruction ?? '');
+      const soundText = scene.soundRhythm || scene.audioRhythm?.backgroundMusicVibe || '';
+
+      return `
+      <section class="scene-block" id="scene-${scene.sceneNumber}" data-scene="${scene.sceneNumber}">
+        <div class="scene-header">
+          <span class="scene-badge ${badgeCls}">SCENE ${scene.sceneNumber}: ${escapeHtml(scene.name.toUpperCase())}</span>
+          <span class="scene-timing">⏱ ${escapeHtml(scene.timeRange)} (${scene.durationSeconds}s · ${scene.wordCount} words · ~${scene.wpm} WPM)</span>
+        </div>
+
+        ${visualCueText ? `
+        <div class="director-pill visual-cue" title="Visual Directing Cue - Do NOT speak this aloud">
+          <span class="pill-icon">🎬</span>
+          <span class="pill-text">${escapeHtml(visualCueText)}</span>
+        </div>` : ''}
+
+        ${soundText ? `
+        <div class="director-pill sound-cue" title="Sound Rhythm Note - Do NOT speak this aloud">
+          <span class="pill-icon">🎵</span>
+          <span class="pill-text">${escapeHtml(soundText)}</span>
+        </div>` : ''}
+
+        <div class="speech-script" data-words="${scene.wordCount}">
+          ${escapeHtml(scene.spokenScript || scene.speechText || '')}
+        </div>
+      </section>
+      `;
+    })
+    .join('\n');
+}
+
+/**
+ * Builds the complete, zero-dependency, self-contained HTML teleprompter viewer.
+ */
+export function renderTeleprompterHtml(scriptInput?: VideoScriptResult): string {
+  const script = scriptInput || getSampleScriptData();
+  const dataToEmbed = { ...script };
+  delete (dataToEmbed as any).teleprompterHtml;
+  const serializedScript = JSON.stringify(dataToEmbed).replace(/<\/script/gi, '<\\/script');
+  const title = script.topic ? `Teleprompter: ${escapeHtml(script.topic)}` : 'AI Video Teleprompter';
+  const scenesHtml = renderSceneCardsHtml(script.scenes || []);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${title}</title>
+  <style>
+    /* Theme 1: Cyberpunk Neon (Default) */
+    :root, body.theme-cyberpunk {
+      --bg-color: #08090e;
+      --surface-color: #12141c;
+      --surface-border: #222634;
+      --text-color: #f8fafc;
+      --text-muted: #94a3b8;
+      --accent-cyan: #06b6d4;
+      --accent-purple: #a855f7;
+      --accent-yellow: #facc15;
+      --accent-red: #f87171;
+      --accent-green: #34d399;
+      --guide-color: rgba(6, 182, 212, 0.18);
+      --guide-border: rgba(6, 182, 212, 0.6);
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      --font-size: 38px;
+      --line-height: 1.55;
+    }
+
+    /* Theme 2: Matrix Terminal */
+    body.theme-matrix {
+      --bg-color: #000000;
+      --surface-color: #051408;
+      --surface-border: #14532d;
+      --text-color: #22c55e;
+      --text-muted: #15803d;
+      --accent-cyan: #4ade80;
+      --accent-purple: #16a34a;
+      --accent-yellow: #86efac;
+      --accent-red: #ef4444;
+      --accent-green: #22c55e;
+      --guide-color: rgba(34, 197, 94, 0.15);
+      --guide-border: rgba(34, 197, 94, 0.7);
+      --font-family: "JetBrains Mono", Consolas, "Courier New", monospace;
+    }
+
+    /* Theme 3: High-Contrast Studio */
+    body.theme-studio {
+      --bg-color: #000000;
+      --surface-color: #111111;
+      --surface-border: #333333;
+      --text-color: #ffffff;
+      --text-muted: #888888;
+      --accent-cyan: #ffffff;
+      --accent-purple: #dddddd;
+      --accent-yellow: #facc15;
+      --accent-red: #ef4444;
+      --accent-green: #22c55e;
+      --guide-color: rgba(250, 204, 21, 0.22);
+      --guide-border: #facc15;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: var(--font-family);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+      user-select: none;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    /* Top Persistent Controls */
+    header.control-panel {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 72px;
+      background: rgba(18, 20, 28, 0.94);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--surface-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      z-index: 100;
+      gap: 12px;
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 180px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      color: #000;
+      font-weight: 800;
+      font-size: 11px;
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    .topic-display {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-color);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 200px;
+    }
+
+    .action-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    button.btn {
+      background: var(--surface-color);
+      color: var(--text-color);
+      border: 1px solid var(--surface-border);
+      padding: 7px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+
+    button.btn:hover {
+      background: #1c202d;
+      border-color: #3b4256;
+    }
+
+    button.btn-primary {
+      background: var(--accent-cyan);
+      color: #000;
+      border-color: var(--accent-cyan);
+    }
+
+    button.btn-primary:hover {
+      background: #38bdf8;
+      box-shadow: 0 0 12px rgba(6, 182, 212, 0.4);
+    }
+
+    button.btn.active {
+      background: var(--accent-purple);
+      color: #fff;
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+    }
+
+    /* Speed Slider Controls */
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface-color);
+      border: 1px solid var(--surface-border);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .speed-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    input[type="range"].slider-wpm {
+      -webkit-appearance: none;
+      width: 80px;
+      height: 4px;
+      border-radius: 2px;
+      background: #2a2f42;
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"].slider-wpm::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 6px var(--accent-cyan);
+    }
+
+    .wpm-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-cyan);
+      min-width: 54px;
+      text-align: right;
+    }
+
+    /* Web Audio Mic Meter */
+    .mic-meter-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--surface-color);
+      border: 1px solid var(--surface-border);
+      padding: 4px 8px;
+      border-radius: 6px;
+    }
+
+    .audio-meter {
+      display: flex;
+      align-items: center;
+      height: 18px;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 2px 4px;
+      border-radius: 4px;
+      border: 1px solid var(--surface-border);
+    }
+
+    .audio-meter-bar {
+      display: flex;
+      gap: 2px;
+      height: 12px;
+    }
+
+    .led-seg {
+      width: 4px;
+      height: 100%;
+      border-radius: 1px;
+      opacity: 0.22;
+      transition: opacity 0.05s ease;
+    }
+
+    .led-seg.seg-green { background: #22c55e; }
+    .led-seg.seg-yellow { background: #facc15; }
+    .led-seg.seg-red { background: #ef4444; }
+    .led-seg.active { opacity: 1; box-shadow: 0 0 5px currentColor; }
+
+    /* Font Size Controls */
+    .font-control {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--surface-color);
+      border: 1px solid var(--surface-border);
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .font-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-color);
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+    }
+
+    .font-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .font-value {
+      font-size: 11px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      color: var(--text-muted);
+      min-width: 32px;
+      text-align: center;
+    }
+
+    /* Timer Display */
+    .timer-display {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--accent-yellow);
+      background: rgba(250, 204, 21, 0.1);
+      border: 1px solid rgba(250, 204, 21, 0.3);
+      padding: 5px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    /* Eye Reading Guide Band */
+    .reading-guide {
+      position: fixed;
+      top: 45%;
+      left: 0;
+      right: 0;
+      height: 90px;
+      background: var(--guide-color);
+      border-top: 1px dashed var(--guide-border);
+      border-bottom: 1px dashed var(--guide-border);
+      pointer-events: none;
+      z-index: 40;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+    }
+
+    .guide-arrow {
+      font-size: 20px;
+      color: var(--accent-cyan);
+      opacity: 0.8;
+      text-shadow: 0 0 8px var(--accent-cyan);
+    }
+
+    /* Teleprompter Scroll Viewport */
+    #teleprompter-viewport {
+      position: absolute;
+      top: 72px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      overflow-y: scroll;
+      overflow-x: hidden;
+      scroll-behavior: auto;
+      padding: 28vh 12vw 50vh 12vw;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+
+    #teleprompter-viewport::-webkit-scrollbar {
+      display: none;
+    }
+
+    /* Mirror Mode Support */
+    body.mirror-active #scroll-content,
+    body.mirror-active .scroll-content {
+      transform: scaleX(-1);
+    }
+
+    .scroll-content {
+      max-width: 900px;
+      margin: 0 auto;
+      transition: transform 0.2s ease;
+    }
+
+    /* Scene Card Typography & Layout */
+    .scene-block {
+      margin-bottom: 56px;
+      position: relative;
+    }
+
+    .scene-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .scene-badge {
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      padding: 4px 10px;
+      border-radius: 5px;
+      text-transform: uppercase;
+      font-family: var(--font-family);
+    }
+
+    .badge-scene-1 { background: rgba(6, 182, 212, 0.2); color: var(--accent-cyan); border: 1px solid rgba(6, 182, 212, 0.4); }
+    .badge-scene-2 { background: rgba(168, 85, 247, 0.2); color: var(--accent-purple); border: 1px solid rgba(168, 85, 247, 0.4); }
+    .badge-scene-3 { background: rgba(250, 204, 21, 0.2); color: var(--accent-yellow); border: 1px solid rgba(250, 204, 21, 0.4); }
+    .badge-scene-4 { background: rgba(52, 211, 153, 0.2); color: var(--accent-green); border: 1px solid rgba(52, 211, 153, 0.4); }
+    .badge-scene-5 { background: rgba(248, 113, 113, 0.2); color: var(--accent-red); border: 1px solid rgba(248, 113, 113, 0.4); }
+
+    .scene-timing {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .director-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--surface-border);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      margin-bottom: 10px;
+      margin-right: 8px;
+    }
+
+    .director-pill.visual-cue {
+      border-color: rgba(6, 182, 212, 0.3);
+      color: #bae6fd;
+    }
+
+    .director-pill.sound-cue {
+      border-color: rgba(168, 85, 247, 0.3);
+      color: #e9d5ff;
+    }
+
+    .pill-icon {
+      font-size: 14px;
+    }
+
+    .speech-script {
+      font-size: var(--font-size);
+      line-height: var(--line-height);
+      font-weight: 600;
+      color: var(--text-color);
+      margin-top: 14px;
+      text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+      letter-spacing: -0.2px;
+    }
+
+    /* 3-2-1 Countdown Overlay */
+    #countdown-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(8, 9, 14, 0.88);
+      backdrop-filter: blur(16px);
+      z-index: 150;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+
+    #countdown-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .countdown-number {
+      font-size: 140px;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 50px rgba(6, 182, 212, 0.5);
+      animation: pulse-number 0.8s ease infinite alternate;
+    }
+
+    @keyframes pulse-number {
+      from { transform: scale(0.95); }
+      to { transform: scale(1.05); }
+    }
+
+    .countdown-label {
+      font-size: 20px;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 16px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* Keyboard Shortcuts Floating Hint */
+    .shortcuts-hint {
+      position: fixed;
+      bottom: 12px;
+      right: 18px;
+      background: rgba(18, 20, 28, 0.8);
+      border: 1px solid var(--surface-border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      z-index: 60;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+
+    /* HUD Visual Feedback Toast */
+    .hud-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(40px);
+      background: rgba(18, 20, 28, 0.95);
+      border: 1px solid var(--accent-cyan);
+      color: #fff;
+      padding: 10px 24px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.6px;
+      box-shadow: 0 0 20px rgba(6, 182, 212, 0.4);
+      backdrop-filter: blur(12px);
+      z-index: 200;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    }
+
+    .hud-toast.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body class="theme-cyberpunk">
+
+  <!-- Top Control Header -->
+  <header class="control-panel">
+    <div class="brand-section">
+      <div class="brand-badge">STUDIO HUD</div>
+      <div class="topic-display" id="topic-display" title="${escapeHtml(script.topic || 'AI Video Script')}">
+        ${escapeHtml(script.topic || 'AI Video Script')}
+      </div>
+    </div>
+
+    <div class="action-controls">
+      <!-- Play/Pause Button -->
+      <button type="button" class="btn btn-primary" id="btn-play-pause">
+        <span id="play-icon">▶</span>
+        <span id="play-text">Start</span>
+      </button>
+
+      <!-- Restart Button -->
+      <button type="button" class="btn" id="btn-restart" title="Restart from beginning [R]">
+        <span>↺</span> Reset
+      </button>
+
+      <!-- Mirror Mode Button -->
+      <button type="button" class="btn" id="btn-mirror" title="Toggle horizontal mirror [M]">
+        <span>⇋</span> Mirror
+      </button>
+
+      <!-- Fullscreen Button -->
+      <button type="button" class="btn" id="btn-fullscreen" title="Toggle fullscreen mode [F]">
+        <span>🖥</span> Full
+      </button>
+
+      <!-- Theme Cycle Button -->
+      <button type="button" class="btn" id="btn-theme" title="Cycle contrast themes [T]">
+        <span>🎨</span> <span id="theme-display">Theme</span>
+      </button>
+
+      <!-- Web Audio API Mic Meter -->
+      <div class="mic-meter-container" id="mic-container" title="Audio / Mic Level Monitor">
+        <button type="button" class="btn" id="btn-mic" style="padding:4px 8px; font-size:11px;" title="Toggle Mic Monitor">
+          <span id="mic-icon">🎙</span>
+          <span id="mic-text">Mic</span>
+        </button>
+        <div class="audio-meter" id="audio-meter">
+          <div class="audio-meter-bar" id="audio-meter-bar">
+            <div class="led-seg seg-green"></div>
+            <div class="led-seg seg-green"></div>
+            <div class="led-seg seg-green"></div>
+            <div class="led-seg seg-green"></div>
+            <div class="led-seg seg-green"></div>
+            <div class="led-seg seg-green"></div>
+            <div class="led-seg seg-yellow"></div>
+            <div class="led-seg seg-yellow"></div>
+            <div class="led-seg seg-red"></div>
+            <div class="led-seg seg-red"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- WPM Speed Slider -->
+      <div class="speed-control">
+        <span class="speed-label">SPEED</span>
+        <input
+          type="range"
+          id="wpm-slider"
+          class="slider-wpm"
+          min="80"
+          max="260"
+          step="5"
+          value="${script.targetWpm || 150}"
+          title="Scroll speed in Words Per Minute"
+        >
+        <span class="wpm-value" id="wpm-display">${script.targetWpm || 150} WPM</span>
+      </div>
+
+      <!-- Font Size Adjusters -->
+      <div class="font-control">
+        <button type="button" class="font-btn" id="btn-font-dec" title="Decrease font size">A-</button>
+        <span class="font-value" id="font-size-display">38px</span>
+        <button type="button" class="font-btn" id="btn-font-inc" title="Increase font size">A+</button>
+      </div>
+
+      <!-- 1-Click Multi-Format Export Group -->
+      <button type="button" class="btn" id="btn-export-md" title="Copy Markdown Script">
+        <span>📋</span> MD
+      </button>
+      <button type="button" class="btn" id="btn-export-txt" title="Download Text Script">
+        <span>💾</span> TXT
+      </button>
+      <button type="button" class="btn" id="btn-export-json" title="Download JSON Metadata">
+        <span>📦</span> JSON
+      </button>
+    </div>
+
+    <!-- Timer Display -->
+    <div class="timer-display" id="time-display">
+      00:00 / ${String(Math.floor((script.durationSeconds || 30) / 60)).padStart(2, '0')}:${String((script.durationSeconds || 30) % 60).padStart(2, '0')}
+    </div>
+  </header>
+
+  <!-- Eye Reading Guide Band -->
+  <div class="reading-guide" id="reading-guide">
+    <span class="guide-arrow">▶</span>
+    <span class="guide-arrow" style="transform: scaleX(-1);">▶</span>
+  </div>
+
+  <!-- Teleprompter Scroll Viewport -->
+  <main id="teleprompter-viewport">
+    <div class="scroll-content" id="scroll-content">
+      <div id="scenes-container">
+        ${scenesHtml}
+      </div>
+    </div>
+  </main>
+
+  <!-- 3-2-1 Countdown Overlay -->
+  <div id="countdown-overlay">
+    <div class="countdown-number" id="countdown-number">3</div>
+    <div class="countdown-label">ACTION!</div>
+  </div>
+
+  <!-- HUD Visual Toast -->
+  <div id="hud-toast" class="hud-toast" aria-live="polite"></div>
+
+  <!-- Keyboard Shortcuts Floating Hint -->
+  <div class="shortcuts-hint">
+    [Space] Play/Pause · [R] Reset · [M] Mirror · [F] Full · [T] Theme · [↑/↓] Speed
+  </div>
+
+  <!-- Injected Script JSON -->
+  <script id="script-data" type="application/json">
+    ${serializedScript}
+  </script>
+
+  <!-- Self-Contained Teleprompter Engine -->
+  <script>
+    (function() {
+      // 1. State Management & Script Loading
+      let scriptData = null;
+      try {
+        const raw = document.getElementById('script-data').textContent;
+        scriptData = JSON.parse(raw);
+      } catch (err) {
+        console.warn('[Teleprompter] No injected script data found, checking fallbacks.');
+      }
+
+      // Check localStorage for transferred script from landing page
+      try {
+        const stored = localStorage.getItem('x402_teleprompter_script');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.scenes && parsed.scenes.length > 0) {
+            scriptData = parsed;
+          }
+        }
+      } catch(e) {}
+
+      // Check query parameters fallback
+      if (!scriptData || !scriptData.scenes) {
+        const params = new URLSearchParams(window.location.search);
+        const dataParam = params.get('data');
+        if (dataParam) {
+          try {
+            scriptData = JSON.parse(decodeURIComponent(dataParam));
+          } catch(e) {}
+        }
+      }
+
+      let totalDurationSec = (scriptData && scriptData.durationSeconds) ? scriptData.durationSeconds : 30;
+      let baseWpm = (scriptData && scriptData.targetWpm) ? scriptData.targetWpm : 150;
+      let currentWpm = baseWpm;
+      let fontSize = 38;
+
+      let isPlaying = false;
+      let isCountingDown = false;
+      let isMirror = false;
+
+      let scrollPos = 0;
+      let lastFrameTime = null;
+      let elapsedSeconds = 0;
+      let animFrameId = null;
+
+      // 2. DOM Elements
+      const viewport = document.getElementById('teleprompter-viewport');
+      const scrollContent = document.getElementById('scroll-content');
+      const scenesContainer = document.getElementById('scenes-container');
+      const topicDisplay = document.getElementById('topic-display');
+      const btnPlayPause = document.getElementById('btn-play-pause');
+      const playIcon = document.getElementById('play-icon');
+      const playText = document.getElementById('play-text');
+      const btnRestart = document.getElementById('btn-restart');
+      const btnMirror = document.getElementById('btn-mirror');
+      const btnFullscreen = document.getElementById('btn-fullscreen');
+      const btnTheme = document.getElementById('btn-theme');
+      const themeDisplay = document.getElementById('theme-display');
+      const btnMic = document.getElementById('btn-mic');
+      const micText = document.getElementById('mic-text');
+      const wpmSlider = document.getElementById('wpm-slider');
+      const wpmDisplay = document.getElementById('wpm-display');
+      const btnFontInc = document.getElementById('btn-font-inc');
+      const btnFontDec = document.getElementById('btn-font-dec');
+      const fontSizeDisplay = document.getElementById('font-size-display');
+      const timeDisplay = document.getElementById('time-display');
+      const countdownOverlay = document.getElementById('countdown-overlay');
+      const countdownNumber = document.getElementById('countdown-number');
+      const hudToast = document.getElementById('hud-toast');
+      const btnExportMd = document.getElementById('btn-export-md');
+      const btnExportTxt = document.getElementById('btn-export-txt');
+      const btnExportJson = document.getElementById('btn-export-json');
+
+      // 3. HUD Toast Notification System
+      let toastTimer = null;
+      function showToast(msg) {
+        if (!hudToast) return;
+        hudToast.textContent = msg;
+        hudToast.classList.add('visible');
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          hudToast.classList.remove('visible');
+        }, 1600);
+      }
+
+      function formatTime(sec) {
+        const s = Math.max(0, Math.floor(sec));
+        const m = Math.floor(s / 60);
+        const rem = s % 60;
+        return String(m).padStart(2, '0') + ':' + String(rem).padStart(2, '0');
+      }
+
+      function updateTimerDisplay() {
+        timeDisplay.textContent = formatTime(elapsedSeconds) + ' / ' + formatTime(totalDurationSec);
+      }
+
+      // 4. Dynamic Script Render Support for Transferred Data
+      function renderTransferredScenes(scenes) {
+        const badgeClasses = ['badge-scene-1', 'badge-scene-2', 'badge-scene-3', 'badge-scene-4', 'badge-scene-5'];
+        scenesContainer.innerHTML = scenes.map((scene, idx) => {
+          const badgeCls = badgeClasses[idx % badgeClasses.length];
+          const visual = scene.visualCue || (scene.visualCues && scene.visualCues[0] ? scene.visualCues[0].instruction : '');
+          const sound = scene.soundRhythm || (scene.audioRhythm ? scene.audioRhythm.backgroundMusicVibe : '');
+          return '<section class="scene-block" id="scene-' + scene.sceneNumber + '" data-scene="' + scene.sceneNumber + '">' +
+            '<div class="scene-header">' +
+              '<span class="scene-badge ' + badgeCls + '">SCENE ' + scene.sceneNumber + ': ' + (scene.name || '').toUpperCase() + '</span>' +
+              '<span class="scene-timing">⏱ ' + scene.timeRange + ' (' + scene.durationSeconds + 's · ' + (scene.wordCount || 0) + ' words · ~' + (scene.wpm || currentWpm) + ' WPM)</span>' +
+            '</div>' +
+            (visual ? '<div class="director-pill visual-cue" title="Visual Cue"><span class="pill-icon">🎬</span><span class="pill-text">' + visual + '</span></div>' : '') +
+            (sound ? '<div class="director-pill sound-cue" title="Audio Note"><span class="pill-icon">🎵</span><span class="pill-text">' + sound + '</span></div>' : '') +
+            '<div class="speech-script" data-words="' + (scene.wordCount || 0) + '">' +
+              (scene.spokenScript || scene.speechText || '') +
+            '</div>' +
+          '</section>';
+        }).join('\\n');
+      }
+
+      if (scriptData && scriptData.topic) {
+        topicDisplay.textContent = scriptData.topic;
+        topicDisplay.title = scriptData.topic;
+        document.title = 'Teleprompter: ' + scriptData.topic;
+        if (scriptData.scenes && scriptData.scenes.length > 0) {
+          renderTransferredScenes(scriptData.scenes);
+        }
+      }
+
+      // 5. 60 FPS Auto-Scroll Engine
+      function computeScrollSpeedPxPerSec() {
+        const totalHeight = scrollContent.offsetHeight;
+        const speedMultiplier = currentWpm / (baseWpm || 150);
+        const basePxPerSec = totalHeight / Math.max(10, totalDurationSec);
+        return basePxPerSec * speedMultiplier;
+      }
+
+      function scrollLoop(timestamp) {
+        if (!isPlaying) return;
+
+        if (!lastFrameTime) {
+          lastFrameTime = timestamp;
+        }
+
+        const deltaSec = (timestamp - lastFrameTime) / 1000;
+        lastFrameTime = timestamp;
+
+        // Advance scroll
+        const speed = computeScrollSpeedPxPerSec();
+        scrollPos += speed * deltaSec;
+        viewport.scrollTop = scrollPos;
+
+        // Advance timer
+        elapsedSeconds += deltaSec * (currentWpm / (baseWpm || 150));
+        updateTimerDisplay();
+
+        // Check end of content
+        const maxScroll = scrollContent.offsetHeight - viewport.clientHeight * 0.35;
+        if (scrollPos >= maxScroll) {
+          pauseScroll();
+          showToast('✓ SCRIPT COMPLETED');
+          return;
+        }
+
+        animFrameId = requestAnimationFrame(scrollLoop);
+      }
+
+      function startScroll() {
+        if (isPlaying || isCountingDown) return;
+
+        isCountingDown = true;
+        countdownOverlay.classList.add('active');
+        let count = 3;
+        countdownNumber.textContent = count;
+
+        const timer = setInterval(() => {
+          count--;
+          if (count > 0) {
+            countdownNumber.textContent = count;
+          } else if (count === 0) {
+            countdownNumber.textContent = 'ACTION!';
+          } else {
+            clearInterval(timer);
+            countdownOverlay.classList.remove('active');
+            isCountingDown = false;
+            isPlaying = true;
+            lastFrameTime = null;
+            playIcon.textContent = '❚❚';
+            playText.textContent = 'Pause';
+            btnPlayPause.classList.add('active');
+            showToast('▶ RECORDING STARTED');
+            animFrameId = requestAnimationFrame(scrollLoop);
+          }
+        }, 700);
+      }
+
+      function pauseScroll() {
+        isPlaying = false;
+        if (animFrameId) {
+          cancelAnimationFrame(animFrameId);
+          animFrameId = null;
+        }
+        lastFrameTime = null;
+        playIcon.textContent = '▶';
+        playText.textContent = 'Resume';
+        btnPlayPause.classList.remove('active');
+        showToast('❚❚ PAUSED');
+      }
+
+      function restartScroll() {
+        pauseScroll();
+        scrollPos = 0;
+        elapsedSeconds = 0;
+        viewport.scrollTop = 0;
+        updateTimerDisplay();
+        playText.textContent = 'Start';
+        showToast('↺ RESTARTED FROM TOP');
+      }
+
+      function togglePlayPause() {
+        if (isPlaying) {
+          pauseScroll();
+        } else {
+          startScroll();
+        }
+      }
+
+      function toggleMirror() {
+        isMirror = !isMirror;
+        if (isMirror) {
+          document.body.classList.add('mirror-active');
+          btnMirror.classList.add('active');
+          showToast('⇋ MIRROR: ON');
+        } else {
+          document.body.classList.remove('mirror-active');
+          btnMirror.classList.remove('active');
+          showToast('⇋ MIRROR: OFF');
+        }
+      }
+
+      function toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          document.documentElement.requestFullscreen().then(() => {
+            btnFullscreen.classList.add('active');
+            showToast('🖥 FULLSCREEN: ON');
+          }).catch(() => {
+            showToast('🖥 FULLSCREEN NOT SUPPORTED');
+          });
+        } else {
+          document.exitFullscreen().then(() => {
+            btnFullscreen.classList.remove('active');
+            showToast('🖥 FULLSCREEN: OFF');
+          });
+        }
+      }
+
+      // 6. Contrast Theme Cycler
+      const themes = ['theme-cyberpunk', 'theme-matrix', 'theme-studio'];
+      const themeLabels = ['Cyberpunk', 'Matrix', 'Studio'];
+      let themeIdx = 0;
+
+      function cycleTheme() {
+        document.body.classList.remove(themes[themeIdx]);
+        themeIdx = (themeIdx + 1) % themes.length;
+        document.body.classList.add(themes[themeIdx]);
+        themeDisplay.textContent = themeLabels[themeIdx];
+        showToast('🎨 THEME: ' + themeLabels[themeIdx].toUpperCase());
+      }
+
+      // 7. Web Audio API Microphone Level VU Meter
+      let audioCtx = null;
+      let micStream = null;
+      let analyser = null;
+      let micAnimId = null;
+      let micActive = false;
+
+      async function toggleMic() {
+        if (micActive) {
+          stopMic();
+        } else {
+          await startMic();
+        }
+      }
+
+      async function startMic() {
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) {
+            showToast('🎙 AUDIO API NOT SUPPORTED');
+            return;
+          }
+          audioCtx = new AudioContextClass();
+          const source = audioCtx.createMediaStreamSource(micStream);
+          analyser = audioCtx.createAnalyser();
+          analyser.fftSize = 64;
+          // Connect solely to analyser, NEVER to destination (avoids feedback screech)
+          source.connect(analyser);
+
+          micActive = true;
+          btnMic.classList.add('active');
+          micText.textContent = 'Active';
+          showToast('🎙 MIC MONITOR ACTIVE');
+          updateMicMeter();
+        } catch (err) {
+          console.warn('[WebAudio] Mic denied or unavailable:', err);
+          micActive = false;
+          btnMic.classList.remove('active');
+          micText.textContent = 'Mic Off';
+          showToast('🎙 MIC ACCESS DENIED');
+        }
+      }
+
+      function stopMic() {
+        if (micAnimId) cancelAnimationFrame(micAnimId);
+        if (micStream) {
+          micStream.getTracks().forEach(t => t.stop());
+          micStream = null;
+        }
+        if (audioCtx && audioCtx.state !== 'closed') {
+          audioCtx.close();
+          audioCtx = null;
+        }
+        micActive = false;
+        btnMic.classList.remove('active');
+        micText.textContent = 'Mic';
+        showToast('🎙 MIC MUTED');
+        clearLeds();
+      }
+
+      function clearLeds() {
+        const segs = document.querySelectorAll('#audio-meter-bar .led-seg');
+        segs.forEach(s => s.classList.remove('active'));
+      }
+
+      function updateMicMeter() {
+        if (!micActive || !analyser) return;
+
+        const dataArray = new Uint8Array(analyser.frequencyBinCount);
+        analyser.getByteFrequencyData(dataArray);
+
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) {
+          sum += dataArray[i];
+        }
+        const avg = sum / dataArray.length;
+        const count = Math.min(10, Math.floor((avg / 120) * 10));
+
+        const segs = document.querySelectorAll('#audio-meter-bar .led-seg');
+        segs.forEach((seg, idx) => {
+          if (idx < count) {
+            seg.classList.add('active');
+          } else {
+            seg.classList.remove('active');
+          }
+        });
+
+        micAnimId = requestAnimationFrame(updateMicMeter);
+      }
+
+      // 8. 1-Click Multi-Format Exports
+      function exportMarkdown() {
+        if (!scriptData) return;
+        let md = '# ' + (scriptData.topic || 'Video Script') + '\\n\\n';
+        md += '**Duration:** ' + totalDurationSec + 's | **Tone:** ' + (scriptData.tone || 'energetic') + ' | **WPM:** ' + currentWpm + '\\n\\n';
+        md += '## Scenes\\n\\n';
+        (scriptData.scenes || []).forEach(sc => {
+          md += '### Scene ' + sc.sceneNumber + ': ' + sc.name + ' (' + sc.timeRange + ')\\n';
+          if (sc.visualCue) md += '- **Visual:** ' + sc.visualCue + '\\n';
+          if (sc.soundRhythm) md += '- **Audio:** ' + sc.soundRhythm + '\\n';
+          md += '\\n> ' + (sc.spokenScript || sc.speechText || '') + '\\n\\n';
+        });
+        navigator.clipboard.writeText(md).then(() => {
+          showToast('📋 MARKDOWN COPIED TO CLIPBOARD');
+        }).catch(() => {
+          showToast('📋 CLIPBOARD PERMISSION ERROR');
+        });
+      }
+
+      function exportTxt() {
+        if (!scriptData) return;
+        let txt = 'TOPIC: ' + (scriptData.topic || 'Video Script') + '\\n';
+        txt += 'DURATION: ' + totalDurationSec + 's\\n';
+        txt += 'PACING: ' + currentWpm + ' WPM\\n\\n';
+        txt += '-------------------------------------\\n\\n';
+        (scriptData.scenes || []).forEach(sc => {
+          txt += '[SCENE ' + sc.sceneNumber + ' - ' + sc.timeRange + ' - ' + sc.name.toUpperCase() + ']\\n';
+          if (sc.visualCue) txt += 'CUE: ' + sc.visualCue + '\\n';
+          txt += (sc.spokenScript || sc.speechText || '') + '\\n\\n';
+        });
+        const blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'video-script-' + (scriptData.topic || 'export').toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) + '.txt';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('💾 TXT FILE DOWNLOADED');
+      }
+
+      function exportJson() {
+        if (!scriptData) return;
+        const jsonStr = JSON.stringify(scriptData, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'video-script-' + (scriptData.topic || 'metadata').toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 30) + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('📦 JSON METADATA DOWNLOADED');
+      }
+
+      function updateFontSize(delta) {
+        fontSize = Math.max(20, Math.min(72, fontSize + delta));
+        document.documentElement.style.setProperty('--font-size', fontSize + 'px');
+        fontSizeDisplay.textContent = fontSize + 'px';
+        showToast('FONT: ' + fontSize + 'PX');
+      }
+
+      // 9. Event Listeners
+      btnPlayPause.addEventListener('click', togglePlayPause);
+      btnRestart.addEventListener('click', restartScroll);
+      btnMirror.addEventListener('click', toggleMirror);
+      btnFullscreen.addEventListener('click', toggleFullscreen);
+      btnTheme.addEventListener('click', cycleTheme);
+      btnMic.addEventListener('click', toggleMic);
+
+      btnExportMd.addEventListener('click', exportMarkdown);
+      btnExportTxt.addEventListener('click', exportTxt);
+      btnExportJson.addEventListener('click', exportJson);
+
+      wpmSlider.addEventListener('input', function(e) {
+        currentWpm = parseInt(e.target.value, 10);
+        wpmDisplay.textContent = currentWpm + ' WPM';
+      });
+
+      btnFontInc.addEventListener('click', () => updateFontSize(4));
+      btnFontDec.addEventListener('click', () => updateFontSize(-4));
+
+      viewport.addEventListener('scroll', function() {
+        if (!isPlaying) {
+          scrollPos = viewport.scrollTop;
+        }
+      });
+
+      // 10. Studio Keyboard Controls
+      window.addEventListener('keydown', function(e) {
+        // Spacebar: Play/Pause
+        if (e.code === 'Space') {
+          e.preventDefault();
+          togglePlayPause();
+        }
+        // R: Restart
+        else if (e.key === 'r' || e.key === 'R') {
+          restartScroll();
+        }
+        // M: Mirror
+        else if (e.key === 'm' || e.key === 'M') {
+          toggleMirror();
+        }
+        // F: Fullscreen
+        else if (e.key === 'f' || e.key === 'F') {
+          toggleFullscreen();
+        }
+        // T: Theme Cycle
+        else if (e.key === 't' || e.key === 'T') {
+          cycleTheme();
+        }
+        // Arrow Up / Down: Adjust Speed
+        else if (e.code === 'ArrowUp') {
+          e.preventDefault();
+          const next = Math.min(260, currentWpm + 10);
+          wpmSlider.value = next;
+          currentWpm = next;
+          wpmDisplay.textContent = currentWpm + ' WPM';
+          showToast('⚡ SPEED: ' + currentWpm + ' WPM');
+        } else if (e.code === 'ArrowDown') {
+          e.preventDefault();
+          const prev = Math.max(80, currentWpm - 10);
+          wpmSlider.value = prev;
+          currentWpm = prev;
+          wpmDisplay.textContent = currentWpm + ' WPM';
+          showToast('⚡ SPEED: ' + currentWpm + ' WPM');
+        }
+      });
+
+      // Initial state render
+      updateTimerDisplay();
+    })();
+  </script>
+</body>
+</html>`;
+}

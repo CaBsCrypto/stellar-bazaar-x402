@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {readFile,writeFile} from 'node:fs/promises';
+import {provisioningBinding,faucetRecoveryBaselineHash} from './provision-usdc-sale-wallets.mjs';
+
+// Local binding only. No packet, credentials, HTTP or transaction submission.
+const directory='docs/evidence/sprint-marketplace/',sha=bytes=>createHash('sha256').update(bytes).digest('hex');
+const read=async path=>JSON.parse(await readFile(path,'utf8'));
+const manifestPath=directory+'usdc-sale-manifest.json',m=await read(manifestPath),report=await read(directory+'usdc-wallet-provision.json');
+assert.equal(m.readiness.canProvision,false);assert.equal(m.readiness.canRecoverFaucet,false);assert.equal(m.readiness.walletProvisioned,false);
+assert.equal(m.faucetRecovery,undefined,'RECOVERY_ALREADY_BOUND');
+assert.equal(report.status,'PAUSED_LOCAL_POW_EXHAUSTED');assert.equal(report.stopReason,'POW_LIMIT_EXHAUSTED_BEFORE_CLAIM');
+assert.equal(report.attempts.length,11);assert.ok(report.attempts.every(v=>v.status==='CONFIRMED'));
+assert.deepEqual(report.counts,{horizonReads:6,friendbotClaims:2,trustlineSubmissions:2,faucetApiRequests:1,usdcFaucetClaims:0});
+assert.equal(report.provisioningBinding,'93a3a5276d00cc17e475d190fe55655ee17888f015e66bd74b2d162efb400eda');
+const snapshot=await readFile(directory+'usdc-wallet-provision-before-recovery.json');
+assert.equal(sha(snapshot),'ad7779e6136ce5c3947c77806e08ba0133341928c1100139db791ce7c250b65e');
+assert.deepEqual(JSON.parse(snapshot),report);
+const helperHash=sha(await readFile('scripts/provision-usdc-sale-wallets.mjs'));
+const measured=await read(directory+'provider-faucet-pow-local.json');
+assert.equal(measured.status,'PASS_LOCAL_POW_DIFFICULTY_24');assert.equal(measured.sourceHash,helperHash);
+assert.equal(measured.externalRequests,0);assert.equal(measured.dpapiReads,0);assert.ok(measured.activeExecutionMs<=90000);
+const review=await readFile('docs/review/USDC_FAUCET_RECOVERY_REVIEW.md','utf8');
+assert.ok(review.includes('PASS_LOCAL_RECOVERY_REVIEW')&&review.includes(helperHash),'EXACT_INDEPENDENT_REVIEW_REQUIRED');
+const previousLimits=structuredClone(m.limits);
+m.limits.faucetApiRequests=3;m.limits.provisioningHorizonReads=7;m.limits.faucetPowMaxMs=90000;m.limits.faucetPowMaxHashes=268435456;m.limits.faucetPowWorkers=4;
+const nextBinding=provisioningBinding(m);
+m.faucetRecovery={version:1,reason:'known-pow-exhausted-old-challenge-lost',maxRecoveryCount:1,fromBinding:report.provisioningBinding,toBinding:nextBinding,baselineHash:faucetRecoveryBaselineHash(report),snapshotHash:sha(snapshot),firstNewAttemptIndex:11,previousLimits,revisedLimits:structuredClone(m.limits),helperHash,localMeasurementHash:sha(await readFile(directory+'provider-faucet-pow-local.json')),independentReviewHash:sha(review)};
+m.provisioningBinding=nextBinding;
+m.preflight.projected.provisioningHttp=14;m.preflight.projected.apiUpperBound=116;
+m.preflight.faucetRecoveryProjection={...m.preflight.faucetRecoveryProjection,canRecover:true,reason:'Explicit one-time recovery locally measured and independently reviewed; original eleven attempts preserved'};
+m.readiness.canRecoverFaucet=true;
+await writeFile(manifestPath,JSON.stringify(m,null,2)+'\n');
+console.log(JSON.stringify({status:'RECOVERY_BOUND_LOCAL',fromBinding:report.provisioningBinding,toBinding:nextBinding,helperHash,apiUpperBound:116,externalRequests:0,canRecoverFaucet:true}));

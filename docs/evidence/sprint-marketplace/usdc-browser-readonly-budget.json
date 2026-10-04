@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_DPiHiRDfYGxMUngmvweCxzCzvojX",
+  "origin": "https://stellar-bazaar-x402-44k1v91v4-cabscryptocontacto-6028s-projects.vercel.app",
+  "pageNavigationsUpper": 4,
+  "alreadyUsedNavigations": 1,
+  "remainingNavigations": [
+    "replacement-empty-token-prime",
+    "magic-link-A",
+    "magic-link-B"
+  ],
+  "expectedPrivateApi": 15,
+  "apiReserve": 20,
+  "expectedPrimeApi": 1,
+  "perIdentityInitialApi": 5,
+  "perIdentityRefreshApi": 2,
+  "maxHtmlBodyBytes": 78688,
+  "fullStaticSetBytes": 2033076,
+  "apiBodyUpperBytes": 1048576,
+  "bootstrapSetBytes": 204763,
+  "faviconPerNavigationBytes": 65536,
+  "headersPerNavigationBytes": 131072,
+  "activeBrowserSecondsUpper": 90,
+  "reloadsAllowed": 0,
+  "catalogNavigationsAllowed": 0,
+  "refreshesPerIdentity": 1,
+  "automaticTransportRetriesConfigured": 0,
+  "retriesObserved": "not-captured",
+  "completeBrowserTransport": false,
+  "canOpen": false,
+  "limitations": [
+    "Bounds model the four controlled document loads and source-constrained private GETs; they do not retrospectively prove absence of platform feedback calls or browser retransmissions.",
+    "Native 200% zoom and human Freighter remain pending."
+  ],
+  "inboundControlledJourneyUpperBytes": 31024060
+}

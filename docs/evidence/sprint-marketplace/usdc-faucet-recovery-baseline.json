@@ -1,0 +1,16 @@
+{
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "reportSha256": "ad7779e6136ce5c3947c77806e08ba0133341928c1100139db791ce7c250b65e",
+  "attempts": 11,
+  "provisioningBinding": "93a3a5276d00cc17e475d190fe55655ee17888f015e66bd74b2d162efb400eda",
+  "counts": {
+    "horizonReads": 6,
+    "friendbotClaims": 2,
+    "trustlineSubmissions": 2,
+    "faucetApiRequests": 1,
+    "usdcFaucetClaims": 0
+  },
+  "activeExecutionMs": 37582,
+  "status": "PAUSED_LOCAL_POW_EXHAUSTED"
+}

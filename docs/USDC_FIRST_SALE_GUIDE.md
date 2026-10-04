@@ -5,6 +5,13 @@ el recorrido hospedado y su revisión independiente. Además, una persona debe
 completar la firma con Freighter antes de abrir a los tres devs previstos. Esta
 guía no envía invitaciones ni autoriza nuevas compras de aceptación.
 
+Al 4 de octubre de 2026 pasaron las dos ventas hospedadas, la recuperación y la
+vista privada de A/B en móvil y teclado. Permanecen pendientes la cobertura de
+tráfico del navegador, el zoom nativo al 200 %, Freighter humano y el cierre
+sintético. Las compras y altas están pausadas; las dos compras comerciales del
+manifiesto ya se consumieron. Consulta [el estado actual](USDC_FIRST_SALE_STATUS.md)
+antes de iniciar efectos o preparar una apertura.
+
 El producto nuevo entrega un guion algorítmico de texto de hasta 2000 caracteres,
 para 15–30 segundos. Cuesta **0,01 USDC testnet**, pagados directamente a la wallet
 del vendedor. Bazaar conserva el pedido, el pago verificado y la entrega reportada;

@@ -1,0 +1,388 @@
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
+import { computeCanonicalSha256 } from '../crypto/canonical-hash.js';
+
+export interface ExtraRequirements {
+  resourceUrl: string;
+  method: string;
+  route: string;
+  inputHash: string;
+  areFeesSponsored: boolean;
+}
+
+export interface PaymentRequirementOption {
+  scheme: 'exact' | 'split-exact';
+  network: 'stellar:testnet';
+  asset: string;
+  amount: string;
+  payTo: string;
+  maxTimeoutSeconds?: number;
+  extra: ExtraRequirements;
+}
+
+export interface ChallengePayload {
+  x402Version: number;
+  error: string;
+  resource: {
+    url: string;
+    description: string;
+    mimeType: string;
+  };
+  accepts: PaymentRequirementOption[];
+}
+
+export interface PaymentSignaturePayload {
+  x402Version: number;
+  accepted: PaymentRequirementOption;
+  payload: {
+    signature?: string;
+    transactionHash: string;
+    ledger: number;
+    payer?: string;
+  };
+}
+
+export interface PaymentResponseHeader {
+  success: boolean;
+  network: string;
+  transaction: string;
+  payer: string;
+  ledger: number;
+  timestamp: string;
+}
+
+export interface SettlementEvidence {
+  transactionHash: string;
+  ledger: number;
+  payer: string;
+  timestamp: string;
+}
+
+declare global {
+  namespace Express {
+    interface Request {
+      validatedInput?: {
+        topic: string;
+        durationSeconds: number;
+        tone: string;
+      };
+      inputHash?: string;
+      settlement?: SettlementEvidence;
+    }
+  }
+}
+
+export interface X402Config {
+  sellerPublicKey?: string;
+  usdcContract?: string;
+  serviceUrl?: string;
+  amount?: string;
+  network?: 'stellar:testnet';
+  scheme?: 'exact';
+  facilitatorUrl?: string;
+}
+
+export function getDefaultConfig(): Required<X402Config> {
+  return {
+    sellerPublicKey:
+      process.env.STELLAR_PUBLIC_KEY ||
+      'GBYXQUSY7WA3DUXZSANGQ3HMER2EBMOK5IYPUJV4YY2UH7QS736J62LB',
+    usdcContract:
+      process.env.STELLAR_USDC_CONTRACT ||
+      'CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA',
+    serviceUrl:
+      process.env.SERVICE_URL ||
+      'https://stellar-bazaar-x402.vercel.app',
+    amount: '200000',
+    network: 'stellar:testnet',
+    scheme: 'exact',
+    facilitatorUrl:
+      process.env.STELLAR_FACILITATOR_URL ||
+      'https://channels.openzeppelin.com/x402/testnet',
+  };
+}
+
+/**
+ * Normalizes and decodes standard or unpadded Base64/Base64URL into a UTF-8 string.
+ */
+export function decodeBase64Payload(input: string): string {
+  let normalized = input.trim().replace(/-/g, '+').replace(/_/g, '/');
+  while (normalized.length % 4 !== 0) {
+    normalized += '=';
+  }
+  return Buffer.from(normalized, 'base64').toString('utf-8');
+}
+
+/**
+ * Parses and validates the PAYMENT-SIGNATURE header payload.
+ */
+export function parsePaymentSignatureHeader(headerValue: string): PaymentSignaturePayload {
+  const jsonStr = decodeBase64Payload(headerValue);
+  return JSON.parse(jsonStr);
+}
+
+/**
+ * Builds the canonical x402 v2 challenge payload.
+ */
+export function buildChallengePayload(
+  expectedRoute: string,
+  inputHash: string,
+  config?: X402Config
+): ChallengePayload {
+  const cfg = { ...getDefaultConfig(), ...config };
+  const resourceUrl = `${cfg.serviceUrl}${expectedRoute}`;
+
+  return {
+    x402Version: 2,
+    error: 'Payment required',
+    resource: {
+      url: resourceUrl,
+      description: 'AI Video Scriptwriter & Creative Director — Structured short-form video generation.',
+      mimeType: 'application/json',
+    },
+    accepts: [
+      {
+        scheme: cfg.scheme,
+        network: cfg.network,
+        asset: cfg.usdcContract,
+        amount: cfg.amount,
+        payTo: cfg.sellerPublicKey,
+        maxTimeoutSeconds: 60,
+        extra: {
+          resourceUrl,
+          method: 'POST',
+          route: expectedRoute,
+          inputHash,
+          areFeesSponsored: true,
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * Compares client's accepted terms against required parameters.
+ * Returns array of discrepancy field names.
+ */
+export function paymentRequirementMismatches(
+  accepted: PaymentRequirementOption,
+  expectedRoute: string,
+  expectedInputHash: string,
+  config?: X402Config
+): string[] {
+  const cfg = { ...getDefaultConfig(), ...config };
+  const mismatches: string[] = [];
+
+  if (accepted.scheme !== cfg.scheme) mismatches.push('scheme');
+  if (accepted.network !== cfg.network) mismatches.push('network');
+  if (accepted.asset !== cfg.usdcContract) mismatches.push('asset');
+  if (accepted.amount !== cfg.amount) mismatches.push('amount');
+  if (accepted.payTo !== cfg.sellerPublicKey) mismatches.push('payTo');
+
+  if (!accepted.extra || typeof accepted.extra !== 'object') {
+    mismatches.push('extra');
+  } else {
+    if (accepted.extra.inputHash !== expectedInputHash) mismatches.push('extra.inputHash');
+    if (accepted.extra.route !== expectedRoute) mismatches.push('extra.route');
+  }
+
+  return mismatches;
+}
+
+/**
+ * Generates the PAYMENT-RESPONSE header value (Base64) and structured payload.
+ */
+export function createPaymentResponseHeader(
+  transactionHash: string,
+  ledger: number,
+  payer?: string
+): { headerValue: string; payload: PaymentResponseHeader } {
+  const cfg = getDefaultConfig();
+  const payload: PaymentResponseHeader = {
+    success: true,
+    network: cfg.network,
+    transaction: transactionHash.toLowerCase(),
+    payer: payer || cfg.sellerPublicKey,
+    ledger,
+    timestamp: new Date().toISOString(),
+  };
+
+  const headerValue = Buffer.from(JSON.stringify(payload), 'utf-8').toString('base64');
+  return { headerValue, payload };
+}
+
+/**
+ * Express middleware implementing the complete HTTP 402 (x402 v2) protocol.
+ * Expects input validation to have already executed, or inspects req.body.
+ */
+export function createX402Middleware(customConfig?: X402Config): RequestHandler {
+  const config = { ...getDefaultConfig(), ...customConfig };
+
+  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    const expectedRoute = req.originalUrl ? req.originalUrl.split('?')[0] : req.path;
+    const inputData = req.validatedInput || req.body;
+    const inputHash = req.inputHash || (inputData ? computeCanonicalSha256(inputData) : '');
+
+    // 1. Retrieve PAYMENT-SIGNATURE (case-insensitive header inspection)
+    const sigHeader = (
+      req.header('PAYMENT-SIGNATURE') ||
+      req.header('payment-signature')
+    )?.trim();
+
+    if (!sigHeader) {
+      // Issue HTTP 402 challenge
+      const challengePayload = buildChallengePayload(expectedRoute, inputHash, config);
+      const base64Challenge = Buffer.from(JSON.stringify(challengePayload), 'utf-8').toString('base64');
+
+      res.setHeader('Cache-Control', 'no-store');
+      res.setHeader('PAYMENT-REQUIRED', base64Challenge);
+      res.setHeader('Access-Control-Expose-Headers', 'PAYMENT-REQUIRED, PAYMENT-RESPONSE');
+      res.status(402).json(challengePayload);
+      return;
+    }
+
+    // 2. Decode & Parse PAYMENT-SIGNATURE
+    let parsedSig: PaymentSignaturePayload;
+    try {
+      parsedSig = parsePaymentSignatureHeader(sigHeader);
+    } catch {
+      res.status(402).json({
+        ok: false,
+        error: {
+          code: 'MALFORMED_PAYMENT_SIGNATURE',
+          message: 'Header PAYMENT-SIGNATURE must be a valid Base64-encoded JSON payload',
+        },
+      });
+      return;
+    }
+
+    if (
+      !parsedSig ||
+      typeof parsedSig !== 'object' ||
+      !parsedSig.accepted ||
+      !parsedSig.payload
+    ) {
+      res.status(402).json({
+        ok: false,
+        error: {
+          code: 'MALFORMED_PAYMENT_SIGNATURE',
+          message: 'Missing accepted requirements or payload in PAYMENT-SIGNATURE',
+        },
+      });
+      return;
+    }
+
+    // 3. Match Accepted Requirements
+    const mismatches = paymentRequirementMismatches(
+      parsedSig.accepted,
+      expectedRoute,
+      inputHash,
+      config
+    );
+
+    if (mismatches.length > 0) {
+      res.status(402).json({
+        ok: false,
+        error: {
+          code: 'PAYMENT_REQUIREMENTS_MISMATCH',
+          message: `Payment signature does not match required parameters: ${mismatches.join(', ')}`,
+          mismatches,
+        },
+      });
+      return;
+    }
+
+    // 4. Validate Transaction Settlement Evidence
+    const { transactionHash, ledger, payer } = parsedSig.payload;
+    if (
+      !transactionHash ||
+      typeof transactionHash !== 'string' ||
+      !/^[0-9a-fA-F]{64}$/.test(transactionHash)
+    ) {
+      res.status(402).json({
+        ok: false,
+        error: {
+          code: 'SETTLEMENT_REJECTED',
+          message: 'Invalid transactionHash: must be a 64-character hexadecimal hash',
+        },
+      });
+      return;
+    }
+
+    if (
+      typeof ledger !== 'number' ||
+      !Number.isSafeInteger(ledger) ||
+      ledger <= 0
+    ) {
+      res.status(402).json({
+        ok: false,
+        error: {
+          code: 'SETTLEMENT_REJECTED',
+          message: 'Invalid ledger: must be a positive integer',
+        },
+      });
+      return;
+    }
+
+    // 5. Facilitator Verification (Live Mode if configured)
+    const facilitatorApiKey = process.env.STELLAR_X402_FACILITATOR_API_KEY;
+    const isFixtureMode = process.env.X402_FIXTURE_MODE === 'true' || !facilitatorApiKey;
+
+    if (!isFixtureMode && facilitatorApiKey) {
+      try {
+        const verifyRes = await fetch(`${config.facilitatorUrl}/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${facilitatorApiKey}`,
+          },
+          body: JSON.stringify({
+            payload: parsedSig.payload,
+            requirements: parsedSig.accepted,
+          }),
+        });
+
+        if (!verifyRes.ok) {
+          res.status(402).json({
+            ok: false,
+            error: {
+              code: 'VERIFY_REJECTED',
+              message: 'Facilitator verification rejected payment signature',
+            },
+          });
+          return;
+        }
+      } catch (err) {
+        res.status(502).json({
+          ok: false,
+          error: {
+            code: 'VERIFY_TRANSPORT_ERROR',
+            message: 'Failed to contact settlement facilitator',
+            retryable: true,
+          },
+        });
+        return;
+      }
+    }
+
+    // 6. Settlement Confirmed: Emit PAYMENT-RESPONSE Header
+    const { headerValue, payload: responsePayload } = createPaymentResponseHeader(
+      transactionHash,
+      ledger,
+      payer
+    );
+
+    res.setHeader('PAYMENT-RESPONSE', headerValue);
+    res.setHeader('Access-Control-Expose-Headers', 'PAYMENT-REQUIRED, PAYMENT-RESPONSE');
+
+    req.settlement = {
+      transactionHash: transactionHash.toLowerCase(),
+      ledger,
+      payer: payer || config.sellerPublicKey,
+      timestamp: responsePayload.timestamp,
+    };
+
+    next();
+  };
+}
+
+export const x402PaymentMiddleware = createX402Middleware();

@@ -1,0 +1,35 @@
+{
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_F4o7DZP2MNp1T2Rxv9h89BkvjV8p",
+  "collection": {
+    "complete": true,
+    "limit": 100,
+    "rawRecords": 1
+  },
+  "records": [
+    {
+      "deploymentId": "dpl_F4o7DZP2MNp1T2Rxv9h89BkvjV8p",
+      "source": "api",
+      "requestId": "9b121f2e-dd92-4181-b92a-d2d45f3a62ec",
+      "path": "/api/market/orders",
+      "redis": 4,
+      "commandsUpperBound": 16,
+      "outboundPayloadBytes": 10044,
+      "inboundPayloadBytes": 8436,
+      "workspaceStoredBytesUpperBound": 5785,
+      "marketStoredBytesUpperBound": 0,
+      "reviewStoredBytesUpperBound": 0,
+      "catalogStoredBytesUpperBound": 0,
+      "externalOutboundPayloadBytes": 0,
+      "externalInboundPayloadBytes": 0,
+      "external": {
+        "horizon": 0,
+        "proof-dns": 0,
+        "proof-http": 0,
+        "provider": 0
+      },
+      "uncertain": false
+    }
+  ]
+}

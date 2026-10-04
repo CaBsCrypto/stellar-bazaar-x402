@@ -1,0 +1,146 @@
+{
+  "version": 1,
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "provisioningBinding": "93a3a5276d00cc17e475d190fe55655ee17888f015e66bd74b2d162efb400eda",
+  "status": "PAUSED_LOCAL_POW_EXHAUSTED",
+  "counts": {
+    "horizonReads": 6,
+    "friendbotClaims": 2,
+    "trustlineSubmissions": 2,
+    "faucetApiRequests": 1,
+    "usdcFaucetClaims": 0
+  },
+  "outboundPayloadBytes": 753,
+  "inboundPayloadBytes": 18435,
+  "activeExecutionMs": 37582,
+  "automaticRetries": 0,
+  "attempts": [
+    {
+      "kind": "horizon-read",
+      "path": "/accounts/GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "origin": "https://horizon-testnet.stellar.org",
+      "method": "GET",
+      "payloadHash": "2853f4038f80d23d116fc8561719e9a9490a2dd4a03643dedab20ed0ae3cb80d",
+      "wallet": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 586,
+      "httpStatus": 404
+    },
+    {
+      "kind": "friendbot",
+      "path": "/",
+      "origin": "https://friendbot.stellar.org",
+      "method": "GET",
+      "payloadHash": "574fabc0033d0ce5ed902392aef00a6a52cb647572826e4ddecee2254fac2628",
+      "wallet": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 6582,
+      "httpStatus": 200
+    },
+    {
+      "kind": "horizon-read",
+      "path": "/accounts/GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "origin": "https://horizon-testnet.stellar.org",
+      "method": "GET",
+      "payloadHash": "2853f4038f80d23d116fc8561719e9a9490a2dd4a03643dedab20ed0ae3cb80d",
+      "wallet": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 539,
+      "httpStatus": 200
+    },
+    {
+      "kind": "trustline",
+      "path": "/transactions",
+      "origin": "https://horizon-testnet.stellar.org",
+      "method": "POST",
+      "payloadHash": "432efeeaf9a015b9aadf01a2b864d5e28e2b8081a7ee784c310a115192aa6a52",
+      "wallet": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "transactionHash": "0d95c3eb4fc01a0a84abdb85bd1235de6c391577ee1ae89197842fb8bccaf4f4",
+      "xdrHash": "ca10ee141f168049a262acb597fd906b2b4aa66a1dcdc3e8431f1855586ff033",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 1252,
+      "httpStatus": 200
+    },
+    {
+      "kind": "horizon-read",
+      "path": "/accounts/GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "origin": "https://horizon-testnet.stellar.org",
+      "method": "GET",
+      "payloadHash": "2853f4038f80d23d116fc8561719e9a9490a2dd4a03643dedab20ed0ae3cb80d",
+      "wallet": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 137,
+      "httpStatus": 200
+    },
+    {
+      "kind": "horizon-read",
+      "path": "/accounts/GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "origin": "https://horizon-testnet.stellar.org",
+      "method": "GET",
+      "payloadHash": "5236cd2be60ed5377d2e659109cf071996edf74bc79ac27750e7e4a18e41c91c",
+      "wallet": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 138,
+      "httpStatus": 404
+    },
+    {
+      "kind": "friendbot",
+      "path": "/",
+      "origin": "https://friendbot.stellar.org",
+      "method": "GET",
+      "payloadHash": "4a052e1ebe6ab460c06aa1ca4a08731061780ce78a36598f897184282772c804",
+      "wallet": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 3037,
+      "httpStatus": 200
+    },
+    {
+      "kind": "horizon-read",
+      "path": "/accounts/GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "origin": "https://horizon-testnet.stellar.org",
+      "method": "GET",
+      "payloadHash": "5236cd2be60ed5377d2e659109cf071996edf74bc79ac27750e7e4a18e41c91c",
+      "wallet": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 425,
+      "httpStatus": 200
+    },
+    {
+      "kind": "trustline",
+      "path": "/transactions",
+      "origin": "https://horizon-testnet.stellar.org",
+      "method": "POST",
+      "payloadHash": "7c3e016df337b8941f48e8d248bec7007ba13ead30421acd35286a9e4dfd9473",
+      "wallet": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "transactionHash": "8d79fac8076f75ce616eae1024755546026be6898dcd9e9da8c429e5c406a6d9",
+      "xdrHash": "6d516353d1457195d8f26403fa23a50d16ccb90e5fe0522df222d906dce61321",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 2748,
+      "httpStatus": 200
+    },
+    {
+      "kind": "horizon-read",
+      "path": "/accounts/GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "origin": "https://horizon-testnet.stellar.org",
+      "method": "GET",
+      "payloadHash": "5236cd2be60ed5377d2e659109cf071996edf74bc79ac27750e7e4a18e41c91c",
+      "wallet": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 155,
+      "httpStatus": 200
+    },
+    {
+      "kind": "faucet-challenge",
+      "path": "/api/v1/faucet/pow/challenge",
+      "origin": "https://faucet.sozu.capital",
+      "method": "POST",
+      "payloadHash": "3c9a6a2563b5b48fb5e14f3326f87a3bfb0f240670db93b06d342a503790cb64",
+      "wallet": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "status": "CONFIRMED",
+      "activeExecutionMs": 1977,
+      "httpStatus": 200
+    }
+  ],
+  "stopReason": "POW_LIMIT_EXHAUSTED_BEFORE_CLAIM"
+}

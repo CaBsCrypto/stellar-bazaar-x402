@@ -1,0 +1,33 @@
+{
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_6vzckCnGuTd2UocjmWpjeaLRebPw",
+  "origin": "https://guionista-market-7f3e80bed9be.vercel.app",
+  "challengeHash": "f60800c0c9046937547628fe074623067cef637af3c78e26e2d0bc71b8020a33",
+  "status": "PASS",
+  "proofHttpRequests": 2,
+  "outboundPayloadBytes": 0,
+  "inboundPayloadBytes": 855,
+  "activeExecutionMs": 1346,
+  "automaticRetries": 0,
+  "unauthenticatedDenied": true,
+  "exactChallenge": true,
+  "attempts": [
+    {
+      "authentication": "none",
+      "path": "/.well-known/stellar-bazaar-provider.txt",
+      "status": "CONFIRMED",
+      "httpStatus": 302
+    },
+    {
+      "origin": "https://guionista-market-7f3e80bed9be.vercel.app",
+      "path": "/.well-known/stellar-bazaar-provider.txt",
+      "method": "GET",
+      "requestBytes": 0,
+      "payloadHash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "authentication": "existing-automation-bypass",
+      "status": "CONFIRMED",
+      "httpStatus": 200
+    }
+  ]
+}

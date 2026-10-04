@@ -1,0 +1,18 @@
+{
+  "status": "PARTIAL_OBSERVATION",
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_Ek6EJ9oEwi7M5UVcFdQTzz5RFxLm",
+  "browser": "Codex In-app Browser",
+  "page": "/history",
+  "privateAccessSupplied": false,
+  "observedMetrics": {"innerWidth":1280,"innerHeight":720,"devicePixelRatio":1,"visualViewportScale":1},
+  "keyboardActions": ["ctrl+0","ctrl+plus","ctrl+equal"],
+  "metricsChangedAfterActions": false,
+  "baseline100Verified": false,
+  "native200Verified": false,
+  "native200Status": "PENDING_MANUAL",
+  "viewportCapability": "set(width,height) and reset only; resizing does not certify native page zoom",
+  "networkTimingObservation": "Read-only DOM evaluator did not expose performance; no complete network capture asserted",
+  "limitation": "Public page capability check only. Functional private recovery and full browser acceptance remain separate."
+}

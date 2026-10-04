@@ -1,0 +1,34 @@
+{
+  "name": "ai-video-scriptwriter",
+  "version": "1.0.0",
+  "description": "AI Video Scriptwriter & Creative Director Skill for Stellar Bazaar x402",
+  "main": "dist/server.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch server.ts",
+    "start": "tsx server.ts",
+    "build": "tsc",
+    "test": "node --test dist/test/e2e/tier1-feature.test.js dist/test/e2e/tier2-boundary.test.js dist/test/e2e/tier3-combination.test.js dist/test/e2e/tier4-workload.test.js dist/test/unit/gemini-fallback.test.js dist/test/challenge/gemini-fallback-stress.test.js",
+    "generate-keys": "tsx scripts/generate-keys.ts",
+    "validate-card": "node dist/scripts/validate-card.js",
+    "ingest-card": "tsx scripts/ingest-card.ts"
+  },
+  "dependencies": {
+    "@stellar/stellar-sdk": "^14.1.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.2",
+    "@types/supertest": "^6.0.2",
+    "supertest": "^7.0.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

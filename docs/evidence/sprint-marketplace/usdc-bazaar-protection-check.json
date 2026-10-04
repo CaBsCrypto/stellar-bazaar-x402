@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_F4o7DZP2MNp1T2Rxv9h89BkvjV8p",
+  "path": "/history",
+  "status": "PASS",
+  "apiRequests": 1,
+  "outboundPayloadBytes": 0,
+  "inboundPayloadBytes": 924,
+  "activeExecutionMs": 534,
+  "automaticRetries": 0,
+  "unauthenticatedDenied": true,
+  "attempts": [
+    {
+      "method": "GET",
+      "path": "/history",
+      "authentication": "none",
+      "status": "CONFIRMED",
+      "httpStatus": 302
+    }
+  ],
+  "origin": "https://stellar-bazaar-x402-7sds5u7fv-cabscryptocontacto-6028s-projects.vercel.app"
+}

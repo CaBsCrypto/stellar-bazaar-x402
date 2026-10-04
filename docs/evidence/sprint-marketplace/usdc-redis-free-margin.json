@@ -1,0 +1,11 @@
+{
+  "observedAt": "2026-10-04T20:48:42.423Z",
+  "databaseId": "1f90faef-48d7-49b3-916a-c378e13a8c23",
+  "plan": "Free Tier",
+  "cost": "$0.00",
+  "commandsDisplay": "2,3 mil / 500k per month",
+  "bandwidthDisplay": "2 MB / 10 GB",
+  "storageDisplay": "12 KB / 256 MB",
+  "valuesRounded": true,
+  "remoteMutations": 0
+}

@@ -1,0 +1,25 @@
+{
+  "status": "PASS_LOCAL_POW_DIFFICULTY_24",
+  "runtime": "v22.18.0",
+  "sourceHash": "ed434a6b46d97c896d7d53642c16cf89d8ea11e8996c465fa6d79087b2aca9b8",
+  "fixture": {
+    "prefix": "sozu-faucet-v1",
+    "challengeId": "local-recovery-fixture-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "to": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    "difficulty": 24
+  },
+  "prefixBytes": 160,
+  "limits": {
+    "maxHashes": 268435456,
+    "maxMs": 90000,
+    "workers": 4
+  },
+  "nonce": "20177376",
+  "hashes": 20626809,
+  "digest": "000000ff83bce26c10e850a763695c379d0d61f06dac51489198847783a73514",
+  "activeExecutionMs": 20449,
+  "externalRequests": 0,
+  "dpapiReads": 0,
+  "seedsUsed": false,
+  "limitation": "One local fixture proves implementation and measured runtime; a fresh server challenge can still exhaust its explicit CPU allowance."
+}

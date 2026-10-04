@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "planId": "7f3e80be-d9be-47e1-81c8-49445b3bc0d9",
+  "sourceSha": "a741937b6d389edbd333ff51bac95b68e654d40e",
+  "deploymentId": "dpl_6vzckCnGuTd2UocjmWpjeaLRebPw",
+  "deploymentLabel": "provider-proof",
+  "path": "/.well-known/stellar-bazaar-provider.txt",
+  "status": "PASS",
+  "apiRequests": 1,
+  "outboundPayloadBytes": 0,
+  "inboundPayloadBytes": 926,
+  "rawResponseBytes": 926,
+  "responseBodyBytes": 263,
+  "responseHeaderBytes": 663,
+  "activeExecutionMs": 489,
+  "automaticRetries": 0,
+  "unauthenticatedDenied": true,
+  "attempts": [
+    {
+      "method": "GET",
+      "path": "/.well-known/stellar-bazaar-provider.txt",
+      "authentication": "none",
+      "status": "CONFIRMED",
+      "httpStatus": 302
+    }
+  ],
+  "origin": "https://ai-video-scriptwriter-g0rn95s84.vercel.app"
+}

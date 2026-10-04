@@ -1,0 +1,264 @@
+{
+  "framework": {
+    "name": "Express",
+    "slug": "express"
+  },
+  "basePath": "C:\\Users\\MGC\\Documents\\ChatGPT\\Bazaarx402\\provider-guionista-recovered",
+  "fileCount": 22,
+  "totalSize": 383586,
+  "ignoredCount": 4,
+  "ignored": [
+    "dist",
+    "local-text-build",
+    "node_modules",
+    "test"
+  ],
+  "directories": [
+    {
+      "path": "src",
+      "fileCount": 12,
+      "size": 185822
+    },
+    {
+      "path": "public",
+      "fileCount": 2,
+      "size": 111051
+    },
+    {
+      "path": "package-lock.json",
+      "fileCount": 1,
+      "size": 81399
+    },
+    {
+      "path": "service-card.json",
+      "fileCount": 1,
+      "size": 2267
+    },
+    {
+      "path": "package.json",
+      "fileCount": 1,
+      "size": 1143
+    },
+    {
+      "path": "server.ts",
+      "fileCount": 1,
+      "size": 900
+    },
+    {
+      "path": "tsconfig.json",
+      "fileCount": 1,
+      "size": 463
+    },
+    {
+      "path": "vercel.json",
+      "fileCount": 1,
+      "size": 336
+    },
+    {
+      "path": ".vercelignore",
+      "fileCount": 1,
+      "size": 147
+    },
+    {
+      "path": "api",
+      "fileCount": 1,
+      "size": 58
+    }
+  ],
+  "largestFiles": [
+    {
+      "path": "package-lock.json",
+      "size": 81399,
+      "mode": 33206,
+      "sha": "91fe4b734641efa4558a05dd5a5b15c7928c9560"
+    },
+    {
+      "path": "src/views/landing-template.ts",
+      "size": 64282,
+      "mode": 33206,
+      "sha": "1807a6afd7ec85b48b419a0c50aa1470e6872c57"
+    },
+    {
+      "path": "public/index.html",
+      "size": 63486,
+      "mode": 33206,
+      "sha": "ba23b17bd050fd862c2bf9b92dc935b38dce2166"
+    },
+    {
+      "path": "public/teleprompter.html",
+      "size": 47565,
+      "mode": 33206,
+      "sha": "d1abcf8ccba8090bab37b90bae9ca02ec6659dd3"
+    },
+    {
+      "path": "src/views/teleprompter-template.ts",
+      "size": 46451,
+      "mode": 33206,
+      "sha": "be674e2acc320c184abf7dcbaeb6d12b17e7f6df"
+    },
+    {
+      "path": "src/engine/script-generator.ts",
+      "size": 24982,
+      "mode": 33206,
+      "sha": "d5a7cc335aba452b07897b6997cad11833b5d7c9"
+    },
+    {
+      "path": "src/engine/gemini-client.ts",
+      "size": 13640,
+      "mode": 33206,
+      "sha": "1a26f60b6751e60f527c8c63628dbb8839c3baca"
+    },
+    {
+      "path": "src/middleware/x402.ts",
+      "size": 10808,
+      "mode": 33206,
+      "sha": "c064821faa9f158d61aad687cec70350f41fc598"
+    },
+    {
+      "path": "src/app.ts",
+      "size": 7108,
+      "mode": 33206,
+      "sha": "23755da98feeb7889859642d3c668dc591cc4d18"
+    },
+    {
+      "path": "src/engine/wpm-calculator.ts",
+      "size": 6081,
+      "mode": 33206,
+      "sha": "60ac2672b9dafcd641251f3bdd384ed64765dfa0"
+    }
+  ],
+  "files": [
+    {
+      "path": ".vercelignore",
+      "size": 147,
+      "mode": 33206,
+      "sha": "92a0fe80407941f9fcd23bd84bf6f3ca0decc911"
+    },
+    {
+      "path": "api/index.ts",
+      "size": 58,
+      "mode": 33206,
+      "sha": "73205e26f574f32b0cf9253a6c13ef425b93f2a9"
+    },
+    {
+      "path": "package-lock.json",
+      "size": 81399,
+      "mode": 33206,
+      "sha": "91fe4b734641efa4558a05dd5a5b15c7928c9560"
+    },
+    {
+      "path": "package.json",
+      "size": 1143,
+      "mode": 33206,
+      "sha": "0ce7d1ddcf61f615c2f1b293c91582fe817f79ab"
+    },
+    {
+      "path": "public/index.html",
+      "size": 63486,
+      "mode": 33206,
+      "sha": "ba23b17bd050fd862c2bf9b92dc935b38dce2166"
+    },
+    {
+      "path": "public/teleprompter.html",
+      "size": 47565,
+      "mode": 33206,
+      "sha": "d1abcf8ccba8090bab37b90bae9ca02ec6659dd3"
+    },
+    {
+      "path": "server.ts",
+      "size": 900,
+      "mode": 33206,
+      "sha": "cd5cddb794610d3464b16263006a913b68da6782"
+    },
+    {
+      "path": "service-card.json",
+      "size": 2267,
+      "mode": 33206,
+      "sha": "f0091e4e17020b6eaf18c13c7b19feca89db3190"
+    },
+    {
+      "path": "src/app.ts",
+      "size": 7108,
+      "mode": 33206,
+      "sha": "23755da98feeb7889859642d3c668dc591cc4d18"
+    },
+    {
+      "path": "src/crypto/canonical-hash.ts",
+      "size": 1732,
+      "mode": 33206,
+      "sha": "dac9d94b4572f795436759d2d8f4c676d7d033c3"
+    },
+    {
+      "path": "src/crypto/delivery-envelope.ts",
+      "size": 5338,
+      "mode": 33206,
+      "sha": "2eb5ed7fdad45ca7ef256b1b1293e1153b1d3634"
+    },
+    {
+      "path": "src/engine/gemini-client.ts",
+      "size": 13640,
+      "mode": 33206,
+      "sha": "1a26f60b6751e60f527c8c63628dbb8839c3baca"
+    },
+    {
+      "path": "src/engine/script-generator.ts",
+      "size": 24982,
+      "mode": 33206,
+      "sha": "d5a7cc335aba452b07897b6997cad11833b5d7c9"
+    },
+    {
+      "path": "src/engine/wpm-calculator.ts",
+      "size": 6081,
+      "mode": 33206,
+      "sha": "60ac2672b9dafcd641251f3bdd384ed64765dfa0"
+    },
+    {
+      "path": "src/marketplace-routes.ts",
+      "size": 2389,
+      "mode": 33206,
+      "sha": "913cb050bd958c1d53f696a18f1cbd4a6faf815c"
+    },
+    {
+      "path": "src/marketplace-text.ts",
+      "size": 1257,
+      "mode": 33206,
+      "sha": "0f1aef7a9b061b639d77870f0a2e04eee08fb008"
+    },
+    {
+      "path": "src/middleware/x402.ts",
+      "size": 10808,
+      "mode": 33206,
+      "sha": "c064821faa9f158d61aad687cec70350f41fc598"
+    },
+    {
+      "path": "src/types.ts",
+      "size": 1754,
+      "mode": 33206,
+      "sha": "c9b02af8f24e587b8867dfa0982471bb76de2308"
+    },
+    {
+      "path": "src/views/landing-template.ts",
+      "size": 64282,
+      "mode": 33206,
+      "sha": "1807a6afd7ec85b48b419a0c50aa1470e6872c57"
+    },
+    {
+      "path": "src/views/teleprompter-template.ts",
+      "size": 46451,
+      "mode": 33206,
+      "sha": "be674e2acc320c184abf7dcbaeb6d12b17e7f6df"
+    },
+    {
+      "path": "tsconfig.json",
+      "size": 463,
+      "mode": 33206,
+      "sha": "7547bbcbd408ea09a9fd8584e77bbd0109f10e89"
+    },
+    {
+      "path": "vercel.json",
+      "size": 336,
+      "mode": 33206,
+      "sha": "d7a19b8776bbb48dcd4ab062b5d593ccf547427f"
+    }
+  ]
+}
