@@ -4,6 +4,7 @@
   "docs/evidence/sprint-marketplace/provider-faucet-pow-local.json",
   "docs/evidence/sprint-marketplace/provider-faucet-recovery-local.json",
   "docs/evidence/sprint-marketplace/provider-usdc-source-archive.json",
+  "docs/evidence/sprint-marketplace/provider-usdc-source/.vercelignore.source",
   "docs/evidence/sprint-marketplace/usdc-final-scoped-files.json",
   "docs/evidence/sprint-marketplace\\provider-usdc-source\\api\\index.ts.source",
   "docs/evidence/sprint-marketplace\\provider-usdc-source\\package-lock.json.source",

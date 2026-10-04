@@ -1,0 +1,13 @@
+node_modules
+.env
+.agents
+*.log
+test
+scripts
+teleprompter-demo.html
+bazaar-registration-packet.json
+dist
+local-text-build
+.git
+.next
+*.tsbuildinfo
