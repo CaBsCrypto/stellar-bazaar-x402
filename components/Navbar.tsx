@@ -7,7 +7,7 @@ import {Modal} from "@/components/ui/Modal";
 const links = process.env.NEXT_PUBLIC_BAZAAR_MARKETPLACE === 'true'
  ? [{href:"/catalogo",label:"Mercado"},{href:"/pilot",label:"Crear espacio"},{href:"/publish",label:"Publicar"},{href:"/history",label:"Mi espacio"}]
  : [{href:"/catalogo",label:"Mercado"},{href:"/hub",label:"Conectar"},{href:"/publish",label:"Publicar"},{href:"/history",label:"Historial"},{href:"/docs",label:"Docs"}];
-export function Navbar({prefetch}: {prefetch?: boolean} = {}) {
+export function Navbar({prefetch = false}: {prefetch?: boolean} = {}) {
  const pathname=usePathname(); const [open,setOpen]=useState(false);
  useEffect(()=>setOpen(false),[pathname]);
  const navigation=links.map(link=><Link key={link.href} href={link.href} prefetch={prefetch} aria-current={pathname===link.href?"page":undefined} onClick={()=>setOpen(false)}>{link.label}</Link>);
