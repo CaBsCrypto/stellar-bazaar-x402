@@ -1,0 +1,40 @@
+import assert from 'node:assert/strict';
+import {encodePaymentSignatureHeader,decodePaymentSignatureHeader,encodePaymentResponseHeader} from '@x402/core/http';
+import {contractRequestProfile,verifyHostedBuyerContracts,verifyHostedSellerReplays} from './x402-hosted-contract-checks.mjs';
+const origin='https://protected-preview.example',operationId='12345678-1234-4234-8234-123456789012';
+const payload={x402Version:2,resource:{url:origin+'/api/market/orders/'+operationId+'/x402'},accepted:{scheme:'exact',amount:'100000',asset:'SAC_FIXTURE',payTo:'SELLER_FIXTURE',network:'stellar:testnet'},payload:{transaction:'SYNTHETIC_NOT_SIGNED'}};
+const receipt={success:true,network:'stellar:testnet',payer:'PAYER_FIXTURE',transaction:'a'.repeat(64)};
+const intent={phase:'paid',origin,operationId,payer:receipt.payer,signedPayload:payload,paymentSignature:encodePaymentSignatureHeader(payload),receipt};
+const create={operationId,serviceId:'service-fixture',input:{topic:'Comunidad',tone:'educativo'},paymentProtocol:'x402-stellar-exact-v2'};
+const terminal={operationId,phase:'delivered',transactionHash:receipt.transaction,delivery:{text:'texto conservado',sha256:'b'.repeat(64)}};
+const context={intent,create,order:terminal};
+const request=(path,body,signature)=>[origin+path,{method:'POST',body:JSON.stringify(body),headers:signature?{'payment-signature':signature}:{}}];
+assert.equal(contractRequestProfile(context,...request('/api/market/orders',create)),'api:orders:replay');
+assert.throws(()=>contractRequestProfile({...context,intent:{...intent,phase:'payment-ready'}},...request('/api/market/orders',create)));
+assert.throws(()=>contractRequestProfile(context,'https://attacker.example/api/market/orders',{method:'POST',body:JSON.stringify(create)}));
+assert.throws(()=>contractRequestProfile(context,...request('/api/market/orders',{...create,payer:'changed'})));
+assert.throws(()=>contractRequestProfile(context,...request('/api/market/orders/'+operationId+'/x402',{},encodePaymentSignatureHeader({...payload,payload:{transaction:'DIFFERENT_AUTHORIZATION'}}))));
+let httpCalls=0,toolCalls=0;
+const headers=()=>({'x-bazaar-acceptance-meter':'v2','x-bazaar-external-facilitator':'0','x-bazaar-external-rpc':'0','x-bazaar-external-provider':'0'});
+const fetcher=async(input,init)=>{
+ httpCalls++;const profile=contractRequestProfile(context,input,init);
+ if(profile==='api:x402:reject-requirements'){
+  assert.equal(decodePaymentSignatureHeader(init.headers['payment-signature']).payload.transaction,payload.payload.transaction);
+  return Response.json({error:{code:'X402_PAYMENT_REQUIREMENTS_MISMATCH'}},{status:402,headers:headers()});
+ }
+ if(profile==='api:orders:reject-content')return Response.json({error:{code:'OPERATION_CONFLICT'}},{status:409,headers:headers()});
+ return Response.json({order:terminal},{status:profile==='api:orders:replay'?201:200,headers:{...headers(),...(profile==='api:x402:replay'?{'payment-response':encodePaymentResponseHeader(receipt)}:{})}});
+};
+const passed=await verifyHostedBuyerContracts({...context,fetcher,agentToken:'TEST_ONLY',includeMutations:true});
+assert.deepEqual(passed.mutationsRejected,['price','recipient','asset','network','content']);assert.equal(httpCalls,7);
+await assert.rejects(()=>verifyHostedBuyerContracts({...context,agentToken:'TEST_ONLY',includeMutations:false,fetcher:async()=>Response.json({order:terminal},{status:201,headers:{...headers(),'x-bazaar-external-facilitator':'1'}})}));
+await assert.rejects(()=>verifyHostedBuyerContracts({...context,agentToken:'TEST_ONLY',includeMutations:false,fetcher:async()=>Response.json({order:{...terminal,transactionHash:'c'.repeat(64)}},{status:201,headers:headers()})}));
+const worker={operationId,attemptId:'22345678-1234-4234-8234-123456789012',text:terminal.delivery.text};
+const client={async callTool({name,arguments:args}){toolCalls++;assert.equal(args.operationId,operationId);assert.equal(args.attemptId,worker.attemptId);assert.ok(['claim_market_order','deliver_market_order'].includes(name));return {content:[{type:'text',text:JSON.stringify({order:terminal})}]};}};
+assert.equal((await verifyHostedSellerReplays({worker,order:terminal,client})).terminalReplayExact,true);assert.equal(toolCalls,2);
+const failed={...terminal,phase:'delivery-failed',failure:'fallo conservado'};delete failed.delivery;
+const failedContext={intent,create,order:failed};let failedHttp=0,failedTools=0;
+await verifyHostedBuyerContracts({...failedContext,includeMutations:false,agentToken:'TEST_ONLY',fetcher:async(input,init)=>{failedHttp++;const p=contractRequestProfile(failedContext,input,init);return Response.json({order:failed},{status:p==='api:x402:replay'?202:201,headers:{...headers(),'payment-response':encodePaymentResponseHeader(receipt)}});}});
+await verifyHostedSellerReplays({worker,order:failed,failureReason:failed.failure,client:{async callTool({name,arguments:args}){failedTools++;assert.ok(['claim_market_order','fail_market_order'].includes(name));if(name==='fail_market_order')assert.equal(args.reason,failed.failure);return {content:[{type:'text',text:JSON.stringify({order:failed})}]};}}});
+assert.equal(failedHttp,2);assert.equal(failedTools,2);
+console.log(JSON.stringify({status:'PASS_OFFLINE_HOSTED_CONTRACT_CHECKS',mutations:5,buyerReplayRequestsPerOrder:2,sellerReplayRequestsPerOrder:2,arbitraryOriginOrPayloadRejected:true,unexpectedExecutionRejected:true,changedRecordRejected:true,failedDeliveryReplaysCovered:true,realCredentialReads:0,remoteRequests:0,payments:0}));

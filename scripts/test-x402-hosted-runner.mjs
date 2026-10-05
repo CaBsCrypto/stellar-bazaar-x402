@@ -32,6 +32,10 @@ for(const mutate of [m=>m.readiness.canExecute=false,m=>m.readiness.nativeCaptur
  await assert.rejects(()=>runHostedX402Agent({command:'submit',paths:{manifest:'m',local:'l',capture:'c',hostedCapture:'h',report:'r'},dependencies:{readJson:async p=>p==='m'?m:p==='l'?local:capture,optionalJson:async()=>undefined,sourceBinding:async()=>source,loadPacket:async()=>{loads++;},acquireLock:async()=>{locks++;},fetchImpl:async()=>{requests++;}}}));assert.equal(loads+locks+requests,0);tests++;
 }
 const dirty={...source,clean:false};assert.throws(()=>assertHostedX402Preflight({manifest:manifest(),localReport:local,capturePreflight:capture,source:dirty,command:'submit'}));tests++;
+const missingContracts=manifest();missingContracts.readiness.walletsPreflightPassed=true;
+let prematurePacketReads=0;
+await assert.rejects(()=>runHostedX402Agent({command:'buy',index:0,paths:{manifest:'m',local:'l',capture:'c',hostedCapture:'h',report:'r'},dependencies:{readJson:async p=>p==='m'?missingContracts:p==='l'?local:capture,optionalJson:async()=>undefined,sourceBinding:async()=>source,loadPacket:async()=>{prematurePacketReads++;}}}),/FROZEN_HOSTED_CONTRACT_CHECKS_REQUIRED/);
+assert.equal(prematurePacketReads,0);tests++;
 assert.equal(x402RequestProfile('api',origin+'/api/market/orders/'+draft.payloads.orders[0].operationId+'/x402',{method:'POST',body:'{}',headers:{'payment-signature':'not-emitted'}}),'api:x402:pay');tests++;
 assert.throws(()=>x402RequestProfile('rpc','https://soroban-testnet.stellar.org/',{method:'POST',body:JSON.stringify({method:'sendTransaction'})}));tests++;
 

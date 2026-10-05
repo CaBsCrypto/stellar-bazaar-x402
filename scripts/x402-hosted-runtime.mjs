@@ -5,6 +5,7 @@ import {join} from 'node:path';
 import {createAutomationPreviewFetch} from '../examples/protected-preview-client.mjs';
 import {createBoundedBuyerFetch} from '../examples/marketplace-x402-buyer.mjs';
 import {X402_ACCEPTANCE_LIMITS} from './x402-acceptance-manifest.mjs';
+import {contractRequestProfile} from './x402-hosted-contract-checks.mjs';
 
 const externalNames=['horizon','proof-dns','proof-http','provider','facilitator','rpc'];
 const partitions=['workspace','market','review','catalog','settlement'];
@@ -110,14 +111,14 @@ export function createX402HostedRuntime({manifest,report,persist,phase,fetchImpl
   for(const key of Object.keys(costs))assert.ok(report.totals[key]+costs[key]+policy.reserves[key]<=manifest.limits[key],'BUDGET_EXHAUSTED:'+key);
  }
  function charge(costs){for(const[key,value]of Object.entries(costs))report.totals[key]+=value;}
- async function transport(kind,origin,bypassSecret,deploymentId){
+ async function transport(kind,origin,bypassSecret,deploymentId,profileResolver){
   httpsOrigin(origin);
   if(kind==='rpc')assert.equal(origin,manifest.config.rpcOrigin);
   if(kind==='provider'){assert.equal(origin,manifest.config.providerOrigin);assert.equal(deploymentId,manifest.deployments.provider.newProofDeploymentId,'PROVIDER_DEPLOYMENT_BINDING_REQUIRED');}
   if(kind==='api')assert.ok([manifest.deployments.application,manifest.deployments.replacement].filter(Boolean).some(d=>d.id===deploymentId&&(d.origin??d.url?.replace(/\/$/,''))===origin),'UNMANIFESTED_PROTECTED_ORIGIN');
   return (input,init={})=>enqueue(async()=>{
    if(readRecovery)assert.equal(String(init.method??'GET').toUpperCase(),'GET','RECOVERY_IS_READ_ONLY');
-   const profile=x402RequestProfile(kind,input,init),budget=policy.requestBudgets[profile];assert.ok(budget,'UNMANIFESTED_REQUEST_PROFILE:'+profile);
+   const profile=profileResolver?profileResolver(input,init):x402RequestProfile(kind,input,init),budget=policy.requestBudgets[profile];assert.ok(budget,'UNMANIFESTED_REQUEST_PROFILE:'+profile);
    if(kind==='rpc')for(const key of ['authorization','cookie','host','x-vercel-protection-bypass'])assert.equal(new Headers(init.headers).has(key),false,'RPC_PRIVATE_HEADER_DENIED');
    const calls=report.profileCalls[profile]??0;assert.ok(calls<budget.maximumCalls,'PROFILE_REQUEST_LIMIT:'+profile);
    let headerBytes=0;for(const[key,value]of new Headers(init.headers))headerBytes+=Buffer.byteLength(key+': '+value+'\r\n');
@@ -164,6 +165,13 @@ export function createX402HostedRuntime({manifest,report,persist,phase,fetchImpl
   });
  }
  return {preview:(origin,bypassSecret,deploymentId)=>transport('api',origin,bypassSecret,deploymentId),provider:(origin,bypassSecret,deploymentId)=>transport('provider',origin,bypassSecret,deploymentId),rpc:()=>transport('rpc',manifest.config.rpcOrigin),
+  contractPreview(origin,bypassSecret,deploymentId,context){
+   const frozen=structuredClone(context),path='/api/market/orders/'+frozen.intent.operationId+'/x402';
+   assert.equal(frozen.intent.origin,origin);assert.equal(frozen.intent.phase,'paid');
+   assert.ok(report.attempts.some(a=>a.origin===origin&&a.path===path&&a.profile==='api:x402:pay'&&a.status==='CONFIRMED'&&[200,202].includes(a.httpStatus)),'CONFIRMED_PAYMENT_REQUIRED_FOR_CONTRACT_CHECKS');
+   assert.ok(manifest.payloads.orders.some(o=>o.operationId===frozen.intent.operationId&&JSON.stringify(o.create)===JSON.stringify(frozen.create)),'FROZEN_ORDER_REQUIRED');
+   return transport('api',origin,bypassSecret,deploymentId,(input,init)=>contractRequestProfile(frozen,input,init));
+  },
   async reservePayment(){const delta=emptyTotals();delta.paymentSubmissionIntents=1;guard(delta);charge(delta);report.paymentReservationCount++;await persist(report);},async drain(){await tail;}};
 }
 

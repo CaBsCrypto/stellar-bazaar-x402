@@ -12,6 +12,7 @@ import {assertX402RuntimePolicy,newX402HostedReport,createX402HostedRuntime,acqu
 import {createMarketplaceBuyerIntent,runMarketplaceBuyerIntent,recoverBuyerIntent,createBuyerSpendBudget,buyerCanonical,buyerIdentity} from '../examples/marketplace-x402-buyer.mjs';
 import {createGuionistaIntent,executeGuionistaIntent,failGuionistaIntent} from '../examples/guionista-marketplace-worker.mjs';
 import {withProtectedPrivateMcp} from '../examples/protected-preview-client.mjs';
+import {verifyHostedBuyerContracts,verifyHostedSellerReplays} from './x402-hosted-contract-checks.mjs';
 
 const root=resolve('docs/evidence/sprint-x402-agent');
 const defaults={manifest:join(root,'acceptance-manifest.json'),local:join(root,'native-local.json'),capture:join(root,'capture-preflight-public.json'),hostedCapture:join(root,'hosted-browser-capture-public.json'),report:join(packetDirectory,'x402-hosted-agent-http.json')};
@@ -63,7 +64,14 @@ export function assertHostedX402Preflight({manifest,localReport,capturePreflight
  assert.ok(Array.isArray(manifest.payloads.orders)&&manifest.payloads.orders.length===2&&new Set(manifest.payloads.orders.map(o=>o.operationId)).size===2,'TWO_FROZEN_ORDERS_REQUIRED');
  for(const o of manifest.payloads.orders){const intent=createMarketplaceBuyerIntent({origin,card:manifest.payloads.card,input:o.create.input,payer:p[1].wallet,operationId:o.operationId});assert.deepEqual(o.create,{operationId:intent.operationId,serviceId:intent.card.id,cardHash:intent.cardHash,payer:intent.payer,input:intent.input,paymentProtocol:intent.paymentProtocol});}
  if(command==='activate'){assert.equal(manifest.readiness.providerProofReady,true,'PROVIDER_CONTROL_RECORD_NOT_BOUND');assert.ok(Array.isArray(manifest.payloads.reviewActions)&&manifest.payloads.reviewActions.length===3);assert.deepEqual(manifest.payloads.reviewActions.map(a=>a.action),['verify-http','approve','activate']);}
- if(command==='buy'){assert.ok(index===0||index===1,'BUY_INDEX_REQUIRED');assert.equal(c.purchases,true,'PURCHASES_DISABLED');assert.equal(c.marketplaceX402,true,'X402_DISABLED');assert.equal(manifest.readiness.walletsPreflightPassed,true,'EXISTING_WALLET_PREFLIGHT_REQUIRED');assert.equal(manifest.payloads.orders[index].expected,index===0?'delivered':'delivery-failed');if(index===1)assert.ok(typeof manifest.payloads.failureReason==='string'&&manifest.payloads.failureReason.length>0);}
+ if(command==='buy'){
+  assert.ok(index===0||index===1,'BUY_INDEX_REQUIRED');assert.equal(c.purchases,true,'PURCHASES_DISABLED');assert.equal(c.marketplaceX402,true,'X402_DISABLED');assert.equal(manifest.readiness.walletsPreflightPassed,true,'EXISTING_WALLET_PREFLIGHT_REQUIRED');assert.equal(manifest.payloads.orders[index].expected,index===0?'delivered':'delivery-failed');if(index===1)assert.ok(typeof manifest.payloads.failureReason==='string'&&manifest.payloads.failureReason.length>0);
+  assert.deepEqual(manifest.runtime.contractChecksPlan,{version:1,mutations:['price','recipient','asset','network','content'],operationIds:manifest.payloads.orders.map(o=>o.operationId),timing:'after-confirmed-payment-and-terminal-delivery'},'FROZEN_HOSTED_CONTRACT_CHECKS_REQUIRED');
+  for(const [name,calls]of Object.entries({'api:x402:reject-requirements':4,'api:orders:reject-content':1,'api:orders:replay':2,'api:x402:replay':2})){
+   const bound=manifest.runtime.requestBudgets[name];assert.equal(bound?.maximumCalls,calls,'CONTRACT_CHECK_CALL_BUDGET_REQUIRED:'+name);assert.ok(Object.values(bound.external).every(n=>n===0),'CONTRACT_CHECK_MUST_HAVE_NO_EXTERNAL_EXECUTION');
+  }
+  for(const [name,calls]of Object.entries({'api:mcp:tool:claim_market_order':4,'api:mcp:tool:deliver_market_order':2,'api:mcp:tool:fail_market_order':2}))assert.equal(manifest.runtime.requestBudgets[name]?.maximumCalls,calls,'SELLER_REPLAY_BUDGET_REQUIRED:'+name);
+ }
  const requiresReplacement=['pause','retire'].includes(command)||command==='recover'&&(!readRecovery||manifest.deployments.replacement);
  if(requiresReplacement){checkDeployment(manifest.deployments.replacement);assert.notEqual(manifest.deployments.replacement.id,app.id);assert.notEqual(applicationOrigin(manifest.deployments.replacement),origin);assert.equal(manifest.deployments.replacement.payloadFingerprint,app.payloadFingerprint,'REPLACEMENT_SOURCE_PAYLOAD_CHANGED');}
  if(command==='pause'){assert.deepEqual(manifest.payloads.pause,{action:'pause'});assert.equal(manifest.payloads.pauseCreate.operationId,manifest.payloads.pauseOperationId);assert.ok(manifest.payloads.pauseWorkspaceProbe,'FROZEN_ADMISSION_PAUSE_PROBE_REQUIRED');}
@@ -130,8 +138,14 @@ export async function runHostedX402Agent({command,index,paths=defaults,dependenc
    await(dependencies.withMcp??withProtectedPrivateMcp)(origin,aAgent,appFetch,async client=>{
     const workerOptions={persistIntent:async value=>{section.workerIntents[index]=value;await persistPacket();},callTool:(name,args)=>client.callTool({name,arguments:args},undefined,{timeout:12000}),providerFetch,providerToken:privateSale.worker};
     const delivered=index===0?await executeGuionistaIntent(worker,workerOptions):await failGuionistaIntent(worker,workerOptions,m.payloads.failureReason);assert.equal(delivered.phase,frozen.expected);if(index===0)assert.equal(delivered.delivery.sha256,x402PublicHash(delivered.delivery.text));else assert.equal(delivered.delivery,undefined);
+    report.contractChecks??=[];
+    report.contractChecks[index]={seller:await verifyHostedSellerReplays({worker,order:delivered,client,failureReason:m.payloads.failureReason})};
    });
    const buyer=(await http(orders+'/'+frozen.operationId,b.agent)).order,seller=(await http(orders+'/'+frozen.operationId,aAgent)).order;assert.deepEqual(seller,buyer);assert.equal(buyer.phase,frozen.expected);section.orders[index]=buyer;
+   section.contractChecks??=[];section.contractChecks[index]={phase:'started'};await persistPacket();
+   const contractFetch=await runtime.contractPreview(origin,privateSale.bazaarBypass,m.deployments.application.id,{intent,create:frozen.create,order:buyer});
+   report.contractChecks[index].buyer=await verifyHostedBuyerContracts({intent,create:frozen.create,order:buyer,fetcher:contractFetch,agentToken:b.agent,includeMutations:index===0});
+   section.contractChecks[index]={phase:'verified',...report.contractChecks[index]};await persistPacket();
    await http(orders+'/'+frozen.operationId,'q'.repeat(43),undefined,401);section.histories={a:(await http(orders,aHuman)).orders,b:(await http(orders,b.human)).orders};
    assert.ok(section.histories.b.some(o=>o.operationId===frozen.operationId));for(const priorId of m.payloads.priorOperationIds)assert.ok(section.histories.b.some(o=>o.operationId===priorId),'HISTORICAL_ORDER_MISSING');await persistPacket();
   }else if(command==='recover'){
