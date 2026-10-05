@@ -16,7 +16,7 @@ const statuses: Record<MarketOrder['phase'], string> = {
   delivered: 'Entrega disponible', 'delivery-failed': 'Pago verificado · entrega fallida',
 };
 const testnetPassphrase = 'Test SDF Network ; September 2015';
-const canBuy = (card: ServiceCard) => card.payment.asset === 'USDC' && isCanonicalUsdcTestnet(card.payment.identity);
+const canBuy = (card: ServiceCard) => !card.payment.marketplace && card.payment.asset === 'USDC' && isCanonicalUsdcTestnet(card.payment.identity);
 function saveIntent(name: string, value: unknown) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], {type: 'application/json'}));
   const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
@@ -135,7 +135,7 @@ export default function MarketplaceWorkspace({access, onLock}: {access: string; 
       }, 'ARCHIVO_INVALIDO_O_SERVICIO_NO_DISPONIBLE'); e.target.value = '';
     }}/></label>
     {!services.length && <p>No hay servicios testnet aprobados disponibles.</p>}
-    <div className={styles.grid}>{services.map(service => <article key={service.submissionId}><h4>{service.card.name}</h4><p>{service.card.description}</p><p>{service.card.payment.amount} {service.card.payment.asset} · testnet</p><AssetIdentity identity={service.card.payment.identity}/><button disabled={busy || uncertain || paused || !canBuy(service.card)} onClick={() => { setSelected(service); setOperationId(crypto.randomUUID()); setInput('{}'); setSavedOrder(''); }}>Preparar compra</button></article>)}</div>
+    <div className={styles.grid}>{services.map(service => <article key={service.submissionId}><h4>{service.card.name}</h4><p>{service.card.description}</p><p>{service.card.payment.amount} {service.card.payment.asset} · testnet</p><AssetIdentity identity={service.card.payment.identity}/>{service.card.payment.marketplace ? <p>Disponible para tu agente por x402. El comprobante y la entrega aparecerán en tu historial privado.</p> : <button disabled={busy || uncertain || paused || !canBuy(service.card)} onClick={() => { setSelected(service); setOperationId(crypto.randomUUID()); setInput('{}'); setSavedOrder(''); }}>Preparar compra</button>}</article>)}</div>
     {selected && <form onSubmit={e => { e.preventDefault(); void run(async ctx => {
       await api(ctx, '/api/market/orders', {operationId, serviceId: selected.card.id, cardHash: selected.cardHash, payer, input: JSON.parse(input)}); setSelected(null); await refresh(ctx);
     }, true); }}>

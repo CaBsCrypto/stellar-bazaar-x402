@@ -73,6 +73,10 @@ const serviceCardSchema = z.object({
       .refine((value) => Number(value) > 0, "amount debe ser mayor que cero."),
     destination: z.string().regex(/^G[A-Z2-7]{55}$/, "destination debe ser una cuenta Stellar pública G… de 56 caracteres."),
     identity:stellarCreditIdentitySchema.optional(),
+    marketplace:z.object({
+      protocol:z.literal('x402-stellar-exact-v2'),
+      resourceTemplate:z.literal('/api/market/orders/{operationId}/x402'),
+    }).strict().optional(),
   }),
   paymentOptions: z.array(z.object({scheme:z.literal("exact"), asset:z.enum(["USDC","XLM"]), contract:z.string(), amount:z.string(), destination:z.string()})).min(1).max(2).optional(),
   provider: z.object({

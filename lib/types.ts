@@ -2,6 +2,11 @@ export type ServiceKind = "http" | "mcp";
 export type PaymentScheme = "exact" | "upto" | "split-exact";
 export type SupportedSep41Asset = "USDC" | "XLM" | "EURC";
 
+export interface MarketplacePaymentEndpoint {
+  protocol: "x402-stellar-exact-v2";
+  resourceTemplate: "/api/market/orders/{operationId}/x402";
+}
+
 export interface PaymentOption { scheme: "exact"; asset: "USDC" | "XLM"; contract: string; amount: string; destination: string }
 
 export interface PaidService {
@@ -17,7 +22,7 @@ export interface PaidService {
   routeTemplate: string;
   provider: string;
   network: "stellar:testnet";
-  payment: { scheme: PaymentScheme; asset: SupportedSep41Asset | string; amount: string; destination?: string; identity?: import('./payment-assets.ts').StellarCreditIdentity };
+  payment: { scheme: PaymentScheme; asset: SupportedSep41Asset | string; amount: string; destination?: string; identity?: import('./payment-assets.ts').StellarCreditIdentity; marketplace?: MarketplacePaymentEndpoint };
   latency: string;
   input: string[];
   output: string[];
@@ -36,7 +41,7 @@ export interface ServiceCard {
   routeTemplate: string;
   input: Array<{ name: string; type: "string" | "number" | "boolean"; required: boolean }>;
   network: "stellar:testnet";
-  payment: { scheme: PaymentScheme; asset: string; amount: string; destination: string; identity?: import('./payment-assets.ts').StellarCreditIdentity };
+  payment: { scheme: PaymentScheme; asset: string; amount: string; destination: string; identity?: import('./payment-assets.ts').StellarCreditIdentity; marketplace?: MarketplacePaymentEndpoint };
   provider: { name: string };
   tags: string[];
   /** Optional for legacy v0 cards; required for a provider to be marked consumable. */

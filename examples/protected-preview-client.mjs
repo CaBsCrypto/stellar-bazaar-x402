@@ -102,14 +102,16 @@ export function createAutomationPreviewFetch(options){
   const abort=()=>controller.abort();
   callerSignal?.addEventListener('abort',abort,{once:true});
   const timer=setTimeout(()=>{timedOut=true;controller.abort();},timeoutMs);
+  let responseHeaderBytes=0,responseBodyBytes=0,responseStatus;
   try{
    if(callerSignal?.aborted)throw Error('TRANSPORT_ABORTED');
    const response=await fetchImpl(url.href,{method,headers,...(body?{body}:{}),redirect:'error',credentials:'omit',cache:'no-store',signal:controller.signal});
+   responseStatus=response.status;
+   for(const[key,value]of response.headers)responseHeaderBytes+=Buffer.byteLength(key+': '+value+'\r\n');
    if(response.redirected||response.status>=300&&response.status<400)throw Error('REDIRECT_DENIED');
    if(response.url&&new URL(response.url).origin!==origin)throw Error('UNBOUND_TRANSPORT_RESPONSE');
-   let responseHeaderBytes=0;for(const[key,value]of response.headers)responseHeaderBytes+=Buffer.byteLength(key+': '+value+'\r\n');
    if(responseHeaderBytes>maxBytes)throw Error('RESPONSE_OVERSIZE');
-   const parts=[];let responseBodyBytes=0,reader;
+   const parts=[];let reader;
    try{
     reader=response.body?.getReader();
     if(reader)while(true){
@@ -129,7 +131,9 @@ export function createAutomationPreviewFetch(options){
   }catch(error){
    const allowed=new Set(['REDIRECT_DENIED','UNBOUND_TRANSPORT_RESPONSE','RESPONSE_OVERSIZE','TRANSPORT_ABORTED','TRANSPORT_UNCONFIRMED']);
    const code=controller.signal.aborted?(timedOut?'TRANSPORT_UNCONFIRMED':'TRANSPORT_ABORTED'):allowed.has(error?.message)?error.message:'TRANSPORT_UNCONFIRMED';
-   await options.onUncertain?.({...metadata,code});
+   // Partial observed bytes remain measurable even when a read is lost or an
+   // oversized chunk is rejected. They do not certify the complete response.
+   await options.onUncertain?.({...metadata,code,...(responseStatus===undefined?{}:{status:responseStatus}),responseBytes:responseBodyBytes+responseHeaderBytes,responseBodyBytes,responseHeaderBytes});
    throw Error(code);
   }finally{clearTimeout(timer);callerSignal?.removeEventListener('abort',abort);}
  };

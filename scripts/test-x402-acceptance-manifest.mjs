@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {createHash,randomUUID} from 'node:crypto';
+import {prepareX402Manifest,assertX402ExecutionGate,X402_ACCEPTANCE_LIMITS,X402_LOCAL_REQUIRED_RESULTS} from './x402-acceptance-manifest.mjs';
+const hash=value=>createHash('sha256').update(JSON.stringify(value)).digest('hex'),sourceSha='a'.repeat(40),previousManifestBytes=Buffer.from(JSON.stringify({planId:randomUUID()}));
+const prior=JSON.parse(previousManifestBytes),previousCountersBytes=Buffer.from(JSON.stringify({planId:prior.planId,status:'INCOMPLETE_EVIDENCE',complete:false,totals:{apiRequests:104}}));
+const draft={sourceSha,storageAllocation:{workspace:6000,market:22000,review:5000,catalog:3000,settlement:13164},config:{network:'stellar:testnet'},payloads:{operations:['public-op-1','public-op-2']}};
+const localReport={status:'PASS_NATIVE_X402_LOCAL',sourceSha,sourceBinding:{candidateCommitted:true,finalShaRequired:false},automaticRetries:0,remoteRequests:0,totals:Object.fromEntries(Object.keys(X402_ACCEPTANCE_LIMITS).map(key=>[key,0])),coverage:Object.fromEntries(['agentHttp','redis','facilitator','horizon','rpc','provider'].map(key=>[key,true])),...Object.fromEntries(X402_LOCAL_REQUIRED_RESULTS.map(key=>[key,true]))};
+const capturePreflight={status:'PASS_LOCAL_CAPTURE',captureComplete:true,physicalWireObserved:false,coverage:{httpRetries:0}};
+let scenarios=0;const manifest=prepareX402Manifest({draft,localReport,capturePreflight,previousManifestBytes,previousCountersBytes});
+assert.notEqual(manifest.planId,prior.planId);assert.equal(manifest.previousEvidence.complete,false);for(const key of ['canExecute','canRetireSynthetic','canOpen','deploymentsVerified','payloadsFrozen'])assert.equal(manifest.readiness[key],false);assert.deepEqual(manifest.limits,X402_ACCEPTANCE_LIMITS);scenarios++;
+assert.throws(()=>assertX402ExecutionGate(manifest,{localReport,capturePreflight,expectedSha:sourceSha}),/CLOSED_GATE/);scenarios++;
+const ready=structuredClone(manifest);for(const key of ['canExecute','deploymentsVerified','payloadsFrozen'])ready.readiness[key]=true;assert.equal(assertX402ExecutionGate(ready,{localReport,capturePreflight,expectedSha:sourceSha}).canOpen,false);scenarios++;
+const changed=structuredClone(ready);changed.payloads.operations.push('changed');assert.throws(()=>assertX402ExecutionGate(changed,{localReport,capturePreflight,expectedSha:sourceSha}),/PAYLOAD_CHANGED/);scenarios++;
+const missing=structuredClone(localReport);delete missing.totals.redisRestExchanges;const closed=prepareX402Manifest({draft,localReport:missing,capturePreflight,previousManifestBytes,previousCountersBytes});assert.equal(closed.readiness.localMeasured,false);scenarios++;
+const fakeCapture={...capturePreflight,status:'PASS_PARSER_FIXTURE',captureComplete:false};assert.equal(prepareX402Manifest({draft,localReport,capturePreflight:fakeCapture,previousManifestBytes,previousCountersBytes}).readiness.nativeCapturePreflight,false);scenarios++;
+const provision=structuredClone(localReport);provision.totals.friendbotClaims=1;assert.equal(prepareX402Manifest({draft,localReport:provision,capturePreflight,previousManifestBytes,previousCountersBytes}).readiness.localMeasured,false);scenarios++;
+const opening=structuredClone(ready);opening.readiness.canOpen=true;assert.throws(()=>assertX402ExecutionGate(opening,{localReport,capturePreflight,expectedSha:sourceSha}));scenarios++;
+for(const override of [{physicalWireObserved:true},{coverage:{httpRetries:1}}]){
+ const contradictory={...capturePreflight,...override};
+ const result=prepareX402Manifest({draft,localReport,capturePreflight:contradictory,previousManifestBytes,previousCountersBytes});
+ for(const key of ['canExecute','deploymentsVerified','payloadsFrozen','nativeCapturePreflight'])result.readiness[key]=true;
+ assert.throws(()=>assertX402ExecutionGate(result,{localReport,capturePreflight:contradictory,expectedSha:sourceSha}),/CAPTURE_/);scenarios++;
+}
+const incomplete=structuredClone(localReport);incomplete.syntheticServicesWithdrawn=false;
+assert.equal(prepareX402Manifest({draft,localReport:incomplete,capturePreflight,previousManifestBytes,previousCountersBytes}).readiness.localMeasured,false);scenarios++;
+const uncommitted=structuredClone(localReport);uncommitted.sourceBinding={candidateCommitted:false,finalShaRequired:true};
+const uncommittedGate=prepareX402Manifest({draft,localReport:uncommitted,capturePreflight,previousManifestBytes,previousCountersBytes});
+for(const key of ['canExecute','deploymentsVerified','payloadsFrozen'])uncommittedGate.readiness[key]=true;
+assert.throws(()=>assertX402ExecutionGate(uncommittedGate,{localReport:uncommitted,capturePreflight,expectedSha:sourceSha}),/COMMITTED_LOCAL_CANDIDATE_REQUIRED/);scenarios++;
+assert.equal(hash(localReport),manifest.localEvidence.sha256);console.log(JSON.stringify({status:'PASS',scenarios,scope:'synthetic manifest/gate fixtures only',remoteRequests:0,secretReads:0}));

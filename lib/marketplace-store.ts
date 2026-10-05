@@ -6,7 +6,7 @@ import { WorkspaceError } from './workspace-types.ts';
 import { parseServiceCardShape,stellarCreditIdentitySchema } from './service-card-schema.ts';
 import type { ServiceCard } from './types.ts';
 import {computeCanonicalServiceCardHash} from './canonical-service-card.ts';
-import {sha,orderMemo} from './marketplace-identity.ts';
+import {sha,canonical,orderMemo} from './marketplace-identity.ts';
 import {isCanonicalUsdcTestnet,sameCreditIdentity} from './payment-assets.ts';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
@@ -17,6 +17,8 @@ export const marketOrderSchema = z.object({
   serviceId: z.string(), cardHash: hash, card: z.unknown(), input: z.record(z.string(), z.union([z.string().max(2000),z.number().finite(),z.boolean()])),
   payer: account, destination: account, amount: z.string(), memoHash: hash,
   settlement:stellarCreditIdentitySchema.optional(),
+  paymentProtocol:z.literal('x402-stellar-exact-v2').optional(), inputHash:hash.optional(),
+  settlementAttemptId:z.string().uuid().optional(),
   phase: z.enum(['awaiting-payment','payment-submitting','payment-uncertain','paid','executing','execution-uncertain','delivered','delivery-failed']),
   createdAt: z.string().datetime(), updatedAt: z.string().datetime(),
   transactionHash: hash.optional(), paymentVerifiedAt: z.string().datetime().optional(),
@@ -44,8 +46,12 @@ export function validateMarketState(raw:unknown):asserts raw is MarketState {
       ?isCanonicalUsdcTestnet(o.settlement)&&c.payment.asset===o.settlement.code&&c.network===o.settlement.network&&sameCreditIdentity(c.payment.identity,o.settlement)
       :c.payment.asset==='XLM'&&!c.payment.identity;
     if(o.serviceId!==c.id||o.destination!==c.payment.destination||o.amount!==c.payment.amount||!paymentBound||o.memoHash!==orderMemo(o.buyerOwnerId,o.operationId,o.cardHash,o.input))throw Error('INVALID_ORDER_BINDING');
+    if(o.paymentProtocol && (o.inputHash!==sha(canonical(o.input)) || !o.settlement || c.payment.marketplace?.protocol!==o.paymentProtocol))throw Error('INVALID_X402_ORDER_BINDING');
+    if(o.paymentProtocol&&o.phase!=='awaiting-payment'&&!o.settlementAttemptId)throw Error('MISSING_X402_ATTEMPT');
+    if(!o.paymentProtocol && (o.inputHash!==undefined || o.settlementAttemptId!==undefined))throw Error('INVALID_LEGACY_ORDER_BINDING');
     if(o.delivery&&(o.delivery.sha256!==sha(o.delivery.text)||o.delivery.reference!==`bazaar-order:${o.operationId}`))throw Error('INVALID_DELIVERY_BINDING');
-    if(o.phase!=='awaiting-payment'&&!o.transactionHash) throw Error('MISSING_TRANSACTION');
+    if(o.phase!=='awaiting-payment'&&!o.transactionHash && !(o.paymentProtocol && ['payment-submitting','payment-uncertain'].includes(o.phase) && o.settlementAttemptId)) throw Error('MISSING_TRANSACTION');
+    if(['paid','executing','execution-uncertain','delivered','delivery-failed'].includes(o.phase)&&!o.transactionHash)throw Error('MISSING_TRANSACTION');
     if(['paid','executing','execution-uncertain','delivered','delivery-failed'].includes(o.phase)&&!o.paymentVerifiedAt) throw Error('MISSING_VERIFICATION');
     if(['executing','execution-uncertain','delivered','delivery-failed'].includes(o.phase)&&(!o.attemptId||!o.agentId)) throw Error('MISSING_CLAIM');
     if(o.phase==='execution-uncertain'&&!o.executionUncertainty)throw Error('MISSING_EXECUTION_UNCERTAINTY');

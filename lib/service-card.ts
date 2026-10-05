@@ -44,6 +44,8 @@ export function toPaidService(card: ServiceCard): PaidService {
       asset: card.payment.asset,
       amount: card.payment.amount,
       destination: card.payment.destination,
+      ...(card.payment.identity ? {identity: structuredClone(card.payment.identity)} : {}),
+      ...(card.payment.marketplace ? {marketplace: structuredClone(card.payment.marketplace)} : {}),
     },
     latency: "<500ms",
     input: card.input.map((i) => i.name),

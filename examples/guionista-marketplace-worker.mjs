@@ -24,13 +24,16 @@ async function tool(options,name,args){
 }
 async function persist(intent,options){validateIntent(intent);await options.persistIntent(structuredClone(intent));}
 function boundOrder(intent,order,phases){
+ const protocol=order?.paymentProtocol;
+ if(protocol!==undefined&&protocol!=='stellar-classic-direct-v1'&&protocol!=='x402-stellar-exact-v2')throw Error('UNSUPPORTED_PAYMENT_PROTOCOL');
+ if(protocol==='x402-stellar-exact-v2'&&(order.inputHash!==sha(canonical(order.input))||order.card?.payment.marketplace?.protocol!==protocol||order.card.payment.marketplace.resourceTemplate!=='/api/market/orders/{operationId}/x402'))throw Error('UNBOUND_X402_ORDER');
  if(!order||order.operationId!==intent.operationId||order.cardHash!==intent.cardHash||sha(canonical(order.card))!==intent.cardHash||order.serviceId!==intent.serviceId||order.card?.id!==intent.serviceId||order.card?.routeTemplate!=='/v1/marketplace-text'||new URL(order.card.url).origin!==intent.providerOrigin||order.card.network!=='stellar:testnet'||order.card.payment?.asset!=='USDC'||canonical(order.card.payment.identity)!==canonical(usdcIdentity)||canonical(order.settlement)!==canonical(usdcIdentity)||order.amount!==order.card.payment.amount||order.destination!==order.card.payment.destination||!StrKey.isValidEd25519PublicKey(order.destination??'')||!order.paymentVerifiedAt||!Number.isFinite(Date.parse(order.paymentVerifiedAt))||!/^[a-f0-9]{64}$/.test(order.transactionHash??'')||!phases.includes(order.phase)||!order.input||typeof order.input!=='object'||Array.isArray(order.input))throw Error('UNBOUND_OR_UNPAID_ORDER');
  if(order.phase!=='paid'&&order.attemptId!==intent.attemptId)throw Error('CLAIM_CONFLICT');
- if(intent.binding&&(intent.binding.transactionHash!==order.transactionHash||intent.binding.inputHash!==sha(canonical(order.input))||intent.binding.amount!==order.amount||intent.binding.destination!==order.destination||canonical(intent.binding.identity)!==canonical(order.settlement)))throw Error('ORDER_CHANGED');
+ if(intent.binding&&(intent.binding.transactionHash!==order.transactionHash||intent.binding.inputHash!==sha(canonical(order.input))||intent.binding.amount!==order.amount||intent.binding.destination!==order.destination||canonical(intent.binding.identity)!==canonical(order.settlement)||(intent.binding.paymentProtocol??undefined)!==(protocol??undefined)))throw Error('ORDER_CHANGED');
  return order;
 }
 function freezeClaim(intent,order){
- intent.binding={transactionHash:order.transactionHash,inputHash:sha(canonical(order.input)),input:structuredClone(order.input),amount:order.amount,destination:order.destination,identity:structuredClone(order.settlement)};
+ intent.binding={transactionHash:order.transactionHash,inputHash:sha(canonical(order.input)),input:structuredClone(order.input),amount:order.amount,destination:order.destination,identity:structuredClone(order.settlement),...(order.paymentProtocol?{paymentProtocol:order.paymentProtocol}:{})};
  intent.phase='claimed';
 }
 export async function inspectGuionistaIntent(intent,options){validateIntent(intent);const body=await tool(options,'list_market_orders',{});return body.orders?.find(order=>order.operationId===intent.operationId);}

@@ -34,8 +34,9 @@ export const marketLedger:MarketLedger={
  submit:signedXdr=>horizon('/transactions',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body:new URLSearchParams({tx:signedXdr})}),
  transaction:hash=>horizon('/transactions/'+hash),
 };
-function buyer(p:WorkspacePrincipal,o:MarketOrder){if(p.role!=='human'||o.buyerOwnerId!==p.ownerId)throw new WorkspaceError('FORBIDDEN',403);}
+function buyer(p:WorkspacePrincipal,o:MarketOrder){if(o.paymentProtocol)throw new WorkspaceError('PAYMENT_PROTOCOL_MISMATCH',409);if(p.role!=='human'||o.buyerOwnerId!==p.ownerId)throw new WorkspaceError('FORBIDDEN',403);}
 function settlementAsset(o:MarketOrder):Asset {
+ if(o.paymentProtocol)throw new WorkspaceError('PAYMENT_PROTOCOL_MISMATCH',409);
  if(!isCanonicalUsdcTestnet(o.settlement)||o.card.network!==o.settlement.network||o.card.payment.asset!==o.settlement.code||!sameCreditIdentity(o.card.payment.identity,o.settlement))throw new WorkspaceError('PAYMENT_ASSET_DISABLED',400);
  return new Asset(o.settlement.code,o.settlement.issuer);
 }

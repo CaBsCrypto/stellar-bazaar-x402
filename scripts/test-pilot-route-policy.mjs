@@ -17,5 +17,8 @@ try {
   assert.equal(pilotRoutePolicy('/api/discovery/private','GET'),'deny');
   assert.equal(pilotRoutePolicy('/resources/guionista-text','GET'),'allow');
   assert.equal(pilotRoutePolicy('/api/publish','POST'),'deny');
+  assert.equal(pilotRoutePolicy(`/api/market/orders/${id}/x402`,'POST'),'allow');
+  for(const method of ['GET','PUT','DELETE','OPTIONS'])assert.equal(pilotRoutePolicy(`/api/market/orders/${id}/x402`,method),'deny');
+  for(const path of ['/api/market/orders/invalid/x402',`/api/market/orders/${id}/x402/extra`,'/api/x402/demo-pay'])assert.equal(pilotRoutePolicy(path,'POST'),'deny');
 }finally{if(prior===undefined)delete process.env.BAZAAR_ENABLE_MARKETPLACE;else process.env.BAZAAR_ENABLE_MARKETPLACE=prior;}
 console.log(JSON.stringify({ ok: true, scope: 'route exposure policy only', excludesPaymentProviderAdminUploadPaths: true, allowsPilotWorkflowRoutes: true, externalRequests: 0, limitation: 'Needs native Next proxy integration; does not authorize owners or rate-limit random valid-shaped credentials' }));

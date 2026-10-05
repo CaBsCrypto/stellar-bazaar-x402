@@ -149,6 +149,22 @@ export async function getAllDynamicServiceCards(): Promise<DynamicEntry[]> {
 /** Tombstone preserves references used by paid orders. Never delete the card. */
 export async function withdrawDynamicServiceCard(id: string) {
   if (!pilot || !redis) throw Error('CATALOG_REDIS_REQUIRED');
+  if (process.env.BAZAAR_ACCEPTANCE_X402 === 'true') {
+    if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) throw Error('CATALOG_WITHDRAWAL_UNCONFIRMED');
+    // Preserve the exact stored envelope. No cjson rewrite, lease or retry.
+    const rawClient = meteredRedis(new Redis({url:redisUrl!,token:redisToken!,automaticDeserialization:false,retry:false,enableAutoPipelining:false}));
+    const key = CARD_KEY_PREFIX + id;
+    const raw = await rawClient.get<string>(key);
+    if (typeof raw !== 'string' || Buffer.byteLength(raw) > 7936) throw Error('CATALOG_WITHDRAWAL_UNCONFIRMED');
+    const entry = JSON.parse(raw) as DynamicEntry;
+    const parsed = parseServiceCardShape(entry.card);
+    if (entry.id !== id || !parsed.ok || parsed.card.id !== id || computeCardHash(parsed.card) !== entry.hash) throw Error('CATALOG_WITHDRAWAL_UNCONFIRMED');
+    if (entry.withdrawn === true) return;
+    const next = JSON.stringify({...entry,withdrawn:true});
+    const script = "-- x402-catalog-withdraw-cas-v1\nlocal old=redis.call('GET',KEYS[1]); if not old or old~=ARGV[1] then return 0 end; if string.len(ARGV[2])>7936 then return -1 end; redis.call('SET',KEYS[1],ARGV[2]); return 1";
+    if (await rawClient.eval(script,[key],[raw,next]) !== 1) throw Error('CATALOG_WITHDRAWAL_UNCONFIRMED');
+    return;
+  }
   const bound=process.env.BAZAAR_ACCEPTANCE_SALE==='true'?" if string.len(next)>7936 then return -1 end;":"";
   const result=await redis.eval("local old=redis.call('GET',KEYS[1]); if not old then return 0 end; local card=cjson.decode(old); card.withdrawn=true; local next=cjson.encode(card);"+bound+" redis.call('SET',KEYS[1],next); return 1", [CARD_KEY_PREFIX + id], []);
   if(result!==1)throw Error('CATALOG_WITHDRAWAL_UNCONFIRMED');
