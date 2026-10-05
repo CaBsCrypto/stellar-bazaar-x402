@@ -19,7 +19,8 @@ assert.equal(draft.planId,'aa002e77-b950-442f-bb41-df5fa4a7f45f');
 assert.equal(draft.config.workspacePrefix,'bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0');assert.equal(draft.config.marketPrefix,'bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0');assert.equal(draft.config.reviewPrefix,'bazaar-review:pilot-be8432d7255e0a3b0dca564d8aa769a0');assert.equal(draft.config.dynamicPrefix,draft.config.marketPrefix+':catalog');
 assert.equal(draft.config.providerOrigin,'https://guionista-market-7f3e80bed9be.vercel.app');assert.equal(draft.payloads.serviceId,'guionista-algorithmic-text-x402-pilot');
 assert.deepEqual(draft.storageAllocation,{workspace:7000,market:18000,review:9000,catalog:5000,settlement:10164});assert.deepEqual(draft.config.catalogValueCaps,{'guionista-algorithmic-text-pilot':2250,'guionista-algorithmic-text-x402-pilot':2250});
-assert.equal(old.payloads.operatorHash,'750ec4fcd5eccd7570940494c7d79b129945cc5da3d528d834b8062edc951736');assert.ok(old.payloads.admissionHashes.length===2&&old.payloads.admissionHashes.every(v=>/^[a-f0-9]{64}$/.test(v)));
+assert.equal(old.payloads.operatorHash,'750ec4fcd5eccd7570940494c7d79b129945cc5da3d528d834b8062edc951736');
+assert.deepEqual(old.payloads.admissionHashes,['e1c944d64e80835b61c5932e43ea20260d430c1c43d9ef5c0f326186039cadec','58599d6a9719cbc6bf3f4a5ef86bdb226d7b59b87f5f5fe3df98615ea57aa420','0c3e196c6b503d3b7b319890b632167fd950ffc183719fb3fd4568096f3e8ad4','d454dfd159eedb4d759f09821fd636e5e2e4f9b14737cca0f9a92689aa589e4d','f280c53b0a36ca6d1a55bb5cfbf0d09a592eda7e5bb18e83753de735b75cee3b']);
 async function sourceFiles(dryPath){
  const dry=await json(dryPath),files=[],paths=new Set();assert.ok(Array.isArray(dry.files)&&dry.files.length>0&&dry.files.length<500);
  for(const file of dry.files){
