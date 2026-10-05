@@ -226,7 +226,7 @@ try {
   const failureReason='Fallo declarado de entrega; el pago sigue confirmado.';
   const failed = await failGuionistaIntent(secondWorker, workerOptions, failureReason);
   const secondPayload={...firstPayload,operationId:second.operationId,input:second.input};
-  const buyerContractChecks=await verifyHostedBuyerContracts({intent:second,create:secondPayload,order:failed,fetcher:appFetch,agentToken:identities[1].agent,includeMutations:true});
+  const buyerContractChecks=await verifyHostedBuyerContracts({intent:second,create:secondPayload,order:failed,fetcher:buyerOptions.marketFetch,agentToken:identities[1].agent,includeMutations:true});
   const failedContractReplays=await verifyHostedSellerReplays({worker:secondWorker,order:failed,client,failureReason});
   assert.equal(failed.phase, 'delivery-failed'); assert(failed.paymentVerifiedAt); assert.equal(failed.delivery, undefined); assert.equal(providerRequests, 1); assert.equal(facilitatorSettlements, 2);assert.equal(ledgerSubmissions,0);assert.equal((await recoverBuyerIntent(first,buyerOptions)).delivery.text,workerIntent.text);assert.equal((await recoverBuyerIntent(second,buyerOptions)).phase,'delivery-failed');
   const buyerHistory = (await http('/api/market/orders', identities[1].human)).orders, sellerHistory = (await http('/api/market/orders', identities[0].human)).orders;
