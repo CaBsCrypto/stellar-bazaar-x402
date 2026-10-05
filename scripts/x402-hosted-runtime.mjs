@@ -52,6 +52,68 @@ export function x402RequestProfile(kind,input,init={}){
  throw Error('UNMANIFESTED_ROUTE');
 }
 
+const boundHash=value=>assert.match(value??'',/^[a-f0-9]{64}$/,'FROZEN_CREDENTIAL_HASH_REQUIRED');
+const participantOwners=manifest=>{const p=manifest.participants;assert.ok(Array.isArray(p)&&p.length===2&&p[0].role==='seller'&&p[1].role==='buyer');return p.map(v=>v.ownerId);};
+function assertPhaseListingPlan(manifest){
+ const plan=manifest.runtime.phaseListingPlan;if(!plan)return;
+ assert.equal(plan.version,1);assert.equal(plan.planId,manifest.planId);assert.equal(plan.sourceSha,manifest.sourceSha);boundHash(plan.baselineSha256);
+ const [seller,buyer]=participantOwners(manifest);assert.equal(plan.sellerOwnerId,seller);assert.equal(plan.buyerOwnerId,buyer);
+ const old=manifest.payloads.closure.withdrawServiceIds.filter(id=>id!==manifest.payloads.serviceId);assert.equal(old.length,1);
+ assert.deepEqual(plan.initialServices,[{serviceId:old[0],ownerId:seller,status:'activated',withdrawn:false}]);
+ for(const role of ['sellerHuman','buyerAgent'])boundHash(plan.credentialHashes?.[role]);
+ assert.notEqual(plan.credentialHashes.sellerHuman,plan.credentialHashes.buyerAgent,'LISTING_ROLES_MUST_HAVE_DISTINCT_ACCESS');
+ for(const [phase,redis,commands]of [['submit',9,24],['activate',10,28],['retire',12,30]]){
+  const b=manifest.runtime.requestBudgets['api:services:list:'+phase];assert.equal(b?.maximumCalls,1,'PHASE_LISTING_BOUND_REQUIRED');assert.ok(b.redisRestExchanges>=redis&&b.redisCommandsUpperBound>=commands,'PHASE_LISTING_BOUND_TOO_SMALL');assert.ok(Object.values(b.external).every(n=>n===0),'PHASE_LISTING_EXTERNAL_EXECUTION_DENIED');
+ }
+}
+function assertNegativeReadPlan(manifest){
+ const plan=manifest.runtime.negativeReadPlan;if(!plan)return;
+ assert.equal(plan.version,1);assert.equal(plan.planId,manifest.planId);assert.equal(plan.sourceSha,manifest.sourceSha);boundHash(plan.baselineSha256);
+ assert.equal(plan.sellerOwnerId,participantOwners(manifest)[0]);
+ for(const role of ['invalid','sellerHuman','sellerAgent'])boundHash(plan.credentialHashes?.[role]);
+ assert.equal(new Set(Object.values(plan.credentialHashes)).size,3,'NEGATIVE_PROBE_ROLES_MUST_HAVE_DISTINCT_ACCESS');
+ assert.ok(Array.isArray(plan.baselineAccessHashes)&&plan.baselineAccessHashes.length>=6&&plan.baselineAccessHashes.length<=32&&new Set(plan.baselineAccessHashes).size===plan.baselineAccessHashes.length,'FROZEN_BASELINE_ACCESS_HASHES_REQUIRED');
+ plan.baselineAccessHashes.forEach(boundHash);assert.equal(plan.baselineAccessHashes.includes(plan.credentialHashes.invalid),false,'INVALID_PROBE_MUST_NOT_RESOLVE_IN_BASELINE');
+ for(const role of ['sellerHuman','sellerAgent'])assert.ok(plan.baselineAccessHashes.includes(plan.credentialHashes[role]),'SELLER_ACCESS_HASH_NOT_IN_BASELINE');
+ if(manifest.runtime.phaseListingPlan){assert.equal(plan.baselineSha256,manifest.runtime.phaseListingPlan.baselineSha256);assert.equal(plan.credentialHashes.sellerHuman,manifest.runtime.phaseListingPlan.credentialHashes.sellerHuman);}
+ for(const probe of ['invalid','revoked']){
+  const b=manifest.runtime.requestBudgets['api:orders:negative-'+probe];assert.equal(b?.maximumCalls,2,'NEGATIVE_READ_BOUND_REQUIRED');assert.ok(b.redisRestExchanges>=1&&b.redisCommandsUpperBound>=4,'NEGATIVE_READ_BOUND_TOO_SMALL');assert.ok(Object.values(b.external).every(n=>n===0),'NEGATIVE_READ_EXTERNAL_EXECUTION_DENIED');
+ }
+}
+function exactPrivateGet(origin,input,init){
+ const request=input instanceof Request?input:undefined,url=new URL(request?request.url:String(input));
+ assert.equal(url.origin,origin);assert.equal(url.username,'');assert.equal(url.password,'');assert.equal(url.search,'');assert.equal(url.hash,'');
+ assert.equal(String(init.method??request?.method??'GET').toUpperCase(),'GET');assert.ok(init.body==null&&(!request||request.body===null),'READ_PROBE_BODY_DENIED');
+ const headers=new Headers(init.headers??request?.headers),match=/^Bearer ([A-Za-z0-9_-]{43})$/.exec(headers.get('authorization')??'');assert.ok(match,'FROZEN_READ_CREDENTIAL_REQUIRED');assert.equal(headers.has('payment-signature'),false,'READ_PROBE_SIGNATURE_DENIED');
+ return {url,credentialHash:hash(match[1])};
+}
+
+/** Only reviewed baseline/role bindings select a smaller service-list bound. */
+export function x402PhaseListingProfile({manifest,phase,origin},input,init={}){
+ const plan=manifest.runtime.phaseListingPlan;assert.ok(plan,'PHASE_LISTING_PLAN_REQUIRED');assertPhaseListingPlan(manifest);
+ assert.ok(['submit','activate','retire'].includes(phase),'UNPLANNED_LISTING_PHASE');
+ const expected=phase==='retire'?manifest.deployments.replacement:manifest.deployments.application;assert.equal(origin,expected?.origin??expected?.url?.replace(/\/$/,''));
+ const request=exactPrivateGet(origin,input,init);assert.equal(request.url.pathname,'/api/market/services');
+ assert.equal(request.credentialHash,plan.credentialHashes[phase==='activate'?'buyerAgent':'sellerHuman'],'LISTING_CREDENTIAL_BINDING_MISMATCH');
+ return 'api:services:list:'+phase;
+}
+
+/** Explicit negative probes never infer a cheap branch from an expected 401. */
+export function x402NegativeReadProfile({manifest,report,phase,origin,probe,tokenSha256,operationId},input,init={}){
+ const plan=manifest.runtime.negativeReadPlan;assert.ok(plan,'NEGATIVE_READ_PLAN_REQUIRED');assertNegativeReadPlan(manifest);boundHash(tokenSha256);
+ const request=exactPrivateGet(origin,input,init);assert.equal(request.credentialHash,tokenSha256,'NEGATIVE_READ_CREDENTIAL_BINDING_MISMATCH');
+ if(probe==='invalid'){
+  assert.ok(['buy-1','buy-2'].includes(phase),'INVALID_PROBE_PHASE_DENIED');const frozen=manifest.payloads.orders[phase==='buy-1'?0:1];assert.equal(operationId,frozen.operationId);
+  assert.equal(origin,manifest.deployments.application.origin??manifest.deployments.application.url?.replace(/\/$/,''));assert.equal(request.url.pathname,'/api/market/orders/'+operationId);assert.equal(tokenSha256,plan.credentialHashes.invalid);
+ }else{
+  assert.equal(probe,'revoked');assert.equal(phase,'retire','REVOKED_PROBE_PHASE_DENIED');assert.equal(operationId,undefined);assert.equal(request.url.pathname,'/api/market/orders');
+  assert.equal(origin,manifest.deployments.replacement?.origin??manifest.deployments.replacement?.url?.replace(/\/$/,''));assert.ok([plan.credentialHashes.sellerHuman,plan.credentialHashes.sellerAgent].includes(tokenSha256),'UNPLANNED_REVOKED_CREDENTIAL');
+  const revokePath='/api/workspaces/'+manifest.participants[0].workspaceId+'/access',payloadHash=hash(JSON.stringify(manifest.payloads.revocation));
+  assert.ok(report.attempts.some(a=>a.origin===origin&&a.phase==='retire'&&a.path===revokePath&&a.profile==='api:access:revoke'&&a.status==='CONFIRMED'&&a.httpStatus===200&&a.payloadHash===payloadHash),'CONFIRMED_REVOCATION_REQUIRED_FOR_NEGATIVE_READ');
+ }
+ return 'api:orders:negative-'+probe;
+}
+
 /** These are reviewed hard bounds, not observed maxima promoted to guarantees. */
 export function assertX402RuntimePolicy(manifest){
  const runtime=manifest.runtime;assert.ok(runtime&&runtime.budgetBoundsReviewed===true,'REVIEWED_RUNTIME_BOUNDS_REQUIRED');
@@ -64,6 +126,11 @@ export function assertX402RuntimePolicy(manifest){
   assert.ok(b.redisRestExchanges<=32&&b.redisCommandsUpperBound<=224,'SERVER_BOUND_EXCEEDED');
   assert.ok(b.external&&Object.keys(b.external).length===externalNames.length&&externalNames.every(key=>natural(b.external[key])&&b.external[key]<=8),'EXTERNAL_REQUEST_BOUNDS_REQUIRED');
   if(!name.startsWith('api:'))assert.ok(b.redisRestExchanges===0&&b.redisCommandsUpperBound===0&&Object.values(b.external).every(v=>v===0),'PUBLIC_TRANSPORT_HAS_NO_SERVER_METER');
+ }
+ assertPhaseListingPlan(manifest);assertNegativeReadPlan(manifest);
+ for(const name of Object.keys(runtime.requestBudgets)){
+  if(/^api:services:list:(submit|activate|retire)$/.test(name))assert.ok(runtime.phaseListingPlan,'PHASE_LISTING_PLAN_REQUIRED');
+  if(/^api:orders:negative-(invalid|revoked)$/.test(name))assert.ok(runtime.negativeReadPlan,'NEGATIVE_READ_PLAN_REQUIRED');
  }
  for(const key of Object.keys(X402_ACCEPTANCE_LIMITS))assert.ok(natural(runtime.reserves?.[key]),'FROZEN_CAPTURE_RESERVE_REQUIRED:'+key);
  assert.ok(runtime.initialCounters&&runtime.initialStorage,'PREVIOUS_PLAN_EFFECTS_ACCOUNTING_REQUIRED');
@@ -136,7 +203,9 @@ export function createX402HostedRuntime({manifest,report,persist,phase,fetchImpl
   if(kind==='api')assert.ok([manifest.deployments.application,manifest.deployments.replacement].filter(Boolean).some(d=>d.id===deploymentId&&(d.origin??d.url?.replace(/\/$/,''))===origin),'UNMANIFESTED_PROTECTED_ORIGIN');
   return (input,init={})=>enqueue(async()=>{
    if(readRecovery)assert.equal(String(init.method??'GET').toUpperCase(),'GET','RECOVERY_IS_READ_ONLY');
-   const profile=profileResolver?profileResolver(input,init):x402RequestProfile(kind,input,init),budget=policy.requestBudgets[profile];assert.ok(budget,'UNMANIFESTED_REQUEST_PROFILE:'+profile);
+   let profile=profileResolver?profileResolver(input,init):x402RequestProfile(kind,input,init);
+   if(!profileResolver&&kind==='api'&&profile==='api:services:list'&&policy.phaseListingPlan&&['submit','activate','retire'].includes(phase))profile=x402PhaseListingProfile({manifest,phase,origin},input,init);
+   const budget=policy.requestBudgets[profile];assert.ok(budget,'UNMANIFESTED_REQUEST_PROFILE:'+profile);
    if(kind==='rpc')for(const key of ['authorization','cookie','host','x-vercel-protection-bypass'])assert.equal(new Headers(init.headers).has(key),false,'RPC_PRIVATE_HEADER_DENIED');
    const calls=report.profileCalls[profile]??0;assert.ok(calls<budget.maximumCalls,'PROFILE_REQUEST_LIMIT:'+profile);
    let headerBytes=0;for(const[key,value]of new Headers(init.headers))headerBytes+=Buffer.byteLength(key+': '+value+'\r\n');
@@ -183,6 +252,11 @@ export function createX402HostedRuntime({manifest,report,persist,phase,fetchImpl
   });
  }
  return {preview:(origin,bypassSecret,deploymentId)=>transport('api',origin,bypassSecret,deploymentId),provider:(origin,bypassSecret,deploymentId)=>transport('provider',origin,bypassSecret,deploymentId),rpc:()=>transport('rpc',manifest.config.rpcOrigin),
+  negativeReadPreview(origin,bypassSecret,deploymentId,context){
+   const frozen=structuredClone(context);assert.ok(policy.negativeReadPlan,'NEGATIVE_READ_PLAN_REQUIRED');
+   assert.ok(Object.keys(frozen).every(key=>['probe','tokenSha256','operationId'].includes(key)),'NEGATIVE_READ_CONTEXT_DENIED');
+   return transport('api',origin,bypassSecret,deploymentId,(input,init)=>x402NegativeReadProfile({manifest,report,phase,origin,probe:frozen.probe,tokenSha256:frozen.tokenSha256,operationId:frozen.operationId},input,init));
+  },
   contractPreview(origin,bypassSecret,deploymentId,context){
    const frozen=structuredClone(context),path='/api/market/orders/'+frozen.intent.operationId+'/x402';
    assert.equal(frozen.intent.origin,origin);assert.equal(frozen.intent.phase,'paid');

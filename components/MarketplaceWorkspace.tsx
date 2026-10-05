@@ -25,11 +25,12 @@ function AssetIdentity({identity}: {identity?: StellarCreditIdentity}) {
   return identity ? <details><summary>Identidad del activo</summary><dl><dt>Red</dt><dd>{identity.network}</dd><dt>Emisor</dt><dd><code>{identity.issuer}</code></dd><dt>Contrato SAC</dt><dd><code>{identity.sacContract}</code></dd></dl></details> : null;
 }
 
-export default function MarketplaceWorkspace({access, onLock}: {access: string; onLock: () => void}) {
+export default function MarketplaceWorkspace({access, onLock, view='all'}: {access: string; onLock: () => void; view?: 'history' | 'all'}) {
   const [services, setServices] = useState<Service[]>([]), [mine, setMine] = useState<Service[]>([]), [orders, setOrders] = useState<Order[]>([]);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [payer, setPayer] = useState(''), [input, setInput] = useState('{}');
   const [card, setCard] = useState(''), [submissionId, setSubmissionId] = useState(''), [operationId, setOperationId] = useState('');
   const [selected, setSelected] = useState<Service | null>(null), [uncertain, setUncertain] = useState(false), [paused, setPaused] = useState(true);
+  const [servicesVisible, setServicesVisible] = useState(view === 'all');
   const [savedOrder, setSavedOrder] = useState(''), [savedCard, setSavedCard] = useState('');
   const generation = useRef(0), controller = useRef<AbortController | null>(null), alive = useRef(true);
   const current = (ctx: Pick<ActionContext, 'generation'>) => alive.current && generation.current === ctx.generation;
@@ -72,16 +73,23 @@ export default function MarketplaceWorkspace({access, onLock}: {access: string; 
     if (current(ctx)) { setServices(catalog.services); setMine(catalog.mine); setOrders(history.orders); setPaused(catalog.paused); }
     return catalog.services as Service[];
   }
+  async function refreshOrders(ctx: ActionContext) {
+    const history = await api(ctx, '/api/market/orders');
+    if (current(ctx)) setOrders(history.orders);
+  }
   useEffect(() => {
     alive.current = true; clearPrivate();
     void run(async ctx => {
-      const catalog = await refresh(ctx);
       const id = new URLSearchParams(window.location.search).get('service');
+      const showServices = view === 'all' || Boolean(id);
+      setServicesVisible(showServices);
+      if (!showServices) { await refreshOrders(ctx); return; }
+      const catalog = await refresh(ctx);
       const requested = catalog.find(service => service.card.id === id && canBuy(service.card));
       if (current(ctx) && requested) { setSelected(requested); setOperationId(crypto.randomUUID()); }
     });
     return () => { alive.current = false; generation.current++; controller.current?.abort(); };
-  }, [access]);
+  }, [access, view]);
   function lock() {
     alive.current = false; generation.current++; controller.current?.abort(); clearPrivate(); setBusy(false); onLock();
   }
@@ -123,10 +131,11 @@ export default function MarketplaceWorkspace({access, onLock}: {access: string; 
     <div className={styles.header}><div><p>Marketplace · sólo Stellar testnet</p><h2 id='market-workspace-title'>Compras, ventas y mis servicios</h2></div><button onClick={lock}>Bloquear espacio</button></div>
     <p>Tu agente corre en tu infraestructura. Los pagos van a la wallet del vendedor. Las entregas son texto declarado por su agente; verificar el pago no certifica su calidad.</p>
     <p>Pagos del piloto: USDC de Circle en testnet. {USDT0_MAINNET_DESCRIPTOR.identity.code} está preparado para mainnet y sus pagos permanecen desactivados.</p>
-    <button disabled={busy} onClick={() => void run(async ctx => { await refresh(ctx); })}>Actualizar marketplace</button>
+    <button disabled={busy} onClick={() => void run(async ctx => { if (servicesVisible) await refresh(ctx); else await refreshOrders(ctx); })}>{servicesVisible ? 'Actualizar marketplace' : 'Actualizar pedidos'}</button>
+    {!servicesVisible && <button disabled={busy} onClick={() => { setServicesVisible(true); void run(async ctx => { await refresh(ctx); }); }}>Servicios y publicación</button>}
     {busy && <p role='status'>Procesando…</p>}{error && <p role='alert'>{error}. Conserva el identificador y actualiza para comprobar el estado; no repitas pagos.</p>}
     {uncertain && <p role='status'>Una acción requiere comprobación. Las nuevas escrituras están pausadas en esta vista. Conserva tu archivo de intención y recupera el estado antes de continuar.</p>}
-    <h3>Servicios disponibles</h3>{paused && <p role='status'>Nuevas publicaciones y compras pausadas. Tu historial sigue disponible.</p>}
+    {servicesVisible && <><h3>Servicios disponibles</h3>{paused && <p role='status'>Nuevas publicaciones y compras pausadas. Tu historial sigue disponible.</p>}
     <label>Recuperar intención de compra<input type='file' accept='application/json' disabled={busy} onChange={e => {
       recoverFile(e.target.files?.[0], 16384, value => {
         const service = services.find(v => v.card.id === value.serviceId && v.cardHash === value.cardHash);
@@ -145,7 +154,7 @@ export default function MarketplaceWorkspace({access, onLock}: {access: string; 
       <label>Parámetros JSON<textarea value={input} onChange={e => setInput(e.target.value)} required/></label><p>Campos: {selected.card.input.map(v => `${v.name} (${v.type}${v.required ? ', obligatorio' : ''})`).join(', ')}</p>
       <p>Referencia: <code>{operationId}</code></p><button type='button' disabled={busy} onClick={() => { try { saveIntent('bazaar-order-intent.json', {operationId, serviceId: selected.card.id, cardHash: selected.cardHash, payer, input: JSON.parse(input)}); setSavedOrder(`${operationId}|${payer}|${input}`); } catch { setError('JSON_INVALIDO'); } }}>Guardar intención de compra</button>
       <button disabled={busy || uncertain || paused || !payer || savedOrder !== `${operationId}|${payer}|${input}`}>Crear pedido sin pagar todavía</button>
-    </form>}
+    </form>}</>}
     <h3>Historial privado de compras y ventas</h3>
     {!orders.length && <p>Aún no tienes pedidos.</p>}
     {orders.map(order => <article key={order.operationId}><h4>{order.perspective === 'sale' ? 'Venta' : 'Compra'} · {order.card.name}</h4><p>{statuses[order.phase]}</p><p>{order.amount} {order.card.payment.asset} testnet · <time>{order.updatedAt}</time></p><p>Referencia: <code>{order.operationId}</code></p><p>Comprador: <code>{order.payer}</code> · Destinatario: <code>{order.destination}</code></p><AssetIdentity identity={order.settlement ?? order.card.payment.identity}/>
@@ -156,13 +165,13 @@ export default function MarketplaceWorkspace({access, onLock}: {access: string; 
       {order.perspective === 'purchase' && order.phase === 'awaiting-payment' && canBuy(order.card) && <button disabled={busy || uncertain || paused} onClick={() => void run(ctx => pay(ctx, order), true)}>Firmar y pagar {order.amount} {order.card.payment.asset} testnet con Freighter</button>}
       {order.perspective === 'purchase' && ['payment-submitting', 'payment-uncertain'].includes(order.phase) && <button disabled={busy} onClick={() => void run(async ctx => { await api(ctx, `/api/market/orders/${order.operationId}`, {action: 'reconcile'}); await refresh(ctx); })}>Conciliar sin volver a pagar</button>}
     </article>)}
-    <h3>Mis servicios</h3><p>Envía una Service Card HTTPS con precio USDC de Circle testnet, su emisor y contrato SAC, entrega text/plain e idempotencia. Requiere prueba de control HTTP y revisión manual antes de publicarse.</p>
+    {servicesVisible && <><h3>Mis servicios</h3><p>Envía una Service Card HTTPS con precio USDC de Circle testnet, su emisor y contrato SAC, entrega text/plain e idempotencia. Requiere prueba de control HTTP y revisión manual antes de publicarse.</p>
     <form onSubmit={e => { e.preventDefault(); void run(async ctx => { const parsed = JSON.parse(card); await api(ctx, '/api/market/services', {submissionId, card: parsed, controlProof: {method: 'http-well-known', domain: new URL(parsed.url).hostname}}); await refresh(ctx); }, true); }}>
       <label>Ficha JSON<textarea value={card} onChange={e => setCard(e.target.value)} required/></label>
       <button type='button' disabled={busy || uncertain || paused} onClick={() => { try { const id = submissionId || crypto.randomUUID(); saveIntent('bazaar-service-intent.json', {submissionId: id, card: JSON.parse(card)}); setSubmissionId(id); setSavedCard(card); } catch { setError('JSON_INVALIDO'); } }}>Guardar intención de publicación</button>
       <label>Recuperar intención guardada<input type='file' accept='application/json' disabled={busy} onChange={e => { recoverFile(e.target.files?.[0], 32768, value => { if (typeof value.submissionId !== 'string' || !value.card) throw Error(); const text = JSON.stringify(value.card, null, 2); setSubmissionId(value.submissionId); setCard(text); setSavedCard(text); }, 'ARCHIVO_INVALIDO'); e.target.value = ''; }}/></label>
       <p>Referencia: <code>{submissionId || 'Guarda la intención primero'}</code></p><button disabled={!submissionId || busy || uncertain || paused || savedCard !== card}>Enviar a revisión</button>
     </form>
-    {mine.map(service => <article key={service.submissionId}><h4>{service.card.name}</h4><p>Estado: {service.status}</p><code>{service.submissionId}</code>{service.control && <details><summary>Prueba de control del endpoint</summary><p>Publica este contenido exacto en {service.control.domain}{service.control.verificationPath}:</p><pre>{service.control.expectedRecord}</pre></details>}<button disabled={busy || uncertain || service.status === 'withdrawn'} onClick={() => void run(async ctx => { await api(ctx, `/api/market/services/${service.submissionId}`, {action: 'withdraw'}); await refresh(ctx); }, true)}>Retirar de nuevas compras</button></article>)}
+    {mine.map(service => <article key={service.submissionId}><h4>{service.card.name}</h4><p>Estado: {service.status}</p><code>{service.submissionId}</code>{service.control && <details><summary>Prueba de control del endpoint</summary><p>Publica este contenido exacto en {service.control.domain}{service.control.verificationPath}:</p><pre>{service.control.expectedRecord}</pre></details>}<button disabled={busy || uncertain || service.status === 'withdrawn'} onClick={() => void run(async ctx => { await api(ctx, `/api/market/services/${service.submissionId}`, {action: 'withdraw'}); await refresh(ctx); }, true)}>Retirar de nuevas compras</button></article>)}</>}
   </section>;
 }

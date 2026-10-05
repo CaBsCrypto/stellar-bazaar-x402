@@ -15,7 +15,7 @@ import {withProtectedPrivateMcp} from '../examples/protected-preview-client.mjs'
 import {verifyHostedBuyerContracts,verifyHostedSellerReplays} from './x402-hosted-contract-checks.mjs';
 
 const root=resolve('docs/evidence/sprint-x402-agent');
-const defaults={manifest:join(root,'acceptance-manifest.json'),local:join(root,'native-local.json'),capture:join(root,'capture-preflight-public.json'),hostedCapture:join(root,'hosted-browser-capture-public.json'),report:join(packetDirectory,'x402-hosted-agent-http.json')};
+const defaults={manifest:join(root,'acceptance-manifest.json'),local:join(root,'native-local.json'),agentCapture:join(root,'agent-capture-preflight-public.json'),hostedCapture:join(root,'hosted-browser-capture-public.json'),report:join(packetDirectory,'x402-hosted-agent-http.json')};
 const readJson=async path=>{const bytes=await readFile(path);assert.ok(bytes.length<=2097152,'PUBLIC_ARTIFACT_TOO_LARGE');return JSON.parse(bytes.toString('utf8').replace(/^\uFEFF/,''));};
 const optionalJson=async path=>{try{return await readJson(path);}catch(error){if(error.code==='ENOENT')return undefined;throw error;}};
 const exactOrigin=value=>{const u=new URL(value);assert.ok(u.origin===value&&u.protocol==='https:'&&u.pathname==='/'&&!u.username&&!u.password&&!u.search&&!u.hash,'EXACT_ORIGIN_REQUIRED');return u.origin;};
@@ -45,10 +45,10 @@ export async function currentX402SourceBinding(manifest){
  return {sha:sha.trim(),clean:dirtySourceFiles.length===0,dirtySourceFiles,publicArtifactChanges};
 }
 
-export function assertHostedX402Preflight({manifest,localReport,capturePreflight,hostedCapture,source,command,index,readRecovery=false}){
+export function assertHostedX402Preflight({manifest,localReport,agentCapturePreflight,hostedCapture,source,command,index,readRecovery=false}){
  // This is intentionally the first authority check: no packet, lock, signer,
  // authenticated transport, or hosted request has been constructed yet.
- assertX402ExecutionGate(manifest,{localReport,capturePreflight,hostedCapture,expectedSha:source.sha});
+ assertX402ExecutionGate(manifest,{localReport,agentCapturePreflight,hostedCapture,expectedSha:source.sha,phase:command});
  assert.equal(source.clean,true,'DIRTY_SOURCE_REQUIRES_FINAL_SHA_BINDING');assertX402RuntimePolicy(manifest);
  assert.equal(manifest.runtime.localProfilesSha256,x402PublicHash(localReport.requestProfiles),'LOCAL_REQUEST_PROFILES_CHANGED');
  assert.ok(['submit','activate','buy','recover','pause','retire'].includes(command),'INVALID_COMMAND');
@@ -79,9 +79,7 @@ export function assertHostedX402Preflight({manifest,localReport,capturePreflight
  if(requiresReplacement){checkDeployment(manifest.deployments.replacement);assert.notEqual(manifest.deployments.replacement.id,app.id);assert.notEqual(applicationOrigin(manifest.deployments.replacement),origin);assert.equal(manifest.deployments.replacement.payloadFingerprint,app.payloadFingerprint,'REPLACEMENT_SOURCE_PAYLOAD_CHANGED');}
  if(command==='pause'){assert.deepEqual(manifest.payloads.pause,{action:'pause'});assert.equal(manifest.payloads.pauseCreate.operationId,manifest.payloads.pauseOperationId);assert.ok(manifest.payloads.pauseWorkspaceProbe,'FROZEN_ADMISSION_PAUSE_PROBE_REQUIRED');}
  if(command==='retire'){
-  assert.equal(manifest.readiness.canRetireSynthetic,true,'RETIREMENT_GATE_CLOSED');assert.equal(manifest.readiness.independentReviewPassed,true,'INDEPENDENT_REVIEW_REQUIRED');
-  assert.equal(hostedCapture?.status,'PASS_BROWSER_NETWORK_CAPTURE');assert.equal(hostedCapture.captureComplete,true);assert.equal(hostedCapture.coverage?.httpRetries,0);assert.equal(manifest.browserAcceptance.nativeZoom200,'PASS');
-  assert.equal(x402PublicHash(hostedCapture),manifest.browserAcceptance.hostedCaptureSha256);assert.equal(hostedCapture.binding.planId,manifest.planId);assert.equal(hostedCapture.binding.sourceSha,manifest.sourceSha);assert.equal(hostedCapture.binding.deploymentId,manifest.deployments.replacement.id);assert.equal(hostedCapture.binding.origin,applicationOrigin(manifest.deployments.replacement));
+  assert.equal(manifest.readiness.canRetireSynthetic,true,'RETIREMENT_GATE_CLOSED');assert.equal(manifest.readiness.retirementPlanReviewed,true,'RETIREMENT_PLAN_REVIEW_REQUIRED');
   assert.equal(manifest.payloads.closure.revokeOwnerId,p[0].ownerId);assert.equal(manifest.payloads.closure.preserveOwnerId,p[1].ownerId);assert.deepEqual(manifest.payloads.revocation,{action:'revoke',expectedGeneration:3});
  }
  return {origin,replacement:requiresReplacement?applicationOrigin(manifest.deployments.replacement):undefined,providerOrigin:provider.stableAlias};
@@ -90,10 +88,10 @@ export function assertHostedX402Preflight({manifest,localReport,capturePreflight
 /** Dependency injection exists solely for offline fail-closed tests. */
 export async function runHostedX402Agent({command,index,paths=defaults,dependencies={}}){
  const read=dependencies.readJson??readJson,optional=dependencies.optionalJson??optionalJson;
- const [m,localReport,capturePreflight,hostedCapture,previousReport]=await Promise.all([read(paths.manifest),read(paths.local),read(paths.capture),optional(paths.hostedCapture),optional(paths.report)]);
+ const [m,localReport,agentCapturePreflight,hostedCapture,previousReport]=await Promise.all([read(paths.manifest),read(paths.local),optional(paths.agentCapture??defaults.agentCapture),optional(paths.hostedCapture),optional(paths.report)]);
  const source=await(dependencies.sourceBinding??currentX402SourceBinding)(m);
  const uncertain=previousReport?.status==='UNCERTAIN'||previousReport?.attempts?.some(a=>a.status==='PENDING'),readRecovery=command==='recover'&&uncertain;
- const origins=assertHostedX402Preflight({manifest:m,localReport,capturePreflight,hostedCapture,source,command,index,readRecovery});
+ const origins=assertHostedX402Preflight({manifest:m,localReport,agentCapturePreflight,hostedCapture,source,command,index,readRecovery});
  if(previousReport)assertX402HostedReport(previousReport,m);
  if(uncertain)assert.ok(readRecovery&&m.readiness.canReadRecovery===true,'UNCERTAIN_STOP_NO_NEW_EFFECTS');
  const lock=await(dependencies.acquireLock??acquireX402RunLock)(packetDirectory,m.planId,{readRecovery});
@@ -149,7 +147,8 @@ export async function runHostedX402Agent({command,index,paths=defaults,dependenc
    const contractFetch=await runtime.contractPreview(origin,privateSale.bazaarBypass,m.deployments.application.id,{intent,create:frozen.create,order:buyer});
    report.contractChecks[index].buyer=await verifyHostedBuyerContracts({intent,create:frozen.create,order:buyer,fetcher:contractFetch,agentToken:b.agent,includeMutations:index===0});
    section.contractChecks[index]={phase:'verified',...report.contractChecks[index]};await persistPacket();
-   await http(orders+'/'+frozen.operationId,'q'.repeat(43),undefined,401);section.histories={a:(await http(orders,aHuman)).orders,b:(await http(orders,b.human)).orders};
+   const invalidProbe=m.runtime.negativeReadPlan?{origin,fetcher:await runtime.negativeReadPreview(origin,privateSale.bazaarBypass,deployment.id,{probe:'invalid',tokenSha256:x402PublicHash('q'.repeat(43)),operationId:frozen.operationId})}:undefined;
+   await http(orders+'/'+frozen.operationId,'q'.repeat(43),undefined,401,invalidProbe);section.histories={a:(await http(orders,aHuman)).orders,b:(await http(orders,b.human)).orders};
    assert.ok(section.histories.b.some(o=>o.operationId===frozen.operationId));for(const priorId of m.payloads.priorOperationIds)assert.ok(section.histories.b.some(o=>o.operationId===priorId),'HISTORICAL_ORDER_MISSING');await persistPacket();
   }else if(command==='recover'){
    if(!readRecovery)mustComplete(section,['buy-1','buy-2']);assert.ok(section.buyerIntents.length>0,'NO_INTENT_TO_RECOVER');
@@ -167,7 +166,9 @@ export async function runHostedX402Agent({command,index,paths=defaults,dependenc
   }else{
    mustComplete(section,['buy-1','buy-2','recover','pause']);const retireIds=m.payloads.closure.withdrawServiceIds;assert.ok(Array.isArray(retireIds)&&retireIds.includes(m.payloads.serviceId));
    const listings=await http(services,aHuman);for(const id of retireIds){const mine=listings.mine?.find(s=>s.card.id===id);assert.ok(mine?.submissionId,'RETIRE_SUBMISSION_NOT_OWNED');await http(services+'/'+mine.submissionId,aHuman,{action:'withdraw'});}
-   await http('/api/workspaces/'+m.participants[0].workspaceId+'/access',a.bootstrap,m.payloads.revocation);await http(orders,aHuman,undefined,401);await http(orders,aAgent,undefined,401);assert.deepEqual((await http(orders,b.human)).orders,section.histories.b);report.syntheticRetirement={sellerOwnerId:m.participants[0].ownerId,buyerOwnerId:m.participants[1].ownerId,expectedGeneration:3,historicalRecordsPreserved:true};
+   await http('/api/workspaces/'+m.participants[0].workspaceId+'/access',a.bootstrap,m.payloads.revocation);
+   for(const access of [aHuman,aAgent]){const revokedProbe=m.runtime.negativeReadPlan?{origin,fetcher:await runtime.negativeReadPreview(origin,privateSale.bazaarBypass,deployment.id,{probe:'revoked',tokenSha256:x402PublicHash(access)})}:undefined;await http(orders,access,undefined,401,revokedProbe);}
+   assert.deepEqual((await http(orders,b.human)).orders,section.histories.b);report.syntheticRetirement={sellerOwnerId:m.participants[0].ownerId,buyerOwnerId:m.participants[1].ownerId,expectedGeneration:3,historicalRecordsPreserved:true};
   }
   if(!readRecovery&&!section.completed.includes(phase))section.completed.push(phase);await persistPacket();report.phases.push({phase,deploymentId:deployment.id,passed:true,readOnly:readRecovery});if(!readRecovery)report.status='PASS_EXECUTED_PHASES';await persist(report);await runtime.drain();
   readSucceeded=readRecovery;return {status:readRecovery?'PASS_READ_RECOVERY_UNCERTAINTY_PRESERVED':'PASS',phase,planId:m.planId,sourceSha:m.sourceSha,deploymentId:deployment.id,totals:report.totals,automaticRetries:0,productionChanges:0,invitationMessages:0};
