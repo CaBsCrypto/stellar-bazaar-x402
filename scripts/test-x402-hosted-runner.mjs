@@ -36,6 +36,25 @@ const missingContracts=manifest();missingContracts.readiness.walletsPreflightPas
 let prematurePacketReads=0;
 await assert.rejects(()=>runHostedX402Agent({command:'buy',index:0,paths:{manifest:'m',local:'l',capture:'c',hostedCapture:'h',report:'r'},dependencies:{readJson:async p=>p==='m'?missingContracts:p==='l'?local:capture,optionalJson:async()=>undefined,sourceBinding:async()=>source,loadPacket:async()=>{prematurePacketReads++;}}}),/FROZEN_HOSTED_CONTRACT_CHECKS_REQUIRED/);
 assert.equal(prematurePacketReads,0);tests++;
+const sellerProfiles={'api:mcp:tool:claim_market_order':4,'api:mcp:tool:deliver_market_order':2,'api:mcp:tool:fail_market_order':2};
+const contracts=manifest();contracts.readiness.walletsPreflightPassed=true;
+contracts.runtime.contractChecksPlan={version:1,mutations:['price','recipient','asset','network','content'],operationIds:draft.payloads.orders.map(o=>o.operationId),timing:'after-confirmed-payment-and-terminal-delivery'};
+for(const [name,maximumCalls]of Object.entries({'api:x402:reject-requirements':4,'api:orders:reject-content':1,'api:orders:replay':2,'api:x402:replay':2,...sellerProfiles}))contracts.runtime.requestBudgets[name]={...structuredClone(budget),maximumCalls};
+assert.equal(assertHostedX402Preflight({manifest:contracts,localReport:local,capturePreflight:capture,source,command:'buy',index:0}).origin,origin);tests++;
+// A replay policy must reject every possible external execution before private access.
+for(const name of Object.keys(sellerProfiles))for(const kind of Object.keys(external())){
+ const altered=structuredClone(contracts);altered.runtime.requestBudgets[name].external[kind]=1;let packetReads=0,locks=0,requests=0;
+ await assert.rejects(()=>runHostedX402Agent({command:'buy',index:0,paths:{manifest:'m',local:'l',capture:'c',hostedCapture:'h',report:'r'},dependencies:{readJson:async p=>p==='m'?altered:p==='l'?local:capture,optionalJson:async()=>undefined,sourceBinding:async()=>source,loadPacket:async()=>{packetReads++;},acquireLock:async()=>{locks++;},fetchImpl:async()=>{requests++;}}}),/SELLER_REPLAY_MUST_HAVE_NO_EXTERNAL_EXECUTION/);
+ assert.equal(packetReads+locks+requests,0);tests++;
+}
+// MCP sees responses only after the runtime has checked the server meter.
+for(const kind of ['provider','rpc','facilitator']){
+ const replayReport=newX402HostedReport(contracts);let requests=0;
+ const replayRuntime=createX402HostedRuntime({manifest:contracts,report:replayReport,phase:'test',persist:async()=>{},fetchImpl:async()=>{requests++;const response=measured({jsonrpc:'2.0',id:1,result:{content:[{type:'text',text:JSON.stringify({order:{phase:'delivered'}})}]}});response.headers.set('x-bazaar-external-'+kind,'1');return response;}});
+ const replayFetch=await replayRuntime.preview(origin,'z'.repeat(32),'dpl_fixture');
+ await assert.rejects(()=>replayFetch(origin+'/api/mcp',{method:'POST',body:JSON.stringify({jsonrpc:'2.0',id:1,method:'tools/call',params:{name:'claim_market_order',arguments:{operationId:draft.payloads.orders[0].operationId,attemptId:randomUUID()}}})}));
+ assert.equal(requests,1);assert.equal(replayReport.status,'UNCERTAIN');assert.equal(replayReport.attempts[0].status,'UNCERTAIN');assert.equal(replayReport.attempts[0].external[kind],1);tests++;
+}
 const arithmeticCases=[
  ['apiRequests',m=>{m.runtime.initialCounters.apiRequests=106;}],
  ['redisRestExchanges',m=>{m.runtime.initialCounters.redisRestExchanges=305;}],

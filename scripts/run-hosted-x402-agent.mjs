@@ -70,7 +70,10 @@ export function assertHostedX402Preflight({manifest,localReport,capturePreflight
   for(const [name,calls]of Object.entries({'api:x402:reject-requirements':4,'api:orders:reject-content':1,'api:orders:replay':2,'api:x402:replay':2})){
    const bound=manifest.runtime.requestBudgets[name];assert.equal(bound?.maximumCalls,calls,'CONTRACT_CHECK_CALL_BUDGET_REQUIRED:'+name);assert.ok(Object.values(bound.external).every(n=>n===0),'CONTRACT_CHECK_MUST_HAVE_NO_EXTERNAL_EXECUTION');
   }
-  for(const [name,calls]of Object.entries({'api:mcp:tool:claim_market_order':4,'api:mcp:tool:deliver_market_order':2,'api:mcp:tool:fail_market_order':2}))assert.equal(manifest.runtime.requestBudgets[name]?.maximumCalls,calls,'SELLER_REPLAY_BUDGET_REQUIRED:'+name);
+  for(const [name,calls]of Object.entries({'api:mcp:tool:claim_market_order':4,'api:mcp:tool:deliver_market_order':2,'api:mcp:tool:fail_market_order':2})){
+   const bound=manifest.runtime.requestBudgets[name];assert.equal(bound?.maximumCalls,calls,'SELLER_REPLAY_BUDGET_REQUIRED:'+name);
+   assert.ok(Object.values(bound.external).every(n=>n===0),'SELLER_REPLAY_MUST_HAVE_NO_EXTERNAL_EXECUTION:'+name);
+  }
  }
  const requiresReplacement=['pause','retire'].includes(command)||command==='recover'&&(!readRecovery||manifest.deployments.replacement);
  if(requiresReplacement){checkDeployment(manifest.deployments.replacement);assert.notEqual(manifest.deployments.replacement.id,app.id);assert.notEqual(applicationOrigin(manifest.deployments.replacement),origin);assert.equal(manifest.deployments.replacement.payloadFingerprint,app.payloadFingerprint,'REPLACEMENT_SOURCE_PAYLOAD_CHANGED');}
