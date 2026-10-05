@@ -24,7 +24,12 @@ import {formatHumanHistoryUrl} from '../lib/operation-history-client.ts';
 // Native production Next + Redis/Soroban/facilitator protocol doubles, actual external worker
 // and algorithmic provider route. No production credentials, DNS proof or funds.
 const sha = value => createHash('sha256').update(value).digest('hex');
-const coreOnly=process.argv.includes('--core-only'),reportPath='docs/evidence/sprint-x402-agent/'+(coreOnly?'native-core-local.json':'native-local.json');
+const coreOnly=process.argv.includes('--core-only'),reportIndex=process.argv.indexOf('--report-name');
+const reportName=reportIndex<0?(coreOnly?'native-core-local.json':'native-local.json'):process.argv[reportIndex+1];
+assert.ok(typeof reportName==='string'&&/^[a-zA-Z0-9][a-zA-Z0-9._-]*\.json$/.test(reportName),'INVALID_PUBLIC_REPORT_NAME');
+const reportPath='docs/evidence/sprint-x402-agent/'+reportName;
+// A named candidate run preserves earlier reports, including a failed attempt.
+if(reportIndex>=0){try{await readFile(reportPath);throw Error('PUBLIC_REPORT_ALREADY_EXISTS');}catch(e){if(e.code!=='ENOENT')throw e;}}
 const candidateArgument=process.argv.indexOf('--candidate-sha'),candidateSha=candidateArgument<0?undefined:process.argv[candidateArgument+1],sourceSha=(await promisify(execFile)('git',['rev-parse','HEAD'],{windowsHide:true})).stdout.trim();
 const sourcePaths=['app','components','lib','examples','scripts','package.json','package-lock.json','next.config.ts','next.config.js','next.config.mjs','tsconfig.json','proxy.ts','public','providers'];
 if(candidateArgument>=0){assert.match(candidateSha??'',/^[a-f0-9]{40}$/,'INVALID_CANDIDATE_SHA');assert.equal(candidateSha,sourceSha,'CANDIDATE_SHA_MISMATCH');const dirty=(await promisify(execFile)('git',['status','--porcelain','--untracked-files=all','--',...sourcePaths],{windowsHide:true})).stdout.trim();assert.equal(dirty,'','COMMITTED_CANDIDATE_SOURCE_IS_DIRTY');assert(!coreOnly,'CORE_ONLY_CANNOT_BIND_FINAL_CANDIDATE');}

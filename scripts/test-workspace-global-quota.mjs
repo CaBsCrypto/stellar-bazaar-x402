@@ -3,14 +3,14 @@ import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { createRedisWorkspaceStore, READ_WORKSPACE_LUA, COMMIT_WORKSPACE_LUA, setWorkspaceStoreForTests } from '../lib/workspace-store.ts';
 import { createWorkspaceHandlers, workspaceFailure } from '../lib/workspace-http.ts';
 
-const names = ['BAZAAR_ENABLE_OPEN_WORKSPACES', 'BAZAAR_WORKSPACE_BACKEND', 'BAZAAR_WORKSPACE_PREFIX', 'BAZAAR_WORKSPACE_PUBLIC_ORIGIN', 'BAZAAR_WORKSPACE_ADMISSION', 'BAZAAR_WORKSPACE_INVITE_HASHES_JSON', 'BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE', 'BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY'];
+const names = ['BAZAAR_ENABLE_OPEN_WORKSPACES', 'BAZAAR_WORKSPACE_BACKEND', 'BAZAAR_WORKSPACE_PREFIX', 'BAZAAR_WORKSPACE_PUBLIC_ORIGIN', 'BAZAAR_WORKSPACE_ADMISSION', 'BAZAAR_WORKSPACE_INVITE_HASHES_JSON', 'BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE', 'BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY', 'BAZAAR_ACCEPTANCE_METER', 'BAZAAR_ACCEPTANCE_X402'];
 const old = Object.fromEntries(names.map(name => [name, process.env[name]])), oldNow = Date.now;
 const hash = value => createHash('sha256').update(value).digest('hex');
 const identities = Array.from({ length: 3 }, () => {
   const tokens = Object.fromEntries(['bootstrap', 'human', 'agent'].map(role => [role, randomBytes(32).toString('base64url')]));
   return { tokens, input: { creationId: randomUUID(), humanAccessHash: hash(tokens.human), agentAccessHash: hash(tokens.agent) } };
 });
-let now = Date.UTC(2026, 9, 2, 12, 0, 1), exchangeCount = 0, commits = 0, lostAck = false, barrier;
+let now = Date.UTC(2026, 9, 2, 12, 0, 1), exchangeCount = 0, commits = 0, lostAck = false, barrier, quotaConflicts = 0;
 const data = new Map();
 const redis = { async eval(script, keys, args) {
   exchangeCount++;
@@ -20,6 +20,7 @@ const redis = { async eval(script, keys, args) {
     return snapshot;
   }
   assert.equal(script, COMMIT_WORKSPACE_LUA);
+  if (quotaConflicts > 0) { quotaConflicts--; return 0; }
   if (keys.some((key, index) => (data.get(key) ?? '') !== args[index])) return 0;
   data.set(keys[0], args[3]); if (args[4]) data.set(keys[1], args[4]); data.set(keys[2], 'workspace-v1'); commits++;
   if (lostAck) { lostAck = false; throw new Error('Synthetic lost acknowledgement'); }
@@ -72,13 +73,32 @@ try {
   await assert.rejects(() => freshStore().consumeRequest(ownerA.ownerId, 1), { code: 'WORKSPACE_UNAVAILABLE' });
   assert.equal(commits, beforeLostAck + 1, 'Unknown acknowledgement must not trigger a second commit');
   assert.equal(registry().globalRequestQuota.dayCount, 1);
+  // Definite CAS0 cannot amplify the hosted x402 acceptance request budget.
+  process.env.BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE = '120';
+  process.env.BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY = '1000';
+  process.env.BAZAAR_ACCEPTANCE_METER = 'true'; process.env.BAZAAR_ACCEPTANCE_X402 = 'true';
+  const beforeAcceptanceConflict = state(), beforeAcceptanceExchanges = exchangeCount, beforeAcceptanceCommits = commits;
+  quotaConflicts = 8;
+  await assert.rejects(() => freshStore().consumeRequest(ownerA.ownerId, 1), { code: 'WORKSPACE_UNAVAILABLE' });
+  assert.equal(exchangeCount - beforeAcceptanceExchanges, 2);
+  assert.equal(commits, beforeAcceptanceCommits); assert.equal(state(), beforeAcceptanceConflict);
+  assert.equal(quotaConflicts, 7, 'Acceptance must stop after its first definite CAS0');
+  // Existing non-acceptance operation still tolerates seven definite conflicts.
+  process.env.BAZAAR_ACCEPTANCE_METER = 'false';
+  const beforeOrdinaryExchanges = exchangeCount, beforeOrdinaryCommits = commits;
+  await freshStore().consumeRequest(ownerA.ownerId, 1);
+  assert.equal(exchangeCount - beforeOrdinaryExchanges, 16); assert.equal(commits, beforeOrdinaryCommits + 1);
+  process.env.BAZAAR_ACCEPTANCE_METER = 'true'; quotaConflicts = 0; lostAck = true;
+  const beforeAcceptanceAckExchanges = exchangeCount, beforeAcceptanceAckCommits = commits;
+  await assert.rejects(() => freshStore().consumeRequest(ownerA.ownerId, 1), { code: 'WORKSPACE_UNAVAILABLE' });
+  assert.equal(exchangeCount - beforeAcceptanceAckExchanges, 2); assert.equal(commits, beforeAcceptanceAckCommits + 1);
   const readsBeforeBadConfig = exchangeCount;
   for (const [minute, day] of [['', '3'], ['2', ''], ['0', '3'], ['2', '10001'], ['1001', '3'], ['2x', '3']]) {
     process.env.BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE = minute; process.env.BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY = day;
     assert.equal((await http.POST(request(identities[2]))).status, 503);
     assert.equal(exchangeCount, readsBeforeBadConfig);
   }
-  console.log(JSON.stringify({ ok: true, redis: 'Protocol double only', sharedAcrossOwnersAndStoreInstances: true, atomicConcurrentQuota: true, creationBlockedWithoutWrite: true, minuteAndDayRollover: true, retryAfterMatchesReset: true, clockRegressionFailsClosed: true, uncertainAcknowledgementNoRetry: true, externalRequests: 0 }));
+  console.log(JSON.stringify({ ok: true, redis: 'Protocol double only', sharedAcrossOwnersAndStoreInstances: true, atomicConcurrentQuota: true, creationBlockedWithoutWrite: true, minuteAndDayRollover: true, retryAfterMatchesReset: true, clockRegressionFailsClosed: true, uncertainAcknowledgementNoRetry: true, acceptanceQuotaCasSingleAttempt: true, ordinaryCounterConflictRetriesPreserved: true, externalRequests: 0 }));
 } finally {
   Date.now = oldNow; setWorkspaceStoreForTests(undefined);
   for (const [name, value] of Object.entries(old)) if (value === undefined) delete process.env[name]; else process.env[name] = value;

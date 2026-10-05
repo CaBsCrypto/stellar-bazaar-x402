@@ -311,9 +311,11 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     }); }); },
     async consumeRequest(ownerId: string, generation: number, bootstrapHash?: string) { return safe(async () => {
       const globalLimits = workspaceGlobalRequestLimits();
-      // Only the request counter can retry, and only after Lua's definite CAS0.
+      // Acceptance v2 budgets one quota CAS; contention stops before any action.
+      // Outside that measured sprint, only a definite CAS0 permits counter retry.
       // Every attempt reads and validates current identity, document and quota.
-      for (let attempt = 0; attempt < 8; attempt++) {
+      const attempts = process.env.BAZAAR_ACCEPTANCE_METER === 'true' && process.env.BAZAAR_ACCEPTANCE_X402 === 'true' ? 1 : 8;
+      for (let attempt = 0; attempt < attempts; attempt++) {
         try { await backend.transact(ownerId, async (s, commit) => {
           const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
           if (!meta) throw new WorkspaceError("UNAUTHORIZED", 401);
