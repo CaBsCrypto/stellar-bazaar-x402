@@ -15,6 +15,23 @@ const emptyTotals=()=>Object.fromEntries(Object.keys(X402_ACCEPTANCE_LIMITS).map
 const httpsOrigin=value=>{const u=new URL(value);assert.ok(u.protocol==='https:'&&!u.username&&!u.password&&!u.search&&!u.hash&&u.pathname==='/'&&u.origin===value,'EXACT_HTTPS_ORIGIN_REQUIRED');return u.origin;};
 export const x402ExternalNames=Object.freeze(externalNames);
 
+/** Arithmetic proof only; it does not certify the provenance of hard bounds. */
+export function x402PlannedBudget(manifest){
+ const runtime=manifest.runtime,requests=emptyTotals(),combined=emptyTotals();
+ for(const [name,b]of Object.entries(runtime.requestBudgets)){
+  const perCall={apiRequests:1+(name.startsWith('api:')?Object.values(b.external).reduce((n,v)=>n+v,0):0),redisRestExchanges:b.redisRestExchanges,redisCommandsUpperBound:b.redisCommandsUpperBound,outboundPayloadBytes:b.outboundPayloadBytes,inboundPayloadBytes:b.inboundPayloadBytes};
+  for(const [key,value]of Object.entries(perCall)){requests[key]+=b.maximumCalls*value;assert.ok(natural(requests[key]),'PLANNED_BOUND_OVERFLOW:'+key);}
+ }
+ // Existing bytes and future writes share these maxima; do not add baseline twice.
+ requests.storedBytes=partitions.reduce((sum,key)=>sum+manifest.storageAllocation[key],0);
+ requests.paymentSubmissionIntents=2;
+ for(const key of Object.keys(combined)){
+  combined[key]=(key==='storedBytes'?0:runtime.initialCounters[key])+requests[key]+runtime.reserves[key];
+  assert.ok(natural(combined[key])&&combined[key]<=X402_ACCEPTANCE_LIMITS[key],'PLANNED_BUDGET_EXCEEDED:'+key);
+ }
+ return {requests,combined,remaining:Object.fromEntries(Object.keys(combined).map(key=>[key,X402_ACCEPTANCE_LIMITS[key]-combined[key]])),storageBasis:'Partition maxima include the baseline and future writes; no cumulative write-byte accounting.'};
+}
+
 /** Public routing categories. Dynamic JSON-RPC IDs and signed headers never enter reports. */
 export function x402RequestProfile(kind,input,init={}){
  const url=new URL(input instanceof Request?input.url:String(input)),method=String(init.method??'GET').toUpperCase();
@@ -59,6 +76,7 @@ export function assertX402RuntimePolicy(manifest){
  assert.equal(manifest.config.rpcOrigin,'https://soroban-testnet.stellar.org');assert.equal(manifest.config.previewProtectionRequired,true);
  assert.equal(manifest.config.transportRetries,0);assert.equal(manifest.config.automaticRetries,0);assert.equal(manifest.config.maximumSpendAtomic,'200000');
  for(const key of Object.keys(X402_ACCEPTANCE_LIMITS))assert.ok(runtime.initialCounters[key]+runtime.reserves[key]<=X402_ACCEPTANCE_LIMITS[key],'INITIAL_BUDGET_EXHAUSTED:'+key);
+ x402PlannedBudget(manifest);
  return runtime;
 }
 

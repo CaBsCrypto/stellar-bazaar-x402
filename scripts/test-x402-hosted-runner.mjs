@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import {randomUUID} from 'node:crypto';
 import {assertHostedX402Preflight,runHostedX402Agent} from './run-hosted-x402-agent.mjs';
-import {createX402HostedRuntime,newX402HostedReport,x402PublicHash,x402RequestProfile,assertX402HostedReport,preservePendingX402Counters} from './x402-hosted-runtime.mjs';
+import {createX402HostedRuntime,newX402HostedReport,x402PublicHash,x402RequestProfile,assertX402HostedReport,preservePendingX402Counters,x402PlannedBudget} from './x402-hosted-runtime.mjs';
 import {X402_ACCEPTANCE_LIMITS,X402_LOCAL_REQUIRED_RESULTS} from './x402-acceptance-manifest.mjs';
 import {buyerCanonical,createMarketplaceBuyerIntent} from '../examples/marketplace-x402-buyer.mjs';
 import {createAutomationPreviewFetch} from '../examples/protected-preview-client.mjs';
@@ -13,7 +13,7 @@ const external=()=>Object.fromEntries(['horizon','proof-dns','proof-http','provi
 const source={sha:'a'.repeat(40),clean:true},origin='https://stellar-bazaar-x402-fixture-cabscryptocontacto-6028s-projects.vercel.app';
 const local={status:'PASS_NATIVE_X402_LOCAL',sourceSha:source.sha,sourceBinding:{candidateCommitted:true,finalShaRequired:false},totals:totals(),coverage:{agentHttp:true,redis:true,facilitator:true,horizon:true,rpc:true,provider:true},remoteRequests:0,automaticRetries:0,requestProfiles:[],...Object.fromEntries(X402_LOCAL_REQUIRED_RESULTS.map(k=>[k,true]))};
 const capture={status:'PASS_LOCAL_CAPTURE',captureComplete:true,physicalWireObserved:false,coverage:{httpRetries:0}};
-const budget={maximumCalls:20,redisRestExchanges:8,redisCommandsUpperBound:30,outboundPayloadBytes:262144,inboundPayloadBytes:262144,responsePayloadBytes:65536,external:external()};
+const budget={maximumCalls:3,redisRestExchanges:8,redisCommandsUpperBound:30,outboundPayloadBytes:262144,inboundPayloadBytes:262144,responsePayloadBytes:65536,external:external()};
 function manifest(){
  return {...structuredClone(draft),kind:'x402-agent-first-acceptance',sourceSha:source.sha,limits:{...X402_ACCEPTANCE_LIMITS},
   config:{...draft.config,marketplaceOrigin:origin,purchases:true,marketplaceX402:true},
@@ -36,6 +36,25 @@ const missingContracts=manifest();missingContracts.readiness.walletsPreflightPas
 let prematurePacketReads=0;
 await assert.rejects(()=>runHostedX402Agent({command:'buy',index:0,paths:{manifest:'m',local:'l',capture:'c',hostedCapture:'h',report:'r'},dependencies:{readJson:async p=>p==='m'?missingContracts:p==='l'?local:capture,optionalJson:async()=>undefined,sourceBinding:async()=>source,loadPacket:async()=>{prematurePacketReads++;}}}),/FROZEN_HOSTED_CONTRACT_CHECKS_REQUIRED/);
 assert.equal(prematurePacketReads,0);tests++;
+const arithmeticCases=[
+ ['apiRequests',m=>{m.runtime.initialCounters.apiRequests=106;}],
+ ['redisRestExchanges',m=>{m.runtime.initialCounters.redisRestExchanges=305;}],
+ ['redisCommandsUpperBound',m=>{m.runtime.initialCounters.redisCommandsUpperBound=2041;}],
+ ['outboundPayloadBytes',m=>{m.runtime.initialCounters.outboundPayloadBytes=16777216-3932160+1;}],
+ ['inboundPayloadBytes',m=>{m.runtime.initialCounters.inboundPayloadBytes=33554432-3932160+1;}],
+ ['storedBytes',m=>{m.storageAllocation.workspace++;}],
+ ['paymentSubmissionIntents',m=>{m.runtime.reserves.paymentSubmissionIntents=1;}]
+];
+for(const [resource,mutate]of arithmeticCases){
+ const m=manifest();mutate(m);let packetReads=0,locks=0,requests=0;
+ await assert.rejects(()=>runHostedX402Agent({command:'submit',paths:{manifest:'m',local:'l',capture:'c',hostedCapture:'h',report:'r'},dependencies:{readJson:async p=>p==='m'?m:p==='l'?local:capture,optionalJson:async()=>undefined,sourceBinding:async()=>source,loadPacket:async()=>{packetReads++;},acquireLock:async()=>{locks++;},fetchImpl:async()=>{requests++;}}}),new RegExp('PLANNED_BUDGET_EXCEEDED:'+resource));
+ assert.equal(packetReads+locks+requests,0);tests++;
+}
+const arithmetic=x402PlannedBudget(manifest());assert.equal(arithmetic.combined.redisRestExchanges,96);assert.equal(arithmetic.combined.apiRequests,15);assert.equal(arithmetic.combined.paymentSubmissionIntents,2);tests++;
+const weighted=manifest();weighted.runtime.requestBudgets['api:services:list'].external['proof-dns']=1;
+assert.equal(x402PlannedBudget(weighted).combined.apiRequests,18);tests++;
+const baselineStorage=manifest();baselineStorage.runtime.initialStorage.workspace=1000;baselineStorage.runtime.initialCounters.storedBytes=1000;
+assert.equal(newX402HostedReport(baselineStorage).storage.workspace,1000);assert.equal(x402PlannedBudget(baselineStorage).combined.storedBytes,49164);tests++;
 assert.equal(x402RequestProfile('api',origin+'/api/market/orders/'+draft.payloads.orders[0].operationId+'/x402',{method:'POST',body:'{}',headers:{'payment-signature':'not-emitted'}}),'api:x402:pay');tests++;
 assert.throws(()=>x402RequestProfile('rpc','https://soroban-testnet.stellar.org/',{method:'POST',body:JSON.stringify({method:'sendTransaction'})}));tests++;
 
@@ -48,7 +67,7 @@ assert.equal(result.status,'PASS');assert.equal(requests,2);assert.equal(loads,1
 const report=newX402HostedReport(m);let persisted=0,calls=0;
 const runtime=createX402HostedRuntime({manifest:m,report,phase:'test',persist:async()=>{persisted++;},fetchImpl:async()=>{calls++;assert.ok(persisted>0);throw Error('response lost');}});
 const preview=await runtime.preview(origin,'z'.repeat(32),'dpl_fixture');await assert.rejects(()=>preview(origin+'/api/market/orders',{headers:{authorization:'Bearer '+'k'.repeat(43)}}));assert.equal(calls,1);assert.equal(report.status,'UNCERTAIN');assert.equal(report.unknownRequestsChargedAtUpperBound,1);assert.equal(report.totals.redisRestExchanges,budget.redisRestExchanges);assert.equal(report.totals.inboundPayloadBytes,budget.inboundPayloadBytes);await assert.rejects(()=>preview(origin+'/api/market/orders'));assert.equal(calls,1);tests++;
-const limited=manifest();limited.runtime.reserves.apiRequests=120;const blocked=newX402HostedReport(limited);let blockedCalls=0;const bRuntime=createX402HostedRuntime({manifest:limited,report:blocked,phase:'test',persist:async()=>{},fetchImpl:async()=>{blockedCalls++;return measured({});}});const bFetch=await bRuntime.preview(origin,'z'.repeat(32),'dpl_fixture');await assert.rejects(()=>bFetch(origin+'/api/market/orders'));assert.equal(blockedCalls,0);assert.equal(blocked.attempts.length,0);tests++;
+const limited=manifest();limited.runtime.reserves.apiRequests=120;assert.throws(()=>newX402HostedReport(limited),/PLANNED_BUDGET_EXCEEDED:apiRequests/);tests++;
 const recoveryRuntime=createX402HostedRuntime({manifest:m,report,phase:'recover',readRecovery:true,persist:async()=>{},fetchImpl:async()=>{calls++;return measured({orders:[]});}});const recoverFetch=await recoveryRuntime.preview(origin,'z'.repeat(32),'dpl_fixture');await assert.rejects(()=>recoverFetch(origin+'/api/market/orders',{method:'POST',body:'{}'}));assert.equal(calls,1);await recoverFetch(origin+'/api/market/orders');assert.equal(calls,2);assert.equal(report.status,'UNCERTAIN');tests++;
 const meterReport=newX402HostedReport(m);const meterRuntime=createX402HostedRuntime({manifest:m,report:meterReport,phase:'test',persist:async()=>{},fetchImpl:async()=>measured({},{redis:9})});const meterFetch=await meterRuntime.preview(origin,'z'.repeat(32),'dpl_fixture');await assert.rejects(()=>meterFetch(origin+'/api/market/orders'));assert.equal(meterReport.status,'UNCERTAIN');assert.equal(meterReport.totals.redisRestExchanges,9);tests++;
 await assert.rejects(()=>runtime.preview('https://attacker.example','z'.repeat(32),'dpl_fixture'));assert.equal(calls,2);tests++;
