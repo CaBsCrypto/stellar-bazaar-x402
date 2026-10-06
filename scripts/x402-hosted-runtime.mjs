@@ -155,7 +155,7 @@ export function newX402HostedReport(manifest){
 /** Reject edited, reset or incomplete public counters before constructing credentials. */
 export function assertX402HostedReport(report,manifest){
  assert.equal(report.version,1);assert.equal(report.kind,'x402-hosted-agent-measurement');assert.equal(report.planId,manifest.planId);assert.equal(report.sourceSha,manifest.sourceSha);assert.equal(report.automaticRetries,0);
- assert.ok(['IN_PROGRESS','PASS_EXECUTED_PHASES','FAILED_CONFIRMED','UNCERTAIN'].includes(report.status),'INVALID_HOSTED_STATUS');assert.ok(Array.isArray(report.attempts)&&report.attempts.length<=120&&Array.isArray(report.phases),'INVALID_HOSTED_ATTEMPTS');
+ assert.ok(['IN_PROGRESS','PASS_EXECUTED_PHASES','FAILED_CONFIRMED','UNCERTAIN'].includes(report.status),'INVALID_HOSTED_STATUS');assert.ok(Array.isArray(report.attempts)&&report.attempts.length<=X402_ACCEPTANCE_LIMITS.apiRequests&&Array.isArray(report.phases),'INVALID_HOSTED_ATTEMPTS');
  assert.equal(report.ownedRequests,report.attempts.length,'OWNED_REQUEST_COUNTER_CHANGED');assert.ok(natural(report.paymentReservationCount)&&report.paymentReservationCount<=2,'PAYMENT_COUNTER_CHANGED');
  const expected={...manifest.runtime.initialCounters},calls={};let unknown=0;
  for(const a of report.attempts){

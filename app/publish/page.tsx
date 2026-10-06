@@ -10,5 +10,5 @@ function LegacyPublish(){const reception = process.env.BAZAAR_ENABLE_SELF_LISTIN
 
 export default function Publish(){
  if(process.env.BAZAAR_ENABLE_MARKETPLACE!=='true')return <LegacyPublish/>;
- return <main><Navbar/><PageShell><h1>Publica tu agente externo</h1><p>Abre tu espacio privado y utiliza «Mis servicios» para enviar una ficha HTTPS, demostrar control del endpoint y solicitar revisión manual.</p><p>Este piloto vende entregas de texto con pagos directos de XLM testnet. Tu agente ejecuta el trabajo desde tu infraestructura y entrega mediante MCP.</p><ButtonLink href="/history">Abrir mi espacio y mis servicios</ButtonLink><ButtonLink href="/pilot" variant="secondary">Crear espacio por invitación</ButtonLink></PageShell><Footer/></main>;
+ return <main><Navbar/><PageShell><h1>Publica tu agente externo</h1><p>Abre tu espacio privado y utiliza «Mis servicios» para enviar una ficha HTTPS, demostrar control del endpoint y solicitar revisión manual.</p><p>Este piloto vende entregas de texto con pagos directos de USDC oficial en Stellar testnet. Los agentes compradores pagan mediante x402. Tu agente ejecuta el trabajo desde tu infraestructura y entrega mediante MCP.</p><ButtonLink href="/history">Abrir mi espacio y mis servicios</ButtonLink><ButtonLink href="/pilot" variant="secondary">Crear espacio por invitación</ButtonLink></PageShell><Footer/></main>;
 }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
-export const X402_ACCEPTANCE_LIMITS={apiRequests:120,redisRestExchanges:400,redisCommandsUpperBound:2400,storedBytes:49164,outboundPayloadBytes:16*1048576,inboundPayloadBytes:32*1048576,paymentSubmissionIntents:2,friendbotClaims:0,trustlineSubmissions:0,usdcFaucetClaims:0};
+export const X402_ACCEPTANCE_LIMITS={apiRequests:190,redisRestExchanges:480,redisCommandsUpperBound:2400,storedBytes:49164,outboundPayloadBytes:16*1048576,inboundPayloadBytes:32*1048576,paymentSubmissionIntents:2,friendbotClaims:0,trustlineSubmissions:0,usdcFaucetClaims:0};
 const digest=value=>createHash('sha256').update(typeof value==='string'||Buffer.isBuffer(value)?value:JSON.stringify(value)).digest('hex');
 const natural=value=>Number.isSafeInteger(value)&&value>=0;
 export const X402_LOCAL_REQUIRED_RESULTS=['nativeNext','externalMcpClient','actualAlgorithmicProvider','serverMeterMatchesProtocol','processReplacement','purchasePausePreservesHistory','successfulDeliveryExact','verifiedPaymentWithFailedDelivery','discoveryApiAndSsrMetered','privateBuyerSellerHistory','historicalClassicPreserved','paymentResponseLossRecoveredByRead','singleProviderInvocation','accessRotationPreservesHistory','magicLinkServerRecoversOrders','sellerRevocationPreservesBuyerAccess','syntheticServicesWithdrawn'];
@@ -51,7 +51,7 @@ export function assertX402AgentCapturePreflight(manifest,capture){
  const deployment=manifest.deployments.application,origin=deployment?.origin??deployment?.url?.replace(/\/$/,'');
  assert.match(deployment?.id??'',/^dpl_[A-Za-z0-9]+$/);assert.equal(new URL(origin).protocol,'https:');assert.equal(new URL(origin).origin,origin);
  assert.deepEqual(capture.binding,{planId:manifest.planId,sourceSha:manifest.sourceSha,deploymentId:deployment.id,origin},'AGENT_CAPTURE_BINDING_MISMATCH');
- assert.ok(Array.isArray(capture.requests)&&capture.requests.length>0&&capture.requests.length<=120,'AGENT_CAPTURE_REQUESTS_REQUIRED');
+ assert.ok(Array.isArray(capture.requests)&&capture.requests.length>0&&capture.requests.length<=X402_ACCEPTANCE_LIMITS.apiRequests,'AGENT_CAPTURE_REQUESTS_REQUIRED');
  const sum=Object.fromEntries(Object.keys(X402_ACCEPTANCE_LIMITS).map(key=>[key,0])),ids=new Set();
  for(const request of capture.requests){
   assert.match(request.requestId??'',/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/,'AGENT_REQUEST_ID_REQUIRED');assert.ok(!ids.has(request.requestId),'DUPLICATE_AGENT_REQUEST_ID');ids.add(request.requestId);

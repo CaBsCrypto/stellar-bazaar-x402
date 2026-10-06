@@ -58,8 +58,8 @@ for(const kind of ['provider','rpc','facilitator']){
  assert.equal(requests,1);assert.equal(replayReport.status,'UNCERTAIN');assert.equal(replayReport.attempts[0].status,'UNCERTAIN');assert.equal(replayReport.attempts[0].external[kind],1);tests++;
 }
 const arithmeticCases=[
- ['apiRequests',m=>{m.runtime.initialCounters.apiRequests=106;}],
- ['redisRestExchanges',m=>{m.runtime.initialCounters.redisRestExchanges=305;}],
+ ['apiRequests',m=>{m.runtime.initialCounters.apiRequests=X402_ACCEPTANCE_LIMITS.apiRequests-x402PlannedBudget(m).combined.apiRequests+1;}],
+ ['redisRestExchanges',m=>{m.runtime.initialCounters.redisRestExchanges=X402_ACCEPTANCE_LIMITS.redisRestExchanges-x402PlannedBudget(m).combined.redisRestExchanges+1;}],
  ['redisCommandsUpperBound',m=>{m.runtime.initialCounters.redisCommandsUpperBound=2041;}],
  ['outboundPayloadBytes',m=>{m.runtime.initialCounters.outboundPayloadBytes=16777216-3932160+1;}],
  ['inboundPayloadBytes',m=>{m.runtime.initialCounters.inboundPayloadBytes=33554432-3932160+1;}],
@@ -88,7 +88,7 @@ assert.equal(result.status,'PASS');assert.equal(requests,2);assert.equal(loads,1
 const report=newX402HostedReport(m);let persisted=0,calls=0;
 const runtime=createX402HostedRuntime({manifest:m,report,phase:'test',persist:async()=>{persisted++;},fetchImpl:async()=>{calls++;assert.ok(persisted>0);throw Error('response lost');}});
 const preview=await runtime.preview(origin,'z'.repeat(32),'dpl_fixture');await assert.rejects(()=>preview(origin+'/api/market/orders',{headers:{authorization:'Bearer '+'k'.repeat(43)}}));assert.equal(calls,1);assert.equal(report.status,'UNCERTAIN');assert.equal(report.unknownRequestsChargedAtUpperBound,1);assert.equal(report.totals.redisRestExchanges,budget.redisRestExchanges);assert.equal(report.totals.inboundPayloadBytes,budget.inboundPayloadBytes);await assert.rejects(()=>preview(origin+'/api/market/orders'));assert.equal(calls,1);tests++;
-const limited=manifest();limited.runtime.reserves.apiRequests=120;assert.throws(()=>newX402HostedReport(limited),/PLANNED_BUDGET_EXCEEDED:apiRequests/);tests++;
+const limited=manifest();limited.runtime.reserves.apiRequests=X402_ACCEPTANCE_LIMITS.apiRequests;assert.throws(()=>newX402HostedReport(limited),/PLANNED_BUDGET_EXCEEDED:apiRequests/);tests++;
 const recoveryRuntime=createX402HostedRuntime({manifest:m,report,phase:'recover',readRecovery:true,persist:async()=>{},fetchImpl:async()=>{calls++;return measured({orders:[]});}});const recoverFetch=await recoveryRuntime.preview(origin,'z'.repeat(32),'dpl_fixture');await assert.rejects(()=>recoverFetch(origin+'/api/market/orders',{method:'POST',body:'{}'}));assert.equal(calls,1);await recoverFetch(origin+'/api/market/orders');assert.equal(calls,2);assert.equal(report.status,'UNCERTAIN');tests++;
 const meterReport=newX402HostedReport(m);const meterRuntime=createX402HostedRuntime({manifest:m,report:meterReport,phase:'test',persist:async()=>{},fetchImpl:async()=>measured({},{redis:9})});const meterFetch=await meterRuntime.preview(origin,'z'.repeat(32),'dpl_fixture');await assert.rejects(()=>meterFetch(origin+'/api/market/orders'));assert.equal(meterReport.status,'UNCERTAIN');assert.equal(meterReport.totals.redisRestExchanges,9);tests++;
 await assert.rejects(()=>runtime.preview('https://attacker.example','z'.repeat(32),'dpl_fixture'));assert.equal(calls,2);tests++;
