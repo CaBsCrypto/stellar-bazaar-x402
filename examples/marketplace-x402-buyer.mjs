@@ -4,7 +4,7 @@ import {open,readFile,unlink} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {Account,Address,Asset,BASE_FEE,Contract,Keypair,Networks,Operation,StrKey,Transaction,TransactionBuilder,authorizeEntry,hash,nativeToScVal,scValToNative,xdr} from '@stellar/stellar-sdk';
-import {Api,assembleTransaction,parseRawSimulation} from '@stellar/stellar-sdk/rpc';
+import {Api,parseRawSimulation} from '@stellar/stellar-sdk/rpc';
 import {decodePaymentRequiredHeader,decodePaymentResponseHeader,encodePaymentSignatureHeader} from '@x402/core/http';
 import {originOnly} from './private-mcp-client.mjs';
 
@@ -97,6 +97,17 @@ async function rpcCall(options,method,params={}){
  if(!response.ok)throw Error('RPC_UNCONFIRMED');const body=await jsonBody(response,262144);if(body.jsonrpc!=='2.0'||body.id!==1||body.error||!body.result)throw Error('RPC_UNCONFIRMED');return body.result;
 }
 function simulationValid(raw,maximumFee){const simulation=parseRawSimulation(raw);if(!Api.isSimulationSuccess(simulation)||Api.isSimulationRestore(simulation)||!simulation.result||BigInt(simulation.minResourceFee)+BigInt(BASE_FEE)>maximumFee)throw Error('SIMULATION_REJECTED');return simulation;}
+function assembleBuyerTransfer(raw,simulation,auth,maximumFee){
+ // The installed builder adds SorobanData.resourceFee at build time. Supply only
+ // the inclusion fee; preserve the footprint and charge resource fees once.
+ const data=simulation.transactionData.build(),declared=BigInt(data.resourceFee().toString()),minimum=BigInt(simulation.minResourceFee);
+ const resourceFee=declared>minimum?declared:minimum;
+ if(resourceFee<0n||resourceFee+BigInt(BASE_FEE)>maximumFee)throw Error('SIMULATION_REJECTED');
+ data.resourceFee(xdr.Int64.fromString(resourceFee.toString()));
+ const tx=TransactionBuilder.cloneFrom(raw,{fee:BASE_FEE,sorobanData:data}).clearOperations().addOperation(Operation.invokeHostFunction({func:raw.operations[0].func,auth})).build();
+ if(tx.signatures.length||tx.operations.length!==1||BigInt(tx.fee)!==resourceFee+BigInt(BASE_FEE))throw Error('UNSAFE_PAYMENT_TRANSACTION');
+ return tx;
+}
 /** SDK pure builders reproduce the official exact scheme without hidden RPC/Horizon clients. */
 export async function buildBuyerPaymentPayload(intent,options){
  const requirements=validateChallenge(intent,intent.challenge);
@@ -106,18 +117,18 @@ export async function buildBuyerPaymentPayload(intent,options){
  const expirationLedger=latest.sequence+Math.ceil(requirements.maxTimeoutSeconds/5);
  const raw=new TransactionBuilder(new Account(nullAccount,'0'),{fee:BASE_FEE,networkPassphrase:Networks.TESTNET}).setTimeout(requirements.maxTimeoutSeconds).addOperation(new Contract(requirements.asset).call('transfer',nativeToScVal(intent.payer,{type:'address'}),nativeToScVal(requirements.payTo,{type:'address'}),nativeToScVal(requirements.amount,{type:'i128'}))).build();
  const simulation=simulationValid(await rpcCall(options,'simulateTransaction',{transaction:raw.toXDR()}),maximumFee);
- const assembled=assembleTransaction(raw,simulation).build(),operation=assembled.operations[0];
+ const assembled=assembleBuyerTransfer(raw,simulation,simulation.result.auth,maximumFee),operation=assembled.operations[0];
  if(operation.auth?.length!==1)throw Error('UNEXPECTED_AUTHORIZATION_COUNT');const entry=operation.auth[0];unsignedEntryValid(entry,requirements,intent.payer);
  intent.unsignedTransaction=assembled.toXDR();intent.expirationLedger=expirationLedger;intent.phase='signer-started';await save(intent,options);
  const signed=await authorizeEntry(entry,async preimage=>{
   const result=await options.signer.signAuthEntry(preimage.toXDR('base64'),{address:intent.payer});
   if(result?.error||typeof result?.signedAuthEntry!=='string'||result.signerAddress&&result.signerAddress!==intent.payer)throw Error('SIGNER_REJECTED');return Buffer.from(result.signedAuthEntry,'base64');
  },expirationLedger,Networks.TESTNET);
- const signedTransaction=TransactionBuilder.cloneFrom(assembled).clearOperations().addOperation(Operation.invokeHostFunction({func:operation.func,auth:[signed]})).build();
+ const signedTransaction=assembleBuyerTransfer(raw,simulation,[signed],maximumFee);
  assertBuyerTransfer(signedTransaction.toXDR(),requirements,intent.payer,options);intent.signedAuthorizationTransaction=signedTransaction.toXDR();intent.phase='authorization-signed';await save(intent,options);
  // A failed second simulation retains this exact signed authorization in the sealed journal.
  const verifiedSimulation=simulationValid(await rpcCall(options,'simulateTransaction',{transaction:signedTransaction.toXDR()}),maximumFee);
- const final=assembleTransaction(raw,verifiedSimulation).clearOperations().addOperation(Operation.invokeHostFunction({func:operation.func,auth:[signed]})).build();
+ const final=assembleBuyerTransfer(raw,verifiedSimulation,[signed],maximumFee);
  const evidence=assertBuyerTransfer(final.toXDR(),requirements,intent.payer,options);if(evidence.expirationLedger!==expirationLedger)throw Error('AUTHORIZATION_CHANGED');
  return {x402Version:2,resource:clone(intent.challenge.resource),accepted:clone(requirements),payload:{transaction:final.toXDR()}};
 }
