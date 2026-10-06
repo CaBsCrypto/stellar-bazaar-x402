@@ -23,6 +23,7 @@ El ejemplo ejecutable es `examples/marketplace-x402-buyer.mjs`, con Node 22 y la
 - `marketFetch` y `rpcFetch`: transportes medidos, con origen exacto, tiempo y tamaño máximos, sin redirecciones ni reintentos.
 - `journal`: diario cifrado con `initialize`, `append` y `read`. En Windows se ofrece `createDpapiBuyerJournal(path)`.
 - `reserveSpend`: reserva durable antes de firmar. `createBuyerSpendBudget` limita el total a 200.000 unidades y conserva reservas ante respuestas perdidas.
+- `maxSponsoredFeeStroops: 1_000_000`: techo explícito de fees patrocinadas para este piloto testnet. Se aplica a ambas simulaciones y a la transacción antes de enviarla. El valor debe ser un entero entre 1 y 1.000.000; si se omite, se conserva el límite de 50.000. Elevarlo requiere que el desafío declare `areFeesSponsored: true`. Este techo no aumenta los 0,01 USDC autorizados y no acredita la cuota ni la aceptación del facilitador; un exceso detiene el intento y conserva su reserva.
 
 El archivo de intención pública contiene `origin`, `card`, `input`, `payer`, `operationId` y `maxAtomic: "100000"`. El origen debe ser el Preview protegido exacto aprobado. La credencial de automatización de Vercel se añade exclusivamente para ese hostname; no se transmite al RPC ni al proveedor.
 

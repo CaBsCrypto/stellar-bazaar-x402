@@ -16,6 +16,11 @@ const digest=value=>createHash('sha256').update(value).digest('hex');
 export const buyerCanonical=value=>Array.isArray(value)?'['+value.map(buyerCanonical).join(',')+']':value&&typeof value==='object'?'{'+Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+buyerCanonical(value[key])).join(',')+'}':JSON.stringify(value);
 const clone=value=>structuredClone(value);
 const nullAccount='GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF';
+function sponsoredFeeLimit(options,requirements){
+ const maximum=options.maxSponsoredFeeStroops??50000;
+ if(!Number.isSafeInteger(maximum)||maximum<1||maximum>1000000||maximum>50000&&requirements.extra?.areFeesSponsored!==true)throw Error('INVALID_SPONSORED_FEE_LIMIT');
+ return BigInt(maximum);
+}
 const proofPhases=['paid','executing','execution-uncertain','delivered','delivery-failed'];
 const endpoint=intent=>new URL('/api/market/orders/'+intent.operationId+'/x402',intent.origin).href;
 function cardValid(card){return card&&card.network==='stellar:testnet'&&card.payment?.scheme==='exact'&&card.payment?.asset==='USDC'&&card.payment?.amount==='0.01'&&StrKey.isValidEd25519PublicKey(card.payment.destination??'')&&buyerCanonical(card.payment.identity)===buyerCanonical(buyerIdentity)&&card.payment.marketplace?.protocol===buyerProtocol&&card.payment.marketplace?.resourceTemplate==='/api/market/orders/{operationId}/x402';}
@@ -71,9 +76,10 @@ function unsignedEntryValid(entry,requirements,payer){
  sameInvocation(entry.rootInvocation(),requirements,payer);
 }
 /** Validate the real signed transfer, rather than treating wrapper metadata as signed. */
-export function assertBuyerTransfer(transactionXdr,requirements,payer){
+export function assertBuyerTransfer(transactionXdr,requirements,payer,options={}){
+ const maximumFee=sponsoredFeeLimit(options,requirements);
  const tx=new Transaction(transactionXdr,Networks.TESTNET);
- if(tx.operations.length!==1||tx.signatures.length||tx.source!==nullAccount||Number(tx.fee)>50000)throw Error('UNSAFE_PAYMENT_TRANSACTION');
+ if(tx.operations.length!==1||tx.signatures.length||tx.source!==nullAccount||BigInt(tx.fee)>maximumFee)throw Error('UNSAFE_PAYMENT_TRANSACTION');
  const op=tx.operations[0];if(op.type!=='invokeHostFunction'||op.source||op.func.switch().name!=='hostFunctionTypeInvokeContract'||op.auth?.length!==1)throw Error('UNSAFE_PAYMENT_OPERATION');
  const call=op.func.invokeContract();if(Address.fromScAddress(call.contractAddress()).toString()!==requirements.asset||call.functionName().toString()!=='transfer'||call.args().length!==3||scValToNative(call.args()[0])!==payer||scValToNative(call.args()[1])!==requirements.payTo||scValToNative(call.args()[2])!==BigInt(requirements.amount))throw Error('UNBOUND_PAYMENT_TRANSFER');
  const entry=op.auth[0];sameInvocation(entry.rootInvocation(),requirements,payer);
@@ -90,15 +96,16 @@ async function rpcCall(options,method,params={}){
  const response=await options.rpcFetch(rpcUrl,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method,params}),redirect:'error'});
  if(!response.ok)throw Error('RPC_UNCONFIRMED');const body=await jsonBody(response,262144);if(body.jsonrpc!=='2.0'||body.id!==1||body.error||!body.result)throw Error('RPC_UNCONFIRMED');return body.result;
 }
-function simulationValid(raw){const simulation=parseRawSimulation(raw);if(!Api.isSimulationSuccess(simulation)||Api.isSimulationRestore(simulation)||!simulation.result||BigInt(simulation.minResourceFee)+BigInt(BASE_FEE)>50000n)throw Error('SIMULATION_REJECTED');return simulation;}
+function simulationValid(raw,maximumFee){const simulation=parseRawSimulation(raw);if(!Api.isSimulationSuccess(simulation)||Api.isSimulationRestore(simulation)||!simulation.result||BigInt(simulation.minResourceFee)+BigInt(BASE_FEE)>maximumFee)throw Error('SIMULATION_REJECTED');return simulation;}
 /** SDK pure builders reproduce the official exact scheme without hidden RPC/Horizon clients. */
 export async function buildBuyerPaymentPayload(intent,options){
  const requirements=validateChallenge(intent,intent.challenge);
+ const maximumFee=sponsoredFeeLimit(options,requirements);
  if(options.signer?.address!==intent.payer||typeof options.signer.signAuthEntry!=='function')throw Error('CONFIGURED_SIGNER_REQUIRED');
  const latest=await rpcCall(options,'getLatestLedger');if(!Number.isInteger(latest.sequence)||latest.sequence<1)throw Error('INVALID_LEDGER');
  const expirationLedger=latest.sequence+Math.ceil(requirements.maxTimeoutSeconds/5);
  const raw=new TransactionBuilder(new Account(nullAccount,'0'),{fee:BASE_FEE,networkPassphrase:Networks.TESTNET}).setTimeout(requirements.maxTimeoutSeconds).addOperation(new Contract(requirements.asset).call('transfer',nativeToScVal(intent.payer,{type:'address'}),nativeToScVal(requirements.payTo,{type:'address'}),nativeToScVal(requirements.amount,{type:'i128'}))).build();
- const simulation=simulationValid(await rpcCall(options,'simulateTransaction',{transaction:raw.toXDR()}));
+ const simulation=simulationValid(await rpcCall(options,'simulateTransaction',{transaction:raw.toXDR()}),maximumFee);
  const assembled=assembleTransaction(raw,simulation).build(),operation=assembled.operations[0];
  if(operation.auth?.length!==1)throw Error('UNEXPECTED_AUTHORIZATION_COUNT');const entry=operation.auth[0];unsignedEntryValid(entry,requirements,intent.payer);
  intent.unsignedTransaction=assembled.toXDR();intent.expirationLedger=expirationLedger;intent.phase='signer-started';await save(intent,options);
@@ -107,22 +114,23 @@ export async function buildBuyerPaymentPayload(intent,options){
   if(result?.error||typeof result?.signedAuthEntry!=='string'||result.signerAddress&&result.signerAddress!==intent.payer)throw Error('SIGNER_REJECTED');return Buffer.from(result.signedAuthEntry,'base64');
  },expirationLedger,Networks.TESTNET);
  const signedTransaction=TransactionBuilder.cloneFrom(assembled).clearOperations().addOperation(Operation.invokeHostFunction({func:operation.func,auth:[signed]})).build();
- assertBuyerTransfer(signedTransaction.toXDR(),requirements,intent.payer);intent.signedAuthorizationTransaction=signedTransaction.toXDR();intent.phase='authorization-signed';await save(intent,options);
+ assertBuyerTransfer(signedTransaction.toXDR(),requirements,intent.payer,options);intent.signedAuthorizationTransaction=signedTransaction.toXDR();intent.phase='authorization-signed';await save(intent,options);
  // A failed second simulation retains this exact signed authorization in the sealed journal.
- const verifiedSimulation=simulationValid(await rpcCall(options,'simulateTransaction',{transaction:signedTransaction.toXDR()}));
+ const verifiedSimulation=simulationValid(await rpcCall(options,'simulateTransaction',{transaction:signedTransaction.toXDR()}),maximumFee);
  const final=assembleTransaction(raw,verifiedSimulation).clearOperations().addOperation(Operation.invokeHostFunction({func:operation.func,auth:[signed]})).build();
- const evidence=assertBuyerTransfer(final.toXDR(),requirements,intent.payer);if(evidence.expirationLedger!==expirationLedger)throw Error('AUTHORIZATION_CHANGED');
+ const evidence=assertBuyerTransfer(final.toXDR(),requirements,intent.payer,options);if(evidence.expirationLedger!==expirationLedger)throw Error('AUTHORIZATION_CHANGED');
  return {x402Version:2,resource:clone(intent.challenge.resource),accepted:clone(requirements),payload:{transaction:final.toXDR()}};
 }
 export async function authorizeBuyerOnce(intent,options){
  validateIntent(intent);if(intent.phase!=='challenge-received')throw Error('EXISTING_SIGNATURE_MUST_NOT_BE_REGENERATED');if(typeof options.reserveSpend!=='function')throw Error('DURABLE_SPEND_LIMIT_REQUIRED');
+ sponsoredFeeLimit(options,validateChallenge(intent,intent.challenge));
  intent.phase='authorization-started';await save(intent,options);
  try{await options.reserveSpend({operationId:intent.operationId,payer:intent.payer,asset:buyerIdentity.sacContract,amount:'100000'});const payload=await buildBuyerPaymentPayload(intent,options);
   intent.signedPayload=clone(payload);intent.payloadHash=digest(buyerCanonical(payload));intent.paymentSignature=encodePaymentSignatureHeader(payload);intent.phase='payment-ready';await save(intent,options);return clone(payload);
  }catch(error){intent.phase='authorization-uncertain';await save(intent,options);throw error;}
 }
 export async function payBuyerOnce(intent,options){
- validateIntent(intent);if(intent.phase!=='payment-ready'||!intent.signedPayload)throw Error('PAYMENT_MUST_NOT_BE_RETRIED');assertBuyerTransfer(intent.signedPayload.payload.transaction,validateChallenge(intent,intent.challenge),intent.payer);
+ validateIntent(intent);if(intent.phase!=='payment-ready'||!intent.signedPayload)throw Error('PAYMENT_MUST_NOT_BE_RETRIED');assertBuyerTransfer(intent.signedPayload.payload.transaction,validateChallenge(intent,intent.challenge),intent.payer,options);
  if(buyerCanonical(intent.signedPayload.accepted)!==buyerCanonical(intent.challenge.accepts[0])||buyerCanonical(intent.signedPayload.resource)!==buyerCanonical(intent.challenge.resource))throw Error('SIGNED_PAYLOAD_CHANGED');
  intent.phase='payment-started';await save(intent,options);
  try{const response=await options.marketFetch(endpoint(intent),{method:'POST',headers:{...authHeaders(options),'payment-signature':intent.paymentSignature},body:'{}',redirect:'error'});
