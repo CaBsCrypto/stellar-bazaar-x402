@@ -30,7 +30,7 @@ async function boundedJson(kind:'facilitator'|'rpc',url:string,body:unknown,head
  let incoming=0;const outgoing=Buffer.byteLength(raw)+Object.entries(headers).reduce((n,[k,v])=>n+Buffer.byteLength(k+': '+v+'\r\n'),0);
  return meteredExternal(kind,async()=>{
   const response=await fetcher(url,{method:'POST',headers,body:raw,redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(10000)});
-  if(response.redirected||(response.url&&response.url!==url))throw new WorkspaceError('X402_TRANSPORT_UNCONFIRMED',409);
+  if(response.redirected||(response.url&&response.url!==new URL(url).href))throw new WorkspaceError('X402_TRANSPORT_UNCONFIRMED',409);
   const parts:Uint8Array[]=[];for(const[k,v]of response.headers)incoming+=Buffer.byteLength(k+': '+v+'\r\n');
   const reader=response.body?.getReader();if(!reader)throw new WorkspaceError('X402_TRANSPORT_UNCONFIRMED',409);
   try{if(incoming>maximumResponseBytes){await reader.cancel();throw new WorkspaceError('X402_RESPONSE_TOO_LARGE',409);}for(;;){const part=await reader.read();if(part.done)break;incoming+=part.value.byteLength;if(incoming>maximumResponseBytes){await reader.cancel();throw new WorkspaceError('X402_RESPONSE_TOO_LARGE',409);}parts.push(part.value);}}finally{reader.releaseLock();}
