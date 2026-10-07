@@ -11,9 +11,13 @@ export const OPERATIONAL_CHECKPOINT_MAX_AGE_MS = 31 * 86400000;
 export const operationalResources = ['requests', 'redisRequests', 'redisCommands', 'outboundBytes', 'inboundBytes', 'externalRequests'] as const;
 export type OperationalResources = Record<typeof operationalResources[number], number>;
 const quantities = z.object(Object.fromEntries(operationalResources.map(name => [name, z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)])) as Record<typeof operationalResources[number], z.ZodNumber>).strict();
+const profileShares = z.object({ public: z.number().int().min(0).max(100), authenticated: z.number().int().min(0).max(100), recovery: z.number().int().min(0).max(100) }).strict()
+  .refine(value => operationalProfiles.reduce((total, profile) => total + value[profile], 0) === 100, 'Profile percentages must sum to 100');
+export const operationalProfilePercentSchema = z.object(Object.fromEntries(operationalResources.map(name => [name, profileShares])) as Record<typeof operationalResources[number], typeof profileShares>).strict();
+export type OperationalProfilePercent = z.infer<typeof operationalProfilePercentSchema>;
 export const operationalCheckpointSchema = z.object({
   version: z.literal(1), epoch: z.string().uuid(), observedAt: z.string().datetime(), expiresAt: z.string().datetime(),
-  evidence: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,180}$/), remaining: quantities,
+  evidence: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,180}$/), remaining: quantities, profilePercent: operationalProfilePercentSchema.optional(),
 }).strict().superRefine((value, ctx) => {
   const observed = Date.parse(value.observedAt), expires = Date.parse(value.expiresAt);
   if (expires <= observed || expires - observed > OPERATIONAL_CHECKPOINT_MAX_AGE_MS || observed > Date.now() + 60000) ctx.addIssue({ code: 'custom', message: 'Invalid checkpoint interval' });
@@ -29,9 +33,13 @@ export function operationalRequestEnvelope(profile: OperationalProfile, workload
 export const OPERATIONAL_REQUEST_ENVELOPES = Object.fromEntries(operationalProfiles.map(profile => [profile, operationalRequestEnvelope(profile)])) as Record<OperationalProfile, OperationalResources>;
 /** Compatibility name for conservative authenticated-request fixtures. */
 export const OPERATIONAL_REQUEST_ENVELOPE = OPERATIONAL_REQUEST_ENVELOPES.authenticated;
+export function operationalProfilePercent(checkpoint: OperationalCheckpoint): OperationalProfilePercent {
+  return checkpoint.profilePercent ?? Object.fromEntries(operationalResources.map(name => [name, { ...OPERATIONAL_PROFILE_PERCENT }])) as OperationalProfilePercent;
+}
 /** Half stays unassigned. Integer rounding can only increase the unassigned reserve. */
 export function allocateOperationalBudget(checkpoint: OperationalCheckpoint) {
-  const assigned = Object.fromEntries(operationalProfiles.map(profile => [profile, Object.fromEntries(operationalResources.map(name => [name, Math.floor(checkpoint.remaining[name] * OPERATIONAL_PROFILE_PERCENT[profile] / 200)]))])) as Ledger['assigned'];
+  const shares = operationalProfilePercent(checkpoint);
+  const assigned = Object.fromEntries(operationalProfiles.map(profile => [profile, Object.fromEntries(operationalResources.map(name => [name, Number(BigInt(checkpoint.remaining[name]) * BigInt(shares[name][profile]) / 200n)]))])) as Ledger['assigned'];
   const reserved = Object.fromEntries(operationalResources.map(name => [name, checkpoint.remaining[name] - operationalProfiles.reduce((total, profile) => total + assigned[profile][name], 0)])) as OperationalResources;
   return { assigned, reserved };
 }
@@ -55,7 +63,7 @@ function parseLedger(raw: unknown): Ledger {
 function initial(checkpoint: OperationalCheckpoint): Ledger { return { version: 1, revision: randomUUID(), checkpoint, ...allocateOperationalBudget(checkpoint), used: { public: zero(), authenticated: zero(), recovery: zero() } }; }
 export function budgetSummary(ledger: Ledger) {
   return { version: 1, epoch: ledger.checkpoint.epoch, observedAt: ledger.checkpoint.observedAt, expiresAt: ledger.checkpoint.expiresAt, evidence: ledger.checkpoint.evidence,
-    stale: Date.now() >= Date.parse(ledger.checkpoint.expiresAt), reserved: ledger.reserved,
+    stale: Date.now() >= Date.parse(ledger.checkpoint.expiresAt), profilePercent: operationalProfilePercent(ledger.checkpoint), reserved: ledger.reserved,
     profiles: Object.fromEntries(operationalProfiles.map(profile => [profile, { envelope: OPERATIONAL_REQUEST_ENVELOPES[profile], assigned: ledger.assigned[profile], used: ledger.used[profile], pressure: Object.fromEntries(operationalResources.map(name => [name, OPERATIONAL_REQUEST_ENVELOPES[profile][name]===0?{applicable:false,used:ledger.used[profile][name]}:{applicable:true,...operationalPressure(ledger.used[profile][name], ledger.assigned[profile][name], profile === 'authenticated')}])) }])) };
 }
 export function createOperationalBudgetStore(redis: OperationalBudgetRedis, prefix: string, checkpoint: () => OperationalCheckpoint): OperationalBudgetStore {
