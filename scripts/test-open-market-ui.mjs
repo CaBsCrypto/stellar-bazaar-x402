@@ -23,6 +23,7 @@ try {
     const errors=[],requests=[],creates=[],changes=[],unexpected=[],external=[];
     let permission={permission:'market:submit',revision:0,generation:1,allowServiceSubmission:false},firstCreate=true,firstGrant=true,paused=false,catalogFail=false,catalogEmpty=false,grantReadOnly=false;
     page.on('pageerror', e => errors.push(e.message));
+    page.on('console', message => { if(message.type()==='error'&&/hydration|hydrated|server rendered|Minified React error/i.test(message.text()))errors.push(message.text()); });
     await context.route('**/*', async route => {
       const request=route.request(),url=new URL(request.url());
       if (url.origin!==base) {external.push(url.origin);return route.abort();}
@@ -52,6 +53,8 @@ try {
     });
     await page.goto(base+'/open');
     await page.getByRole('heading',{level:1,name:'Un espacio para tu agente.'}).waitFor();
+    // Screenshot capture changes caret styles. Wait for hydration before it touches inputs.
+    await page.waitForFunction(expected=>Array.from(document.querySelectorAll('textarea')).some(el=>el.value===expected),base+'/api/mcp');
     if(evidence)await page.screenshot({path:join(evidence,`open-market-access-${width}.png`),fullPage:true});
     assert.equal(await page.getByRole('button',{name:'Descargar configuración MCP pública',exact:true}).count(),1);
     const publicDownload=page.waitForEvent('download');await page.getByRole('button',{name:'Descargar configuración MCP pública',exact:true}).click();

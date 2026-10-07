@@ -84,5 +84,5 @@ desktop alignment:
 Native browser zoom remains a distinct manual check. A headless viewport or CSS
 scale does not establish native zoom behavior. On a local browser, set its own
 zoom to 200%, visit open/hub/catalog/history and check that text, paging and
-confirmation controls stay usable without horizontal scrolling. Reset to 100%.
+  confirmation controls stay usable without horizontal scrolling. Reset to 100%.
 No native zoom result is claimed by these tests.
