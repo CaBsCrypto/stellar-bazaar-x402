@@ -14,6 +14,15 @@
     "retainPreviewProtection": true
   },
   "prospectiveFlags": {
+    "NEXT_PUBLIC_BAZAAR_MARKETPLACE": "true",
+    "NEXT_PUBLIC_APP_URL": "https://bazaar.browns.studio",
+    "BAZAAR_ENABLE_OPEN_WORKSPACES": "true",
+    "BAZAAR_ENABLE_MARKETPLACE": "true",
+    "BAZAAR_ENABLE_MARKET_PURCHASES": "false",
+    "BAZAAR_X402_MARKETPLACE_ENABLED": "false",
+    "BAZAAR_ENABLE_SELF_LISTING_INTAKE": "false",
+    "BAZAAR_ENABLE_PROVIDER_ACTIVATION": "false",
+    "BAZAAR_WORKSPACE_CREATION_PAUSED": "true",
     "BAZAAR_ROUTE_BOUNDARY": "true",
     "BAZAAR_WORKSPACE_ADMISSION": "open",
     "BAZAAR_WORKSPACE_INVITE_HASHES_JSON": "absent",
@@ -23,14 +32,67 @@
     "BAZAAR_ACCEPTANCE_SALE": "false",
     "BAZAAR_ACCEPTANCE_X402": "false",
     "BAZAAR_WORKSPACE_PUBLIC_ORIGIN": "https://bazaar.browns.studio",
-    "BAZAAR_WORKSPACE_BACKEND": "redis"
+    "BAZAAR_WORKSPACE_BACKEND": "redis",
+    "BAZAAR_PROVIDER_REVIEW_BACKEND": "redis",
+    "BAZAAR_WORKSPACE_PREFIX": "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "BAZAAR_MARKET_PREFIX": "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "BAZAAR_REVIEW_PREFIX": "bazaar-review:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "BAZAAR_DYNAMIC_PREFIX": "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0:catalog",
+    "BAZAAR_ENABLE_PROVIDER_REVIEW_ADMIN": "false",
+    "BAZAAR_ENABLE_PUBLIC_PROVIDER_REVIEW": "false",
+    "BAZAAR_ENABLE_REGISTRY_MUTATIONS": "false",
+    "X402_PILOT_PAYMENTS_ENABLED": "false",
+    "X402_LEGACY_PAYMENTS_ENABLED": "false",
+    "X402_ENABLE_LOCAL_PAYER": "false",
+    "NEXT_PUBLIC_X402_XLM_PILOT": "false",
+    "STELLAR_X402_FACILITATOR_URL": "https://channels.openzeppelin.com/x402/testnet",
+    "STELLAR_X402_RPC_URL": "https://soroban-testnet.stellar.org"
+  },
+  "prospectivePhase": "new-work-paused-for-production-acceptance",
+  "afterAcceptanceOverrides": {
+    "BAZAAR_WORKSPACE_CREATION_PAUSED": "false",
+    "BAZAAR_ENABLE_MARKET_PURCHASES": "true",
+    "BAZAAR_X402_MARKETPLACE_ENABLED": "true",
+    "BAZAAR_ENABLE_SELF_LISTING_INTAKE": "true",
+    "BAZAAR_ENABLE_PROVIDER_ACTIVATION": "true"
+  },
+  "buildOverrides": {
+    "NEXT_PUBLIC_BAZAAR_MARKETPLACE": "true",
+    "NEXT_PUBLIC_APP_URL": "https://bazaar.browns.studio",
+    "BAZAAR_ENABLE_OPEN_WORKSPACES": "false",
+    "BAZAAR_ENABLE_MARKETPLACE": "false",
+    "BAZAAR_ENABLE_SELF_LISTING_INTAKE": "false",
+    "BAZAAR_ENABLE_PROVIDER_ACTIVATION": "false",
+    "BAZAAR_OPERATIONAL_METER": "false",
+    "BAZAAR_OPERATIONAL_BUDGET": "false"
+  },
+  "removeAcceptanceMetadata": [
+    "BAZAAR_ACCEPTANCE_STORAGE_CAPS_JSON",
+    "BAZAAR_ACCEPTANCE_CATALOG_VALUE_CAPS_JSON",
+    "BAZAAR_ACCEPTANCE_SETTLEMENT_KEY",
+    "BAZAAR_ACCEPTANCE_CATALOG_CARD_ID"
+  ],
+  "buildSecretNamesMustBeAbsent": [
+    "BAZAAR_WORKSPACE_REDIS_REST_URL", "BAZAAR_WORKSPACE_REDIS_REST_TOKEN",
+    "BAZAAR_REVIEW_REDIS_REST_URL", "BAZAAR_REVIEW_REDIS_REST_TOKEN",
+    "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "KV_REST_API_URL", "KV_REST_API_TOKEN",
+    "BAZAAR_MARKET_REVIEW_SECRET", "BAZAAR_PROVIDER_PREVIEW_BYPASS", "STELLAR_X402_FACILITATOR_API_KEY"
+  ],
+  "recommendedFunctionDuration": {
+    "projectDefaultSeconds": 60,
+    "apiRouteSeconds": 60,
+    "publicSsrSeconds": 15,
+    "proxyUsesProjectDefault": true,
+    "liveProjectDefaultVerified": false,
+    "preparedRequestHelper": "scripts/prepare-open-operations-project-timeout.mjs"
   },
   "privateConfiguration": {
-    "workspacePrefix": "existing verified dedicated prefix required; redacted",
-    "marketPrefix": "existing matching market prefix required; redacted",
-    "reviewPrefix": "existing matching review prefix required; redacted",
+    "workspacePrefix": "bazaar-workspace:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "marketPrefix": "bazaar-market:pilot-be8432d7255e0a3b0dca564d8aa769a0",
+    "reviewPrefix": "bazaar-review:pilot-be8432d7255e0a3b0dca564d8aa769a0",
     "workspaceRedisRestUrl": "existing mapping unconfirmed; redacted",
     "workspaceRedisRestToken": "existing private configuration required; never printed",
+    "marketplaceReviewConnection": "BAZAAR_WORKSPACE_REDIS_REST_URL/TOKEN only; no legacy or generic aliases",
     "operatorCredentialHash": "existing private operator required; redacted",
     "checkpointJson": null
   },
