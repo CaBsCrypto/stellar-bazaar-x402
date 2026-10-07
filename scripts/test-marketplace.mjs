@@ -10,7 +10,8 @@ import {resetSelfListingStateForTests,recordManualReview,stageApprovedSubmission
 import {verifySubmissionHttp,activateSubmission} from '../lib/provider-review-operator.ts';
 import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts';
 import {syncDeliveryContract} from '../lib/delivery-contract.ts';
-import {createRedisWorkspaceStore,READ_WORKSPACE_LUA,COMMIT_WORKSPACE_LUA,setWorkspaceStoreForTests} from '../lib/workspace-store.ts';
+import {createRedisWorkspaceStore,READ_WORKSPACE_LUA,COMMIT_WORKSPACE_LUA,READ_MARKET_PERMISSION_LUA,COMMIT_MARKET_PERMISSION_LUA,setWorkspaceStoreForTests} from '../lib/workspace-store.ts';
+import {orderMemo} from '../lib/marketplace-identity.ts';
 import {createWorkspaceHandlers} from '../lib/workspace-http.ts';
 import {requireWorkspacePrincipal} from '../lib/workspace-auth.ts';
 import {marketHandlers} from '../lib/marketplace-http.ts';
@@ -20,11 +21,12 @@ import {InMemoryTransport} from '@modelcontextprotocol/sdk/inMemory.js';
 import {registerMarketplaceTools} from '../lib/marketplace-mcp.ts';
 import {workspacePublicOrigin} from '../lib/workspace-public-origin.ts';
 
-process.env.BAZAAR_ENABLE_MARKETPLACE='true';process.env.BAZAAR_ENABLE_MARKET_PURCHASES='true';
+process.env.BAZAAR_ENABLE_MARKETPLACE='true';process.env.BAZAAR_ENABLE_MARKET_PURCHASES='true';process.env.BAZAAR_X402_MARKETPLACE_ENABLED='true';
 process.env.BAZAAR_ENABLE_SELF_LISTING_INTAKE='true';process.env.BAZAAR_MARKET_REVIEW_SECRET=randomBytes(32).toString('hex');
 const data=new Map(),prefix='bazaar-market:pilot-'+randomBytes(16).toString('hex');let calls=0,writes=0,lostWrite=false;
 const redis={async get(key){calls++;return data.get(key)??null;},async eval(script,keys,args){calls++;
- if(script===READ_WORKSPACE_LUA)return keys.map(k=>data.get(k)??'');
+ if(script===READ_WORKSPACE_LUA||script===READ_MARKET_PERMISSION_LUA)return keys.map(k=>data.get(k)??'');
+ if(script===COMMIT_MARKET_PERMISSION_LUA){if(keys.some((k,i)=>(data.get(k)??'')!==args[i]))return 0;data.set(keys[3],args[4]);writes++;return 1;}
  if(script===COMMIT_WORKSPACE_LUA){if(keys.some((k,i)=>(data.get(k)??'')!==args[i]))return 0;data.set(keys[0],args[3]);if(args[4])data.set(keys[1],args[4]);data.set(keys[2],'workspace-v1');writes++;return 1;}
  const old=data.get(keys[0]);if(args[0]==='missing'?old!==undefined:old!==args[1])return 0;
  data.set(keys[0],args[2]);writes++;if(lostWrite){lostWrite=false;throw Error('simulated lost acknowledgement');}return 1;
@@ -45,17 +47,21 @@ assert.equal(new Asset(identity.code,identity.issuer).contractId(Networks.TESTNE
 assert.equal(USDT0_MAINNET_DESCRIPTOR.paymentsEnabled,false);assert.equal(isCanonicalUsdcTestnet(USDT0_MAINNET_DESCRIPTOR.identity),false);
 for(const changed of [{...identity,issuer:Keypair.random().publicKey()},{...identity,code:'EURC'},{...identity,network:'stellar:mainnet'},{...identity,sacContract:USDT0_MAINNET_DESCRIPTOR.identity.sacContract},USDT0_MAINNET_DESCRIPTOR.identity,{...USDT0_MAINNET_DESCRIPTOR.identity,network:'stellar:testnet'}])assert.throws(()=>marketCard({...card,payment:{...card.payment,identity:changed}}),e=>e.code==='INVALID_SERVICE');
 assert.throws(()=>marketCard({...card,payment:{...card.payment,asset:'XLM',identity:undefined}}),e=>e.code==='INVALID_SERVICE');
-const submissionId=randomUUID(),submission=await submitMarketService(seller,{submissionId,card,controlProof:{method:'http-well-known',domain:'provider.example.com'}});
+const publishedCard={...card,payment:{...card.payment,marketplace:{protocol:'x402-stellar-exact-v2',resourceTemplate:'/api/market/orders/{operationId}/x402'}}};
+const submissionId=randomUUID(),submission=await submitMarketService(seller,{submissionId,card:publishedCard,controlProof:{method:'http-well-known',domain:'provider.example.com'}});
 assert.equal(submission.status,'awaiting-control-proof');
-await assert.rejects(()=>submitMarketService(buyer,{submissionId,card,controlProof:{method:'http-well-known',domain:'provider.example.com'}}),e=>e.code==='SUBMISSION_CONFLICT');
-await assert.rejects(()=>submitMarketService(sellerAgent,{submissionId:randomUUID(),card,controlProof:{method:'http-well-known',domain:'provider.example.com'}}),e=>e.code==='FORBIDDEN');
+await assert.rejects(()=>submitMarketService(buyer,{submissionId,card:publishedCard,controlProof:{method:'http-well-known',domain:'provider.example.com'}}),e=>e.code==='SUBMISSION_CONFLICT');
+await assert.rejects(()=>submitMarketService(sellerAgent,{submissionId:randomUUID(),card:publishedCard,controlProof:{method:'http-well-known',domain:'provider.example.com'}}),e=>e.code==='MARKET_SUBMISSION_NOT_ALLOWED');
 await verifySubmissionHttp(submissionId,{lookup:async()=>[{address:'8.8.8.8',family:4}],transport:async()=>({status:200,body:submission.control.expectedRecord})});
 assert.equal((await recordManualReview(submissionId,{decision:'approve',reviewerId:'synthetic-operator',reasons:['Fixture contract checked']})).ok,true);
 assert.equal((await stageApprovedSubmission(submissionId)).ok,true);
 const entries=new Map();await activateSubmission(submissionId,{configured:()=>true,create:async c=>{const entry={id:c.id,card:c,hash:computeCanonicalServiceCardHash(c)};entries.set(c.id,entry);return {ok:true,entry};},read:async id=>entries.get(id)});
 const intent=()=>({operationId:randomUUID(),serviceId:card.id,cardHash:computeCanonicalServiceCardHash(card),payer:payer.publicKey(),input:{topic:'Test'}});
-const original=intent(),order=await createMarketOrder(buyer,original);assert.equal(order.phase,'awaiting-payment');assert.deepEqual(order.settlement,identity);assert.equal((await createMarketOrder(buyer,original)).operationId,order.operationId);
-await assert.rejects(()=>createMarketOrder(buyer,{...original,input:{topic:'Different'}}),e=>e.code==='OPERATION_CONFLICT');
+// Legacy native payments below are retained historical fixtures, not new order creation.
+const historicalOrder=input=>createMarketStore(redis,prefix).transact(s=>{const now=new Date().toISOString(),o={...input,buyerOwnerId:buyer.ownerId,sellerOwnerId:seller.ownerId,card,destination,amount:card.payment.amount,settlement:identity,memoHash:orderMemo(buyer.ownerId,input.operationId,input.cardHash,input.input),phase:'awaiting-payment',createdAt:now,updatedAt:now};s.orders.push(o);return o;});
+const original=intent();await assert.rejects(()=>createMarketOrder(buyer,original),e=>e.name==='ZodError');
+const order=await historicalOrder(original);assert.equal(order.phase,'awaiting-payment');assert.deepEqual(order.settlement,identity);
+assert.equal((await marketHandlers.action(request('/api/market/orders/'+order.operationId,identities[1].human,{action:'prepare'}),order.operationId)).status,409,'Native HTTP signing is disabled, including legacy awaiting orders');
 await assert.rejects(()=>readMarketOrder(third,order.operationId),e=>e.code==='NOT_FOUND');assert.equal((await listMarketOrders(third)).length,0);
 await assert.rejects(()=>sellerOrderAction(sellerAgent,order.operationId,{action:'claim',attemptId:randomUUID()}),e=>e.code==='PAYMENT_REQUIRED');
 const account=publicKey=>({account_id:publicKey,sequence:'0',subentry_count:1,balances:[{asset_type:'native',balance:'1000',selling_liabilities:'0'},{asset_type:'credit_alphanum4',asset_code:'USDC',asset_issuer:identity.issuer,balance:'10',limit:'100000',selling_liabilities:'0',buying_liabilities:'0',is_authorized:true}],thresholds:{med_threshold:1},signers:[{key:publicKey,type:'ed25519_public_key',weight:1}]});
@@ -83,16 +89,16 @@ assert.equal(done.phase,'delivered');assert.equal(done.delivery.sha256,sha('Exac
 await assert.rejects(()=>sellerOrderAction(sellerAgent,order.operationId,{action:'deliver',attemptId,text:'Changed'}),e=>e.code==='DELIVERY_CONFLICT');
 // A new process/store sees exactly the same paid order and delivery.
 setMarketStoreForTests(createMarketStore(redis,prefix));assert.deepEqual(await readMarketOrder(buyer,order.operationId),done);
-const lost=await createMarketOrder(buyer,intent()),lostDraft=await prepareMarketPayment(buyer,lost.operationId,ledger),lostTx=TransactionBuilder.fromXDR(lostDraft.unsignedXdr,Networks.TESTNET);lostTx.sign(payer);signed=lostTx.toXDR();
+const lost=await historicalOrder(intent()),lostDraft=await prepareMarketPayment(buyer,lost.operationId,ledger),lostTx=TransactionBuilder.fromXDR(lostDraft.unsignedXdr,Networks.TESTNET);lostTx.sign(payer);signed=lostTx.toXDR();
 const uncertainLedger={...ledger,submit:async()=>{submissions++;throw Error('lost transaction response');}};
 await assert.rejects(()=>payMarketOrder(buyer,lost.operationId,signed,uncertainLedger),e=>e.code==='PAYMENT_OUTCOME_UNCERTAIN');assert.equal((await readMarketOrder(buyer,lost.operationId)).phase,'payment-uncertain');
 assert.equal((await verifyMarketPayment(buyer,lost.operationId,ledger)).phase,'paid');assert.equal(submissions,2);
 const failedAttempt=randomUUID();await sellerOrderAction(sellerAgent,lost.operationId,{action:'claim',attemptId:failedAttempt});const failed=await sellerOrderAction(sellerAgent,lost.operationId,{action:'fail',attemptId:failedAttempt,reason:'Provider stopped'});assert.equal(failed.phase,'delivery-failed');assert.ok(failed.paymentVerifiedAt);
 // Losing the Redis acknowledgement before submission must not call the ledger.
-const markerLost=await createMarketOrder(buyer,intent()),markerDraft=await prepareMarketPayment(buyer,markerLost.operationId,ledger),markerTx=TransactionBuilder.fromXDR(markerDraft.unsignedXdr,Networks.TESTNET);markerTx.sign(payer);lostWrite=true;
+const markerLost=await historicalOrder(intent()),markerDraft=await prepareMarketPayment(buyer,markerLost.operationId,ledger),markerTx=TransactionBuilder.fromXDR(markerDraft.unsignedXdr,Networks.TESTNET);markerTx.sign(payer);lostWrite=true;
 await assert.rejects(()=>payMarketOrder(buyer,markerLost.operationId,markerTx.toXDR(),ledger));assert.equal(submissions,2);assert.equal((await readMarketOrder(buyer,markerLost.operationId)).phase,'payment-submitting');
 const thirdRead=await marketHandlers.read(request('/api/market/orders/'+order.operationId,identities[2].human),order.operationId);assert.equal(thirdRead.status,404);assert.equal(thirdRead.headers.get('cache-control'),'private, no-store');
-const buyerRead=await marketHandlers.orders(request('/api/market/orders',identities[1].human));assert.equal(buyerRead.status,200);assert.equal((await buyerRead.json()).orders[0].delivery.text,'Exact private text');
+const buyerRead=await marketHandlers.orders(request('/api/market/orders',identities[1].human));assert.equal(buyerRead.status,200);assert.equal((await buyerRead.json()).orders.find(o=>o.operationId===order.operationId).delivery.text,'Exact private text');
 const originResponse=await marketHandlers.orders(new Request('https://wrong.example/api/market/orders',{headers:{authorization:'Bearer '+identities[1].human}}));assert.equal(originResponse.status,400);
 process.env.BAZAAR_ENABLE_MARKET_PURCHASES='false';assert.equal((await marketHandlers.create(request('/api/market/orders',identities[1].human,intent()))).status,503);assert.equal((await marketHandlers.orders(request('/api/market/orders',identities[1].human))).status,200);
 const saved=data.get(prefix+':state'),corrupt=JSON.parse(saved);corrupt.state.orders[0].destination=Keypair.random().publicKey();data.set(prefix+':state',JSON.stringify(corrupt));await assert.rejects(()=>readMarketOrder(buyer,order.operationId));data.set(prefix+':state',saved);
@@ -104,9 +110,9 @@ let legacyLedgerCalls=0;await assert.rejects(()=>prepareMarketPayment(buyer,orig
 const alteredSettlement=JSON.parse(saved);alteredSettlement.state.orders[0].settlement.issuer=Keypair.random().publicKey();assert.throws(()=>validateMarketState(alteredSettlement.state));
 const malformedIdentity={...identity,spoof:'hidden'};assert.equal(parseServiceCardShape({...card,payment:{...card.payment,identity:malformedIdentity}}).ok,false);
 const server=new McpServer({name:'market-protocol-double',version:'1'}),client=new Client({name:'external-seller-test',version:'1'});registerMarketplaceTools(server,request('/api/mcp',identities[0].agent));const [clientTransport,serverTransport]=InMemoryTransport.createLinkedPair();await server.connect(serverTransport);await client.connect(clientTransport);
-assert.deepEqual((await client.listTools()).tools.map(v=>v.name),['list_market_orders','claim_market_order','deliver_market_order','fail_market_order','uncertain_market_order']);const mcpResult=await client.callTool({name:'list_market_orders',arguments:{}});assert.equal(JSON.parse(mcpResult.content[0].text).orders[0].delivery.text,'Exact private text');await client.close();await server.close();
+assert.deepEqual((await client.listTools()).tools.map(v=>v.name),['list_market_services','submit_market_service','get_market_submission','create_market_order','get_market_order','list_market_orders','claim_market_order','deliver_market_order','fail_market_order','uncertain_market_order']);const mcpResult=await client.callTool({name:'list_market_orders',arguments:{}});assert.equal(JSON.parse(mcpResult.content[0].text).orders.find(o=>o.operationId===order.operationId).delivery.text,'Exact private text');await client.close();await server.close();
 const originalOrigin=process.env.BAZAAR_WORKSPACE_PUBLIC_ORIGIN;Object.assign(process.env,{BAZAAR_WORKSPACE_PUBLIC_ORIGIN:'vercel-preview',VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:'stellar-bazaar-x402-example.vercel.app'});assert.equal(workspacePublicOrigin(),'https://stellar-bazaar-x402-example.vercel.app');process.env.VERCEL_ENV='production';assert.throws(()=>workspacePublicOrigin());process.env.BAZAAR_WORKSPACE_PUBLIC_ORIGIN=originalOrigin;delete process.env.VERCEL;delete process.env.VERCEL_ENV;delete process.env.VERCEL_URL;
 process.env.BAZAAR_ENABLE_MARKET_PURCHASES='true';const operatorToken=randomBytes(32).toString('base64url');process.env.BAZAAR_MARKET_OPERATOR_HASH=sha(operatorToken);
 assert.equal((await marketHandlers.control(request('/api/market/control',operatorToken,{action:'pause'}))).status,200);setMarketStoreForTests(createMarketStore(redis,prefix));
-assert.equal((await marketHandlers.create(request('/api/market/orders',identities[1].human,intent()))).status,503);assert.deepEqual(await readMarketOrder(buyer,order.operationId),done);
+assert.equal((await marketHandlers.create(request('/api/market/orders',identities[1].human,{...intent(),cardHash:computeCanonicalServiceCardHash(publishedCard),paymentProtocol:'x402-stellar-exact-v2'}))).status,503);assert.deepEqual(await readMarketOrder(buyer,order.operationId),done);
 console.log(JSON.stringify({status:'PASS',storage:'Redis protocol double, no external requests',orders:3,ledgerSubmissions:submissions,redisExchanges:calls,committedWrites:writes,checks:['owned seller submission and real review state machine','canonical Circle USDC issuer/network/SAC frozen','USDT0 mainnet descriptor derived with payments disabled','substituted asset/issuer/amount/destination/memo rejected','cryptographic testnet signatures and threshold verified','buyer/seller trustline authorization and liability capacity','XLM reserves and fees before signing/submission','legacy XLM exact read/hash without migration and signing disabled','participant isolation through HTTP','single signed submission','unknown response reconciliation without resubmission','execution uncertainty preserves original attempt and manual resolution','paid execution failure remains paid','Redis lost acknowledgement prevents transaction submission','exact delivery and idempotency after store replacement','private headers and exact origin','purchase pause preserves history']}));

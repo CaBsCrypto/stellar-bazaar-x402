@@ -154,7 +154,7 @@ try {
     const q=credentials();await assert.rejects(()=>quotas.createWorkspace(body(q),hash(q.bootstrap),'another-ip'),{code:'WORKSPACE_RATE_LIMIT'});
     fakeNow+=86400000;
     for(let i=0;i<50;i++){const q=credentials();await quotas.createWorkspace(body(q),hash(q.bootstrap),'one-ip');}
-    fakeNow+=86400000;const q2=credentials();await assert.rejects(()=>quotas.createWorkspace(body(q2),hash(q2.bootstrap)),{code:'WORKSPACE_CAPACITY'});
+    fakeNow+=86400000;const q2=credentials();assert.equal((await quotas.createWorkspace(body(q2),hash(q2.bootstrap))).created,true,'The byte-bounded registry admits an owner beyond the former 100-owner count cap');
     for(let i=0;i<120;i++)await quotas.consumeRequest(first.ownerId,1);
     await assert.rejects(()=>quotas.consumeRequest(first.ownerId,1),{code:'WORKSPACE_RATE_LIMIT'});
     setWorkspaceStoreForTests(quotas);

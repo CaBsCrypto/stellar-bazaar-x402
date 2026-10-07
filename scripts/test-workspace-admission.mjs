@@ -36,7 +36,7 @@ try {
   setWorkspaceStoreForTests(createRedisWorkspaceStore(redis, prefix, () => ({ ownerIds: [], hashes: [] })));
   const handlers = createWorkspaceHandlers(), a = credentials(), b = credentials();
   const aInput = inputFor(a), bInput = inputFor(b), allow = [hash(a.bootstrap), hash(b.bootstrap)];
-  for (const raw of [undefined, '', '[]', '{}', '[', JSON.stringify([a.bootstrap]), JSON.stringify([allow[0], allow[0]]), JSON.stringify(Array.from({ length: 6 }, (_, i) => hash('invite-' + i))), ' '.repeat(513)]) {
+  for (const raw of [undefined, '', '[]', '{}', '[', JSON.stringify([a.bootstrap]), JSON.stringify([allow[0], allow[0]]), ' '.repeat(1024 * 1024 + 1)]) {
     if (raw === undefined) delete process.env.BAZAAR_WORKSPACE_INVITE_HASHES_JSON;
     else process.env.BAZAAR_WORKSPACE_INVITE_HASHES_JSON = raw;
     const response = await handlers.POST(request(a, aInput));
@@ -44,7 +44,7 @@ try {
     assert.equal(response.headers.get('cache-control'), 'private, no-store');
     assert.equal(exchanges, 0, 'Invalid configuration must not access Redis');
   }
-  process.env.BAZAAR_WORKSPACE_INVITE_HASHES_JSON = JSON.stringify(allow);
+  process.env.BAZAAR_WORKSPACE_INVITE_HASHES_JSON = JSON.stringify([...allow, ...Array.from({ length: 6 }, (_, i) => hash('invite-' + i))]);
   for (const origin of [undefined, '', 'http://pilot.example', 'https://pilot.example/path', 'https://pilot.example/', 'https://secret@pilot.example', 'malformed']) {
     if (origin === undefined) delete process.env.BAZAAR_WORKSPACE_PUBLIC_ORIGIN;
     else process.env.BAZAAR_WORKSPACE_PUBLIC_ORIGIN = origin;
@@ -90,13 +90,10 @@ try {
   await replacementStore.changeAccess(receipt.workspaceId, hash(a.bootstrap), { action: 'revoke', expectedGeneration: 1 });
   const sixth = credentials();
   process.env.BAZAAR_WORKSPACE_INVITE_HASHES_JSON = JSON.stringify([hash(sixth.bootstrap)]);
-  const originalValues = [...data.entries()];
-  const full = await handlers.POST(request(sixth, inputFor(sixth)));
-  assert.equal(full.status, 409);
-  assert.equal((await full.json()).error.code, 'WORKSPACE_CAPACITY');
-  assert.deepEqual([...data.entries()], originalValues, 'Capacity rejection must not store an owner or consume accepted quota');
+  const next = await handlers.POST(request(sixth, inputFor(sixth)));
+  assert.equal(next.status, 201, 'Invitation replacement and retained revoked owners do not impose a lifetime count cap');
   process.env.BAZAAR_WORKSPACE_INVITE_HASHES_JSON = JSON.stringify([allow[1]]);
-  assert.equal((await handlers.POST(request(b, bInput))).status, 200, 'Existing intent remains recoverable at full capacity');
+  assert.equal((await handlers.POST(request(b, bInput))).status, 200, 'Existing intent remains recoverable');
   const beforeInvalidConfiguration = exchanges;
   process.env.BAZAAR_WORKSPACE_ADMISSION = 'misspelled';
   assert.equal((await handlers.POST(request(b, bInput))).status, 503);
@@ -105,7 +102,7 @@ try {
   assert.equal((await handlers.POST(request(b, bInput))).status, 503, 'Open mode cannot silently ignore invite configuration');
   delete process.env.BAZAAR_WORKSPACE_INVITE_HASHES_JSON;
   assert.equal((await handlers.POST(request(b, bInput))).status, 200);
-  console.log(JSON.stringify({ ok: true, backend: 'Redis protocol double only', inviteAdmission: true, deniedBeforeRedis: true, replayIdentity: true, oneWorkspacePerInvite: true, lifetimeCapacityAcrossStoreInstances: 5, capacityRejectionHasNoWrites: true, exactPublicOrigin: true, dedicatedPilotPrefix: true, noExternalRequests: true }));
+  console.log(JSON.stringify({ ok: true, backend: 'Redis protocol double only', inviteAdmission: true, deniedBeforeRedis: true, replayIdentity: true, oneWorkspacePerInvite: true, retainedOwners: 6, invitationListExceedsFive: true, exactPublicOrigin: true, dedicatedPilotPrefix: true, noExternalRequests: true }));
 } finally {
   setWorkspaceStoreForTests(undefined);
   for (const [name, value] of Object.entries(previous)) if (value === undefined) delete process.env[name]; else process.env[name] = value;
