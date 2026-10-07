@@ -23,13 +23,13 @@ registerHooks({ resolve(specifier, context, next) { try { return next(specifier,
 const { createOnboardingMcpServer } = await import('../lib/mcp-onboarding-server.ts');
 const previous = { ...process.env };
 const clock = Date.now;
-const data = new Map(); let registryReads = 0, reviewReads = 0;
+const data = new Map(); let registryReads = 0, reviewReads = 0, permissionCommits = 0, losePermissionAck = false;
 const redis = { async eval(script, keys, args) {
   if (script === READ_WORKSPACE_LUA || script === READ_MARKET_PERMISSION_LUA) { registryReads++; return keys.map(key => data.get(key) ?? ''); }
   if (script === COMMIT_WORKSPACE_LUA) { if (keys.some((key, i) => (data.get(key) ?? '') !== args[i])) return 0; data.set(keys[0], args[3]); if (args[4]) data.set(keys[1], args[4]); data.set(keys[2], 'workspace-v1'); return 1; }
   assert.equal(script, COMMIT_MARKET_PERMISSION_LUA);
   if (keys.some((key, i) => (data.get(key) ?? '') !== args[i])) return 0;
-  data.set(keys[3], args[4]); return 1;
+  data.set(keys[3], args[4]); permissionCommits++;if(losePermissionAck){losePermissionAck=false;throw Error('Lost permission acknowledgement');}return 1;
 } };
 const state = { version: 1, services: [], orders: [] };
 let beforeCommit;
@@ -122,6 +122,10 @@ try {
   assert.equal((await tool('get_service',{id:'swap-risk-quote'})).code,'RESOURCE_NOT_FOUND');
   const capabilities=await tool('get_bazaar_capabilities');assert.equal(capabilities.workspace.payments,'x402-stellar-exact-v2');assert.equal(capabilities.architecture.settlementIdentity.issuer,USDC_TESTNET_PAYMENT_IDENTITY.issuer);assert.equal(JSON.stringify(capabilities).includes('native-XLM-testnet-direct'),false);
   await client.close();await server.close();client=server=undefined;
+  const revokeGrant={changeId:randomUUID(),expectedRevision:4,allowServiceSubmission:false},beforeLostAck=permissionCommits;losePermissionAck=true;
+  await assert.rejects(()=>store.changeMarketPermissions(human,revokeGrant),e=>e.code==='WORKSPACE_UNAVAILABLE');assert.equal(permissionCommits,beforeLostAck+1,'A lost acknowledgement never retries a grant write');
+  const freshStore=createRedisWorkspaceStore(redis,prefix,()=>({ownerIds:[],hashes:[]})),recoveredGrant=await freshStore.changeMarketPermissions(human,revokeGrant);assert.equal(recoveredGrant.created,false);assert.equal(recoveredGrant.permission.revision,5);assert.equal((await freshStore.readMarketPermissionSnapshot(agent)).permission.allowServiceSubmission,false);
+  assert.equal((await (await marketHandlers.catalog(request('/api/market/catalog'))).json()).services.length,10,'Revoking future submission permission preserves active services and purchase recovery');
   await store.changeAccess(agent.workspaceId,sha(seller.bootstrap),{action:'revoke',expectedGeneration:2});
   assert.equal((await (await marketHandlers.catalog(request('/api/market/catalog'))).json()).services.length,0,'Revoked seller disappears from public discovery');
   await assert.rejects(()=>store.readMarketPermissionSnapshot(agent),e=>e.code==='UNAUTHORIZED');
@@ -138,5 +142,5 @@ try {
   for(let i=0;i<105;i++){const input=submitInput('review-'+i);const result=await submitProviderDraft(input.card,input.controlProof,{submissionId:input.submissionId,submissionToken:randomBytes(32).toString('base64url')});assert.equal(result.ok,true);}
   assert.throws(()=>validateReviewState({version:1,records:[{padding:'x'.repeat(1024*1024)}]}));
   const largePage=marketPage(Array.from({length:20},(_,i)=>({createdAt:'2026-10-01T00:00:00.000Z',id:String(i),text:'x'.repeat(20000)})),{limit:20},'bytes',r=>({createdAt:r.createdAt,id:r.id}),r=>r);assert.ok(largePage.items.length<20);assert.ok(largePage.nextCursor);assert.ok(Buffer.byteLength(JSON.stringify(largePage))<=MARKET_DTO_BYTES);
-  console.log(JSON.stringify({status:'PASS',remoteRequests:0,payments:0,checks:['human-owned generation-bound grant CAS/replay','agent HTTP permission enforcement','atomic grant race rejection','public canonical catalog privacy','one owner snapshot and one review snapshot per public page','opaque stable pagination and bounded DTO','MCP tools/discovery canonical parity','private submission and order isolation','strict new USDC price/protocol','revoked catalog owner filtering','106 retained owners and 105 live request windows','105 retained reviews with 1MiB byte guard']}));
+  console.log(JSON.stringify({status:'PASS',remoteRequests:0,payments:0,checks:['human-owned generation-bound grant CAS/replay','agent HTTP permission enforcement','atomic grant race rejection','grant lost acknowledgement explicit replay across store instances','public canonical catalog privacy','one owner snapshot and one review snapshot per public page','opaque stable pagination and bounded DTO','MCP tools/discovery canonical parity','private submission and order isolation','strict new USDC price/protocol','revoked catalog owner filtering','106 retained owners and 105 live request windows','105 retained reviews with 1MiB byte guard']}));
 } finally { Date.now=clock;await client?.close();await server?.close();setWorkspaceStoreForTests(undefined);setMarketStoreForTests(undefined);await setReviewStoreForTests(undefined);for(const key of Object.keys(process.env))if(!(key in previous))delete process.env[key];Object.assign(process.env,previous); }
