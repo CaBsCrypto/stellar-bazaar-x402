@@ -16,7 +16,7 @@ const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
 const hash=text=>createHash('sha256').update(text).digest('hex');
 const canonical=value=>Array.isArray(value)?`[${value.map(canonical).join(',')}]`:value&&typeof value==='object'?`{${Object.keys(value).sort().map(key=>JSON.stringify(key)+':'+canonical(value[key])).join(',')}}`:JSON.stringify(value);
 function save(path,value){const tmp=path+'.'+randomUUID()+'.tmp';writeFileSync(tmp,JSON.stringify(value,null,2),{mode:0o600,flag:'wx'});renameSync(tmp,path);}
-function newSecret(role){return `bz_${role}_`+randomBytes(32).toString('hex');}
+function newSecret(){return randomBytes(32).toString('base64url');}
 function snapshot(kind,body){const folder=resolve(dir,'responses');if(!existsSync(folder))mkdirSync(folder,{mode:0o700});writeFileSync(resolve(folder,`${Date.now()}-${kind}-${randomUUID()}.json`),JSON.stringify(body,null,2),{mode:0o600,flag:'wx'});}
 function humanLinks(packet){writeFileSync(resolve(dir,'human-links.txt'),`${packet.origin}/agent-chat#token=${packet.humanAccess}\n${packet.origin}/history#token=${packet.humanAccess}\n`,{mode:0o600});}
 async function call(origin,token,name,args={}){

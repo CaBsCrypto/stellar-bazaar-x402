@@ -21,8 +21,8 @@ function fixture(){
  const saved=[],apiCalls=[],rpcCalls=[],spends=[];let paymentCalls=0,signerCalls=0,losePayment=false,loseSigning=false,loseSecondSimulation=false,mutateChallenge,minResourceFees=['100','100'],resourceFees;
  const options={agentToken:'a'.repeat(43),rpcUrl:'https://soroban-testnet.stellar.org',persistIntent:async value=>saved.push(structuredClone(value)),reserveSpend:async value=>{assert.equal(saved.at(-1).phase,'authorization-started');spends.push(value);},signer:{address:payer.publicKey(),signAuthEntry:async(...args)=>{signerCalls++;assert.equal(saved.at(-1).phase,'signer-started');if(loseSigning)throw Error('SIGNER_RESPONSE_LOST');return basicNodeSigner(payer,Networks.TESTNET).signAuthEntry(...args);}},
   marketFetch:async(url,init)=>{
-   totalApi++;const path=new URL(url).pathname;apiCalls.push({path,method:init.method});assert.equal(new URL(url).origin,origin);assert.equal(init.redirect,'error');assert.equal(init.headers.authorization,'Bearer '+'a'.repeat(43));
-   if(init.method==='GET'&&path==='/api/market/services')return Response.json({services:[{card,cardHash:intent.cardHash,status:'activated'}]});
+   totalApi++;const path=new URL(url).pathname;apiCalls.push({path,method:init.method});assert.equal(new URL(url).origin,origin);assert.equal(init.redirect,'error');if(path!=='/api/market/catalog')assert.equal(init.headers.authorization,'Bearer '+'a'.repeat(43));
+   if(init.method==='GET'&&path==='/api/market/catalog')return Response.json({services:[{card,cardHash:intent.cardHash,status:'activated'}]});
    if(init.method==='GET')return Response.json({order:structuredClone(order)});
    if(path==='/api/market/orders'){assert.equal(saved.at(-1).phase,'order-started');assert.equal(JSON.parse(init.body).paymentProtocol,buyerProtocol);return Response.json({order:structuredClone(order)},{status:201});}
    assert.equal(path,route);assert.equal(init.body,'{}');

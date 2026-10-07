@@ -46,15 +46,18 @@ function validateChallenge(intent,challenge){
  return requirements;
 }
 async function save(intent,options){validateIntent(intent);if(typeof options.persistIntent!=='function')throw Error('DURABLE_JOURNAL_REQUIRED');await options.persistIntent(clone(intent));}
-function authHeaders(options){if(!/^[A-Za-z0-9_-]{43}$/.test(options.agentToken??''))throw Error('AGENT_ACCESS_REQUIRED');return {authorization:'Bearer '+options.agentToken,'content-type':'application/json'};}
+export function buyerAccessValid(value){return typeof value==='string'&&(/^[A-Za-z0-9_-]{43}$/.test(value)||/^bz_agent_[a-f0-9]{64}$/.test(value));}
+function authHeaders(options){if(!buyerAccessValid(options.agentToken))throw Error('AGENT_ACCESS_REQUIRED');return {authorization:'Bearer '+options.agentToken,'content-type':'application/json'};}
 async function jsonBody(response,maxBytes=65536){const text=await response.text();if(Buffer.byteLength(text)>maxBytes)throw Error('RESPONSE_OVERSIZE');try{return JSON.parse(text);}catch{throw Error('INVALID_RESPONSE');}}
 
 /** All calls are explicit. A started operation is never automatically retried. */
 export async function createBuyerOrderOnce(intent,options){
  validateIntent(intent);if(intent.phase!=='prepared')throw Error('EXISTING_INTENT_REQUIRES_READ_RECOVERY');
  intent.phase='order-started';await save(intent,options);
- try{const response=await options.marketFetch(new URL('/api/market/orders',intent.origin),{method:'POST',headers:authHeaders(options),body:JSON.stringify({operationId:intent.operationId,serviceId:intent.card.id,cardHash:intent.cardHash,payer:intent.payer,input:intent.input,paymentProtocol:buyerProtocol}),redirect:'error'});
-  if(response.status!==201)throw Error('ORDER_NOT_CONFIRMED');const body=await jsonBody(response);intent.order=clone(boundOrder(intent,body.order));intent.phase='order-created';await save(intent,options);return clone(intent.order);
+ try{const args={operationId:intent.operationId,serviceId:intent.card.id,cardHash:intent.cardHash,payer:intent.payer,input:intent.input,paymentProtocol:buyerProtocol};let body;
+  if(options.marketTool){body=await options.marketTool('create_market_order',args);if(body.httpStatus!==201)throw Error('ORDER_NOT_CONFIRMED');}
+  else{const response=await options.marketFetch(new URL('/api/market/orders',intent.origin),{method:'POST',headers:authHeaders(options),body:JSON.stringify(args),redirect:'error'});if(response.status!==201)throw Error('ORDER_NOT_CONFIRMED');body=await jsonBody(response);}
+  intent.order=clone(boundOrder(intent,body.order));intent.phase='order-created';await save(intent,options);return clone(intent.order);
  }catch(error){intent.phase='order-uncertain';await save(intent,options);throw error;}
 }
 export async function requestBuyerChallengeOnce(intent,options){
@@ -145,7 +148,7 @@ export async function payBuyerOnce(intent,options){
  if(buyerCanonical(intent.signedPayload.accepted)!==buyerCanonical(intent.challenge.accepts[0])||buyerCanonical(intent.signedPayload.resource)!==buyerCanonical(intent.challenge.resource))throw Error('SIGNED_PAYLOAD_CHANGED');
  intent.phase='payment-started';await save(intent,options);
  try{const response=await options.marketFetch(endpoint(intent),{method:'POST',headers:{...authHeaders(options),'payment-signature':intent.paymentSignature},body:'{}',redirect:'error'});
-  if(![200,202].includes(response.status))throw Error('PAYMENT_NOT_CONFIRMED');const body=await jsonBody(response),order=boundOrder(intent,body.order),header=response.headers.get('payment-response');
+  if(![200,202].includes(response.status)){const failure=await jsonBody(response).catch(()=>({})),code=failure.error?.code??failure.code;if(['MARKET_CAPACITY','X402_SETTLEMENT_CAPACITY','CAPACITY_WRITE_UNCONFIRMED'].includes(code)){intent.lastFailure=code;throw Error(code);}throw Error('PAYMENT_NOT_CONFIRMED');}const body=await jsonBody(response),order=boundOrder(intent,body.order),header=response.headers.get('payment-response');
   if(!proofPhases.includes(order.phase)||!header||header.length>32768)throw Error('PAYMENT_NOT_CONFIRMED');const receipt=decodePaymentResponseHeader(header);
   if(receipt.success!==true||receipt.network!=='stellar:testnet'||receipt.payer!==intent.payer||receipt.transaction!==order.transactionHash||new URL(body.statusUrl,intent.origin).href!==new URL('/api/market/orders/'+intent.operationId,intent.origin).href)throw Error('PAYMENT_RECEIPT_CHANGED');
   intent.order=clone(order);intent.receipt=clone(receipt);intent.phase='paid';await save(intent,options);return {order:clone(order),receipt:clone(receipt)};
@@ -153,6 +156,7 @@ export async function payBuyerOnce(intent,options){
 }
 export async function inspectBuyerOrder(intent,options){
  validateIntent(intent);let readOrigin=intent.origin,fetcher=options.marketFetch;
+ if(options.marketTool&&options.recoveryOrigin===undefined){const body=await options.marketTool('get_market_order',{operationId:intent.operationId});if(body.httpStatus!==200)throw Error('READ_UNCONFIRMED');return clone(boundOrder(intent,body.order));}
  if(options.recoveryOrigin!==undefined){const configured=originOnly(options.recoveryOrigin);if(!configured.startsWith('https://')||configured!==options.recoveryOrigin||!Array.isArray(options.allowedRecoveryOrigins)||!options.allowedRecoveryOrigins.includes(configured))throw Error('UNTRUSTED_RECOVERY_ORIGIN');readOrigin=configured;fetcher=options.recoveryFetch??fetcher;}
  const response=await fetcher(new URL('/api/market/orders/'+intent.operationId,readOrigin),{method:'GET',headers:authHeaders(options),redirect:'error'});if(!response.ok)throw Error('READ_UNCONFIRMED');return clone(boundOrder(intent,(await jsonBody(response)).order));
 }
@@ -168,13 +172,13 @@ export async function runMarketplaceBuyerIntent(intent,options){
  try{await createBuyerOrderOnce(intent,options);await requestBuyerChallengeOnce(intent,options);await authorizeBuyerOnce(intent,options);return await payBuyerOnce(intent,options);}finally{activeBuyers.delete(key);}
 }
 export async function discoverBuyerService(origin,serviceId,options){
- const response=await options.marketFetch(new URL('/api/market/services',originOnly(origin)),{method:'GET',headers:authHeaders(options),redirect:'error'});if(!response.ok)throw Error('CATALOG_UNCONFIRMED');const body=await jsonBody(response),service=body.services?.find(item=>item.card?.id===serviceId&&item.status==='activated');
+ const response=await options.marketFetch(new URL(options.catalogPath??'/api/market/catalog',originOnly(origin)),{method:'GET',redirect:'error'});if(!response.ok)throw Error('CATALOG_UNCONFIRMED');const body=await jsonBody(response),service=body.services?.find(item=>item.card?.id===serviceId&&item.status==='activated');
  if(!service||!cardValid(service.card)||digest(buyerCanonical(service.card))!==service.cardHash)throw Error('SERVICE_NOT_ACTIVE');return clone(service);
 }
 
 /** Reservations are never released after a lost signer/transport response. */
 export function createBuyerSpendBudget({maximumAtomic='200000',reservations=[],persistReservations}){
- if(!/^[1-9][0-9]*$/.test(maximumAtomic)||BigInt(maximumAtomic)>200000n||typeof persistReservations!=='function'||!Array.isArray(reservations))throw Error('INVALID_SPEND_BUDGET');
+ if(typeof maximumAtomic!=='string'||!/^[1-9][0-9]{0,19}$/.test(maximumAtomic)||typeof persistReservations!=='function'||!Array.isArray(reservations))throw Error('INVALID_SPEND_BUDGET');
  let conserved=clone(reservations),tail=Promise.resolve(),uncertain=false;
  const valid=value=>uuid.test(value?.operationId??'')&&StrKey.isValidEd25519PublicKey(value.payer??'')&&value.asset===buyerIdentity.sacContract&&value.amount==='100000';
  if(conserved.some(value=>!valid(value))||new Set(conserved.map(value=>value.operationId)).size!==conserved.length||conserved.reduce((sum,value)=>sum+BigInt(value.amount),0n)>BigInt(maximumAtomic))throw Error('INVALID_SPEND_BUDGET');
