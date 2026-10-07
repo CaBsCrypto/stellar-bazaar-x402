@@ -6,8 +6,8 @@ import { WorkspaceError } from '../../../../lib/workspace-types.ts';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 let operatorMinute = -1, operatorCount = 0;
-function authorize(request: Request) {
-  assertMarketEnabled(); assertWorkspaceRequest(request); marketOperator(request.headers.get('authorization'));
+async function authorize(request: Request) {
+  assertMarketEnabled(); assertWorkspaceRequest(request); await marketOperator(request.headers.get('authorization'));
   if (!operationalBudgetEnabled()) throw new WorkspaceError('OPERATIONAL_BUDGET_DISABLED');
   // A per-process backstop. The project WAF supplies the global, pre-function limit.
   const minute = Math.floor(Date.now() / 60000);
@@ -17,10 +17,10 @@ function authorize(request: Request) {
   operatorCount++;
 }
 export const GET = measuredHandler(async (request: Request) => {
-  try { authorize(request); return Response.json(await configuredOperationalBudgetStore().read(), { headers: workspaceHeaders }); }
+  try { await authorize(request); return Response.json(await configuredOperationalBudgetStore().read(), { headers: workspaceHeaders }); }
   catch (error) { return workspaceFailure(error); }
 }, { budget: false });
 export const POST = measuredHandler(async (request: Request) => {
-  try { authorize(request); const checkpoint = await parseWorkspaceBody(request, operationalCheckpointSchema, 8192); return Response.json(await configuredOperationalBudgetStore().refresh(checkpoint), { headers: workspaceHeaders }); }
+  try { await authorize(request); const checkpoint = await parseWorkspaceBody(request, operationalCheckpointSchema, 8192); return Response.json(await configuredOperationalBudgetStore().refresh(checkpoint), { headers: workspaceHeaders }); }
   catch (error) { return workspaceFailure(error); }
 }, { budget: false });

@@ -10,6 +10,7 @@ import {isReservedServiceId,withdrawDynamicServiceCard} from './dynamic-registry
 import {submitProviderDraft,getSubmissionForOperator,getMarketReviewSnapshot,type ProviderSubmission} from './provider-self-listing.ts';
 import type {ServiceCard} from './types.ts';
 import {isCanonicalUsdcTestnet} from './payment-assets.ts';
+import { creditOperationalPrincipal } from './acceptance-meter.ts';
 
 import {sha,canonical,orderMemo} from './marketplace-identity.ts';
 import {configuredWorkspaceStore} from './workspace-store.ts';
@@ -104,4 +105,4 @@ export async function sellerOrderAction(p:WorkspacePrincipal,id:string,action:Ex
  else {if(o.phase==='delivery-failed'&&o.failure===action.reason)return o;if(!['executing','execution-uncertain'].includes(o.phase))throw new WorkspaceError('INVALID_TRANSITION',409);o.failure=action.reason;o.phase='delivery-failed';}}
  o.updatedAt=new Date().toISOString();return o;});
 }
-export function marketOperator(authorization:string|null){const expected=process.env.BAZAAR_MARKET_OPERATOR_HASH,match=/^Bearer ([a-zA-Z0-9_-]{43})$/.exec(authorization??'');if(!expected||!match||!/^[a-f0-9]{64}$/.test(expected)||!timingSafeEqual(Buffer.from(sha(match[1]),'hex'),Buffer.from(expected,'hex')))throw new WorkspaceError('UNAUTHORIZED',401);}
+export async function marketOperator(authorization:string|null){const expected=process.env.BAZAAR_MARKET_OPERATOR_HASH,match=/^Bearer ([a-zA-Z0-9_-]{43})$/.exec(authorization??'');if(!expected||!match||!/^[a-f0-9]{64}$/.test(expected)||!timingSafeEqual(Buffer.from(sha(match[1]),'hex'),Buffer.from(expected,'hex')))throw new WorkspaceError('UNAUTHORIZED',401);await creditOperationalPrincipal();}

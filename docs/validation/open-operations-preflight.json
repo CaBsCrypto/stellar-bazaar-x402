@@ -17,8 +17,16 @@
     "nodeVersion": "24.x",
     "rootDirectory": ".",
     "domains": [
-      { "name": "bazaar.browns.studio", "verified": true, "redirect": null },
-      { "name": "stellar-bazaar-x402.vercel.app", "verified": true, "redirect": null }
+      {
+        "name": "bazaar.browns.studio",
+        "verified": true,
+        "redirect": null
+      },
+      {
+        "name": "stellar-bazaar-x402.vercel.app",
+        "verified": true,
+        "redirect": null
+      }
     ],
     "protection": {
       "ssoDeploymentType": "all_except_custom_domains",
@@ -33,7 +41,9 @@
         "environment": "production",
         "deploymentId": "dpl_5rbJydG46d3EaTdWFaCkspPrqems",
         "hostname": "stellar-bazaar-x402-q8oxsipdo-cabscryptocontacto-6028s-projects.vercel.app",
-        "aliases": ["stellar-bazaar-x402-cabscryptocontacto-6028s-projects.vercel.app"],
+        "aliases": [
+          "stellar-bazaar-x402-cabscryptocontacto-6028s-projects.vercel.app"
+        ],
         "readyState": "READY",
         "createdAtEpochMs": 1790741965217
       },
@@ -53,7 +63,10 @@
       "plan": "pro",
       "status": "active",
       "trial": null,
-      "subscriptionPeriod": { "start": "2026-09-21T07:00:00Z", "end": "2026-10-21T07:00:00Z" },
+      "subscriptionPeriod": {
+        "start": "2026-09-21T07:00:00Z",
+        "end": "2026-10-21T07:00:00Z"
+      },
       "includedAllocationUsd": 20,
       "usageQuery": {
         "fromArgument": "2026-09-21",
@@ -63,18 +76,34 @@
         "dateInterpretation": "CLI date arguments use America/Los_Angeles day boundaries. The query includes the current day's window; figures reflect data returned at observation time."
       },
       "reportedEffectiveCostUsd": 30.044060999633107,
-      "reportedBilledCostUsd": 1.041057486576681e-9,
+      "reportedBilledCostUsd": 1.041057486576681E-09,
       "reportedProEffectiveCostUsd": 11.33333333333333,
       "reportedBuildCpuEffectiveCostUsd": 15.917999999999994,
       "reportedChargeCount": 40664,
-      "arithmeticInfrastructureEffectiveCostUsd": 18.710727666299777,
+      "arithmeticInfrastructureEffectiveCostUsd": 18.71072766629978,
       "arithmeticEstimatedCreditHeadroomUsd": 1.289272333700223,
       "exactRemainingCreditUsd": null,
       "exactRemainingCreditConfirmed": false,
       "generalSpendHardCapUsd": null,
       "zeroAdditionalCostMarginConfirmed": false,
       "limitation": "The arithmetic estimate is 20 minus (total effective cost minus the Pro subscription line). Effective cost includes resources with their own included allocations and is not a live credit ledger. Billed cost is near zero at floating-point precision; it is not a guarantee of future zero charges. No exact credit balance or general spend hard cap was exposed by the bounded read-only CLI/API paths.",
-      "pricingReference": "https://vercel.com/docs/plans/pro-plan"
+      "pricingReference": "https://vercel.com/docs/plans/pro-plan",
+      "dashboardCreditEvidence": {
+        "observedAt": "2026-10-07T04:57:30Z",
+        "source": "Parent task read-only existing authenticated Vercel Usage dashboard",
+        "sourceUrl": "https://vercel.com/cabscryptocontacto-6028s-projects/~/usage",
+        "includedCreditUsedDisplayUsd": 18.72,
+        "includedCreditAllocationDisplayUsd": 20,
+        "infrastructureSubtotalDisplayUsd": 18.72,
+        "creditsAppliedDisplayUsd": -18.72,
+        "totalDisplayUsd": 20,
+        "remainingDisplayUsd": 1.28,
+        "remainingConservativeLowerBoundUsd": 1.27,
+        "halfAllocationBeforeDeploymentAndSharedConsumptionUsd": 0.635,
+        "maximumDashboardLagHours": 1,
+        "sharedTeam": true,
+        "zeroAdditionalCostGuarantee": false
+      }
     }
   },
   "redis": {
@@ -169,6 +198,7 @@
     "vercel env ls from the matching mission-consolidation link; names/type/target metadata only.",
     "Authorized production env pull for the exact project into an ACL-exclusive temporary directory; selected Redis configuration parsed in process and temporary data removed.",
     "Read-only child browser inventory contained no open dashboard tabs; no login or account provisioning attempted.",
-    "Parent task's existing authenticated IAB Upstash Details dashboard read on 2026-10-07; selected resource/plan/quota counters only, no Redis command or mutation."
+    "Parent task's existing authenticated IAB Upstash Details dashboard read on 2026-10-07; selected resource/plan/quota counters only, no Redis command or mutation.",
+    "Parent read-only authenticated Vercel Usage dashboard, selected Included Credit and subtotal counters; shared delayed snapshot."
   ]
 }

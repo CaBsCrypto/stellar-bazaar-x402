@@ -24,6 +24,8 @@ The team has an **active Pro plan**, no trial, and a **$20 included allocation**
 
 The headroom estimate is `$20 - (total effective cost - Pro effective cost)`. It is an inference from selected counters, not a live credit ledger. Effective costs include resources with their own allocations. Vercel's [Pro billing documentation](https://vercel.com/docs/plans/pro-plan) explains that credit applies after each resource's included allocation. The estimate and near-zero billed cost cannot confirm a zero-additional-cost margin for a new deployment or open traffic. The counters are team-wide and shared by other projects.
 
+The parent subsequently read the existing authenticated [Vercel Usage dashboard](https://vercel.com/cabscryptocontacto-6028s-projects/~/usage) on October 7. It displays Included Credit **$18.72/$20.00**, infrastructure subtotal **$18.72**, credits applied **-$18.72**, and total **$20.00** for the subscription. Displayed credit remaining is $1.28; the conservatively rounded lower bound is **$1.27**, leaving **$0.635** in the half available for allocation before deployment/artifact and shared-consumption allowances. The dashboard says usage can lag by one hour. This current dashboard evidence supersedes the earlier arithmetic estimate for planning, while full unrounded balance and future shared consumption remain uncertain. A bounded request count still needs a compute, memory, duration, proxy and artifact-cost derivation.
+
 ## Redis
 
 The project's Marketplace resource list returned zero resources. This does not establish that its separately configured Redis databases do not exist.
@@ -40,6 +42,6 @@ The immutable [October 4 snapshot](../evidence/sprint-marketplace/usdc-redis-fre
 
 ## Result
 
-Project/domain/protection/runtime facts and the existing Redis dashboard quota snapshot are current. Exact Vercel credit remaining and the dedicated production workspace mapping remain unconfirmed. The preflight therefore does not confirm a perpetual zero-additional-cost operational margin or provide a complete activation checkpoint.
+Project/domain/protection/runtime facts, Redis quota snapshot and displayed Vercel credit usage are current. Vercel's snapshot is rounded, shared and delayed; dedicated production workspace mapping and compute/request-cost derivation remain unconfirmed. The preflight does not confirm a perpetual zero-additional-cost margin or provide a complete activation checkpoint.
 
 There were **zero remote mutations, deployments, alias changes, protection changes, resources provisioned, Redis requests, application-data requests, provider invocations or payments**. Historical evidence was left unchanged. The machine-readable fields and source commands are in [open-operations-preflight.json](open-operations-preflight.json).

@@ -1,7 +1,7 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { pilotRoutePolicy, routeBoundaryEnabled } from './lib/pilot-route-policy';
-import { earlyRouteGate, earlyBodyGate } from './lib/operational-route-gate';
-import { measuredHandler } from './lib/acceptance-meter';
+import { NextResponse, type NextRequest } from 'next/server.js';
+import { pilotRoutePolicy, routeBoundaryEnabled } from './lib/pilot-route-policy.ts';
+import { earlyRouteGate, earlyBodyGate } from './lib/operational-route-gate.ts';
+import { measuredHandler } from './lib/acceptance-meter.ts';
 
 const privacy = { 'Cache-Control': 'private, no-store', 'Referrer-Policy': 'no-referrer', 'X-Content-Type-Options': 'nosniff' };
 async function boundary(request: NextRequest) {

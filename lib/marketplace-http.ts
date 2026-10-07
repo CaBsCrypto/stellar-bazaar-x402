@@ -30,9 +30,9 @@ export const marketHandlers={
  if(body.action==='reconcile'){const order=await readMarketOrder(p,id);return response({order:order.paymentProtocol?await reconcileMarketX402Payment(p,id):await verifyMarketPayment(p,id)});}
  return response({order:await sellerOrderAction(p,id,body)});
  }catch(e){return workspaceFailure(e);}},
- async control(request:Request){try{assertMarketEnabled();assertWorkspaceRequest(request);marketOperator(request.headers.get('authorization'));const body=await parseWorkspaceBody(request,z.object({action:z.enum(['pause','resume'])}).strict(),1024);return response(await configuredMarketStore().transact(s=>{s.paused=body.action==='pause';return {paused:s.paused};}));}catch(e){return workspaceFailure(e);}},
+ async control(request:Request){try{assertMarketEnabled();assertWorkspaceRequest(request);await marketOperator(request.headers.get('authorization'));const body=await parseWorkspaceBody(request,z.object({action:z.enum(['pause','resume'])}).strict(),1024);return response(await configuredMarketStore().transact(s=>{s.paused=body.action==='pause';return {paused:s.paused};}));}catch(e){return workspaceFailure(e);}},
  async review(request:Request){try{
- assertMarketEnabled();assertWorkspaceRequest(request);marketOperator(request.headers.get('authorization'));
+ assertMarketEnabled();assertWorkspaceRequest(request);await marketOperator(request.headers.get('authorization'));
  await configuredMarketStore().transact(s=>{const minute=Math.floor(Date.now()/60000);if(!s.operatorQuota||s.operatorQuota.minute!==minute)s.operatorQuota={minute,count:0};if(s.operatorQuota.count>=20)throw new WorkspaceError('OPERATOR_RATE_LIMIT',429);s.operatorQuota.count++;});
  const body=await parseWorkspaceBody(request,z.object({submissionId:z.string().uuid(),action:z.enum(['verify-dns','verify-http','approve','reject','activate','recover']),reason:z.string().min(1).max(500).optional()}).strict(),2048);
  const service=await configuredMarketStore().transact(s=>s.services.find(v=>v.submissionId===body.submissionId));if(!service||service.withdrawn)throw new WorkspaceError('NOT_FOUND',404);

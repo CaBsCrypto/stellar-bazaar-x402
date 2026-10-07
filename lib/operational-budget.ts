@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { Redis } from '@upstash/redis';
 import { z } from 'zod';
-import { meteredRedis } from './acceptance-meter.ts';
+import { meteredRedis, setOperationalTransportProfile } from './acceptance-meter.ts';
 import { WorkspaceError } from './workspace-types.ts';
 import { operationalProfiles, OPERATIONAL_PROFILE_PERCENT, operationalPressure, type OperationalProfile, type OperationalRequestClass } from './operational-pressure.ts';
+import { operationalTransportEnvelope } from './operational-envelopes.ts';
 
 export const OPERATIONAL_LEDGER_MAX_BYTES = 65536;
+export const OPERATIONAL_CHECKPOINT_MAX_AGE_MS = 31 * 86400000;
 export const operationalResources = ['requests', 'redisRequests', 'redisCommands', 'outboundBytes', 'inboundBytes', 'externalRequests'] as const;
 export type OperationalResources = Record<typeof operationalResources[number], number>;
 const quantities = z.object(Object.fromEntries(operationalResources.map(name => [name, z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)])) as Record<typeof operationalResources[number], z.ZodNumber>).strict();
@@ -14,12 +16,19 @@ export const operationalCheckpointSchema = z.object({
   evidence: z.string().regex(/^[a-zA-Z0-9][a-zA-Z0-9._:/-]{0,180}$/), remaining: quantities,
 }).strict().superRefine((value, ctx) => {
   const observed = Date.parse(value.observedAt), expires = Date.parse(value.expiresAt);
-  if (expires <= observed || expires - observed > 86400000 || observed > Date.now() + 60000) ctx.addIssue({ code: 'custom', message: 'Invalid checkpoint interval' });
+  if (expires <= observed || expires - observed > OPERATIONAL_CHECKPOINT_MAX_AGE_MS || observed > Date.now() + 60000) ctx.addIssue({ code: 'custom', message: 'Invalid checkpoint interval' });
 });
 export type OperationalCheckpoint = z.infer<typeof operationalCheckpointSchema>;
 type Ledger = { version: 1; revision: string; checkpoint: OperationalCheckpoint; assigned: Record<OperationalProfile, OperationalResources>; reserved: OperationalResources; used: Record<OperationalProfile, OperationalResources> };
 const zero = (): OperationalResources => Object.fromEntries(operationalResources.map(name => [name, 0])) as OperationalResources;
-export const OPERATIONAL_REQUEST_ENVELOPE: OperationalResources = { requests: 1, redisRequests: 34, redisCommands: 330, outboundBytes: 18 * 1048576, inboundBytes: 34 * 1048576, externalRequests: 48 };
+export function operationalRequestEnvelope(profile: OperationalProfile, workload?:'metadata'): OperationalResources {
+  const limit = operationalTransportEnvelope(profile,workload);
+  return { requests: 1, redisRequests: limit.redis, redisCommands: limit.commandsUpperBound, outboundBytes: limit.outboundPayloadBytes + limit.externalOutboundBytes + limit.dtoBytes,
+    inboundBytes: limit.inboundPayloadBytes + limit.externalInboundBytes, externalRequests: limit.externalRequests };
+}
+export const OPERATIONAL_REQUEST_ENVELOPES = Object.fromEntries(operationalProfiles.map(profile => [profile, operationalRequestEnvelope(profile)])) as Record<OperationalProfile, OperationalResources>;
+/** Compatibility name for conservative authenticated-request fixtures. */
+export const OPERATIONAL_REQUEST_ENVELOPE = OPERATIONAL_REQUEST_ENVELOPES.authenticated;
 /** Half stays unassigned. Integer rounding can only increase the unassigned reserve. */
 export function allocateOperationalBudget(checkpoint: OperationalCheckpoint) {
   const assigned = Object.fromEntries(operationalProfiles.map(profile => [profile, Object.fromEntries(operationalResources.map(name => [name, Math.floor(checkpoint.remaining[name] * OPERATIONAL_PROFILE_PERCENT[profile] / 200)]))])) as Ledger['assigned'];
@@ -47,7 +56,7 @@ function initial(checkpoint: OperationalCheckpoint): Ledger { return { version: 
 export function budgetSummary(ledger: Ledger) {
   return { version: 1, epoch: ledger.checkpoint.epoch, observedAt: ledger.checkpoint.observedAt, expiresAt: ledger.checkpoint.expiresAt, evidence: ledger.checkpoint.evidence,
     stale: Date.now() >= Date.parse(ledger.checkpoint.expiresAt), reserved: ledger.reserved,
-    profiles: Object.fromEntries(operationalProfiles.map(profile => [profile, { assigned: ledger.assigned[profile], used: ledger.used[profile], pressure: Object.fromEntries(operationalResources.map(name => [name, operationalPressure(ledger.used[profile][name], ledger.assigned[profile][name], profile === 'authenticated')])) }])) };
+    profiles: Object.fromEntries(operationalProfiles.map(profile => [profile, { envelope: OPERATIONAL_REQUEST_ENVELOPES[profile], assigned: ledger.assigned[profile], used: ledger.used[profile], pressure: Object.fromEntries(operationalResources.map(name => [name, OPERATIONAL_REQUEST_ENVELOPES[profile][name]===0?{applicable:false,used:ledger.used[profile][name]}:{applicable:true,...operationalPressure(ledger.used[profile][name], ledger.assigned[profile][name], profile === 'authenticated')}])) }])) };
 }
 export function createOperationalBudgetStore(redis: OperationalBudgetRedis, prefix: string, checkpoint: () => OperationalCheckpoint): OperationalBudgetStore {
   if (!/^bazaar-workspace:pilot-[a-f0-9]{32}$/.test(prefix)) throw new WorkspaceError('OPERATIONAL_BUDGET_UNAVAILABLE');
@@ -63,12 +72,14 @@ export function createOperationalBudgetStore(redis: OperationalBudgetRedis, pref
     async read() { return budgetSummary((await read()).ledger); },
     async reserve(kind) {
       const { raw, ledger } = await read(), used = ledger.used[kind.profile], assigned = ledger.assigned[kind.profile];
+      const envelope = operationalRequestEnvelope(kind.profile,kind.workload);
       if (kind.newOperation && Date.now() >= Date.parse(ledger.checkpoint.expiresAt)) throw new WorkspaceError('OPERATIONAL_CHECKPOINT_STALE', 503);
       for (const name of operationalResources) {
-        const projected = used[name] + OPERATIONAL_REQUEST_ENVELOPE[name];
+        const projected = used[name] + envelope[name];
+        if (envelope[name] === 0) continue;
         if (projected > assigned[name] || (kind.newOperation && projected * 100 > assigned[name] * 75)) throw new WorkspaceError(kind.newOperation ? 'NEW_OPERATIONS_PAUSED' : 'OPERATIONAL_REQUEST_BUDGET', 429, 60);
       }
-      for (const name of operationalResources) used[name] += OPERATIONAL_REQUEST_ENVELOPE[name];
+      for (const name of operationalResources) used[name] += envelope[name];
       await commit(raw, ledger); return budgetSummary(ledger);
     },
     async refresh(value) {
@@ -89,6 +100,7 @@ export function configuredOperationalBudgetStore(): OperationalBudgetStore {
     () => operationalCheckpointSchema.parse(JSON.parse(process.env.BAZAAR_OPERATIONAL_CHECKPOINT_JSON ?? '')));
 }
 export async function operationalRequestGate(kind: OperationalRequestClass) {
+  setOperationalTransportProfile(kind.profile,kind.workload);
   if (!operationalBudgetEnabled()) return;
   try { await configuredOperationalBudgetStore().reserve(kind); }
   catch (error) { if (error instanceof WorkspaceError) throw error; throw new WorkspaceError('OPERATIONAL_BUDGET_UNAVAILABLE'); }

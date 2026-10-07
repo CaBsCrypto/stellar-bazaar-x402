@@ -25,7 +25,14 @@ export function earlyRouteGate(request: Request): EarlyRouteResult {
   try { expected = workspacePublicOrigin() ?? process.env.BAZAAR_WORKSPACE_LOCAL_ORIGIN; } catch { return { code: 'WORKSPACE_UNAVAILABLE', status: 503 }; }
   const origin = request.headers.get('origin');
   if (!expected || url.origin !== expected || origin && origin !== expected) return { code: 'INVALID_REQUEST', status: 400 };
-  if (url.search && !['/api/discovery/search', '/api/discovery/resources', '/api/market/catalog'].includes(path)) return { code: 'INVALID_REQUEST', status: 400 };
+  if (url.search) {
+    if (['/api/market/catalog','/api/market/orders','/api/market/services'].includes(path) && method === 'GET') {
+      const params=url.searchParams, allowed=path==='/api/market/services'?['limit','cursor','mineCursor']:['limit','cursor'];
+      if ([...params.keys()].some(key=>!allowed.includes(key)||params.getAll(key).length!==1)) return {code:'INVALID_REQUEST',status:400};
+      const limit=params.get('limit'); if(limit!==null&&(!/^[1-9]\d?$/.test(limit)||Number(limit)>20)) return {code:'INVALID_REQUEST',status:400};
+      for(const key of ['cursor','mineCursor']) { const value=params.get(key); if(value!==null&&(!/^[a-zA-Z0-9_-]{1,512}$/.test(value)||Buffer.byteLength(value)>512)) return {code:'INVALID_REQUEST',status:400}; }
+    } else if (!['/api/discovery/search', '/api/discovery/resources'].includes(path)) return { code: 'INVALID_REQUEST', status: 400 };
+  }
   const contentLength = request.headers.get('content-length');
   if (contentLength !== null && (!/^\d{1,10}$/.test(contentLength) || Number(contentLength) > routeBodyLimit(path))) return { code: 'REQUEST_TOO_LARGE', status: 413 };
   if (['POST', 'PUT', 'PATCH'].includes(method) && request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') return { code: 'INVALID_CONTENT_TYPE', status: 415 };

@@ -36,11 +36,15 @@
   },
   "allocation": {
     "unassignedReservePercent": 50,
-    "assignedHalfProfilePercent": { "public": 20, "authenticated": 50, "recovery": 30 },
+    "assignedHalfProfilePercent": {
+      "public": 20,
+      "authenticated": 50,
+      "recovery": 30
+    },
     "alertAtAssignedPercent": 70,
     "pauseOnlyNewWorkAtAssignedPercent": 75,
     "retainedReadsRecoveryAndPaidFinalizationPercent": 100,
-    "checkpointMaxAgeHours": 24,
+    "checkpointMaxAgeHours": 744,
     "checkpointSourcesMustBeCurrent": true,
     "absoluteZeroDollarWallClaimed": false,
     "pauseVercelTeam": false
@@ -55,12 +59,19 @@
   },
   "activationEvidencePending": [
     "Current production mapping for existing dedicated workspace/market/review Redis",
-    "Current exact Vercel credit/account margin and bounded request allowance",
     "Project WAF global pre-function anonymous/private-operator limits",
     "Operator supplied current checkpoint using actual quantities",
-    "Integrated source compilation and focused offline checks"
+    "Integrated source compilation and focused offline checks",
+    "Bounded function/proxy compute/request allowance from current delayed credit minus artifact/deployment/shared-consumption allowances"
   ],
-  "actionsPerformed": { "deployment": false, "alias": false, "protectionChange": false, "newService": false, "providerCall": false, "payment": false },
+  "actionsPerformed": {
+    "deployment": false,
+    "alias": false,
+    "protectionChange": false,
+    "newService": false,
+    "providerCall": false,
+    "payment": false
+  },
   "existingRedisDashboardSnapshot": {
     "observedDate": "2026-10-07",
     "databaseId": "1f90faef-48d7-49b3-916a-c378e13a8c23",
@@ -71,5 +82,17 @@
     "storageRemainingBytesConservativeLowerBound": 255946752,
     "productionDedicatedMappingVerified": false
   },
-  "historicalEvidenceRewritten": false
+  "historicalEvidenceRewritten": false,
+  "currentVercelCreditSnapshot": {
+    "observedAt": "2026-10-07T04:57:30Z",
+    "includedCreditUsedDisplayUsd": 18.72,
+    "allocationDisplayUsd": 20,
+    "remainingConservativeLowerBoundUsd": 1.27,
+    "halfAvailableBeforeOtherAllowancesUsd": 0.635,
+    "sourceUrl": "https://vercel.com/cabscryptocontacto-6028s-projects/~/usage",
+    "maximumDashboardLagHours": 1,
+    "sharedConsumption": true,
+    "requestAllowanceDerived": false,
+    "zeroAdditionalCostGuarantee": false
+  }
 }

@@ -2,16 +2,18 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import type { Redis } from '@upstash/redis';
-import { classifyOperationalRequest, type OperationalRequestClass } from './operational-pressure.ts';
+import { classifyOperationalRequest, type OperationalRequestClass, type OperationalProfile } from './operational-pressure.ts';
 import { operationalMetricTotals } from './operational-metrics.ts';
+import { operationalTransportEnvelope } from './operational-envelopes.ts';
 
-export type Counts = { redis: number; commandsUpperBound: number; outboundPayloadBytes: number; inboundPayloadBytes: number; workspaceStoredBytesUpperBound: number; marketStoredBytesUpperBound:number; reviewStoredBytesUpperBound:number; catalogStoredBytesUpperBound:number; settlementStoredBytesUpperBound:number; ledgerStoredBytesUpperBound?:number; storageObservation?:'prospective-upper-bound'; external:Partial<Record<ExternalKind,number>>; externalOutboundPayloadBytes:number; externalInboundPayloadBytes:number; uncertain: boolean };
+export type Counts = { redis: number; commandsUpperBound: number; outboundPayloadBytes: number; inboundPayloadBytes: number; workspaceStoredBytesUpperBound: number; marketStoredBytesUpperBound:number; reviewStoredBytesUpperBound:number; catalogStoredBytesUpperBound:number; settlementStoredBytesUpperBound:number; ledgerStoredBytesUpperBound?:number; storageObservation?:'prospective-upper-bound'; operationalProfile?:OperationalProfile; operationalWorkload?:'metadata'; operationalPendingClass?:OperationalRequestClass; operationalCredited?:boolean; operationalReserved?:boolean; external:Partial<Record<ExternalKind,number>>; externalOutboundPayloadBytes:number; externalInboundPayloadBytes:number; uncertain: boolean };
 export type ExternalKind='horizon'|'proof-dns'|'proof-http'|'provider'|'facilitator'|'rpc';
+export const OPERATIONAL_STORAGE_CAPS={workspace:12*1048576,market:512*1024,review:1048576,settlement:128*1024,ledger:64*1024} as const;
 const scope = new AsyncLocalStorage<Counts>();
 export const operationalMeterEnabled = () => process.env.BAZAAR_OPERATIONAL_METER === 'true' && process.env.BAZAAR_ACCEPTANCE_METER !== 'true';
 const enabled = () => process.env.BAZAAR_ACCEPTANCE_METER === 'true' || operationalMeterEnabled();
 const limits = { redis: 32, commandsUpperBound: 224, outboundPayloadBytes: 4 * 1048576, inboundPayloadBytes: 8 * 1048576 };
-const currentLimits = () => operationalMeterEnabled() ? { redis: 34, commandsUpperBound: 330, outboundPayloadBytes: 9 * 1048576, inboundPayloadBytes: 17 * 1048576 } : limits;
+const currentLimits = () => operationalMeterEnabled() ? operationalTransportEnvelope(scope.getStore()?.operationalProfile??'authenticated',scope.getStore()?.operationalWorkload) : limits;
 export const SALE_STORAGE_CAPS={workspace:12288,market:16384,review:12288,catalog:8192} as const;
 export const ACCEPTANCE_TOTAL_STORAGE_CAP=49164;
 const x402Enabled=()=>process.env.BAZAAR_ACCEPTANCE_X402==='true';
@@ -36,8 +38,19 @@ export function acceptanceCatalogAllocation(market:string,catalogCap:number){
  return {cards,indexKey,aggregateBytes};
 }
 const fresh=():Counts=>({redis:0,commandsUpperBound:0,outboundPayloadBytes:0,inboundPayloadBytes:0,workspaceStoredBytesUpperBound:0,marketStoredBytesUpperBound:0,reviewStoredBytesUpperBound:0,catalogStoredBytesUpperBound:0,settlementStoredBytesUpperBound:0,external:{horizon:0,'proof-dns':0,'proof-http':0,provider:0,...(x402Enabled()||operationalMeterEnabled()?{facilitator:0,rpc:0}:{})},externalOutboundPayloadBytes:0,externalInboundPayloadBytes:0,uncertain:false});
-function record(counts:Counts,source:'api'|'ssr'|'proxy',requests=1){const requestId=randomUUID();console.info(JSON.stringify({...(operationalMeterEnabled()?{operationalMeter:'v1',...operationalMetricTotals(counts,requests)}:{acceptanceMeter:x402Enabled()?'v2':'v1'}),source,requestId,...counts}));return requestId;}
-async function gate(kind: OperationalRequestClass) { if (operationalMeterEnabled()) { const { operationalRequestGate } = await import('./operational-budget.ts'); await operationalRequestGate(kind); } }
+function record(counts:Counts,source:'api'|'ssr'|'proxy',requests=1){const requestId=randomUUID();console.info(JSON.stringify({...(operationalMeterEnabled()?{operationalMeter:'v1',...operationalMetricTotals(counts,requests),...(counts.storageObservation?{storagePressure:storagePressure(counts)}:{})}:{acceptanceMeter:x402Enabled()?'v2':'v1'}),source,requestId,...counts}));return requestId;}
+function storagePressure(counts:Counts) { return Object.fromEntries(Object.entries(OPERATIONAL_STORAGE_CAPS).map(([name,cap])=>{const bytes=counts[`${name as keyof typeof OPERATIONAL_STORAGE_CAPS}StoredBytesUpperBound`]??0;return [name,{bytes,cap,percent:Math.ceil(bytes*100/cap),alert:bytes*100>=cap*70}];})); }
+async function gate(kind: OperationalRequestClass) { if (operationalMeterEnabled()) { const counts=scope.getStore(); if(counts){counts.operationalProfile=kind.profile;counts.operationalWorkload=kind.workload;}const { operationalRequestGate } = await import('./operational-budget.ts'); await operationalRequestGate(kind);if(counts)counts.operationalReserved=true; } }
+/** An inner fresh-payment gate upgrades a recovered HTTP request to its payment transport bounds. */
+export function setOperationalTransportProfile(profile: OperationalProfile, workload?:'metadata') {
+  if(!operationalMeterEnabled())return;const counts=scope.getStore();if(counts){counts.operationalProfile=profile;counts.operationalWorkload=workload;}
+}
+/** Call only after authoritative credential and requested-role verification. No credential is recorded. */
+export async function creditOperationalPrincipal() {
+  if(!operationalMeterEnabled())return;const counts=scope.getStore();if(!counts)return;
+  counts.operationalCredited=true;
+  if(counts.operationalPendingClass&&!counts.operationalReserved)await gate(counts.operationalPendingClass);
+}
 type OperationalStore = 'workspace'|'market'|'review'|'catalog'|'settlement'|'ledger';
 /** Projection evidence includes completion reservations; it is never a confirmed database size. */
 export function recordOperationalStorageBounds(bounds: Partial<Record<OperationalStore, number|{committedBytes:number;reservedBytes:number}>>) {
@@ -55,7 +68,7 @@ export function recordOperationalStorageBounds(bounds: Partial<Record<Operationa
 /** SSR dynamic reads have their own logged scope; no bearer or payload is logged. */
 export async function measuredRead<T>(handler:()=>T|Promise<T>):Promise<T>{
  if(!enabled()||scope.getStore())return handler();
- const counts=fresh();return scope.run(counts,async()=>{try{await gate({profile:'recovery',newOperation:false});return await handler();}finally{record(counts,'ssr');}});
+ const counts=fresh();return scope.run(counts,async()=>{try{await gate({profile:'public',newOperation:false});return await handler();}finally{record(counts,'ssr');}});
 }
 
 export type ExternalPayloadEvidence=()=>{outboundBytes?:number;inboundBytes?:number};
@@ -63,14 +76,15 @@ export type ExternalPayloadEvidence=()=>{outboundBytes?:number;inboundBytes?:num
 export async function meteredExternal<T>(kind:ExternalKind,handler:()=>Promise<T>,outbound?:unknown,evidence?:ExternalPayloadEvidence):Promise<T>{
  const limits=currentLimits();
  if(!enabled())return handler();const counts=scope.getStore();if(!counts)throw Error('ACCEPTANCE_SCOPE_REQUIRED');
- if(!(kind in counts.external)||(counts.external[kind]??0)>=8)throw Error('ACCEPTANCE_EXTERNAL_BUDGET');
+ const operational=operationalMeterEnabled()?operationalTransportEnvelope(counts.operationalProfile??'authenticated'):undefined;
+ if(!(kind in counts.external)||(counts.external[kind]??0)>=8||operational&&(Object.values(counts.external).reduce((n,value)=>n+(value??0),0)>=operational.externalRequests||counts.operationalProfile==='recovery'&&kind==='facilitator'))throw Error(operational?'OPERATIONAL_EXTERNAL_BUDGET':'ACCEPTANCE_EXTERNAL_BUDGET');
  const checkedBytes=(value:number)=>{if(!Number.isSafeInteger(value)||value<0)throw Error('ACCEPTANCE_EXTERNAL_BYTE_EVIDENCE_INVALID');return value;};
  const before=evidence?.();const bytes=before?.outboundBytes===undefined?(outbound===undefined?0:Buffer.byteLength(JSON.stringify(outbound))):checkedBytes(before.outboundBytes);
- if(counts.externalOutboundPayloadBytes+bytes>limits.outboundPayloadBytes)throw Error('ACCEPTANCE_EXTERNAL_BUDGET');
+ if(counts.externalOutboundPayloadBytes+bytes>(operational?.externalOutboundBytes??limits.outboundPayloadBytes))throw Error(operational?'OPERATIONAL_EXTERNAL_BUDGET':'ACCEPTANCE_EXTERNAL_BUDGET');
  counts.external[kind]=(counts.external[kind]??0)+1;counts.externalOutboundPayloadBytes+=bytes;
  let inboundRecorded=false;
  try{const result=await handler(),after=evidence?.();const inbound=after?.inboundBytes===undefined?Buffer.byteLength(JSON.stringify(result)??''):checkedBytes(after.inboundBytes);
- counts.externalInboundPayloadBytes+=inbound;inboundRecorded=true;if(counts.externalInboundPayloadBytes>limits.inboundPayloadBytes)throw Error('ACCEPTANCE_EXTERNAL_RESPONSE_BUDGET');return result;}
+ counts.externalInboundPayloadBytes+=inbound;inboundRecorded=true;if(counts.externalInboundPayloadBytes>(operational?.externalInboundBytes??limits.inboundPayloadBytes))throw Error(operational?'OPERATIONAL_EXTERNAL_RESPONSE_BUDGET':'ACCEPTANCE_EXTERNAL_RESPONSE_BUDGET');return result;}
  catch(error){counts.uncertain=true;
   if(!inboundRecorded&&evidence){const partial=evidence().inboundBytes;if(partial!==undefined)counts.externalInboundPayloadBytes+=checkedBytes(partial);}
   throw error;}
@@ -84,9 +98,19 @@ export function measuredHandler<A extends unknown[]>(handler: (...args: A) => Re
     return scope.run(counts, async () => {
       let response:Response;
       try {
-        if (options.budget !== false) await gate(options.classify ? await options.classify(...args) : await classifyOperationalRequest(args[0] instanceof Request ? args[0] : undefined));
+        if (options.budget !== false) {
+          const kind=options.classify ? await options.classify(...args) : await classifyOperationalRequest(args[0] instanceof Request ? args[0] : undefined);
+          if(operationalMeterEnabled()&&kind.profile==='recovery'&&args[0] instanceof Request){counts.operationalPendingClass=kind;counts.operationalProfile='public';}
+          else await gate(kind);
+        }
         response = await handler(...args);
+        if(operationalMeterEnabled()&&counts.operationalPendingClass&&!counts.operationalReserved&&!counts.operationalCredited) {
+          try{await gate({profile:'public',newOperation:false});}catch{counts.uncertain=true;}
+        }
       } catch(error) {
+        if(operationalMeterEnabled()&&counts.operationalPendingClass&&!counts.operationalReserved&&!counts.operationalCredited) {
+          try{await gate({profile:'public',newOperation:false});}catch{counts.uncertain=true;}
+        }
         if (operationalMeterEnabled() && error && typeof error === 'object' && 'code' in error && String(error.code).match(/^(?:OPERATIONAL_|NEW_OPERATIONS_PAUSED)/)) {
           response = Response.json({error:{code:String(error.code)}},{status:'status' in error ? Number(error.status):503,headers:{'Cache-Control':'private, no-store','Retry-After':'60'}});
         } else { record(counts,options.source??'api'); throw error; }
@@ -101,7 +125,10 @@ export function measuredHandler<A extends unknown[]>(handler: (...args: A) => Re
       response.headers.set('X-Bazaar-Workspace-Stored-Bytes-Upper-Bound', String(counts.workspaceStoredBytesUpperBound));
       for(const name of ['market','review','catalog'] as const)response.headers.set('X-Bazaar-'+name+'-Stored-Bytes-Upper-Bound',String(counts[`${name}StoredBytesUpperBound`]));
       if(x402Enabled()||operationalMeterEnabled())response.headers.set('X-Bazaar-Settlement-Stored-Bytes-Upper-Bound',String(counts.settlementStoredBytesUpperBound));
-      if(operationalMeterEnabled()) { response.headers.set('X-Bazaar-Ledger-Stored-Bytes-Upper-Bound',String(counts.ledgerStoredBytesUpperBound??0));response.headers.set('X-Bazaar-Storage-Observation',counts.storageObservation??'not-observed'); }
+      if(operationalMeterEnabled()) {
+        response.headers.set('X-Bazaar-Ledger-Stored-Bytes-Upper-Bound',String(counts.ledgerStoredBytesUpperBound??0));response.headers.set('X-Bazaar-Storage-Observation',counts.storageObservation??'not-observed');
+        if(counts.storageObservation)for(const[name,value]of Object.entries(storagePressure(counts))){response.headers.set('X-Bazaar-'+name+'-Storage-Pressure-Percent',String(value.percent));response.headers.set('X-Bazaar-'+name+'-Storage-Alert',String(value.alert));}
+      }
       for(const kind of Object.keys(counts.external) as ExternalKind[])response.headers.set('X-Bazaar-External-'+kind,String(counts.external[kind]));
       response.headers.set('X-Bazaar-External-Outbound-Payload-Bytes',String(counts.externalOutboundPayloadBytes));
       response.headers.set('X-Bazaar-External-Inbound-Payload-Bytes',String(counts.externalInboundPayloadBytes));
