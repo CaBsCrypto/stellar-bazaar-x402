@@ -1,16 +1,24 @@
 // An exposure boundary, not authorization. Native handlers still verify owners.
+export function routeBoundaryEnabled() {
+  return process.env.BAZAAR_ROUTE_BOUNDARY === 'true' || process.env.BAZAAR_WORKSPACE_ADMISSION === 'invite-only';
+}
+export function publicBazaarApi(path: string, method: string) {
+  return method === 'GET' && ['/api/discovery/resources', '/api/discovery/search', '/api/market/catalog'].includes(path) ||
+    method === 'OPTIONS' && path === '/api/discovery/search' || path === '/api/mcp' && method === 'GET';
+}
 export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redirect' | 'deny' {
   if (process.env.BAZAAR_ENABLE_MARKETPLACE === 'true') {
     if (['GET','HEAD'].includes(method) && path === '/') return 'allow';
-    if (['GET','HEAD'].includes(method) && path === '/MARKETPLACE_PILOT.md') return 'allow';
+    if (['GET','HEAD'].includes(method) && ['/MARKETPLACE_PILOT.md','/WORKSPACE_AGENT.md','/PROVIDER_ONBOARDING.md','/HISTORY_CONNECTION.md','/BUYER_AGENT_KIT.md','/SELLER_AGENT_KIT.md','/llms.txt'].includes(path)) return 'allow';
+    if (['GET','HEAD'].includes(method) && /^\/skills\/(buyer|seller|recovery)\/SKILL\.md$/.test(path)) return 'allow';
     if (['GET','HEAD'].includes(method) && ['/catalogo','/hub','/publish'].includes(path)) return 'allow';
     if (['GET','HEAD'].includes(method) && /^\/resources\/[a-z0-9-]+$/.test(path)) return 'allow';
-    if (method === 'GET' && ['/api/discovery/resources','/api/discovery/search'].includes(path)) return 'allow';
+    if (method === 'GET' && ['/api/discovery/resources','/api/discovery/search','/api/market/catalog'].includes(path)) return 'allow';
     if (method === 'OPTIONS' && path === '/api/discovery/search') return 'allow';
-    if (['GET','POST'].includes(method) && ['/api/market/services','/api/market/orders'].includes(path)) return 'allow';
+    if (['GET','POST'].includes(method) && ['/api/market/services','/api/market/orders','/api/market/agent-permissions','/api/market/operations-budget'].includes(path)) return 'allow';
     if (method === 'POST' && /^\/api\/market\/orders\/[a-f0-9-]{36}\/x402$/i.test(path)) return 'allow';
     if (method === 'POST' && ['/api/market/review','/api/market/control'].includes(path)) return 'allow';
-    if (/^\/api\/market\/(services|orders)\/[a-f0-9-]{36}$/i.test(path) && (method === 'POST' || method === 'GET' && path.startsWith('/api/market/orders/'))) return 'allow';
+    if (/^\/api\/market\/(services|orders)\/[a-f0-9-]{36}$/i.test(path) && ['POST','GET'].includes(method)) return 'allow';
     if (['GET','HEAD'].includes(method) && /^\/(images|icons|fonts)\//.test(path)) return 'allow';
   }
   if ((method === 'GET' || method === 'HEAD') && path === '/') return 'redirect';

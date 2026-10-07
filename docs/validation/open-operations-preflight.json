@@ -1,0 +1,174 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-07T04:46:30Z",
+  "status": "partial-current-facts",
+  "scope": "Bounded read-only preflight of the existing Vercel project and Redis configuration; no deploy, alias, protection change, resource provisioning, payment or application-data mutation.",
+  "target": {
+    "projectName": "stellar-bazaar-x402",
+    "projectId": "prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3",
+    "teamSlug": "cabscryptocontacto-6028s-projects",
+    "teamId": "team_XjolcoWJ9V9yamVnCdpC7EMY",
+    "authenticatedProjectMatch": true,
+    "localLinkSource": "mission-consolidation/.vercel/project.json"
+  },
+  "vercel": {
+    "cliVersion": "58.9.4",
+    "framework": "nextjs",
+    "nodeVersion": "24.x",
+    "rootDirectory": ".",
+    "domains": [
+      { "name": "bazaar.browns.studio", "verified": true, "redirect": null },
+      { "name": "stellar-bazaar-x402.vercel.app", "verified": true, "redirect": null }
+    ],
+    "protection": {
+      "ssoDeploymentType": "all_except_custom_domains",
+      "passwordProtectionConfigured": false,
+      "trustedIpsConfigured": false,
+      "customDomainCoveredByVercelAuthentication": false,
+      "httpAccessBehaviorProbed": false,
+      "limitation": "These are current project settings. They do not establish application authorization behavior or verify public HTTP availability."
+    },
+    "targets": [
+      {
+        "environment": "production",
+        "deploymentId": "dpl_5rbJydG46d3EaTdWFaCkspPrqems",
+        "hostname": "stellar-bazaar-x402-q8oxsipdo-cabscryptocontacto-6028s-projects.vercel.app",
+        "aliases": ["stellar-bazaar-x402-cabscryptocontacto-6028s-projects.vercel.app"],
+        "readyState": "READY",
+        "createdAtEpochMs": 1790741965217
+      },
+      {
+        "environment": "preview",
+        "deploymentId": "dpl_CvyfxEvehFrN1rZhqV2nmcYrrjsR",
+        "hostname": "stellar-bazaar-x402-8atzrlkma-cabscryptocontacto-6028s-projects.vercel.app",
+        "aliases": [],
+        "readyState": "READY",
+        "createdAtEpochMs": 1791339204926
+      }
+    ],
+    "projectMarketplaceResourceCount": 0,
+    "billing": {
+      "scope": "team-wide, shared across all projects in the authorized team",
+      "currency": "USD",
+      "plan": "pro",
+      "status": "active",
+      "trial": null,
+      "subscriptionPeriod": { "start": "2026-09-21T07:00:00Z", "end": "2026-10-21T07:00:00Z" },
+      "includedAllocationUsd": 20,
+      "usageQuery": {
+        "fromArgument": "2026-09-21",
+        "toArgument": "2026-10-07",
+        "returnedFrom": "2026-09-21T07:00:00Z",
+        "returnedTo": "2026-10-08T07:00:00Z",
+        "dateInterpretation": "CLI date arguments use America/Los_Angeles day boundaries. The query includes the current day's window; figures reflect data returned at observation time."
+      },
+      "reportedEffectiveCostUsd": 30.044060999633107,
+      "reportedBilledCostUsd": 1.041057486576681e-9,
+      "reportedProEffectiveCostUsd": 11.33333333333333,
+      "reportedBuildCpuEffectiveCostUsd": 15.917999999999994,
+      "reportedChargeCount": 40664,
+      "arithmeticInfrastructureEffectiveCostUsd": 18.710727666299777,
+      "arithmeticEstimatedCreditHeadroomUsd": 1.289272333700223,
+      "exactRemainingCreditUsd": null,
+      "exactRemainingCreditConfirmed": false,
+      "generalSpendHardCapUsd": null,
+      "zeroAdditionalCostMarginConfirmed": false,
+      "limitation": "The arithmetic estimate is 20 minus (total effective cost minus the Pro subscription line). Effective cost includes resources with their own included allocations and is not a live credit ledger. Billed cost is near zero at floating-point precision; it is not a guarantee of future zero charges. No exact credit balance or general spend hard cap was exposed by the bounded read-only CLI/API paths.",
+      "pricingReference": "https://vercel.com/docs/plans/pro-plan"
+    }
+  },
+  "redis": {
+    "currentManagementPlaneAccessible": true,
+    "currentResourceIdentityConfirmed": true,
+    "currentPlanConfirmed": true,
+    "databaseId": "1f90faef-48d7-49b3-916a-c378e13a8c23",
+    "databaseName": "bazaar-validacion-20261001",
+    "endpointHostname": "smooth-dory-323957.upstash.io",
+    "planDisplay": "Free Tier",
+    "costDisplay": "$0.00",
+    "monthlyCommandsUsed": 4174,
+    "monthlyCommandsUsedConservativeUpperBound": 4200,
+    "monthlyCommandsLimit": 500000,
+    "monthlyCommandsRemainingConservativeLowerBound": 495800,
+    "monthlyBandwidthUsedDisplay": "7 MB / 10 GB",
+    "monthlyBandwidthUsedBytesConservativeUpperBound": 8388608,
+    "monthlyBandwidthLimitBytesConservativeLowerBound": 10000000000,
+    "monthlyBandwidthRemainingBytesConservativeLowerBound": 9991611392,
+    "storageUsedDisplay": "51 KB / 256 MB",
+    "storageUsedBytesConservativeUpperBound": 53248,
+    "storageLimitBytesConservativeLowerBound": 256000000,
+    "storageRemainingBytesConservativeLowerBound": 255946752,
+    "currentQuotaHeadroomConfirmed": true,
+    "zeroAdditionalCostMarginConfirmed": false,
+    "dashboardEvidence": {
+      "observedDate": "2026-10-07",
+      "source": "Existing authenticated IAB dashboard, inspected read-only by the parent task after the CLI preflight",
+      "detailsUrl": "https://console.upstash.com/redis/1f90faef-48d7-49b3-916a-c378e13a8c23/details?teamid=0",
+      "writes": 1408,
+      "reads": 2766,
+      "commandsDisplay": "4.2k / 500k per month",
+      "productionMappingConfirmed": false,
+      "limitation": "Rounded dashboard bytes are bounded conservatively. The production dedicated workspace mapping still requires verification; the existing preview Redis URL must match the observed endpoint hostname. This snapshot does not assert a permanent zero-cost wall."
+    },
+    "environmentMetadata": {
+      "productionGenericRedisUrlAndTokenConfigured": true,
+      "productionReviewRedisUrlAndTokenConfigured": true,
+      "productionDedicatedWorkspaceRedisUrlAndTokenConfigured": false,
+      "previewDedicatedWorkspaceRedisUrlAndTokenConfigured": true,
+      "previewReviewRedisUrlAndTokenConfigured": true,
+      "redisVariablesType": "sensitive",
+      "deployedBackendValuesVerified": false
+    },
+    "protectedProductionEnvPull": {
+      "completed": true,
+      "onlyRedisConfigurationParsedInProcess": true,
+      "validUpstashEndpointAvailableForInfo": false,
+      "redisInfoDispatched": false,
+      "temporaryDirectoryAccessExclusive": true,
+      "temporaryEnvironmentFileAndDirectoryRemoved": true,
+      "limitation": "The pull did not yield a candidate that passed strict HTTPS Upstash endpoint validation. Dispatch stopped before any Redis request; sensitive environment values cannot be read later according to the installed CLI guidance. No secret or raw environment value was printed or retained in this report."
+    },
+    "historicalReference": {
+      "source": "docs/evidence/sprint-marketplace/usdc-redis-free-margin.json",
+      "observedAt": "2026-10-04T20:48:42.423Z",
+      "databaseId": "1f90faef-48d7-49b3-916a-c378e13a8c23",
+      "planDisplay": "Free Tier",
+      "costDisplay": "$0.00",
+      "commandsDisplay": "2,3 mil / 500k per month",
+      "bandwidthDisplay": "2 MB / 10 GB",
+      "storageDisplay": "12 KB / 256 MB",
+      "rounded": true,
+      "isCurrentMarginEvidence": false,
+      "limitation": "Historical rounded counters remain immutable and cannot establish current quota remaining or current project-to-database mapping."
+    },
+    "infoCounterLimitation": "Even a successful Redis INFO read would establish memory/lifetime counters only. Monthly command and bandwidth remaining require current management-plane billing/quota evidence."
+  },
+  "safety": {
+    "remoteMutations": 0,
+    "deploymentsCreated": 0,
+    "aliasesChanged": 0,
+    "protectionChanges": 0,
+    "resourcesProvisioned": 0,
+    "redisRestRequests": 0,
+    "redisCommands": 0,
+    "applicationDataRequests": 0,
+    "paidProviderInvocations": 0,
+    "payments": 0,
+    "walletsOrPrivatePacketsLoaded": false,
+    "secretValuesPrinted": false,
+    "historicalEvidenceModified": false
+  },
+  "evidence": [
+    "Installed Vercel CLI skill and relevant project, domain, billing, integration, API and environment references read before operations.",
+    "vercel project inspect stellar-bazaar-x402 --scope cabscryptocontacto-6028s-projects --non-interactive",
+    "GET /v9/projects/prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3 with explicit team scope; selected metadata only.",
+    "GET /v9/projects/prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3/domains with explicit team scope; selected domain fields only.",
+    "vercel integration list stellar-bazaar-x402 with explicit team scope and JSON filtered in process.",
+    "vercel usage with explicit team scope; custom query 2026-09-21 through 2026-10-07, selected billing counters only.",
+    "GET /v2/teams/team_XjolcoWJ9V9yamVnCdpC7EMY with explicit team scope; selected plan/allocation metadata only.",
+    "vercel env ls from the matching mission-consolidation link; names/type/target metadata only.",
+    "Authorized production env pull for the exact project into an ACL-exclusive temporary directory; selected Redis configuration parsed in process and temporary data removed.",
+    "Read-only child browser inventory contained no open dashboard tabs; no login or account provisioning attempted.",
+    "Parent task's existing authenticated IAB Upstash Details dashboard read on 2026-10-07; selected resource/plan/quota counters only, no Redis command or mutation."
+  ]
+}

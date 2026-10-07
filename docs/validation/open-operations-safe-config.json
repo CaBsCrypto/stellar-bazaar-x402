@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "kind": "prospective-redacted-configuration",
+  "sourceOnly": true,
+  "liveDeploymentConfigured": false,
+  "currentPreflight": "docs/validation/open-operations-preflight.json",
+  "target": {
+    "projectName": "stellar-bazaar-x402",
+    "projectId": "prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3",
+    "teamId": "team_XjolcoWJ9V9yamVnCdpC7EMY",
+    "publicOrigin": "https://bazaar.browns.studio",
+    "framework": "nextjs",
+    "nodeVersion": "24.x",
+    "retainPreviewProtection": true
+  },
+  "prospectiveFlags": {
+    "BAZAAR_ROUTE_BOUNDARY": "true",
+    "BAZAAR_WORKSPACE_ADMISSION": "open",
+    "BAZAAR_WORKSPACE_INVITE_HASHES_JSON": "absent",
+    "BAZAAR_OPERATIONAL_METER": "true",
+    "BAZAAR_OPERATIONAL_BUDGET": "true",
+    "BAZAAR_ACCEPTANCE_METER": "false",
+    "BAZAAR_ACCEPTANCE_SALE": "false",
+    "BAZAAR_ACCEPTANCE_X402": "false",
+    "BAZAAR_WORKSPACE_PUBLIC_ORIGIN": "https://bazaar.browns.studio",
+    "BAZAAR_WORKSPACE_BACKEND": "redis"
+  },
+  "privateConfiguration": {
+    "workspacePrefix": "existing verified dedicated prefix required; redacted",
+    "marketPrefix": "existing matching market prefix required; redacted",
+    "reviewPrefix": "existing matching review prefix required; redacted",
+    "workspaceRedisRestUrl": "existing mapping unconfirmed; redacted",
+    "workspaceRedisRestToken": "existing private configuration required; never printed",
+    "operatorCredentialHash": "existing private operator required; redacted",
+    "checkpointJson": null
+  },
+  "allocation": {
+    "unassignedReservePercent": 50,
+    "assignedHalfProfilePercent": { "public": 20, "authenticated": 50, "recovery": 30 },
+    "alertAtAssignedPercent": 70,
+    "pauseOnlyNewWorkAtAssignedPercent": 75,
+    "retainedReadsRecoveryAndPaidFinalizationPercent": 100,
+    "checkpointMaxAgeHours": 24,
+    "checkpointSourcesMustBeCurrent": true,
+    "absoluteZeroDollarWallClaimed": false,
+    "pauseVercelTeam": false
+  },
+  "technicalStorageBytes": {
+    "registry": 1048576,
+    "workspaceDocuments": 12582912,
+    "workspaceOwnerDocument": 131072,
+    "marketState": 524288,
+    "settlementState": 131072,
+    "operationalLedger": 65536
+  },
+  "activationEvidencePending": [
+    "Current production mapping for existing dedicated workspace/market/review Redis",
+    "Current exact Vercel credit/account margin and bounded request allowance",
+    "Project WAF global pre-function anonymous/private-operator limits",
+    "Operator supplied current checkpoint using actual quantities",
+    "Integrated source compilation and focused offline checks"
+  ],
+  "actionsPerformed": { "deployment": false, "alias": false, "protectionChange": false, "newService": false, "providerCall": false, "payment": false },
+  "existingRedisDashboardSnapshot": {
+    "observedDate": "2026-10-07",
+    "databaseId": "1f90faef-48d7-49b3-916a-c378e13a8c23",
+    "endpointHostnameMustMatch": "smooth-dory-323957.upstash.io",
+    "plan": "Free Tier",
+    "commandsRemainingConservativeLowerBound": 495800,
+    "bandwidthRemainingBytesConservativeLowerBound": 9991611392,
+    "storageRemainingBytesConservativeLowerBound": 255946752,
+    "productionDedicatedMappingVerified": false
+  },
+  "historicalEvidenceRewritten": false
+}
