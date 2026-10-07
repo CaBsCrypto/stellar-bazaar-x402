@@ -29,7 +29,7 @@ export function prepareOpenAcceptancePlan(draft){
  openAssert(plan.origin==='https://bazaar.browns.studio','DEFINITIVE_DOMAIN_REQUIRED');
  openAssert(plan.redisOrigin==='https://smooth-dory-323957.upstash.io','EXACT_EXISTING_REDIS_REQUIRED');
  for(const origin of [plan.origin,plan.redisOrigin,plan.providerOrigin,'https://soroban-testnet.stellar.org','https://horizon-testnet.stellar.org','https://channels.openzeppelin.com'])exactOpenOrigin(origin);
- openAssert(plan.participants?.length===2&&plan.participants[0].label==='C'&&plan.participants[0].role==='seller'&&plan.participants[1].label==='D'&&plan.participants[1].role==='buyer'&&new Set(plan.participants.map(p=>p.ownerId)).size===2,'NEW_C_D_PARTICIPANTS_REQUIRED');
+ openAssert(plan.participants?.length===2&&plan.participants[0].role==='seller'&&plan.participants[1].role==='buyer'&&plan.participants.every(p=>/^[A-D]$/.test(p.label))&&new Set(plan.participants.map(p=>p.label)).size===2&&new Set(plan.participants.map(p=>p.ownerId)).size===2,'DISTINCT_EXISTING_PARTICIPANTS_REQUIRED');
  openAssert(plan.cardHash===openHash(plan.card)&&plan.card?.url===plan.providerOrigin&&plan.card.network==='stellar:testnet'&&plan.card.payment?.destination===plan.participants[0].wallet&&plan.card.payment.amount==='0.01'&&plan.card.payment.asset==='USDC'&&openCanonical(plan.card.payment.identity)===openCanonical(buyerIdentity)&&plan.card.payment.marketplace?.protocol===buyerProtocol,'EXACT_FROZEN_CARD_REQUIRED');
  openAssert(Array.isArray(plan.orders)&&plan.orders.length===2,'EXACT_TWO_NEW_ORDERS_REQUIRED');
  plan.orders=plan.orders.map((order,index)=>({...order,operationId:order.operationId??randomUUID(),attemptId:order.attemptId??randomUUID(),expected:index===0?'delivered':'delivery-failed'}));
