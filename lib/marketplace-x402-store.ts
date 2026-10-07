@@ -5,6 +5,7 @@ import type {PaymentPayload,PaymentRequired,SettleResponse} from '@x402/core/typ
 import {meteredRedis} from './acceptance-meter.ts';
 import {marketPrefix,type MarketRedis} from './marketplace-store.ts';
 import {WorkspaceError} from './workspace-types.ts';
+import {commitCapacityStore,SETTLEMENT_CAPACITY_BYTES} from './marketplace-capacity.ts';
 
 /** Signed authorizations never enter the public order or the seller's MCP DTO. */
 export interface MarketX402Settlement {
@@ -21,7 +22,7 @@ const recordSchema=z.object({operationId:z.string().uuid(),buyerOwnerId:z.string
  challenge:z.unknown(),phase:z.enum(['challenged','verifying','rejected','settling','uncertain','settled','confirmed']),
  createdAt:z.string().datetime(),updatedAt:z.string().datetime(),attemptId:z.string().uuid().optional(),
  payload:z.unknown().optional(),payloadHash:hash.optional(),authorizationFingerprint:hash.optional(),outcome:z.unknown().optional(),transactionHash:hash.optional(),responseHash:hash.optional()}).strict();
-const stateSchema=z.object({version:z.literal(1),records:z.array(recordSchema).max(100)}).strict();
+const stateSchema=z.object({version:z.literal(1),records:z.array(recordSchema)}).strict();
 export function validateMarketX402State(raw:unknown):asserts raw is MarketX402State{
  const state=stateSchema.parse(raw);
  if(new Set(state.records.map(r=>r.operationId)).size!==state.records.length)throw Error('INVALID_X402_SETTLEMENT');
@@ -48,7 +49,7 @@ export function createMarketX402Store(redis:MarketRedis,prefix:string):MarketX40
  return {async transact(op){
   const raw=await redis.get(key);let state:MarketX402State;
   if(raw===null)state={version:1,records:[]};else{
-   if(typeof raw!=='string'||Buffer.byteLength(raw)>131072)throw new WorkspaceError('X402_SETTLEMENT_UNAVAILABLE');
+   if(typeof raw!=='string'||Buffer.byteLength(raw)>SETTLEMENT_CAPACITY_BYTES)throw new WorkspaceError('X402_SETTLEMENT_UNAVAILABLE');
    const envelope=JSON.parse(raw);if(envelope.version!==1||typeof envelope.revision!=='string'||Object.keys(envelope).sort().join(',')!=='revision,state,version')throw new WorkspaceError('X402_SETTLEMENT_UNAVAILABLE');state=envelope.state;
   }
   validateMarketX402State(state);const before=JSON.stringify(state),result=op(state);
@@ -56,8 +57,8 @@ export function createMarketX402Store(redis:MarketRedis,prefix:string):MarketX40
   validateMarketX402State(state);
   if(before!==JSON.stringify(state)){
    const next=JSON.stringify({version:1,revision:randomUUID(),state});
-   if(Buffer.byteLength(next)>131072)throw new WorkspaceError('X402_SETTLEMENT_CAPACITY',409);
-   if(await redis.eval(MARKET_X402_CAS,[key],[raw===null?'missing':'present',raw===null?'':raw,next])!==1)throw new WorkspaceError('X402_SETTLEMENT_WRITE_UNCONFIRMED',409);
+   if(Buffer.byteLength(next)>SETTLEMENT_CAPACITY_BYTES)throw new WorkspaceError('X402_SETTLEMENT_CAPACITY',409);
+   await commitCapacityStore(redis,prefix,'settlement',raw as string|null,next);
   }
   return structuredClone(result);
  }};

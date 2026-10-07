@@ -8,6 +8,7 @@ import type { ServiceCard } from './types.ts';
 import {computeCanonicalServiceCardHash} from './canonical-service-card.ts';
 import {sha,canonical,orderMemo} from './marketplace-identity.ts';
 import {isCanonicalUsdcTestnet,sameCreditIdentity} from './payment-assets.ts';
+import {commitCapacityStore,MARKET_CAPACITY_BYTES,type MarketCommitGuard} from './marketplace-capacity.ts';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const account = z.string().regex(/^G[A-Z2-7]{55}$/);
@@ -30,11 +31,11 @@ export const marketOrderSchema = z.object({
 export type MarketOrder = Omit<z.infer<typeof marketOrderSchema>, 'card'> & {card:ServiceCard};
 export type MarketService = {submissionId:string;ownerId:string;cardHash:string;card:ServiceCard;withdrawn:boolean;createdAt:string};
 const serviceSchema = z.object({submissionId:z.string().uuid(),ownerId:z.string(),cardHash:hash,card:z.unknown(),withdrawn:z.boolean(),createdAt:z.string().datetime()}).strict();
-const stateSchema = z.object({version:z.literal(1),services:z.array(serviceSchema).max(10),orders:z.array(marketOrderSchema).max(100),
+const stateSchema = z.object({version:z.literal(1),services:z.array(serviceSchema),orders:z.array(marketOrderSchema),
   paused:z.boolean().optional(),
   operatorQuota:z.object({minute:z.number().int(),count:z.number().int().nonnegative()}).strict().optional()}).strict();
 export type MarketState = {version:1;services:MarketService[];orders:MarketOrder[];paused?:boolean;operatorQuota?:{minute:number;count:number}};
-export interface MarketStore { transact<T>(op:(state:MarketState)=>T):Promise<T> }
+export interface MarketStore { transact<T>(op:(state:MarketState)=>T,guard?:MarketCommitGuard):Promise<T> }
 export interface MarketRedis {get(key:string):Promise<unknown>;eval(script:string,keys:string[],args:string[]):Promise<unknown>}
 export function validateMarketState(raw:unknown):asserts raw is MarketState {
   const s=stateSchema.parse(raw);
@@ -66,16 +67,16 @@ redis.call('SET',KEYS[1],ARGV[3]); return 1`;
 export function createMarketStore(redis:MarketRedis,prefix:string):MarketStore {
   if(!/^bazaar-market:pilot-[a-f0-9]{32}$/.test(prefix))throw new WorkspaceError('MARKET_UNAVAILABLE');
   const key=prefix+':state';
-  return {async transact(op){
+  return {async transact(op,guard){
     const raw=await redis.get(key);let state:MarketState;
     if(raw===null)state={version:1,services:[],orders:[]};
-    else {if(typeof raw!=='string'||Buffer.byteLength(raw)>524288)throw new WorkspaceError('MARKET_UNAVAILABLE');const envelope=JSON.parse(raw);if(envelope.version!==1||typeof envelope.revision!=='string'||Object.keys(envelope).sort().join(',')!=='revision,state,version')throw new WorkspaceError('MARKET_UNAVAILABLE');state=envelope.state;}
+    else {if(typeof raw!=='string'||Buffer.byteLength(raw)>MARKET_CAPACITY_BYTES)throw new WorkspaceError('MARKET_UNAVAILABLE');const envelope=JSON.parse(raw);if(envelope.version!==1||typeof envelope.revision!=='string'||Object.keys(envelope).sort().join(',')!=='revision,state,version')throw new WorkspaceError('MARKET_UNAVAILABLE');state=envelope.state;}
     validateMarketState(state);const before=JSON.stringify(state),result=op(state);if(result instanceof Promise)throw Error('ASYNC_MARKET_CALLBACK_FORBIDDEN');validateMarketState(state);
     if(before!==JSON.stringify(state)){
       const next=JSON.stringify({version:1,revision:randomUUID(),state});
-      if(Buffer.byteLength(next)>524288)throw new WorkspaceError('MARKET_CAPACITY',409);
-      if(await redis.eval(CAS,[key],[raw===null?'missing':'present',raw===null?'':raw as string,next])!==1)throw new WorkspaceError('MARKET_WRITE_UNCONFIRMED',409);
-    }
+      if(Buffer.byteLength(next)>MARKET_CAPACITY_BYTES)throw new WorkspaceError('MARKET_CAPACITY',409);
+      await commitCapacityStore(redis,prefix,'market',raw as string|null,next,guard);
+    }else if(guard)await commitCapacityStore(redis,prefix,'market',raw as string|null,null,guard);
     return structuredClone(result);
   }};
 }

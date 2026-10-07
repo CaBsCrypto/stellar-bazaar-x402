@@ -12,6 +12,8 @@ import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts'
 import {syncDeliveryContract} from '../lib/delivery-contract.ts';
 import {createRedisWorkspaceStore,READ_WORKSPACE_LUA,COMMIT_WORKSPACE_LUA,READ_MARKET_PERMISSION_LUA,COMMIT_MARKET_PERMISSION_LUA,setWorkspaceStoreForTests} from '../lib/workspace-store.ts';
 import {orderMemo} from '../lib/marketplace-identity.ts';
+import {capacityEval} from './fixtures/market-capacity-redis.mjs';
+import {MARKET_CAPACITY_CAS} from '../lib/marketplace-capacity.ts';
 import {createWorkspaceHandlers} from '../lib/workspace-http.ts';
 import {requireWorkspacePrincipal} from '../lib/workspace-auth.ts';
 import {marketHandlers} from '../lib/marketplace-http.ts';
@@ -28,6 +30,7 @@ const redis={async get(key){calls++;return data.get(key)??null;},async eval(scri
  if(script===READ_WORKSPACE_LUA||script===READ_MARKET_PERMISSION_LUA)return keys.map(k=>data.get(k)??'');
  if(script===COMMIT_MARKET_PERMISSION_LUA){if(keys.some((k,i)=>(data.get(k)??'')!==args[i]))return 0;data.set(keys[3],args[4]);writes++;return 1;}
  if(script===COMMIT_WORKSPACE_LUA){if(keys.some((k,i)=>(data.get(k)??'')!==args[i]))return 0;data.set(keys[0],args[3]);if(args[4])data.set(keys[1],args[4]);data.set(keys[2],'workspace-v1');writes++;return 1;}
+ if(script===MARKET_CAPACITY_CAS)return capacityEval(data,script,keys,args,{afterWrite(){writes++;if(lostWrite){lostWrite=false;throw Error('simulated lost acknowledgement');}}});
  const old=data.get(keys[0]);if(args[0]==='missing'?old!==undefined:old!==args[1])return 0;
  data.set(keys[0],args[2]);writes++;if(lostWrite){lostWrite=false;throw Error('simulated lost acknowledgement');}return 1;
 }};

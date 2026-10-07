@@ -138,7 +138,7 @@ export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,or
  if(!record){
   if(o.phase!=='awaiting-payment')throw new WorkspaceError('X402_SETTLEMENT_UNAVAILABLE',409);
   if(process.env.BAZAAR_X402_MARKETPLACE_ENABLED!=='true'||process.env.BAZAAR_ENABLE_MARKET_PURCHASES!=='true'||await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
-  const challenge=createMarketX402Challenge(o,origin);record=await deps.store.transact(s=>{if(s.records.some(r=>r.operationId===id))throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.records.length>=100)throw new WorkspaceError('X402_SETTLEMENT_CAPACITY',409);const time=new Date().toISOString(),r:MarketX402Settlement={operationId:id,buyerOwnerId:p.ownerId,orderBinding:marketX402OrderBinding(o),challenge,phase:'challenged',createdAt:time,updatedAt:time};s.records.push(r);return r;});
+  const challenge=createMarketX402Challenge(o,origin);record=await deps.store.transact(s=>{if(s.records.some(r=>r.operationId===id))throw new WorkspaceError('OPERATION_CONFLICT',409);const time=new Date().toISOString(),r:MarketX402Settlement={operationId:id,buyerOwnerId:p.ownerId,orderBinding:marketX402OrderBinding(o),challenge,phase:'challenged',createdAt:time,updatedAt:time};s.records.push(r);return r;});
  }
  assertRecordBinding(record,o);
  if(!signature){if(record.phase==='confirmed')return paidResponse(await finalizePaid(deps,o,record),record,origin);if(record.phase!=='challenged')throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);return Response.json(record.challenge,{status:402,headers:{...workspaceHeaders,'PAYMENT-REQUIRED':encodePaymentRequiredHeader(record.challenge)}});}
