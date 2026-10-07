@@ -50,8 +50,9 @@ export async function createExistingOpenPrivateRuntime({plan,authorization,contr
   const packet=await loadHistoricalPacket();openAssert(await readHistoricalFileHash()===before,'HISTORICAL_PACKET_CHANGED');
   const sellerAccess=packet.identities?.[0]?.rotatedAgent,buyerAccess=packet.identities?.[1]?.agent;
   openAssert(packet.receipt?.[1]?.ownerId===plan.participants[1].ownerId&&packet.receipt?.[0]?.ownerId===plan.participants[0].ownerId&&packet.sale?.providerOrigin===plan.providerOrigin&&[sellerAccess,buyerAccess,packet.sale.worker].every(v=>/^[A-Za-z0-9_-]{43}$/.test(v??'')),'EXISTING_PARTICIPANT_ACCESS_REQUIRED');
-  let ledger,key;
+  let ledger,key,releaseRecovery;
   try{
+    if(readOnly)releaseRecovery=await ownerStore.acquireLock('spend.'+openHash({ownerId:plan.participants[1].ownerId,wallet:plan.participants[1].wallet}));
     if(!readOnly){ledger=await openExistingBuyerSpendLedger({store:ownerStore,storeDirectory:ownerStoreDirectory,historicalPacketPath,plan,consent:authorization.consent,
       loadBase:async()=>({sha256:await readHistoricalFileHash(),reservations:packet.x402.spendReservations})});
       key=Keypair.fromSecret(packet.sale.wallets[1].secret);openAssert(key.publicKey()===plan.participants[1].wallet,'EXISTING_FUNDED_WALLET_BINDING_REQUIRED');}
@@ -60,6 +61,6 @@ export async function createExistingOpenPrivateRuntime({plan,authorization,contr
       signer:readOnly?{address:plan.participants[1].wallet,signAuthEntry:async()=>{throw Error('READ_RECOVERY_SIGNING_FORBIDDEN');}}:{address:key.publicKey(),...basicNodeSigner(key,Networks.TESTNET)},
       reserveSpend:readOnly?async()=>{throw Error('READ_RECOVERY_SPENDING_FORBIDDEN');}:value=>ledger.reserve(value)}};
     return {buyer,seller:{agentAccess:sellerAccess,providerAccess:packet.sale.worker,providerProtectionAccess:packet.sale.providerBypass,journal:ownerStore.journal('seller.'+operationId)},
-      async dispose(){key?._secretKey?.fill(0);if(packet.sale.wallets?.[1])delete packet.sale.wallets[1].secret;await ledger?.close();}};
-  }catch(error){key?._secretKey?.fill(0);await ledger?.close();throw error;}
+      async dispose(){key?._secretKey?.fill(0);if(packet.sale.wallets?.[1])delete packet.sale.wallets[1].secret;await ledger?.close();await releaseRecovery?.();}};
+  }catch(error){key?._secretKey?.fill(0);await ledger?.close();await releaseRecovery?.();throw error;}
 }
