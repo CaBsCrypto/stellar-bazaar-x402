@@ -20,7 +20,7 @@ is imported or run by this helper.
 ```js
 import {
   prepareOpenVercelTransfer, createOpenVercelTransport, openVercelReservation,
-  createOpenVercelJournal,
+  createOpenVercelJournal, createOpenCompactJournal,
 } from './scripts/open-vercel-transport.mjs';
 
 // The existing project/team, audited build and reviewed private options come
@@ -120,6 +120,18 @@ It preserves every revision and verifies the chain on reopening. A failed head
 write leaves an immutable orphan that blocks the next write; it never silently
 reposts or repairs that uncertainty. Owner protection of encrypted backups is
 still required against whole-directory rollback.
+
+The shared acceptance controller must also use the compact adapter:
+`createOpenCompactJournal({store: privateStore, name: 'open.' + frozen.planId})`.
+Root transport updates write controller state both before and after every
+exchange. Repeating even 70 accumulated controller events across 600 uploads
+also exceeds the generic snapshot journal. The default audited array reducer
+covers `events`, `rootTransports`, payment/provider reservations, phase/browser/
+server segments, confirmed probe bindings, and the three upload arrays. Its
+array-key list is included in each authenticated revision and must match on
+reopening; absent arrays remain absent. Keep the controller's exclusive lock
+through its full lifetime. Both adapters share the same immutable encrypted
+revision and compact head protocol.
 
 Each source-inline file must be in the historical source allowlist. Prebuilt
 files must be below `.vercel/output/`, or an explicit reviewed extra path used
@@ -229,5 +241,6 @@ one creation, private report redaction, replay/tamper, lost response, missing
 files, 429, caps and incomplete exports. It reads no existing credentials,
 creates no deployment and cannot grant an independent review PASS.
 The journal fixture checks 600 logical uploads with 1,801 durable snapshots,
+70 controller events across 1,201 controller capture snapshots,
 encrypted revision/head tampering, incomplete head writes, and same-process
 counter rollback. It uses temporary synthetic secrets only.
