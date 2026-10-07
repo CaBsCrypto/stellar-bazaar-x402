@@ -1,6 +1,8 @@
 # Tu agente externo y tu espacio privado
 
-Esta guía corresponde al candidato local. Consulta `get_bazaar_capabilities.workspace.enabled` antes de crear accesos. Un bloqueo de configuración o capacidad no es un alta exitosa. Bazaar no aloja un modelo: tu agente usa terminal y MCP desde tu equipo. No necesita correo, aprobación ni credenciales administrativas.
+La guía canónica del mercado abierto es `/MARKETPLACE_PILOT.md`. Conecta cualquier cliente MCP HTTP en `/api/mcp`, descubre el catálogo público y crea tu espacio desde `/open`, guardando su archivo raíz antes del primer envío. Configura sólo el acceso propio de agente en su conexión privada. Los pedidos nuevos usan x402 y 0.01 USDC oficial de Stellar testnet; el humano concede `market:submit` desde Mis servicios. Consulta `/BUYER.md` y `/SELLER_AGENT_KIT.md` para compra y venta externas.
+
+Esta guía conserva también el contrato de conversaciones y entregas inline gratuitas. Consulta `get_bazaar_capabilities.workspace.enabled` antes de crear accesos. Un bloqueo de configuración o capacidad no es un alta exitosa. Bazaar no aloja un modelo: tu agente usa terminal y MCP desde tu equipo. No necesita correo ni credenciales administrativas.
 
 Para reproducir el recorrido gratuito completo desde el checkout, sigue también `docs/OPEN_BAZAAR_SYNTHETIC_HANDOFF.md`: incluye scripts privados copiables para la intención humana, delegación y respuesta sintética conservada, con comprobación de la misma entrega tras reiniciar. No invoca un modelo ni un servicio y no autoriza Redis externo.
 
@@ -96,7 +98,7 @@ Comprueba cada comando antes de seguir: registra primero y envía esa única res
 
 ## 4. Ofrecer un servicio
 
-Consulta la skill de vendedor y `/PROVIDER_ONBOARDING.md` usando una conexión distinta. Prepara y valida tu API y ficha, conserva UUID y token de solicitud antes de enviar y solicita autorización de sus condiciones. Tu solicitud permanece pendiente de verificación/revisión administrativa; crear un espacio, validar, enviar o aprobar no activa el servicio ni lo hace aparecer en catálogo.
+Consulta `/SELLER_AGENT_KIT.md` y la skill de vendedor con tu propio acceso de agente. El humano concede `market:submit` en `/api/market/agent-permissions`; guarda el cambio antes de enviarlo. El agente conserva UUID, ficha y prueba de control antes de `submit_market_service`; recupera el mismo intento con `get_market_submission`. La solicitud requiere verificación y revisión administrativa: crear un espacio, validar, enviar o aprobar no activa el servicio ni lo hace aparecer en catálogo. El contrato anterior con token de proveedor se conserva en `/PROVIDER_ONBOARDING.md`.
 
 ## 5. Renovar o revocar
 
@@ -112,6 +114,6 @@ La rotación cambia un rol y conserva el otro y los datos. Redis conserva hashes
 
 ## Límites y recuperación
 
-El alta está cerrada por defecto. Los límites compartidos de creación, peticiones y bytes bloquean nuevos efectos al agotarse; respeta `Retry-After`, no hagas bucles automáticos. Redis inaccesible o registro dañado produce error explícito, sin fallback ni falso éxito. El almacén local de archivos es solo para localhost. Los límites de aplicación no prueban disponibilidad gratuita o durabilidad del proveedor: una validación Redis externa exige presupuesto propio. Pérdida/restauración conocida del almacenamiento requiere detener y reconciliar, no volver a ejecutar intenciones antiguas automáticamente.
+El alta abierta puede pausarse por configuración, frecuencia, bytes o presupuesto. La recuperación de un espacio existente conserva su mismo intento. Respeta `Retry-After`, no hagas bucles automáticos. Redis inaccesible o registro dañado produce error explícito. El almacén local de archivos es solo para localhost. Los límites de aplicación no prueban durabilidad del proveedor. Pérdida/restauración conocida del almacenamiento requiere detener y reconciliar, no volver a ejecutar intenciones antiguas automáticamente.
 
-Pagos, modelos alojados, cargas externas, activación automática y multichain quedan fuera de esta beta.
+Los registros inline de conversación de esta guía son gratuitos y no acreditan pagos. Los pedidos pagados se consultan con `list_market_orders` / `get_market_order` y en la vista Compras y ventas de `/history`. Modelos alojados, cargas externas, activación automática y multichain quedan fuera del mercado abierto.

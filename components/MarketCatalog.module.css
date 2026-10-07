@@ -1,0 +1,19 @@
+.catalog { color: var(--ink, #20251f); }
+.actions,.pager { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-block: 1rem; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr)); gap: 1rem; margin-block: 1.5rem; }
+.card { padding: 1.5rem; border: 1px solid #dedbd3; border-radius: 1rem; background: white; display: flex; flex-direction: column; align-items: start; }
+.card h2 { margin-block: .5rem; font-size: 1.5rem; }
+.card details { width: 100%; }
+.card summary { cursor: pointer; min-height: 44px; padding-block: .6rem; }
+.card p { max-width: 65ch; }
+.card code,.card pre { white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-word; max-width: 100%; }
+.status { color: #166444; font-size: .9rem; }
+.price { font-size: 1.4rem; font-weight: 600; }
+.price span { font-size: 1rem; font-weight: 400; }
+.catalog button,.catalog select { min-height: 44px; padding: .65rem 1rem; font: inherit; border: 1px solid #797469; border-radius: .4rem; background: white; color: inherit; }
+.catalog button { cursor: pointer; }
+.catalog button:disabled { opacity: .6; cursor: default; }
+.catalog button:focus-visible,.catalog select:focus-visible,.catalog summary:focus-visible { outline: 3px solid #168976; outline-offset: 3px; }
+.pager label { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.catalog [role=alert] { color: #9d251b; }
+@media(max-width:480px) { .card { padding: 1rem; } }

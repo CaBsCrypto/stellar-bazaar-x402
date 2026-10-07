@@ -19,5 +19,10 @@
 .ready { margin-top: 2rem; padding: 1rem; background: var(--surface-mint); border-left: 3px solid var(--mint); }
 .page .lock { background: transparent; color: var(--ink); border-color: var(--muted); margin-top: 2rem; }
 .notice { min-height: 1.6em; font-weight: 600; }
+.page section { margin-block: 2rem; }
+.nav a { display: inline-flex; align-items: center; min-height: 44px; }
+.page code { overflow-wrap: anywhere; }
+.page button, .page input[type=file], .check { min-height: 44px; }
+.page input[type=checkbox] { width: 1.2rem; height: 1.2rem; }
 .page footer { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); }
 @media (max-width: 420px) { .page { padding: 1rem; } .page button, .open { width: 100%; box-sizing: border-box; } }

@@ -5,7 +5,7 @@ import {usePathname} from "next/navigation";
 import {Button, Pill} from "@/components/ui";
 import {Modal} from "@/components/ui/Modal";
 const links = process.env.NEXT_PUBLIC_BAZAAR_MARKETPLACE === 'true'
- ? [{href:"/catalogo",label:"Mercado"},{href:"/pilot",label:"Crear espacio"},{href:"/publish",label:"Publicar"},{href:"/history",label:"Mi espacio"}]
+ ? [{href:"/catalogo",label:"Mercado"},{href:"/hub",label:"Conectar agente"},{href:"/open",label:"Crear espacio"},{href:"/publish",label:"Publicar"},{href:"/history",label:"Mi espacio"}]
  : [{href:"/catalogo",label:"Mercado"},{href:"/hub",label:"Conectar"},{href:"/publish",label:"Publicar"},{href:"/history",label:"Historial"},{href:"/docs",label:"Docs"}];
 export function Navbar({prefetch = false}: {prefetch?: boolean} = {}) {
  const pathname=usePathname(); const [open,setOpen]=useState(false);

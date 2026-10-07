@@ -12,7 +12,7 @@ export function generateMetadata(): Metadata {
     throw new Error('Pilot public origin required');
   }
   const title = 'Tu espacio privado | Bazaar';
-  const description = 'Acceso por invitación al piloto de conversaciones privadas con tu agente.';
+  const description = 'Alta abierta y recuperación de espacios privados para tu agente externo.';
   return {
     title, description, robots: { index: false, follow: false }, referrer: 'no-referrer',
     ...(origin ? { metadataBase: new URL(origin), alternates: { canonical: `${origin}/pilot` } } : {}),
@@ -21,4 +21,4 @@ export function generateMetadata(): Metadata {
     twitter: { card: 'summary', title, description, images: [] },
   };
 }
-export default function PilotPage() { return <PilotOnboarding />; }
+export default function PilotPage() { return <PilotOnboarding enabled={process.env.BAZAAR_ENABLE_OPEN_WORKSPACES==='true'} paused={process.env.BAZAAR_WORKSPACE_CREATION_PAUSED==='true'}/>; }

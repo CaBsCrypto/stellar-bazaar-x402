@@ -7,8 +7,12 @@ import { readPublicDiscovery } from "@/lib/public-discovery";
 import { toPaidService } from "@/lib/service-card";
 import { filterServices, rankServices } from "@/lib/discovery";
 import type { PaymentScheme, ServiceKind } from "@/lib/types";
+import {MarketCatalog} from './MarketCatalog';
 
-export function Catalog({standalone = false}: {standalone?: boolean}) {
+export function Catalog({standalone = false, marketEnabled = process.env.NEXT_PUBLIC_BAZAAR_MARKETPLACE === 'true'}: {standalone?: boolean; marketEnabled?: boolean}) {
+  return marketEnabled ? <MarketCatalog standalone={standalone}/> : <LegacyCatalog standalone={standalone}/>;
+}
+function LegacyCatalog({standalone = false}: {standalone?: boolean}) {
   const [catalog, setCatalog] = useState(services);
   const [discoveryState, setDiscoveryState] = useState<"loading" | "complete" | "partial" | "error">("loading");
   useEffect(() => {

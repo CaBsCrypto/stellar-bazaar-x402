@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import ts from 'typescript';
+import {parsePilotAccess,createPilotAccess} from '../lib/pilot-access.ts';
 
 // Execute the component's real handlers with in-memory hooks and inert children.
 // No browser, private capsule, transport, storage or hosted evidence is used.
@@ -10,7 +11,7 @@ const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.Comm
 const token='A'.repeat(43),other='B'.repeat(43);
 const capsule=value=>JSON.stringify({version:1,kind:'bazaar-private-read-access',token,...value});
 const jsx=(type,props)=>({type,props});
-function harness(initialUrl='https://example.invalid/historial'){
+function harness(initialUrl='https://example.invalid/historial',marketEnabled=true){
  const slots=[],effects=[],cleanups=[],listeners=new Map();let cursor=0,updates=0,tree;
  const react={useState:initial=>{const i=cursor++;slots[i]??={value:initial};return[slots[i].value,value=>{updates++;slots[i].value=typeof value==='function'?value(slots[i].value):value;}];},useRef:initial=>{const i=cursor++;return slots[i]??=( {current:initial} );},useEffect:fn=>{const i=cursor++;if(!slots[i]){slots[i]={effect:true};effects.push(()=>{const cleanup=fn();if(cleanup)cleanups.push(cleanup);});}}};
  const window={location:{href:initialUrl},history:{state:null,replaceState(_state,_title,url){window.location.href=new URL(url,window.location.href).href;}},addEventListener:(name,fn)=>listeners.set(name,fn),removeEventListener:(name,fn)=>{if(listeners.get(name)===fn)listeners.delete(name);}};
@@ -20,12 +21,13 @@ function harness(initialUrl='https://example.invalid/historial'){
   if(name==='react')return react;if(name==='react/jsx-runtime')return{jsx,jsxs:jsx,Fragment:'Fragment'};
   if(name==='next/dynamic')return{__esModule:true,default:()=> 'OperationHistory'};
   if(name==='./ui')return{Button:'Button'};
+  if(name==='../lib/pilot-access')return{parsePilotAccess};
   if(name==='./MarketplaceWorkspace')return{__esModule:true,default:'MarketplaceWorkspace'};
   if(['./DeliverableReview','./Navbar','./Footer','./Breadcrumbs'].includes(name)){const label=name.slice(2);return{[label]:label};}
   throw Error('UNEXPECTED_IMPORT:'+name);
  };
- vm.runInNewContext(code,{exports:module.exports,module,require,URL,URLSearchParams,TextEncoder,window,fetch(){throw Error('NETWORK_FORBIDDEN');}});
- const render=()=>{cursor=0;tree=module.exports.HistoryEntry({marketEnabled:true});if(effects.length){for(const effect of effects.splice(0))effect();cursor=0;tree=module.exports.HistoryEntry({marketEnabled:true});}return tree;};
+ vm.runInNewContext(code,{exports:module.exports,module,require,URL,URLSearchParams,TextEncoder,window,location:{origin:new URL(initialUrl).origin},fetch(){throw Error('NETWORK_FORBIDDEN');}});
+ const render=()=>{cursor=0;tree=module.exports.HistoryEntry({marketEnabled});if(effects.length){for(const effect of effects.splice(0))effect();cursor=0;tree=module.exports.HistoryEntry({marketEnabled});}return tree;};
  const walk=(value,predicate)=>{if(!value||typeof value!=='object')return null;if(predicate(value))return value;for(const child of [value.props?.children,value.props?.accessEntry]){for(const item of Array.isArray(child)?child:[child]){const found=walk(item,predicate);if(found)return found;}}return null;};
  const find=predicate=>walk(tree,predicate);
  const input=id=>{const element=find(x=>x.type==='input'&&x.props.id===id);assert.ok(element,'Missing input '+id);return element;};
@@ -48,7 +50,8 @@ await check('unreadable file exposes only the generic alert',async()=>{const h=h
 await check('late file cannot replace manually submitted access',async()=>{const h=harness(),d=deferred(),pending=h.load(file(capsule(),{text:()=>d.promise}));h.render();assert.ok(h.find(x=>x.props?.role==='status'));h.manual(other);h.submit();assert.equal(h.access(),other);d.resolve(capsule());await pending;h.render();assert.equal(h.access(),other);assert.equal(h.error(),null);});
 await check('manual editing cancels a pending file without submitting',async()=>{const h=harness(),d=deferred(),pending=h.load(file(capsule(),{text:()=>d.promise}));h.manual(other);d.resolve(capsule());await pending;h.render();assert.equal(h.access(),undefined);assert.equal(h.input('manual-history-access').props.value,other);});
 await check('late file cannot reopen after lock',async()=>{const h=harness('https://example.invalid/historial#token='+other),lock=h.find(x=>x.type==='MarketplaceWorkspace').props.onLock;lock();h.render();const d=deferred(),pending=h.load(file(capsule(),{text:()=>d.promise}));lock();d.resolve(capsule());await pending;h.render();assert.equal(h.access(),undefined);assert.ok(h.input('history-access-capsule'));});
-await check('late file cannot reopen after exploring demonstration',async()=>{const h=harness('https://example.invalid/historial#token='+other);h.find(x=>x.type==='MarketplaceWorkspace').props.onLock();h.render();const d=deferred(),pending=h.load(file(capsule(),{text:()=>d.promise}));h.find(x=>x.type==='Button'&&x.props.children==='Explorar demostración').props.onClick();d.resolve(capsule());await pending;h.render();assert.equal(h.access(),undefined);assert.ok(h.find(x=>x.type==='DeliverableReview'));});
+await check('market starts locked without showing fixtures or a demo action',async()=>{const h=harness();assert.equal(h.access(),undefined);assert.equal(h.find(x=>x.type==='DeliverableReview'),null);assert.equal(h.find(x=>x.type==='Button'&&x.props.children==='Explorar demostración'),null);});
+await check('root recovery file restores human only at the same origin',async()=>{const packet=createPilotAccess('https://example.invalid'),h=harness();await h.load(file(JSON.stringify(packet)));h.render();assert.equal(h.access(),packet.human);assert.notEqual(h.access(),packet.agent);const otherOrigin=harness('https://other.invalid/history');await otherOrigin.load(file(JSON.stringify(packet)));otherOrigin.render();assert.equal(otherOrigin.access(),undefined);assert.ok(otherOrigin.error());});
 await check('late completion after unmount makes no state updates',async()=>{const h=harness(),d=deferred(),pending=h.load(file(capsule(),{text:()=>d.promise}));h.unmount();const before=h.updates();d.resolve(capsule());await pending;assert.equal(h.updates(),before);});
 await check('late read error after unmount makes no state updates',async()=>{const h=harness(),d=deferred(),pending=h.load(file(capsule(),{text:()=>d.promise}));h.unmount();const before=h.updates();d.reject(Error('fake error'));await pending;assert.equal(h.updates(),before);});
 await check('a newer capsule wins over an older pending file',async()=>{const h=harness(),d=deferred(),pending=h.load(file(capsule(),{text:()=>d.promise}));await h.load(file(capsule({token:other})));d.resolve(capsule());await pending;h.render();assert.equal(h.access(),other);});

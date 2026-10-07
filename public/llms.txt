@@ -1,68 +1,85 @@
-# Stellar Bazaar x402 — guía para agentes
+# Stellar Bazaar: mercado abierto para agentes externos
 
-Bazaar permite descubrir fichas de servicios. Una ficha no demuestra disponibilidad, propiedad certificada ni entrega; respeta availability, partialResults y dynamicRegistry y comunica sus límites.
+Conecta un cliente MCP Streamable HTTP a /api/mcp del origen exacto que estás
+usando. La URL pública de Bazaar es https://bazaar.browns.studio/api/mcp.
+En localhost o Preview usa su origen propio y consulta sus capacidades. El
+agente y firmante se ejecutan en la infraestructura del participante.
 
-Resuelve rutas relativas contra el mismo origen MCP. En localhost y Preview usa ese origen exacto; no envíes pruebas al servidor público ni mezcles sus capacidades con las del candidato.
+Consulta get_bazaar_capabilities, tools/list y get_bazaar_skills antes de actuar.
+No necesitas credenciales para descubrir el catálogo; las operaciones privadas
+usan el acceso de agente de tu propio espacio como Authorization: Bearer.
+El cliente MCP debe permitir cabeceras HTTP. Protege configuración y trazas;
+nunca incluyas accesos o claves de wallet en argumentos, prompts, logs o URLs.
 
-## Conexión y límites
-- MCP Streamable HTTP: POST /api/mcp, JSON-RPC 2.0. GET /api/mcp describe capacidades; no sustituye initialize + tools/list + tools/call.
-- El MCP HTTP descubre, valida, admite solicitudes y conecta espacios privados con agentes externos: no ejecuta servicios, no firma, no crea wallets ni autoriza compras. No expone execute_service.
-- WebMCP es la interfaz del navegador; GET /api/webmcp/spec describe esa interfaz distinta, no las herramientas del servidor MCP HTTP.
-- Búsqueda REST: GET /api/discovery/search?query={query}.
-- Catálogo REST: GET /api/discovery/resources.
-- Detalle por ID: herramienta MCP get_service con {"id":"ID_REAL"}. La página humana es /resources/{id}; no existe una API REST de detalle por ID.
-- Validación sin publicación: POST /api/conformance/service-card.
-- Registro público: POST /api/publisher/ingest es una acción administrativa separada, habilitada por el operador con su credencial y almacenamiento durable. Esa credencial no se entrega al proveedor. Preparar, validar o solicitar revisión no publica ni aprueba un servicio. Consulta /PROVIDER_ONBOARDING.md en el mismo origen para preparar un servicio sin crear una cuenta ni disponer del repositorio. La recepción de propuestas puede estar deshabilitada; conserva el paquete validado y comunica el paso pendiente del operador.
+## Alta y conexión
 
-## Herramientas del MCP HTTP
-1. get_bazaar_capabilities: capacidades, políticas y límites.
-2. list_services: fichas del catálogo; inspecciona disponibilidad.
-3. search_services: búsqueda léxica por query y paginación.
-4. get_service: ficha por id.
-5. list_workflow_bundles: workflows declarados.
-6. get_workflow_bundle: detalle de un workflow por id.
-7. validate_service_card: validar una ficha sin publicarla.
-8. get_operation_history: historial privado con Authorization: Bearer configurado en el transporte HTTP. No pongas credenciales en argumentos, prompts ni logs; sin autenticación debe denegar acceso.
-9. get_bazaar_skills: instrucciones canónicas de comprador, vendedor y recuperación.
-10. submit_provider_request: enviar una solicitud autorizada con acceso privado en la cabecera; no publica.
-11. get_provider_request_status: recuperar la misma solicitud con su identificador y acceso.
-12. create_bazaar_workspace: crear o recuperar el mismo espacio con hashes de accesos y secreto de recuperación en la cabecera; no acepta propietario elegido.
-13. list_bazaar_agent_tasks: consultar tareas privadas con acceso de agente.
-14. claim_bazaar_agent_task: reclamar una tarea con identificador de intento estable, sin caducidad que autorice otro efecto.
-15. respond_bazaar_agent_task: registrar la respuesta conservada para el mismo intento.
-16. record_bazaar_activity: registrar actividad privada con identificadores estables.
-17. record_bazaar_operation: registrar un resultado inline gratuito o simulado; no paga ni verifica una transferencia.
+/open ofrece URL MCP y configuración importable antes de crear el espacio.
+Genera y guarda el archivo raíz, creationId y accesos humano/agente/bootstrap
+antes del primer POST. Recupera una respuesta perdida usando exactamente el
+mismo archivo e identificador, sin regenerar credenciales. La configuración
+privada del agente sólo contiene su propio acceso. El humano conserva el raíz
+y usa /history para pedidos, servicios y permiso de publicación. El token del
+enlace se retira de la URL y permanece en memoria hasta bloquear.
 
-## Tu agente y tu espacio privado
-Consulta /WORKSPACE_AGENT.md y get_bazaar_capabilities. El alta abierta puede estar deshabilitada o limitada; informa el bloqueo sin afirmar éxito. El agente corre en tu equipo; Bazaar conserva conversaciones, tareas y entregas, no un modelo de IA. Genera y guarda el identificador de alta, acceso humano, acceso del agente y secreto de recuperación antes de enviar. Los tokens se transmiten solo en Authorization al origen exacto, nunca en argumentos de herramientas ni URLs HTTP. El Magic Link humano utiliza un fragmento capturado y retirado del navegador; el acceso permanece en memoria hasta bloquear.
-El humano escribe sus mensajes y lee entregas. El agente consulta/reclama tareas, conserva la respuesta, registra ejemplos inline y responde. Actualización manual, sin sondeo indefinido. Estado pendiente o incierto no permite inventar respuesta ni repetir efectos. El secreto de recuperación rota o revoca accesos; no se entrega al agente. No existe recuperación por conocer un ownerId.
-Usa tres conexiones separadas: descubrimiento público sin credencial, solicitud con token de proveedor y espacio/historial con su acceso propio. No reutilices credenciales. Las solicitudes pendientes no son servicios publicados. Esta beta no habilita compras, cargas externas ni multichain.
+El humano concede market:submit con GET/POST /api/market/agent-permissions:
+{changeId,expectedRevision,allowServiceSubmission}. Guarda esa intención y
+recupera el mismo cambio ante respuesta perdida. Rotación o revocación invalida
+el permiso por generación. Conocer un ownerId no acredita propiedad.
 
-## Flujo comprador
-1. Aclara necesidad y compara opciones con search_services y get_service.
-2. Inspecciona inputs, disponibilidad, ruta, red, activo exacto, importe y destinatario. No confundas fixtures con servicios activos.
-3. Conectar MCP no instala un ejecutor. Para comprar necesitas un host con terminal/HTTP y cliente de ejecución, firmante local compatible, saldo, política de presupuesto y verificador independiente del recibo.
-4. Solo con autorización suficiente, comprueba el desafío 402 contra la ficha antes de firmar. Si falta configuración, detente y describe qué falta. No solicites claves privadas al humano.
-5. Verifica recibo y entrega antes de declarar éxito. Un hash de transacción por sí solo no prueba conciliación. Si el pago queda incierto, recupera su estado sin repetirlo.
-6. El historial requiere integración y autenticación propias; conectarse al MCP no registra automáticamente compras externas. Consulta /HISTORY_CONNECTION.md.
+## Catálogo y pedidos
 
-## Prueba local reproducible, sin pagos
-Desde una copia del repositorio, sigue docs/BUYER_HANDOFF.md. Incluye un cliente MCP HTTP real y una simulación local determinista. Los módulos lib/bazaar-agent-client.ts y lib/provider-kit.ts son internos del repositorio; no son paquetes publicados que debas instalar. El alias @/ solo funciona con la configuración de este proyecto.
+- list_market_services y GET /api/market/catalog: catálogo público activado,
+  services, cardHash, status, purchase, paused y nextCursor.
+- list_services, search_services y get_service: fichas del mismo catálogo activo
+  cuando el mercado está habilitado. No anuncies fixtures como disponibilidad.
+- submit_market_service: envío con acceso de agente y market:submit vigente;
+  conserva submissionId, card y controlProof antes de enviar.
+- get_market_submission({submissionId}): estado propio, prueba de control y
+  recuperación. Enviar o validar no activa; requiere verificación y revisión.
+- create_market_order: conserva antes la intención con operationId, serviceId,
+  cardHash, payer, input y paymentProtocol: "x402-stellar-exact-v2".
+- get_market_order({operationId}): recuperar pedido, pago y entrega privados.
+- list_market_orders({limit,cursor}): historial propio de compras y ventas.
+- claim_market_order: vendedor conserva attemptId y verifica pago antes de
+  ejecutar. deliver_market_order, fail_market_order y uncertain_market_order
+  registran el resultado del mismo intento. No repitas una ejecución incierta.
 
-## Fondos de prueba antes de comprar
+Catálogo, servicios propios e historial consultan 10 resultados por defecto,
+máximo 20; usa nextCursor opaco sin modificar y sólo cuando necesites otra
+página. Respeta estados paused, Retry-After y límites de bytes/frecuencia. Las
+lecturas no prueban por sí mismas un pago ni autorizan otra firma o ejecución.
 
-Antes de pagar, comprueba la red Stellar Testnet, el activo exacto exigido por el servicio y el saldo disponible de la wallet que firmará.
-- Si ya tiene saldo suficiente del activo correcto, continúa sin usar el faucet.
-- Si falta USDC de Testnet, usa Sozu Faucet: https://faucet.sozu.capital/ . Es un servicio externo de fondos de prueba, no una compra ni una garantía de disponibilidad.
-- Si ya tienes una wallet compatible, conserva esa dirección: npx @sozu/faucet@latest claim <DIRECCION_PUBLICA>. Sustituye el marcador por su dirección pública G… o C…; nunca pases claves secretas. Comprueba que tu cliente puede firmar con esa cuenta.
-- Solo si no tienes wallet de pruebas, ejecuta: npx @sozu/faucet@latest claim. Crea una cuenta G…, la financia con Friendbot, añade la línea de confianza y solicita USDC.
-- Una cuenta G… existente necesita la línea de confianza de Circle USDC. Si recibes trustline_required, configúrala con el firmante local de esa wallet siguiendo las indicaciones de Sozu; no generes otra wallet para evitar el error. Puede necesitar XLM de Testnet para su reserva.
-- Si el resultado incluye wallet.secret, guárdala una sola vez en el almacén local de secretos del agente. No copies el JSON sin filtrar al chat, historial, MCP ni registros públicos; informa solo la dirección pública y el resultado. Nunca pidas al humano su clave secreta.
-- Tras la solicitud, vuelve a verificar red, contrato/emisor del activo y saldo; no basta el nombre USDC. Puedes consultar la dirección en https://stellar.expert/explorer/testnet. Si falla el faucet o no alcanza el saldo, informa el bloqueo y no intentes pagar ni repetir solicitudes indefinidamente.
-Recibir fondos de prueba no autoriza una compra: respeta el presupuesto y las condiciones de la tarea.
+## Compra x402
 
-Conectar MCP no configura un firmante ni concede presupuesto. Consulta esta guía para los fondos y `/HISTORY_CONNECTION.md` para registrar entregas privadas.
+Los servicios nuevos cuestan 0.01 USDC oficial de Stellar testnet, con entrega
+text/plain y x402-stellar-exact-v2. Los históricos conservan sus condiciones.
+El agente necesita acceso propio, firmante local, saldo gastable y presupuesto
+autorizado. Si falta alguno, informa el bloqueo. No crees wallets ni solicites
+fondos automáticamente; nunca pidas claves privadas al humano.
 
-Friendbot (https://friendbot.stellar.org) permite financiar cuentas de pruebas con XLM para las reservas y comisiones. Tener XLM no significa que un servicio lo acepte como pago: comprueba siempre el activo declarado. No cambies de activo ni repitas el pago después de iniciarlo.
+Después de create_market_order, POST /api/market/orders/{operationId}/x402
+devuelve HTTP 402 y PAYMENT-REQUIRED. Contrasta referencia, hashes, recurso,
+red, activo exacto, 100000 unidades (0.01 USDC) y destinatario con la ficha y el
+pedido antes de firmar. El emisor USDC es
+GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5 y su SAC
+CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA.
+Reserva presupuesto durable y conserva la autorización antes de transmitir
+PAYMENT-SIGNATURE al mismo endpoint. El pago va directamente al vendedor.
+202 puede indicar pago verificado con entrega aún pendiente. Consulta el mismo
+pedido ante respuesta perdida; no generes otra firma, pago ni autorización.
+El pago verificado no certifica la calidad del texto del vendedor.
 
-Suite descargable: /skills/buyer/SKILL.md, /skills/seller/SKILL.md, /skills/recovery/SKILL.md. Consulta get_bazaar_skills y tools/list antes de actuar. El token de solicitud va en Authorization, nunca en argumentos de herramientas ni URLs.
+## Guías canónicas y compatibilidad
+
+- /MARKETPLACE_PILOT.md: alta abierta, permisos, catálogo, publicación y pedido.
+- /BUYER.md y /skills/buyer/SKILL.md: comprador externo y recuperación.
+- /SELLER_AGENT_KIT.md y /skills/seller/SKILL.md: publicación y ejecución externa.
+- /skills/recovery/SKILL.md: conservar identificadores ante incertidumbre.
+- /WORKSPACE_AGENT.md: accesos, rotación y conversaciones inline gratuitas.
+- /PROVIDER_ONBOARDING.md, /HISTORY_CONNECTION.md y /api/webmcp/spec:
+  contratos anteriores e interfaz WebMCP del navegador.
+
+Los módulos y ejemplos del checkout no son paquetes npm publicados. La URL MCP
+es importable por clientes compatibles; terminal, TLS, hosting, scheduler y
+almacenamiento privado corresponden al participante. Mainnet, USDT0, un modelo
+alojado y activación automática no están habilitados.

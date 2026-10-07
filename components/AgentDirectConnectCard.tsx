@@ -1,116 +1,18 @@
-"use client";
+'use client';
+import {ButtonLink} from '@/components/ui';
+import {CopyText} from '@/components/ui/CopyText';
+import {useBazaarOrigin} from '@/components/useBazaarOrigin';
 
-import { useState } from "react";
-import { buyerConnectionPrompt } from "@/lib/testnet-funding";
-import { bazaarPrompts } from "@/lib/bazaar-skills";
-import {ButtonLink} from "@/components/ui";
-import {CopyText} from "@/components/ui/CopyText";
-import {useBazaarOrigin} from "@/components/useBazaarOrigin";
-
-type BuyerFormat = "prompt" | "mcp_json" | "sdk";
-type SellerFormat = "prompt" | "cli" | "sdk";
-type SellerExample = "scriptwriter" | "auditor" | "oracle" | "custom";
-type ActiveTab = "buyer" | "seller";
-
-export function AgentDirectConnectCard({role = "buyer", compact=false}: {role?: ActiveTab; compact?:boolean}) {
-  const origin = useBazaarOrigin();
-  const [buyerFormat, setBuyerFormat] = useState<BuyerFormat>("prompt");
-  const [sellerFormat, setSellerFormat] = useState<SellerFormat>("prompt");
-  const [sellerExample, setSellerExample] = useState<SellerExample>("custom");
-
-  // Quick MCP Config
-  const quickMcpJson = `{
-  "mcpServers": {
-    "stellar-bazaar": {
-      "url": "${origin}/api/mcp"
-    }
-  }
-}`;
-
-  // Buyer Snippets
-  const buyerPrompt = buyerConnectionPrompt.replaceAll("https://bazaar.browns.studio", origin);
-
-  const buyerMcpJson = quickMcpJson;
-
-  const buyerSdkCode = `// Ejemplo interno del repositorio, no paquete npm instalable.
-import { BazaarAgentClient } from "@/lib/bazaar-agent-client";
-
-const agent = new BazaarAgentClient({
-  baseUrl: "${origin}",
-  maxPriceAllowedUsdc: 0.10,
-  allowedNetworks: ["stellar:testnet"],
-});
-
-// Descubrimiento REST; no realiza pagos ni crea historial.
-const services = await agent.searchServicesREST("video");
-console.log(services);
-// Prueba MCP y compra simulada: docs/BUYER_HANDOFF.md.`;
-
-  // Examples describe possible scope, not existing implementations or fixed prices.
-  const sellerScopes: Record<SellerExample, string> = {
-    custom: "Quiero definir un servicio propio: qué hace, para quién y qué recibe el cliente.",
-    scriptwriter: "Me interesa ofrecer guiones por escenas con narración e indicaciones visuales. Es una idea de alcance: confirma conmigo qué puedo entregar realmente.",
-    auditor: "Me interesa ofrecer análisis de contratos Soroban. Define conmigo las comprobaciones y límites reales; no lo presentes como auditoría completa ni garantía de seguridad.",
-    oracle: "Me interesa ofrecer consultas sobre pares y liquidez. Confirma las fuentes, fecha de los datos y cálculos disponibles; no prometas cotizaciones en tiempo real sin comprobarlo.",
-  };
-  const sellerPrompt = `${bazaarPrompts.seller}${sellerExample === "custom" ? "" : "\n\n" + sellerScopes[sellerExample]}
-
-Skill: ${origin}/skills/seller/SKILL.md
-MCP: ${origin}/api/mcp`;
-
-  const sellerCliCode = `# Dentro del repositorio, con dependencias instaladas y Node.js 22.18+.
-# 1. Inicializar configuración de ejemplo; sustituir sus valores antes de validar.
-npm run bazaar-cli -- init mi-servicio.json
-
-# 2. Validar conformidad con el estándar del Bazaar
-npm run bazaar-cli -- validate mi-servicio.json
-# Valida localmente; no solicita revisión ni publica.`;
-
-  const sellerSdkCode = `// Ejemplo interno del repositorio, no paquete npm instalable.
-import { generateCanonicalServiceCard, createDeliverableBundle } from "@/lib/provider-kit";
-
-// 1. Genera la ServiceCard oficial
-const card = generateCanonicalServiceCard({
-  id: "mi-servicio-ai",
-  name: "Mi Servicio AI",
-  description: "Microservicio de inferencia con cobro x402",
-  tags: ["ai", "analysis"],
-  pricing: { amountUsdc: "0.05", destinationAddress: "G..." },
-  endpointUrl: "https://mi-api.com/x402/run",
-  input: [{ name: "prompt", type: "string", required: true }],
-  provider: { name: "Mi Org" }
-});
-
-// 2. Empaqueta el entregable con hashes SHA-256
-const files = [{ id: "result", path: "result.json", contentType: "application/json", content: JSON.stringify({ output: "Muestra ilustrativa" }), role: "data" as const }];
-const envelope = createDeliverableBundle(card.id, { output: "Muestra ilustrativa" }, files);
-// Sustituye el destino de ejemplo y valida la ficha; esto no publica ni cobra.`;
-
-  const getBuyerText = () => {
-    if (buyerFormat === "prompt") return buyerPrompt;
-    if (buyerFormat === "mcp_json") return buyerMcpJson;
-    return buyerSdkCode;
-  };
-
-  const getSellerText = () => {
-    if (sellerFormat === "prompt") return sellerPrompt;
-    if (sellerFormat === "cli") return sellerCliCode;
-    return sellerSdkCode;
-  };
-
-  const buyer = role === "buyer";
-  const advanced=<>
-   <div className="ui-chips" aria-label="Formato de instrucciones">{buyer ? (["prompt","mcp_json","sdk"] as BuyerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={buyerFormat===fmt} onClick={()=>setBuyerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="mcp_json"?"MCP JSON":"Ejemplo SDK"}</button>):(["prompt","cli","sdk"] as SellerFormat[]).map(fmt=><button type="button" className="ui-chip" key={fmt} aria-pressed={sellerFormat===fmt} onClick={()=>setSellerFormat(fmt)}>{fmt==="prompt"?"Prompt":fmt==="cli"?"Bazaar CLI":"Provider Kit"}</button>)}</div>
-   {!buyer && sellerFormat==="prompt" && <div className="ui-actions" aria-label="Ejemplos de proveedor">{(["custom","scriptwriter","auditor","oracle"] as SellerExample[]).map(ex=><button type="button" className="ui-chip" key={ex} aria-pressed={sellerExample===ex} onClick={()=>setSellerExample(ex)}>{ex==="scriptwriter"?"Guiones":ex==="auditor"?"Auditoría":ex==="oracle"?"Oráculo":"Personalizado"}</button>)}</div>}
-   <details className="connect-help"><summary>Cómo usar estas instrucciones</summary><p>{buyer ? "Copia una plantilla o la configuración MCP. El MCP permite descubrir, validar y enviar solicitudes de proveedores; no compra ni firma. WebMCP es una interfaz distinta del navegador. Para ver acciones externas en el historial, tu agente debe integrar su reporte." : "Estas plantillas son ejemplos para desarrollar un proveedor, no servicios ya disponibles. Publicar requiere validación, prueba de control y revisión manual."}</p><p>Copiar no envía mensajes, no publica un servicio ni ejecuta pagos. Revisa la plantilla antes de usarla; los ejemplos SDK requieren el entorno del repositorio.</p></details>
-   {buyer && <details className="connect-help"><summary>¿Tu agente necesita fondos de prueba?</summary><p>Si ya tiene saldo, puede continuar. Sozu permite financiar su wallet de Testnet existente o crear una de pruebas si todavía no tiene. Para XLM, la guía explica cómo financiar una cuenta de pruebas con Friendbot. El agente necesita un firmante compatible y el servicio debe aceptar ese activo. No compartas claves secretas.</p><a href="https://faucet.sozu.capital/" target="_blank" rel="noopener noreferrer">Conocer Sozu Faucet ↗</a><p>El prompt enlaza la guía de fondos, que el agente consultará solo si la necesita.</p></details>}
-  </>;
-  return <section className="connect-instructions" aria-label={buyer?"Conexión del comprador":"Preparación del proveedor"}>
-   {!compact && <h2>{buyer?"Encuentra un servicio con tu agente":"Prepara tu servicio con tu agente"}</h2>}
-
-   <p className="ui-muted">{buyer?"Cuéntale qué necesitas: te ayudará a comparar opciones y revisar lo recibido.":"Parte de tu idea o API: tu agente te ayudará a preparar la integración para revisión."}</p>
-   {!compact && advanced}
-   <CopyText key={buyer?buyerFormat:sellerFormat+sellerExample} text={buyer?getBuyerText():getSellerText()} label="Instrucciones" compact extraActions={buyer?<><ButtonLink href="/agent-chat" variant="secondary">Abrir chat existente</ButtonLink><ButtonLink href="/buyer-execution" variant="quiet">Abrir workspace</ButtonLink></>:<ButtonLink href="/publish" variant="secondary">Preparar mi servicio</ButtonLink>} />
-   {compact && <details className="connect-help"><summary>Formatos, ejemplos y ayuda</summary>{advanced}</details>}
+export function AgentDirectConnectCard({role = 'buyer', compact=false}: {role?: 'buyer' | 'seller'; compact?: boolean}) {
+  const origin = useBazaarOrigin(), buyer = role === 'buyer';
+  const prompt = buyer
+    ? `Conecta con Bazaar por MCP en ${origin}/api/mcp. Consulta get_bazaar_capabilities, tools/list y la skill de comprador ${origin}/skills/buyer/SKILL.md. Busca servicios activos con list_market_services o search_services y comprueba la ficha y su hash con get_service. Ayúdame a comparar opciones. Para comprar, usa mi acceso de agente propio y mi firmante local autorizado: guarda la intención antes de create_market_order, conserva su operationId, usa x402-stellar-exact-v2 y 0.01 USDC oficial de Stellar testnet. Comprueba el HTTP 402 contra la ficha antes de firmar. Si falta configuración, saldo gastable o autorización, detente. No crees wallets ni uses faucets automáticamente. Recupera el mismo pedido con get_market_order; nunca repitas un pago incierto. No incluyas credenciales en el prompt.`
+    : `Conecta con Bazaar por MCP en ${origin}/api/mcp. Consulta get_bazaar_capabilities, tools/list y la skill de vendedor ${origin}/skills/seller/SKILL.md. Ayúdame a preparar una API HTTPS real, una ficha para entrega text/plain con precio 0.01 USDC oficial de Stellar testnet y x402-stellar-exact-v2, y la prueba de control del endpoint. Usa únicamente mi acceso de agente propio, con market:submit concedido por mi acceso humano. Guarda submissionId, ficha y controlProof antes de submit_market_service; recupera con get_market_submission sin inventar otra solicitud. La publicación requiere verificación y revisión manual. Ejecuta pedidos sólo después de comprobar pago y conservar su intento estable; ante ejecución incierta, usa uncertain_market_order y no repitas el efecto. No incluyas credenciales en el prompt.`;
+  return <section className='connect-instructions' aria-label={buyer ? 'Conexión del comprador' : 'Conexión del vendedor'}>
+    {!compact && <h2>{buyer ? 'Compra con tu agente externo' : 'Publica con tu agente externo'}</h2>}
+    <p className='ui-muted'>{buyer ? 'Compara servicios activos y encarga entregas de texto desde el agente que utilizas.' : 'Define tu servicio, prepara la integración y autoriza a tu agente para enviarla a revisión.'}</p>
+    <CopyText text={prompt} label='Instrucciones para mi agente' compact extraActions={<><ButtonLink href='/open' variant='secondary'>Crear mi espacio</ButtonLink><ButtonLink href='/history' variant='quiet'>Abrir mi espacio</ButtonLink></>}/>
+    <p>Importa la conexión MCP desde Crear mi espacio. El catálogo funciona sin credencial; los pedidos y servicios propios requieren tu acceso de agente.</p>
+    <details className='connect-help'><summary>Requisitos y recuperación</summary><p>Tu agente se ejecuta en tu infraestructura y necesita un cliente MCP por HTTP, almacenamiento privado y un firmante local compatible para comprar. Guarda las intenciones antes de enviar. Una respuesta perdida se consulta con el mismo identificador; la recuperación es explícita.</p><p>Los nuevos servicios cuestan 0.01 USDC oficial de Stellar testnet. El agente comprador paga directamente al vendedor mediante x402. Bazaar conserva el pedido y la entrega; el pago verificado no certifica su calidad.</p><a href='/MARKETPLACE_PILOT.md'>Leer la guía del mercado abierto</a></details>
   </section>;
 }

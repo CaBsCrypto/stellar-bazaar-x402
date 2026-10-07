@@ -2,176 +2,139 @@
 import {useEffect, useRef, useState} from 'react';
 import type {ServiceCard} from '../lib/types';
 import type {MarketOrder} from '../lib/marketplace-store';
-import {isCanonicalUsdcTestnet, USDT0_MAINNET_DESCRIPTOR, type StellarCreditIdentity} from '../lib/payment-assets';
-import styles from './MarketplaceWorkspace.module.css';
 import {serializedPrivateRead} from '../lib/private-read-queue';
+import styles from './MarketplaceWorkspace.module.css';
 
 type Service = {submissionId: string; card: ServiceCard; cardHash: string; status: string; control?: {expectedRecord: string; domain: string; verificationPath?: string}};
 type Order = MarketOrder & {perspective?: 'purchase' | 'sale'};
-type ActionContext = {generation: number; access: string; controller: AbortController};
+type Permission = {permission: 'market:submit'; revision: number; generation: number; allowServiceSubmission: boolean};
+type Intent = {version: 1; origin: string; generation: number; changeId: string; expectedRevision: number; allowServiceSubmission: boolean};
+type Context = {generation: number; access: string; controller: AbortController};
 const statuses: Record<MarketOrder['phase'], string> = {
-  'awaiting-payment': 'Pendiente de pago', 'payment-submitting': 'Enviando pago',
+  'awaiting-payment': 'Pendiente de pago', 'payment-submitting': 'Comprobando pago',
   'payment-uncertain': 'Pago incierto · conciliar', paid: 'Pago verificado · pendiente de agente',
   executing: 'Agente trabajando', 'execution-uncertain': 'Pago verificado · ejecución incierta',
   delivered: 'Entrega disponible', 'delivery-failed': 'Pago verificado · entrega fallida',
 };
-const testnetPassphrase = 'Test SDF Network ; September 2015';
-const canBuy = (card: ServiceCard) => !card.payment.marketplace && card.payment.asset === 'USDC' && isCanonicalUsdcTestnet(card.payment.identity);
-function saveIntent(name: string, value: unknown) {
+function saveIntent(value: Intent) {
   const url = URL.createObjectURL(new Blob([JSON.stringify(value, null, 2)], {type: 'application/json'}));
-  const a = document.createElement('a'); a.href = url; a.download = name; a.click(); URL.revokeObjectURL(url);
+  const a = document.createElement('a'); a.href = url; a.download = 'bazaar-publication-permission.json'; a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function AssetIdentity({identity}: {identity?: StellarCreditIdentity}) {
-  return identity ? <details><summary>Identidad del activo</summary><dl><dt>Red</dt><dd>{identity.network}</dd><dt>Emisor</dt><dd><code>{identity.issuer}</code></dd><dt>Contrato SAC</dt><dd><code>{identity.sacContract}</code></dd></dl></details> : null;
+function readIntent(raw: string, permission: Permission): Intent {
+  const value = JSON.parse(raw);
+  if (!value || Object.keys(value).sort().join(',') !== 'allowServiceSubmission,changeId,expectedRevision,generation,origin,version'
+    || value.version !== 1 || value.origin !== location.origin || value.generation !== permission.generation
+    || !/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(value.changeId)
+    || !Number.isSafeInteger(value.expectedRevision) || value.expectedRevision < 0 || typeof value.allowServiceSubmission !== 'boolean') throw Error('INVALID_PERMISSION_FILE');
+  return value;
+}
+function Pager({name, limit, page, next, busy, onLimit, onPage}: {name: string; limit: number; page: number; next?: string; busy: boolean; onLimit: (n: number) => void; onPage: (direction: number) => void}) {
+  return <nav className={styles.pager} aria-label={`Páginas de ${name}`}><label>Por página<select value={limit} disabled={busy} onChange={e => onLimit(Number(e.target.value))}><option value={10}>10</option><option value={20}>20</option></select></label><button disabled={busy || page === 0} onClick={() => onPage(-1)}>Anterior</button><span>Página {page + 1}</span><button disabled={busy || !next} onClick={() => onPage(1)}>Siguiente</button></nav>;
 }
 
 export default function MarketplaceWorkspace({access, onLock, view='all'}: {access: string; onLock: () => void; view?: 'history' | 'all'}) {
-  const [services, setServices] = useState<Service[]>([]), [mine, setMine] = useState<Service[]>([]), [orders, setOrders] = useState<Order[]>([]);
-  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [payer, setPayer] = useState(''), [input, setInput] = useState('{}');
-  const [card, setCard] = useState(''), [submissionId, setSubmissionId] = useState(''), [operationId, setOperationId] = useState('');
-  const [selected, setSelected] = useState<Service | null>(null), [uncertain, setUncertain] = useState(false), [paused, setPaused] = useState(true);
+  const [mine, setMine] = useState<Service[]>([]), [orders, setOrders] = useState<Order[]>([]);
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [paused, setPaused] = useState(false);
   const [servicesVisible, setServicesVisible] = useState(view === 'all');
-  const [savedOrder, setSavedOrder] = useState(''), [savedCard, setSavedCard] = useState('');
+  const [orderLimit, setOrderLimit] = useState(10), [mineLimit, setMineLimit] = useState(10);
+  const [orderPage, setOrderPage] = useState(0), [minePage, setMinePage] = useState(0);
+  const [orderNext, setOrderNext] = useState<string>(), [mineNext, setMineNext] = useState<string>();
+  const [permission, setPermission] = useState<Permission>(), [permissionReadOnly, setPermissionReadOnly] = useState(false);
+  const [intent, setIntent] = useState<Intent>(), [intentSaved, setIntentSaved] = useState(false), [confirmed, setConfirmed] = useState(false);
+  const [uncertain, setUncertain] = useState(false), [notice, setNotice] = useState('');
+  const orderCursors = useRef<(string | undefined)[]>([undefined]), mineCursors = useRef<(string | undefined)[]>([undefined]);
   const generation = useRef(0), controller = useRef<AbortController | null>(null), alive = useRef(true);
-  const current = (ctx: Pick<ActionContext, 'generation'>) => alive.current && generation.current === ctx.generation;
+  const current = (ctx: Pick<Context, 'generation'>) => alive.current && generation.current === ctx.generation;
   function clearPrivate() {
-    setServices([]); setMine([]); setOrders([]); setCard(''); setPayer(''); setInput('{}'); setSelected(null);
-    setSubmissionId(''); setOperationId(''); setSavedOrder(''); setSavedCard(''); setError(''); setUncertain(false); setPaused(true);
+    setMine([]); setOrders([]); setPermission(undefined); setPermissionReadOnly(false); setIntent(undefined); setIntentSaved(false); setConfirmed(false);
+    setError(''); setUncertain(false); setNotice(''); setPaused(false); setOrderPage(0); setMinePage(0); setOrderNext(undefined); setMineNext(undefined);
+    orderCursors.current = [undefined]; mineCursors.current = [undefined];
   }
-  async function api(ctx: ActionContext, path: string, body?: unknown) {
+  async function api(ctx: Context, path: string, body?: unknown) {
     if (!current(ctx)) throw new DOMException('Disconnected', 'AbortError');
     const signal = AbortSignal.any([ctx.controller.signal, AbortSignal.timeout(15000)]);
-    const request = () => fetch(path, {
-      method: body === undefined ? 'GET' : 'POST', credentials: 'same-origin', redirect: 'error',
-      headers: {Authorization: `Bearer ${ctx.access}`, ...(body === undefined ? {} : {'Content-Type': 'application/json'})},
-      ...(body === undefined ? {} : {body: JSON.stringify(body)}), cache: 'no-store',
-      signal,
-    });
+    const request = () => fetch(path, {method: body === undefined ? 'GET' : 'POST', credentials: 'same-origin', redirect: 'error', headers: {Authorization: `Bearer ${ctx.access}`, ...(body === undefined ? {} : {'Content-Type': 'application/json'})}, ...(body === undefined ? {} : {body: JSON.stringify(body)}), cache: 'no-store', signal});
     const response = body === undefined ? await serializedPrivateRead(ctx.access, signal, request) : await request();
     const value = await response.json();
     if (!current(ctx)) throw new DOMException('Disconnected', 'AbortError');
     if (!response.ok) throw Error(value.error?.code ?? 'REQUEST_FAILED');
     return value;
   }
-  async function run(action: (ctx: ActionContext) => Promise<void>, write = false) {
-    if (!alive.current) return;
+  async function run(action: (ctx: Context) => Promise<void>, write = false, initial = false) {
+    if (!alive.current || (busy && !initial)) return;
     controller.current?.abort(); controller.current = new AbortController();
     const ctx = {generation: ++generation.current, access, controller: controller.current};
-    setBusy(true); setError('');
+    setBusy(true); setError(''); setNotice('');
     try { await action(ctx); }
-    catch (e) {
-      if (current(ctx)) {
-        setError(e instanceof Error ? e.message : 'REQUEST_FAILED');
-        if (write && !(e instanceof Error && /^(WALLET_|SELECT_STELLAR_TESTNET|JSON_)/.test(e.message))) setUncertain(true);
-      }
-    } finally { if (current(ctx)) setBusy(false); }
+    catch (e) { if (current(ctx)) { setError(e instanceof Error ? e.message : 'REQUEST_FAILED'); if (write) setUncertain(true); } }
+    finally { if (current(ctx)) setBusy(false); }
   }
-  async function refresh(ctx: ActionContext) {
-    // Both reads debit the same owner's quota. Sequential calls avoid a quota CAS conflict.
-    const catalog = await api(ctx, '/api/market/services');
-    const history = await api(ctx, '/api/market/orders');
-    if (current(ctx)) { setServices(catalog.services); setMine(catalog.mine); setOrders(history.orders); setPaused(catalog.paused); }
-    return catalog.services as Service[];
+  async function loadOrders(ctx: Context, page = orderPage, limit = orderLimit, cursor = orderCursors.current[page]) {
+    const query = new URLSearchParams({limit: String(limit)}); if (cursor) query.set('cursor', cursor);
+    const body = await api(ctx, `/api/market/orders?${query}`);
+    if (current(ctx)) { setOrders(body.orders); setOrderNext(body.nextCursor); setOrderPage(page); setOrderLimit(limit); }
   }
-  async function refreshOrders(ctx: ActionContext) {
-    const history = await api(ctx, '/api/market/orders');
-    if (current(ctx)) setOrders(history.orders);
+  async function loadMine(ctx: Context, page = minePage, limit = mineLimit, cursor = mineCursors.current[page]) {
+    const query = new URLSearchParams({limit: String(limit)}); if (cursor) query.set('mineCursor', cursor);
+    const body = await api(ctx, `/api/market/services?${query}`);
+    if (current(ctx)) { setMine(body.mine); setMineNext(body.mineNextCursor); setMinePage(page); setMineLimit(limit); setPaused(body.paused); }
+  }
+  async function loadPermission(ctx: Context) {
+    try { const body = await api(ctx, '/api/market/agent-permissions'); if (current(ctx)) { setPermission(body.permission); setPermissionReadOnly(false); } }
+    catch (e) { if (current(ctx) && e instanceof Error && e.message === 'FORBIDDEN') { setPermissionReadOnly(true); return; } throw e; }
   }
   useEffect(() => {
-    alive.current = true; clearPrivate();
-    void run(async ctx => {
-      const id = new URLSearchParams(window.location.search).get('service');
-      const showServices = view === 'all' || Boolean(id);
-      setServicesVisible(showServices);
-      if (!showServices) { await refreshOrders(ctx); return; }
-      const catalog = await refresh(ctx);
-      const requested = catalog.find(service => service.card.id === id && canBuy(service.card));
-      if (current(ctx) && requested) { setSelected(requested); setOperationId(crypto.randomUUID()); }
-    });
+    alive.current = true; clearPrivate(); setServicesVisible(view === 'all');
+    void run(async ctx => { await loadOrders(ctx, 0, 10, undefined); if (view === 'all') { await loadMine(ctx, 0, 10, undefined); await loadPermission(ctx); } }, false, true);
     return () => { alive.current = false; generation.current++; controller.current?.abort(); };
   }, [access, view]);
-  function lock() {
-    alive.current = false; generation.current++; controller.current?.abort(); clearPrivate(); setBusy(false); onLock();
+  function lock() { alive.current = false; generation.current++; controller.current?.abort(); clearPrivate(); setBusy(false); onLock(); }
+  function preparePermission(allowServiceSubmission: boolean) {
+    if (!permission || busy || uncertain) return;
+    setIntent({version: 1, origin: location.origin, generation: permission.generation, changeId: crypto.randomUUID(), expectedRevision: permission.revision, allowServiceSubmission}); setIntentSaved(false); setConfirmed(false); setNotice('Guarda y confirma esta intención antes de cambiar el permiso.');
   }
-  async function wallet(ctx: ActionContext) {
-    const freighter = await import('@stellar/freighter-api'); if (!current(ctx)) return;
-    const connection = await freighter.requestAccess(); if (!current(ctx)) return;
-    if (connection.error) throw Error('WALLET_CONNECTION_REJECTED');
-    const network = await freighter.getNetworkDetails(); if (!current(ctx)) return;
-    if (network.error || network.networkPassphrase !== testnetPassphrase) throw Error('SELECT_STELLAR_TESTNET');
-    setPayer(connection.address);
+  async function submitPermission(ctx: Context) {
+    if (!intent || !intentSaved || !confirmed) return;
+    const body = await api(ctx, '/api/market/agent-permissions', {changeId: intent.changeId, expectedRevision: intent.expectedRevision, allowServiceSubmission: intent.allowServiceSubmission});
+    if (current(ctx)) { setPermission(body.permission); setIntent(undefined); setIntentSaved(false); setConfirmed(false); setUncertain(false); setNotice('Permiso confirmado. La rotación o revocación del acceso lo invalida.'); }
   }
-  async function pay(ctx: ActionContext, order: Order) {
-    const {payment} = await api(ctx, `/api/market/orders/${order.operationId}`, {action: 'prepare'});
-    const freighter = await import('@stellar/freighter-api'); if (!current(ctx)) return;
-    const network = await freighter.getNetworkDetails(); if (!current(ctx)) return;
-    if (network.error || network.networkPassphrase !== testnetPassphrase) throw Error('SELECT_STELLAR_TESTNET');
-    const signed = await freighter.signTransaction(payment.unsignedXdr, {networkPassphrase: testnetPassphrase, address: order.payer});
-    if (!current(ctx)) return;
-    if (signed.error || !signed.signedTxXdr || signed.signerAddress !== order.payer) throw Error('WALLET_SIGNING_REJECTED');
-    await api(ctx, `/api/market/orders/${order.operationId}`, {action: 'pay', signedXdr: signed.signedTxXdr});
-    await refresh(ctx);
+  async function restorePermission(file?: File) {
+    if (!file || !permission || busy) return;
+    const ctx = {generation: ++generation.current}; controller.current?.abort();
+    try { if (file.size > 1024) throw Error(); const raw = await file.text(); if (!current(ctx)) return; setIntent(readIntent(raw, permission)); setIntentSaved(true); setConfirmed(false); setUncertain(true); setNotice('Intención restaurada. Confirma para recuperar exactamente este cambio.'); }
+    catch { if (current(ctx)) setError('El archivo de permiso no corresponde a este origen y generación.'); }
   }
-  function recoverFile(file: File | undefined, limit: number, restore: (value: Record<string, unknown>) => void, code: string) {
-    const ctx = {generation: generation.current};
-    if (!current(ctx)) return;
-    if (!file || file.size > limit) { setError('ARCHIVO_INVALIDO'); return; }
-    void file.text().then(raw => {
-      if (!current(ctx)) return;
-      try {
-        const value: unknown = JSON.parse(raw);
-        if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error();
-        restore(value as Record<string, unknown>); setUncertain(false);
-      }
-      catch { if (current(ctx)) setError(code); }
-    }).catch(() => { if (current(ctx)) setError('ARCHIVO_INVALIDO'); });
-  }
-
   return <section className={styles.panel} aria-labelledby='market-workspace-title'>
-    <div className={styles.header}><div><p>Marketplace · sólo Stellar testnet</p><h2 id='market-workspace-title'>Compras, ventas y mis servicios</h2></div><button onClick={lock}>Bloquear espacio</button></div>
-    <p>Tu agente corre en tu infraestructura. Los pagos van a la wallet del vendedor. Las entregas son texto declarado por su agente; verificar el pago no certifica su calidad.</p>
-    <p>Pagos del piloto: USDC de Circle en testnet. {USDT0_MAINNET_DESCRIPTOR.identity.code} está preparado para mainnet y sus pagos permanecen desactivados.</p>
-    <button disabled={busy} onClick={() => void run(async ctx => { if (servicesVisible) await refresh(ctx); else await refreshOrders(ctx); })}>{servicesVisible ? 'Actualizar marketplace' : 'Actualizar pedidos'}</button>
-    {!servicesVisible && <button disabled={busy} onClick={() => { setServicesVisible(true); void run(async ctx => { await refresh(ctx); }); }}>Servicios y publicación</button>}
-    {busy && <p role='status'>Procesando…</p>}{error && <p role='alert'>{error}. Conserva el identificador y actualiza para comprobar el estado; no repitas pagos.</p>}
-    {uncertain && <p role='status'>Una acción requiere comprobación. Las nuevas escrituras están pausadas en esta vista. Conserva tu archivo de intención y recupera el estado antes de continuar.</p>}
-    {servicesVisible && <><h3>Servicios disponibles</h3>{paused && <p role='status'>Nuevas publicaciones y compras pausadas. Tu historial sigue disponible.</p>}
-    <label>Recuperar intención de compra<input type='file' accept='application/json' disabled={busy} onChange={e => {
-      recoverFile(e.target.files?.[0], 16384, value => {
-        const service = services.find(v => v.card.id === value.serviceId && v.cardHash === value.cardHash);
-        if (!service || !canBuy(service.card) || typeof value.operationId !== 'string' || typeof value.payer !== 'string' || !value.input) throw Error();
-        const text = JSON.stringify(value.input); setSelected(service); setOperationId(value.operationId); setPayer(value.payer); setInput(text); setSavedOrder(`${value.operationId}|${value.payer}|${text}`);
-      }, 'ARCHIVO_INVALIDO_O_SERVICIO_NO_DISPONIBLE'); e.target.value = '';
-    }}/></label>
-    {!services.length && <p>No hay servicios testnet aprobados disponibles.</p>}
-    <div className={styles.grid}>{services.map(service => <article key={service.submissionId}><h4>{service.card.name}</h4><p>{service.card.description}</p><p>{service.card.payment.amount} {service.card.payment.asset} · testnet</p><AssetIdentity identity={service.card.payment.identity}/>{service.card.payment.marketplace ? <p>Disponible para tu agente por x402. El comprobante y la entrega aparecerán en tu historial privado.</p> : <button disabled={busy || uncertain || paused || !canBuy(service.card)} onClick={() => { setSelected(service); setOperationId(crypto.randomUUID()); setInput('{}'); setSavedOrder(''); }}>Preparar compra</button>}</article>)}</div>
-    {selected && <form onSubmit={e => { e.preventDefault(); void run(async ctx => {
-      await api(ctx, '/api/market/orders', {operationId, serviceId: selected.card.id, cardHash: selected.cardHash, payer, input: JSON.parse(input)}); setSelected(null); await refresh(ctx);
-    }, true); }}>
-      <h3>Comprar {selected.card.name}</h3><p>{selected.card.payment.amount} {selected.card.payment.asset} testnet. Destinatario: <code>{selected.card.payment.destination}</code></p><AssetIdentity identity={selected.card.payment.identity}/>
-      <button type='button' disabled={busy} onClick={() => void run(wallet)}>Conectar Freighter en testnet</button>
-      <label>Cuenta pública del comprador<input value={payer} onChange={e => setPayer(e.target.value)} autoComplete='off' required/></label>
-      <label>Parámetros JSON<textarea value={input} onChange={e => setInput(e.target.value)} required/></label><p>Campos: {selected.card.input.map(v => `${v.name} (${v.type}${v.required ? ', obligatorio' : ''})`).join(', ')}</p>
-      <p>Referencia: <code>{operationId}</code></p><button type='button' disabled={busy} onClick={() => { try { saveIntent('bazaar-order-intent.json', {operationId, serviceId: selected.card.id, cardHash: selected.cardHash, payer, input: JSON.parse(input)}); setSavedOrder(`${operationId}|${payer}|${input}`); } catch { setError('JSON_INVALIDO'); } }}>Guardar intención de compra</button>
-      <button disabled={busy || uncertain || paused || !payer || savedOrder !== `${operationId}|${payer}|${input}`}>Crear pedido sin pagar todavía</button>
-    </form>}</>}
+    <div className={styles.header}><div><p>Stellar testnet · espacio privado</p><h2 id='market-workspace-title'>Compras, ventas y mis servicios</h2></div><button onClick={lock}>Bloquear espacio</button></div>
+    <p>Tu agente descubre, compra y ejecuta desde tu infraestructura. Los nuevos pedidos usan x402 y cuestan 0.01 USDC oficial de testnet. El historial conserva las condiciones de cada pedido anterior.</p>
+    <p><a href='/catalogo'>Ver catálogo público</a> · <a href='/hub'>Conectar mi agente por MCP</a></p>
+    <button disabled={busy} onClick={() => void run(ctx => loadOrders(ctx))}>Actualizar esta página de pedidos</button>
+    <button disabled={busy} onClick={() => { setServicesVisible(true); void run(async ctx => { await loadMine(ctx); await loadPermission(ctx); }); }}>Mis servicios y permiso de publicación</button>
+    {busy && <p role='status'>Consultando tu espacio…</p>}{error && <p role='alert'>{error}. Conserva el identificador y vuelve a consultar el estado. Si un pago es incierto, no lo repitas.</p>}
+    {notice && <p role='status'>{notice}</p>}
     <h3>Historial privado de compras y ventas</h3>
-    {!orders.length && <p>Aún no tienes pedidos.</p>}
-    {orders.map(order => <article key={order.operationId}><h4>{order.perspective === 'sale' ? 'Venta' : 'Compra'} · {order.card.name}</h4><p>{statuses[order.phase]}</p><p>{order.amount} {order.card.payment.asset} testnet · <time>{order.updatedAt}</time></p><p>Referencia: <code>{order.operationId}</code></p><p>Comprador: <code>{order.payer}</code> · Destinatario: <code>{order.destination}</code></p><AssetIdentity identity={order.settlement ?? order.card.payment.identity}/>
+    {!busy && !orders.length && !error && <p>Aún no tienes pedidos en esta página.</p>}
+    {orders.map(order => <article key={order.operationId}><h4>{order.perspective === 'sale' ? 'Venta' : 'Compra'} · {order.card.name}</h4><p>{statuses[order.phase]}</p><p>{order.amount} {order.card.payment.asset} · <time>{order.updatedAt}</time></p><p>Referencia: <code>{order.operationId}</code></p><details><summary>Condiciones del pedido</summary><p>Comprador: <code>{order.payer}</code></p><p>Destinatario: <code>{order.destination}</code></p><p>Protocolo: {order.paymentProtocol ?? 'registro histórico'}</p><p>Hash de la ficha: <code>{order.cardHash}</code></p></details>
       {order.transactionHash && <p><a href={`https://stellar.expert/explorer/testnet/tx/${order.transactionHash}`} target='_blank' rel='noreferrer'>Transacción testnet</a> · {order.paymentVerifiedAt ? 'Verificada por Bazaar' : 'Sin confirmación'}</p>}
-      {order.delivery && <><p>Entrega reportada por vendedor · <code>{order.delivery.reference}</code></p><pre>{order.delivery.text}</pre></>}
+      {order.delivery && <><p>Entrega reportada por vendedor · <code>{order.delivery.reference}</code></p><pre>{order.delivery.text}</pre><p>El pago verificado no certifica la calidad de la entrega.</p></>}
       {order.failure && <p>Fallo de entrega: {order.failure}</p>}
-      {order.phase === 'execution-uncertain' && <p>Se conserva el pago y el intento del agente. Soporte debe comprobar la evidencia antes de resolver la entrega; no se ejecutará de nuevo automáticamente.</p>}
-      {order.perspective === 'purchase' && order.phase === 'awaiting-payment' && canBuy(order.card) && <button disabled={busy || uncertain || paused} onClick={() => void run(ctx => pay(ctx, order), true)}>Firmar y pagar {order.amount} {order.card.payment.asset} testnet con Freighter</button>}
-      {order.perspective === 'purchase' && ['payment-submitting', 'payment-uncertain'].includes(order.phase) && <button disabled={busy} onClick={() => void run(async ctx => { await api(ctx, `/api/market/orders/${order.operationId}`, {action: 'reconcile'}); await refresh(ctx); })}>Conciliar sin volver a pagar</button>}
+      {order.phase === 'awaiting-payment' && <p>Tu agente debe recuperar este mismo pedido y su archivo de intención antes de continuar.</p>}
+      {order.phase === 'execution-uncertain' && <p>Se conserva el pago y el intento de ejecución. Revisa la evidencia con el vendedor antes de resolver; no se ejecuta de nuevo automáticamente.</p>}
+      {order.perspective === 'purchase' && ['payment-submitting', 'payment-uncertain'].includes(order.phase) && <button disabled={busy} onClick={() => void run(async ctx => { await api(ctx, `/api/market/orders/${order.operationId}`, {action: 'reconcile'}); await loadOrders(ctx); })}>Conciliar sin volver a pagar</button>}
     </article>)}
-    {servicesVisible && <><h3>Mis servicios</h3><p>Envía una Service Card HTTPS con precio USDC de Circle testnet, su emisor y contrato SAC, entrega text/plain e idempotencia. Requiere prueba de control HTTP y revisión manual antes de publicarse.</p>
-    <form onSubmit={e => { e.preventDefault(); void run(async ctx => { const parsed = JSON.parse(card); await api(ctx, '/api/market/services', {submissionId, card: parsed, controlProof: {method: 'http-well-known', domain: new URL(parsed.url).hostname}}); await refresh(ctx); }, true); }}>
-      <label>Ficha JSON<textarea value={card} onChange={e => setCard(e.target.value)} required/></label>
-      <button type='button' disabled={busy || uncertain || paused} onClick={() => { try { const id = submissionId || crypto.randomUUID(); saveIntent('bazaar-service-intent.json', {submissionId: id, card: JSON.parse(card)}); setSubmissionId(id); setSavedCard(card); } catch { setError('JSON_INVALIDO'); } }}>Guardar intención de publicación</button>
-      <label>Recuperar intención guardada<input type='file' accept='application/json' disabled={busy} onChange={e => { recoverFile(e.target.files?.[0], 32768, value => { if (typeof value.submissionId !== 'string' || !value.card) throw Error(); const text = JSON.stringify(value.card, null, 2); setSubmissionId(value.submissionId); setCard(text); setSavedCard(text); }, 'ARCHIVO_INVALIDO'); e.target.value = ''; }}/></label>
-      <p>Referencia: <code>{submissionId || 'Guarda la intención primero'}</code></p><button disabled={!submissionId || busy || uncertain || paused || savedCard !== card}>Enviar a revisión</button>
-    </form>
-    {mine.map(service => <article key={service.submissionId}><h4>{service.card.name}</h4><p>Estado: {service.status}</p><code>{service.submissionId}</code>{service.control && <details><summary>Prueba de control del endpoint</summary><p>Publica este contenido exacto en {service.control.domain}{service.control.verificationPath}:</p><pre>{service.control.expectedRecord}</pre></details>}<button disabled={busy || uncertain || service.status === 'withdrawn'} onClick={() => void run(async ctx => { await api(ctx, `/api/market/services/${service.submissionId}`, {action: 'withdraw'}); await refresh(ctx); }, true)}>Retirar de nuevas compras</button></article>)}</>}
+    <Pager name='pedidos' limit={orderLimit} page={orderPage} next={orderNext} busy={busy} onLimit={n => { orderCursors.current = [undefined]; void run(ctx => loadOrders(ctx, 0, n, undefined)); }} onPage={direction => { const page = orderPage + direction; if (direction > 0) orderCursors.current[page] = orderNext; void run(ctx => loadOrders(ctx, page)); }}/>
+    {servicesVisible && <><h3>Permiso de publicación del agente</h3><p>El acceso humano puede autorizar a su agente actual a enviar fichas a revisión. Una autorización no activa servicios: siguen requiriendo control del endpoint y revisión manual.</p>
+      {permissionReadOnly && <p role='status'>Este acceso puede consultar el espacio. Abre el acceso humano de tu archivo de recuperación para administrar el permiso.</p>}
+      {permission && <><p>Envío de servicios: <strong>{permission.allowServiceSubmission ? 'Autorizado' : 'Sin autorización'}</strong> · generación {permission.generation}, revisión {permission.revision}.</p>
+        <button disabled={busy || uncertain || !!intent || permission.allowServiceSubmission} onClick={() => preparePermission(true)}>Preparar autorización</button><button disabled={busy || uncertain || !!intent || !permission.allowServiceSubmission} onClick={() => preparePermission(false)}>Preparar revocación</button>
+        <label>Recuperar un cambio guardado<input type='file' accept='application/json,.json' disabled={busy} onChange={e => { void restorePermission(e.target.files?.[0]); e.target.value = ''; }}/></label>
+        {intent && <div className={styles.intent}><p>Cambio: <strong>{intent.allowServiceSubmission ? 'Autorizar envío a revisión' : 'Revocar envío a revisión'}</strong></p><p>Referencia: <code>{intent.changeId}</code></p><button disabled={busy} onClick={() => { saveIntent(intent); setIntentSaved(true); }}>Guardar intención del permiso</button><label className={styles.check}><input type='checkbox' checked={confirmed} disabled={busy || !intentSaved} onChange={e => setConfirmed(e.target.checked)}/>He guardado el archivo y confirmo este cambio.</label><button disabled={busy || !intentSaved || !confirmed} onClick={() => void run(submitPermission, true)}>{uncertain ? 'Recuperar el mismo cambio' : 'Confirmar permiso'}</button>{uncertain && <p role='status'>El resultado requiere comprobación. Recupera con el mismo identificador, revisión y decisión; no crees otro cambio automáticamente.</p>}<button disabled={busy} onClick={() => void run(async ctx => { await loadPermission(ctx); if (current(ctx)) { setIntent(undefined); setConfirmed(false); setIntentSaved(false); setUncertain(false); setNotice('Estado consultado. Puedes preparar un cambio nuevo si lo necesitas.'); } })}>Consultar estado y descartar esta intención</button></div>}
+      </>}
+      <h3>Mis servicios</h3>{paused && <p role='status'>Nuevas publicaciones y compras pausadas. La lectura y recuperación del historial siguen disponibles.</p>}<p>Tu agente envía la ficha por MCP con <code>submit_market_service</code> y guarda antes su intención. Puedes consultar aquí el estado y la prueba de control.</p>
+      {!busy && !mine.length && <p>No hay servicios propios en esta página.</p>}
+      {mine.map(service => <article key={service.submissionId}><h4>{service.card.name}</h4><p>Estado: {service.status}</p><p>Referencia: <code>{service.submissionId}</code></p>{service.control && <details><summary>Prueba de control del endpoint</summary><p>Publica este contenido exacto en {service.control.domain}{service.control.verificationPath}:</p><pre>{service.control.expectedRecord}</pre></details>}{permission && <button disabled={busy || service.status === 'withdrawn'} onClick={() => void run(async ctx => { await api(ctx, `/api/market/services/${service.submissionId}`, {action: 'withdraw'}); await loadMine(ctx); })}>Retirar de nuevas compras</button>}</article>)}
+      <Pager name='mis servicios' limit={mineLimit} page={minePage} next={mineNext} busy={busy} onLimit={n => { mineCursors.current = [undefined]; void run(ctx => loadMine(ctx, 0, n, undefined)); }} onPage={direction => { const page = minePage + direction; if (direction > 0) mineCursors.current[page] = mineNext; void run(ctx => loadMine(ctx, page)); }}/>
+    </>}
   </section>;
 }
