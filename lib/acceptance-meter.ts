@@ -100,7 +100,7 @@ export function measuredHandler<A extends unknown[]>(handler: (...args: A) => Re
       try {
         if (options.budget !== false) {
           const kind=options.classify ? await options.classify(...args) : await classifyOperationalRequest(args[0] instanceof Request ? args[0] : undefined);
-          if(operationalMeterEnabled()&&kind.profile==='recovery'&&args[0] instanceof Request){counts.operationalPendingClass=kind;counts.operationalProfile='public';}
+          if(operationalMeterEnabled()&&kind.profile!=='public'&&!kind.bootstrapCreation&&args[0] instanceof Request){counts.operationalPendingClass=kind;counts.operationalProfile='public';}
           else await gate(kind);
         }
         response = await handler(...args);
