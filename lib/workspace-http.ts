@@ -46,8 +46,8 @@ export async function parseWorkspaceBody<T>(request: Request, schema: z.ZodType<
   for (;;) { const { done, value } = await reader.read(); if (done) break; size += value.byteLength; if (size > maxBytes) { await reader.cancel(); throw new WorkspaceError("REQUEST_TOO_LARGE", 413); } chunks.push(value); }
   try { return schema.parse(JSON.parse(Buffer.concat(chunks).toString("utf8"))); } catch { throw new WorkspaceError("INVALID_REQUEST", 400); }
 }
-export async function authenticateWorkspaceRequest(request: Request, role?: WorkspaceRole) {
-  assertWorkspaceRequest(request); const principal = await requireWorkspacePrincipal(request.headers.get("authorization"), role);
+export async function authenticateWorkspaceRequest(request: Request, role?: WorkspaceRole, allowQuery = false) {
+  assertWorkspaceRequest(request, allowQuery); const principal = await requireWorkspacePrincipal(request.headers.get("authorization"), role);
   await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.generation, principal.role === "bootstrap" ? workspaceBearerHash(request.headers.get("authorization")) : undefined);
   return principal;
 }

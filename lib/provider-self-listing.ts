@@ -7,7 +7,6 @@ import { parseServiceCardShape } from "./service-card-schema.ts";
 import { validateCardRules, validateCardShape } from "./service-ingest.ts";
 
 export const SELF_LISTING_VERSION = "bazaar.provider-submission/v1" as const;
-const MAX_QUEUE_SIZE = 100;
 const SUBMISSION_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type ControlProofMethod = "dns-txt" | "http-well-known";
@@ -84,7 +83,7 @@ const iso = (v:unknown):v is string => typeof v === "string" && /^\d{4}-\d{2}-\d
 const hex = (v:unknown) => typeof v === "string" && /^[a-f0-9]{64}$/.test(v);
 export function validateReviewState(value:unknown): asserts value is ReviewState<ProviderSubmission> {
  const state=value as ReviewState<ProviderSubmission>;
- if(!state || state.version!==1 || !Array.isArray(state.records) || state.records.length>100 || Object.keys(state).sort().join(",")!=="records,version") throw Error("Invalid state");
+ if(!state || state.version!==1 || !Array.isArray(state.records) || Buffer.byteLength(JSON.stringify(state),'utf8')>1024*1024 || Object.keys(state).sort().join(",")!=="records,version") throw Error("Invalid state");
  const ids=new Set();
  for(const r of state.records){const s=r?.submission;
  if(!parseServiceCardShape(s?.card).ok)throw Error("Invalid stored card shape");
@@ -192,7 +191,6 @@ export async function submitProviderDraft(
   return safe(()=>transaction(async(reviewQueue,state)=>{
   const existing=state.records.find(r=>r.submission.submissionId===options.submissionId);
   if(existing)return existing.digest===digest && tokenMatches(options.submissionToken,existing.tokenHash)?{ok:true as const,value:clone(reviewQueue.get(options.submissionId)!)}:failure("SUBMISSION_CONFLICT","Submission identity conflict.");
-  if(state.records.length>=100)return failure("QUEUE_FULL","Review retention capacity reached.");
   if ([...reviewQueue.values()].some((entry) => entry.card.id === shape.card.id && !["rejected", "expired"].includes(entry.status))) {
     return { ok: false, error: { code: "DUPLICATE_SUBMISSION", message: "Ya existe una revisión activa para esta Service Card.", retryable: false, field: "card.id" } };
   }
@@ -228,6 +226,11 @@ export async function submitProviderDraft(
 
 export async function getSubmissionStatus(submissionId:string,submissionToken?:string){return safe(()=>transaction((queue,state)=>{const r=state.records.find(r=>r.submission.submissionId===submissionId);if(!r || typeof submissionToken!=="string" || !tokenMatches(submissionToken,r.tokenHash))return failure("SUBMISSION_NOT_FOUND","Submission access denied.");expireOldSubmissions(queue);const s=queue.get(submissionId)!;return {ok:true as const,value:{version:s.version,submissionId:s.submissionId,status:s.status,publiclyActive:s.publiclyActive,submittedAt:s.submittedAt,updatedAt:s.updatedAt,expiresAt:s.expiresAt,serviceCardId:s.card.id,control:clone(s.control),...(s.review?{review:{decision:s.review.decision,reasons:clone(s.review.reasons),reviewedAt:s.review.reviewedAt}}:{})}};},false));}
 export async function getSubmissionForOperator(id:string,expire=true):Promise<SelfListingResult<ProviderSubmission>>{return safe(()=>transaction(q=>{const s=q.get(id);return s?{ok:true,value:clone(s)}:failure("SUBMISSION_NOT_FOUND","Submission unknown.");},expire));}
+/** One read per catalog request; no expiry mutation and no per-service Redis reads. */
+export async function getMarketReviewSnapshot(ids: readonly string[]): Promise<SelfListingResult<ProviderSubmission[]>> {
+  const wanted = new Set(ids);
+  return safe(() => transaction(queue => ({ ok: true as const, value: [...queue.values()].filter(s => wanted.has(s.submissionId)).map(clone) }), false));
+}
 export async function recordControlProofResult(
   submissionId: string,
   result: { challengeId: string; domain: string; verified: boolean; observedAt?:string;source?:string;challengeHash?:string;cardHash?:string },

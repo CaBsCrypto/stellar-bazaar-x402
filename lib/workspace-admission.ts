@@ -23,12 +23,12 @@ export function assertWorkspaceCreationAdmission(bootstrapHash: string): void {
     if (raw) throw new WorkspaceError("WORKSPACE_UNAVAILABLE");
     return;
   }
-  if (mode !== "invite-only" || !raw || Buffer.byteLength(raw, "utf8") > 512) {
+  if (mode !== "invite-only" || !raw || Buffer.byteLength(raw, "utf8") > 1024 * 1024) {
     throw new WorkspaceError("WORKSPACE_UNAVAILABLE");
   }
   let hashes: unknown;
   try { hashes = JSON.parse(raw); } catch { throw new WorkspaceError("WORKSPACE_UNAVAILABLE"); }
-  if (!Array.isArray(hashes) || hashes.length < 1 || hashes.length > 5 ||
+  if (!Array.isArray(hashes) || hashes.length < 1 ||
       hashes.some(hash => !workspaceHashSchema.safeParse(hash).success) ||
       new Set(hashes).size !== hashes.length) {
     throw new WorkspaceError("WORKSPACE_UNAVAILABLE");

@@ -8,7 +8,7 @@ import { Redis } from "@upstash/redis";
 import { z } from "zod";
 import { activitySchema, type ActivityInput, type ActivityEvent } from "./activity.ts";
 import { canonicalOperationJson, parseOperationHistoryInput, operationHistoryInputSchema, type OperationHistoryInput, type OperationHistoryRecord } from "./operation-history.ts";
-import { WORKSPACE_LIMITS, WorkspaceError, createWorkspaceSchema, workspaceAccessSchema, workspaceHashSchema, workspaceIdentifierSchema, workspaceTextSchema, type WorkspacePrincipal, type WorkspaceRole, type WorkspaceConversation, type WorkspaceTask } from "./workspace-types.ts";
+import { WORKSPACE_LIMITS, WorkspaceError, createWorkspaceSchema, workspaceAccessSchema, marketPermissionChangeSchema, workspaceHashSchema, workspaceIdentifierSchema, workspaceTextSchema, type WorkspacePrincipal, type WorkspaceRole, type WorkspaceConversation, type WorkspaceTask } from "./workspace-types.ts";
 import { legacyHistoryReservations } from "./operation-history-auth.ts";
 import { workspaceGlobalRequestLimits } from "./workspace-admission.ts";
 
@@ -17,7 +17,7 @@ const fileDiagnostics = channel("bazaar.workspace.file");
 const uuid = z.string().uuid(), iso = z.string().datetime();
 const accessIntentSchema = z.object({ expectedGeneration: z.number().int().min(1), digest: workspaceHashSchema, generation: z.number().int().min(2), revoked: z.boolean() }).strict();
 const metaSchema = z.object({ creationId: uuid, workspaceId: uuid, ownerId: z.string().regex(/^ow_[a-f0-9]{32}$/), agentId: z.string().regex(/^agent_[a-f0-9]{32}$/), bootstrapHash: workspaceHashSchema, initialHumanHash: workspaceHashSchema, initialAgentHash: workspaceHashSchema, humanHash: workspaceHashSchema.nullable(), agentHash: workspaceHashSchema.nullable(), retiredHashes: z.array(workspaceHashSchema).max(4096), accessIntents: z.array(accessIntentSchema).max(4094), generation: z.number().int().min(1), revoked: z.boolean(), createdAt: iso, documentRevision: uuid, documentBytes: z.number().int().min(0).max(WORKSPACE_LIMITS.ownerBytes) }).strict();
-const registrySchema = z.object({ version: z.literal(1), revision: uuid, workspaces: z.array(metaSchema).max(WORKSPACE_LIMITS.owners), creationWindows: z.array(z.object({ key: z.string().max(100), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()).max(102), requestWindows: z.array(z.object({ ownerId: z.string(), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()).max(100), globalRequestQuota: z.object({ minute: z.number().int().min(0), minuteCount: z.number().int().min(0).max(1000), day: z.number().int().min(0), dayCount: z.number().int().min(0).max(10000) }).strict().refine(q => q.day === Math.floor(q.minute / 1440) && q.dayCount >= q.minuteCount).optional() }).strict();
+const registrySchema = z.object({ version: z.literal(1), revision: uuid, workspaces: z.array(metaSchema), creationWindows: z.array(z.object({ key: z.string().max(100), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()), requestWindows: z.array(z.object({ ownerId: z.string(), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()), globalRequestQuota: z.object({ minute: z.number().int().min(0), minuteCount: z.number().int().min(0).max(1000), day: z.number().int().min(0), dayCount: z.number().int().min(0).max(10000) }).strict().refine(q => q.day === Math.floor(q.minute / 1440) && q.dayCount >= q.minuteCount).optional() }).strict();
 const messageSchema = z.object({ messageId: workspaceIdentifierSchema, conversationId: workspaceIdentifierSchema, taskId: workspaceIdentifierSchema, actor: z.enum(["human", "agent"]), text: workspaceTextSchema, recordedAt: iso, operationId: workspaceIdentifierSchema.optional() }).strict();
 const conversationSchema = z.object({ conversationId: workspaceIdentifierSchema, title: z.string().min(1).max(160), createdAt: iso, messages: z.array(messageSchema).max(500) }).strict();
 const taskSchema = z.object({ taskId: workspaceIdentifierSchema, conversationId: workspaceIdentifierSchema, humanMessageId: workspaceIdentifierSchema, text: workspaceTextSchema, status: z.enum(["pending", "claimed", "responded", "uncertain"]), createdAt: iso, attemptId: workspaceIdentifierSchema.optional(), agentId: z.string().optional(), responseMessageId: workspaceIdentifierSchema.optional(), operationId: workspaceIdentifierSchema.optional() }).strict();
@@ -27,6 +27,7 @@ type Registry = z.infer<typeof registrySchema>;
 type Meta = z.infer<typeof metaSchema>;
 const frozenUuid = z.string().regex(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
 const frozenOwnerSchema = z.object({ creationId: frozenUuid, ownerUuid: frozenUuid, ownerId: z.string().regex(/^ow_[a-f0-9]{32}$/), hashes: z.object({ bootstrap: workspaceHashSchema, human: workspaceHashSchema, agent: workspaceHashSchema, rotatedHuman: workspaceHashSchema, rotatedAgent: workspaceHashSchema }).strict() }).strict();
+const marketPermissionSchema = z.object({ version: z.literal(1), ownerId: z.string().regex(/^ow_[a-f0-9]{32}$/), agentId: z.string().regex(/^agent_[a-f0-9]{32}$/), generation: z.number().int().min(1), revision: z.number().int().min(1), allowServiceSubmission: z.boolean(), changeId: uuid, digest: workspaceHashSchema }).strict();
 type FrozenOwner = z.infer<typeof frozenOwnerSchema>;
 type Document = Omit<z.infer<typeof docSchema>, "operations" | "events"> & { operations: { digest: string; record: OperationHistoryRecord }[]; events: { digest: string; record: ActivityEvent }[] };
 export type WorkspaceLegacyRegistry = { ownerIds: string[]; hashes: string[] };
@@ -115,7 +116,13 @@ function enforceUnpaid(input: OperationHistoryInput) {
   if (input.mode === "testnet" || input.payment.status !== "not-requested" || input.payment.amountAtomic !== "0" || input.payment.transactionHash || input.delivery.artifact) throw new WorkspaceError("WORKSPACE_UNPAID_ONLY", 403);
 }
 type Snapshot = { registryRaw: string; documentRaw: string; marker: string };
-interface Backend { read(ownerId?: string): Promise<Snapshot>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string) => Promise<void>) => Promise<T>): Promise<T> }
+export type MarketCommitGuard = { keys: string[]; values: (string | null)[] };
+type PermissionSnapshot = Snapshot & { permissionRaw: string | null; guard?: MarketCommitGuard };
+interface Backend { read(ownerId?: string): Promise<Snapshot>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string) => Promise<void>) => Promise<T>): Promise<T>; readPermission(ownerId: string): Promise<PermissionSnapshot>; transactPermission<T>(ownerId: string, callback: (snapshot: PermissionSnapshot, commit: (permission: string) => Promise<void>) => Promise<T>): Promise<T> }
+export const READ_MARKET_PERMISSION_LUA = `return {redis.call('GET', KEYS[1]) or '', redis.call('GET', KEYS[2]) or '', redis.call('GET', KEYS[3]) or '', redis.call('GET', KEYS[4]) or ''}`;
+export const COMMIT_MARKET_PERMISSION_LUA = `
+for i=1,4 do if (redis.call('GET',KEYS[i]) or '') ~= ARGV[i] then return 0 end end
+redis.call('SET',KEYS[4],ARGV[5]); return 1`;
 // Only this error proves the Lua comparison rejected a write before any effect.
 class RedisCompareConflict extends WorkspaceError { constructor() { super("WORKSPACE_CONFLICT", 409); } }
 function validatePrefix(prefix: string) { if (!/^bazaar-workspace:(local-test|preview|production|pilot-[a-f0-9]{32}|isolated-[a-f0-9]{32})$/.test(prefix)) throw unavailable(); return prefix; }
@@ -131,7 +138,20 @@ function redisBackend(redis: WorkspaceRedis, prefix: string, allowedOwners?: rea
     if (!Array.isArray(result) || result.length !== 3 || !result.every(v => typeof v === "string")) throw unavailable();
     return { registryRaw: result[0], documentRaw: result[1], marker: result[2] };
   };
-  return { read, async transact(ownerId, callback) {
+  const permissionKeys = (ownerId: string) => [...keys(ownerId), `${prefix}:{${tag}}:market-permissions:${ownerId}`];
+  const readPermission = async (ownerId: string): Promise<PermissionSnapshot> => {
+    const allKeys = permissionKeys(ownerId), result = await redis.eval(READ_MARKET_PERMISSION_LUA, allKeys, []);
+    if (!Array.isArray(result) || result.length !== 4 || !result.every(v => typeof v === 'string')) throw unavailable();
+    return { registryRaw: result[0], documentRaw: result[1], marker: result[2], permissionRaw: result[3] || null, guard: { keys: [allKeys[0], allKeys[3]], values: [result[0], result[3] || null] } };
+  };
+  return { read, readPermission, async transactPermission(ownerId, callback) {
+    const snapshot = await readPermission(ownerId);
+    return callback(snapshot, async permission => {
+      const result = await redis.eval(COMMIT_MARKET_PERMISSION_LUA, permissionKeys(ownerId), [snapshot.registryRaw, snapshot.documentRaw, snapshot.marker, snapshot.permissionRaw ?? '', permission]);
+      if (result === 0) throw new WorkspaceError('PERMISSION_CONFLICT', 409);
+      if (result !== 1) throw unavailable();
+    });
+  }, async transact(ownerId, callback) {
     const snapshot = await read(ownerId);
     return callback(snapshot, async (registry, document) => {
       const result = await redis.eval(COMMIT_WORKSPACE_LUA, keys(ownerId), [snapshot.registryRaw, snapshot.documentRaw, snapshot.marker, registry, document]);
@@ -148,7 +168,7 @@ function fileFailure(phase: string, error: unknown) {
 }
 function fileBackend(directory: string, prefix: string): Backend {
   validatePrefix(prefix); const root = join(resolve(directory), prefix.split(":")[1]);
-  const paths = (ownerId?: string) => ({ registry: join(root, "registry.json"), document: join(root, ownerId ? `owner-${ownerId}.json` : "unused.json"), marker: join(root, "initialized"), pending: join(root, "pending.json"), lock: join(root, "lock") });
+  const paths = (ownerId?: string) => ({ registry: join(root, "registry.json"), document: join(root, ownerId ? `owner-${ownerId}.json` : "unused.json"), permission: join(root, `market-permissions-${ownerId}.json`), marker: join(root, "initialized"), pending: join(root, "pending.json"), lock: join(root, "lock") });
   async function locked<T>(ownerId: string | undefined, callback: (p: ReturnType<typeof paths>) => Promise<T>) {
     await mkdir(root, { recursive: true }); const p = paths(ownerId);
     let handle, reportedPermissionContention = false; const until = Date.now() + 2500;
@@ -168,7 +188,8 @@ function fileBackend(directory: string, prefix: string): Backend {
   }
   const snapshot = async (p: ReturnType<typeof paths>) => { try { const values = await Promise.all([optionalRead(p.registry), optionalRead(p.document), optionalRead(p.marker)]); return { registryRaw: values[0], documentRaw: values[1], marker: values[2] }; } catch (e) { fileFailure("snapshot-read", e); throw e; } };
   const atomicWrite = async (path: string, raw: string, phase: string) => { try { const temp = path + "." + randomUUID() + ".tmp"; const h = await open(temp, "wx"); try { await h.writeFile(raw); await h.sync(); } finally { await h.close(); } await rename(temp, path); } catch (e) { fileFailure(phase, e); throw e; } };
-  return { read: ownerId => locked(ownerId, snapshot), transact: (ownerId, callback) => locked(ownerId, async p => callback(await snapshot(p), async (registry, document) => {
+  const permissionSnapshot = async (p: ReturnType<typeof paths>): Promise<PermissionSnapshot> => ({ ...await snapshot(p), permissionRaw: await optionalRead(p.permission) || null });
+  return { read: ownerId => locked(ownerId, snapshot), readPermission: ownerId => locked(ownerId, permissionSnapshot), transactPermission: (ownerId, callback) => locked(ownerId, async p => callback(await permissionSnapshot(p), async permission => { await atomicWrite(p.permission, permission, 'write-market-permission'); })), transact: (ownerId, callback) => locked(ownerId, async p => callback(await snapshot(p), async (registry, document) => {
     await atomicWrite(p.pending, JSON.stringify({ transaction: randomUUID() }), "write-pending");
     if (document) await atomicWrite(p.document, document, "write-owner");
     await atomicWrite(p.registry, registry, "write-registry"); await atomicWrite(p.marker, "workspace-v1", "write-marker"); try { await unlink(p.pending); } catch (e) { fileFailure("clear-pending-after-commit", e); throw e; }
@@ -211,6 +232,43 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     return result;
   }); });
   const store = {
+    async activeOwnerIds(ownerIds: readonly string[]): Promise<Set<string>> { return safe(async () => {
+      const s = await backend.read(), registry = readRegistry(s.registryRaw, s.marker, reservations()), wanted = new Set(ownerIds);
+      return new Set(registry.workspaces.filter(m => wanted.has(m.ownerId) && !m.revoked).map(m => m.ownerId));
+    }); },
+    async readMarketPermissionSnapshot(p: WorkspacePrincipal) { return safe(async () => {
+      if (p.role !== 'human' && p.role !== 'agent') throw new WorkspaceError('FORBIDDEN', 403);
+      const s = await backend.readPermission(p.ownerId), registry = readRegistry(s.registryRaw, s.marker, reservations());
+      const meta = registry.workspaces.find(m => m.ownerId === p.ownerId);
+      if (!meta || meta.revoked || meta.generation !== p.generation || meta.workspaceId !== p.workspaceId || meta.agentId !== p.agentId) throw new WorkspaceError('UNAUTHORIZED', 401);
+      validateDocument(s.documentRaw, meta);
+      if (s.permissionRaw && bytes(s.permissionRaw) > 4096) throw unavailable('permission-envelope');
+      const permission = s.permissionRaw ? marketPermissionSchema.parse(JSON.parse(s.permissionRaw)) : undefined;
+      if (permission && (permission.ownerId !== meta.ownerId || permission.agentId !== meta.agentId || permission.generation > meta.generation)) throw unavailable('permission-binding');
+      return { permission: { permission: 'market:submit' as const, revision: permission?.revision ?? 0, generation: meta.generation, allowServiceSubmission: permission?.generation === meta.generation && permission.allowServiceSubmission }, guard: s.guard };
+    }); },
+    async changeMarketPermissions(p: WorkspacePrincipal, input: z.infer<typeof marketPermissionChangeSchema>) { return safe(async () => {
+      if (p.role !== 'human') throw new WorkspaceError('FORBIDDEN', 403);
+      const parsed = marketPermissionChangeSchema.parse(input);
+      return backend.transactPermission(p.ownerId, async (s, commit) => {
+        const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === p.ownerId);
+        if (!meta || meta.revoked || meta.generation !== p.generation || meta.workspaceId !== p.workspaceId || meta.agentId !== p.agentId) throw new WorkspaceError('UNAUTHORIZED', 401);
+        validateDocument(s.documentRaw, meta);
+        if (s.permissionRaw && bytes(s.permissionRaw) > 4096) throw unavailable('permission-envelope');
+        const old = s.permissionRaw ? marketPermissionSchema.parse(JSON.parse(s.permissionRaw)) : undefined;
+        if (old && (old.ownerId !== p.ownerId || old.agentId !== p.agentId || old.generation > p.generation)) throw unavailable('permission-binding');
+        const intent = digest({ ...parsed, ownerId: meta.ownerId, agentId: meta.agentId, generation: meta.generation });
+        if (old?.changeId === parsed.changeId) {
+          if (old.digest !== intent) throw new WorkspaceError('PERMISSION_CONFLICT', 409);
+          return { permission: { permission: 'market:submit' as const, revision: old.revision, generation: meta.generation, allowServiceSubmission: old.allowServiceSubmission }, created: false };
+        }
+        if (parsed.expectedRevision !== (old?.revision ?? 0)) throw new WorkspaceError('PERMISSION_CONFLICT', 409);
+        const next = { version: 1 as const, ownerId: meta.ownerId, agentId: meta.agentId, generation: meta.generation, revision: parsed.expectedRevision + 1, allowServiceSubmission: parsed.allowServiceSubmission, changeId: parsed.changeId, digest: intent };
+        const raw = JSON.stringify(next); if (bytes(raw) > 4096) throw new WorkspaceError('WORKSPACE_CAPACITY', 409);
+        marketPermissionSchema.parse(next); await commit(raw);
+        return { permission: { permission: 'market:submit' as const, revision: next.revision, generation: meta.generation, allowServiceSubmission: next.allowServiceSubmission }, created: true };
+      });
+    }); },
     async isOwnerActive(ownerId: string): Promise<boolean> { return safe(async () => {
       const s = await backend.read(), registry = readRegistry(s.registryRaw, s.marker, reservations());
       return registry.workspaces.some(m => m.ownerId === ownerId && !m.revoked);
@@ -256,10 +314,6 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         const hashes = [bootstrapHash, input.humanAccessHash, input.agentAccessHash];
         if (new Set(hashes).size !== 3 || hashes.some(h => legacy.hashes.includes(h) || registry.workspaces.some(m => [m.bootstrapHash, m.initialHumanHash, m.initialAgentHash, m.humanHash, m.agentHash, ...m.retiredHashes].includes(h)))) throw new WorkspaceError("WORKSPACE_COLLISION", 409);
         if (legacy.ownerIds.includes(ownerId) || s.documentRaw) throw new WorkspaceError("WORKSPACE_COLLISION", 409);
-        // Retained/revoked records still occupy a pilot slot. Changing the
-        // invitation list must not expand the pilot's lifetime owner capacity.
-        const ownerLimit = process.env.BAZAAR_WORKSPACE_ADMISSION === "invite-only" ? 5 : WORKSPACE_LIMITS.owners;
-        if (registry.workspaces.length >= ownerLimit) throw new WorkspaceError("WORKSPACE_CAPACITY", 409);
         const now = Date.now(); consumeGlobalQuota(registry, now, globalLimits); registry.creationWindows = registry.creationWindows.filter(w => w.until > now);
         if (globalLimits) {
           registry.requestWindows = registry.requestWindows.filter(w => w.until > now);

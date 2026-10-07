@@ -20,4 +20,5 @@ export class WorkspaceError extends Error {
   readonly retryAfter?: number;
   constructor(code: string, status = 503, retryAfter?: number) { super(code); this.code = code; this.status = status; this.retryAfter = retryAfter; }
 }
-export const WORKSPACE_LIMITS = Object.freeze({ dailyCreations: 50, hourlyCreationsPerIp: 50, owners: 100, ownerBytes: 128 * 1024, globalBytes: 12 * 1024 * 1024, registryBytes: 1024 * 1024, requestsPerMinute: 120 });
+export const WORKSPACE_LIMITS = Object.freeze({ dailyCreations: 50, hourlyCreationsPerIp: 50, ownerBytes: 128 * 1024, globalBytes: 12 * 1024 * 1024, registryBytes: 1024 * 1024, requestsPerMinute: 120 });
+export const marketPermissionChangeSchema = z.object({ changeId: z.string().uuid(), expectedRevision: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER - 1), allowServiceSubmission: z.boolean() }).strict();

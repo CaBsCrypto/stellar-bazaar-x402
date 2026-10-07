@@ -17,6 +17,11 @@ import { reviewSharedConfigured } from "./provider-review-runtime";
 import { bazaarRoles, skillPackage } from "./bazaar-skills";
 import { MCP_VERSION, MCP_WRITES } from "./mcp-tool-contract";
 import {registerMarketplaceTools} from './marketplace-mcp';
+import {marketEnabled,marketCatalogPage,marketServiceSnapshot,marketServiceDto,sha} from './marketplace';
+import {marketPage} from './market-pagination';
+import {workspaceRequestOrigin} from './workspace-http';
+import {workspacePublicOrigin} from './workspace-public-origin';
+import {USDC_TESTNET_PAYMENT_IDENTITY} from './payment-assets';
 export interface ProviderMcpHandlers {
   submit(body: unknown): Promise<McpHttpResult>;
   status(submissionId: string): Promise<McpHttpResult>;
@@ -59,7 +64,6 @@ const errorEnvelope = (
 const notFound = (id: string) =>
   errorEnvelope("RESOURCE_NOT_FOUND", `Unknown service id: ${id}`, "discover");
 
-const PAGE_LIMIT_MAX = 50;
 const encodeCursor = (offset: number) =>
   Buffer.from(String(offset)).toString("base64url");
 const decodeCursor = (raw: string): number | null => {
@@ -72,6 +76,8 @@ const decodeCursor = (raw: string): number | null => {
 };
 
 export function createOnboardingMcpServer(readOperationHistory?: () => Promise<McpHttpResult>, provider?: ProviderMcpHandlers, workspace?:WorkspaceMcpHandlers, incoming?:Request) {
+  const marketOrigin = () => incoming ? workspaceRequestOrigin(incoming) : workspacePublicOrigin() ?? 'https://context-unavailable.invalid';
+  const marketFailure = (error: unknown) => errorEnvelope(error && typeof error === 'object' && 'code' in error ? String(error.code) : 'MARKET_UNAVAILABLE', 'The market request was not confirmed. Recover the saved intent before retrying effects.', 'discover', true);
   const server = new McpServer({
     name: "stellar-bazaar-discovery",
     version: MCP_VERSION,
@@ -87,6 +93,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
     async () =>
       result({
         ...pilotCapabilityCard,
+        ...(marketEnabled()?{serviceStatusValues:['activated','awaiting-control-proof','pending-manual-review','withdrawn'],policy:{metadataUntrusted:true,arbitraryUrlsRejected:true,execution:'seller-external-agent'}}:{}),
         historyConnection,
         testnetFunding: { instructions: testnetFundingInstructions, automatic: false },
         writes: MCP_WRITES,
@@ -95,26 +102,26 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           creationTool: "create_bazaar_workspace", enabled:process.env.BAZAAR_ENABLE_OPEN_WORKSPACES==='true',
           humanView:"/agent-chat", guide:"/WORKSPACE_AGENT.md", agentRunsExternally:true,
           emailRequired:false, operatorApprovalRequired:false, automaticPolling:false,
-          payments:process.env.BAZAAR_ENABLE_MARKETPLACE==='true'?'native-XLM-testnet-direct':'disabled', fileUploads:false,
-          marketplace: {enabled:process.env.BAZAAR_ENABLE_MARKETPLACE==='true',orders:'/api/market/orders',sellerTools:['list_market_orders','claim_market_order','deliver_market_order','fail_market_order'],feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
+          payments:marketEnabled()?'x402-stellar-exact-v2':'disabled', fileUploads:false,
+          marketplace: {enabled:marketEnabled(),catalog:'/api/market/catalog',orders:'/api/market/orders',submissionTool:'submit_market_service',submissionStatusTool:'get_market_submission',submissionPermission:{scope:'market:submit',endpoint:'/api/market/agent-permissions',grantRole:'human',generationBound:true},buyerTools:['list_market_services','create_market_order','get_market_order'],sellerTools:['list_market_orders','claim_market_order','deliver_market_order','fail_market_order','uncertain_market_order'],feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
           storage:process.env.BAZAAR_WORKSPACE_BACKEND??'not-configured',
           creationAccess:"Save UUID, bootstrap/human/agent accesses privately before creation. Send hashes only; bootstrap uses Authorization. Server assigns owner.",
         },
         registry: {
           discovery: "read-only",
-          mutationViaMcp: false,
+          mutationViaMcp: marketEnabled(),
           providerMetadataTrusted: false,
         },
         providerOnboarding: {
           guide: "/PROVIDER_ONBOARDING.md",
           validationTool: "validate_service_card",
-          submissionEndpoint: "/api/provider-self-listing",
-          submissionTool: "submit_provider_request",
-          statusTool: "get_provider_request_status",
+          submissionEndpoint: marketEnabled()?'/api/market/services':"/api/provider-self-listing",
+          submissionTool: marketEnabled()?'submit_market_service':"submit_provider_request",
+          statusTool: marketEnabled()?'get_market_submission':"get_provider_request_status",
           intakeEnabled: selfListingIntakeConfigured() && (publicProviderReviewConfigured() || (!process.env.VERCEL && (!!process.env.BAZAAR_PROVIDER_REVIEW_DIR || reviewSharedConfigured()))),
           submissionStorage: reviewSharedConfigured()?"shared-redis":"local-file-pilot",
           publicIntakeEnabled: selfListingIntakeConfigured() && publicProviderReviewConfigured(),
-          submissionAccess: "Client saves a UUID and 32-byte token before POST; reuse the UUID and Authorization: Bearer token for recovery. Never put the token in a URL.",
+          submissionAccess: marketEnabled()?'Save submission UUID and canonical card before POST. Use your workspace agent Bearer after the human grants market:submit; recover the same UUID with get_market_submission.':"Client saves a UUID and 32-byte token before POST; reuse the UUID and Authorization: Bearer token for recovery. Never put the token in a URL.",
           controlVerification: "authenticated-operator-dns-or-pinned-https",
           publicActivation: "separate-operator-action",
           automaticPublication: false,
@@ -122,22 +129,24 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           whenUnavailable: "Keep the validated ServiceCard locally and ask the Bazaar operator for a review channel. Do not report it as submitted or published.",
         },
         architecture: {
-          standard: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? 'Stellar native testnet payment + seller MCP delivery' : "x402 (HTTP 402 Payment Required)",
+          standard: marketEnabled() ? 'x402-stellar-exact-v2 + seller MCP delivery' : "x402 (HTTP 402 Payment Required)",
           network: "stellar:testnet",
-          settlementAsset: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? 'XLM native testnet' : "USDC (CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA)",
-          facilitatorUrl: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? null : "https://channels.openzeppelin.com/x402/testnet",
+          settlementAsset: 'USDC',
+          settlementIdentity: USDC_TESTNET_PAYMENT_IDENTITY,
+          ...(marketEnabled()?{newServicePrice:'0.01',purchaseSigning:'external-buyer-local-wallet'}:{}),
+          facilitatorUrl: "https://channels.openzeppelin.com/x402/testnet",
           monetization: {
             takeRateFeeBps: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? 0 : 100,
             defindexStaking: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? null : "85% yield provider / 15% platform performance fee",
           },
-          providerStepsToDeliver: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? ['Publish through your private space; verify endpoint control and manual review.','Buyer signs a native XLM testnet payment bound to this order.','Use your external seller agent to list, claim and deliver the paid order through MCP.'] : [
+          providerStepsToDeliver: marketEnabled() ? ['Obtain human market:submit permission; submit the fixed-price canonical card through your private agent space. Verify endpoint control and manual review.','The external buyer creates a bound order and pays its exact USDC testnet x402 challenge with a local signer.','Use your external seller agent to list, claim and deliver the paid order through MCP.'] : [
             "1. Expose HTTP endpoint that challenges requests without payment-signature with HTTP 402 + PAYMENT-REQUIRED header.",
             "2. Define deterministic ServiceCard manifest with name, routeTemplate, inputs, price and Stellar destination wallet.",
             "3. Validate ServiceCard conformance via validate_service_card tool or POST /api/conformance/service-card.",
             "4. Verify on-chain payment via facilitator and deliver payload with PAYMENT-RESPONSE header.",
           ],
         },
-        paymentFlow: paymentFlowCapability,
+        paymentFlow: marketEnabled()?{protocol:'x402-stellar-exact-v2',asset:USDC_TESTNET_PAYMENT_IDENTITY,price:'0.01',wallet:'external-local-signer',automaticSigning:false}:paymentFlowCapability,
         operationHistory: { tool: "get_operation_history", authentication: "HTTP Authorization Bearer", endpoint: "/api/operations", evidence: "agent-reported", paymentsInitiated: false, humanApprovalRequired: false },
       }),
   );
@@ -147,9 +156,10 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
     {
       description:
         "List active service cards (static catalog + provider-registered dynamic cards). Pilot fixtures are excluded unless includePilots is true.",
-      inputSchema: { includePilots: z.boolean().optional() },
+      inputSchema: { includePilots: z.boolean().optional(),limit:z.number().int().min(1).max(20).optional(),cursor:z.string().max(512).optional() },
     },
-    async ({ includePilots }) => {
+    async ({ includePilots,limit,cursor }) => {
+      if(marketEnabled())try{const page=await marketCatalogPage({limit,cursor},marketOrigin());return result({services:page.services.map(({card,...metadata})=>({...card,...metadata})),pilots:[],nextCursor:page.nextCursor,partialResults:page.partialResults,dynamicRegistry:'available'});}catch(error){return marketFailure(error);}
       const registry = await readDynamicServiceCards();
       const dynamicServices = registry.entries.map((d) => toPaidService(d.card));
       return result({
@@ -175,11 +185,16 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
         "Deterministic bilingual lexical search over current service cards and verified pilot cards; no AI/reputation inference. Supports opaque cursor pagination via limit/cursor.",
       inputSchema: {
         query: z.string().min(1),
-        limit: z.number().int().min(1).max(PAGE_LIMIT_MAX).optional(),
+        limit: z.number().int().min(1).max(20).optional(),
         cursor: z.string().optional(),
       },
     },
     async ({ query, limit, cursor }) => {
+      if(marketEnabled())try{
+        const snapshot=await marketServiceSnapshot(),active=snapshot.records.filter(r=>r.active),ranked=rankServices(active.map(r=>toPaidService(r.service.card)),query),matches=new Map(ranked.map(r=>[r.service.id,r]));
+        const page=marketPage(active.filter(r=>matches.has(r.service.card.id)),{limit,cursor},`search:${sha(query)}`,r=>({createdAt:r.service.createdAt,id:r.service.submissionId}),r=>{const {card,...metadata}=marketServiceDto(r,false,marketOrigin()),match=matches.get(card.id)!;return {resource:card,...metadata,score:match.score,reasons:match.reasons};});
+        return result({query,ranking:{version:'lexical-v1',ai:false},results:page.items,nextCursor:page.nextCursor,partialResults:page.partialResults,dynamicRegistry:'available'});
+      }catch(error){return marketFailure(error);}
       const registry = await readDynamicServiceCards();
       const dynamicServices = registry.entries.map((d) => toPaidService(d.card));
       const ranked = rankServices([...services, ...dynamicServices, ...pilotSearchServices], query);
@@ -219,6 +234,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
       inputSchema: { id: z.string().min(1) },
     },
     async ({ id }) => {
+      if(marketEnabled())try{const snapshot=await marketServiceSnapshot(),record=snapshot.records.find(r=>r.active&&r.service.card.id===id);if(!record)return notFound(id);const {card,...metadata}=marketServiceDto(record,false,marketOrigin());return result({resource:card,...metadata,availability:{execution:'seller-external-agent',payment:'x402-stellar-exact-v2'}});}catch(error){return marketFailure(error);}
       const registry = await readDynamicServiceCards();
       const dynamic = registry.entries.find((entry) => entry.id === id);
       if (dynamic) {

@@ -1,27 +1,32 @@
 import {z} from 'zod';
 import {authenticateWorkspaceRequest,assertWorkspaceRequest,parseWorkspaceBody,workspaceFailure,workspaceHeaders,workspaceRequestOrigin} from './workspace-http.ts';
-import {assertMarketEnabled,newServiceSchema,newOrderSchema,orderActionSchema,submitMarketService,marketServices,withdrawService,createMarketOrder,listMarketOrders,readMarketOrder,sellerOrderAction,marketOperator} from './marketplace.ts';
-import {prepareMarketPayment,payMarketOrder,verifyMarketPayment} from './marketplace-payment.ts';
+import {assertMarketEnabled,newServiceSchema,newOrderSchema,orderActionSchema,submitMarketService,marketCatalogPage,marketServiceSnapshot,pageMarketServices,readMarketSubmission,withdrawService,createMarketOrder,listMarketOrdersPage,readMarketOrder,sellerOrderAction,marketOperator} from './marketplace.ts';
+import {verifyMarketPayment} from './marketplace-payment.ts';
 import {configuredMarketStore} from './marketplace-store.ts';
 import {marketPrefix} from './marketplace-store.ts';
-import {WorkspaceError} from './workspace-types.ts';
+import {WorkspaceError,marketPermissionChangeSchema} from './workspace-types.ts';
+import {configuredWorkspaceStore} from './workspace-store.ts';
+import {marketSubmissionGuard} from './market-permissions.ts';
+import {assertMarketDto,marketPageFromRequest} from './market-pagination.ts';
 import {verifySubmissionDns,verifySubmissionHttp,activateSubmission,recoverSubmissionActivation,type OperatorRegistry} from './provider-review-operator.ts';
 import {getSubmissionForOperator,recordManualReview,stageApprovedSubmission} from './provider-self-listing.ts';
 import {createDynamicServiceCard,getDynamicServiceCard} from './dynamic-registry.ts';
 import {sha} from './marketplace.ts';
 import {reconcileMarketX402Payment} from './marketplace-x402.ts';
-import {marketplacePurchaseDescriptor} from './marketplace-discovery.ts';
 
-const response=(value:unknown,status=200)=>Response.json(value,{status,headers:workspaceHeaders});
+const response=(value:unknown,status=200)=>Response.json(assertMarketDto(value),{status,headers:workspaceHeaders});
 export const marketHandlers={
- async services(request:Request){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request),origin=workspaceRequestOrigin(request);const decorate=(service:Awaited<ReturnType<typeof marketServices>>[number])=>({...service,...(service.card.payment.marketplace?{purchase:marketplacePurchaseDescriptor(service.card,origin)}:{})});return response({services:(await marketServices()).map(decorate),mine:(await marketServices(p.ownerId)).map(decorate),paused:await configuredMarketStore().transact(s=>s.paused??false)});}catch(e){return workspaceFailure(e);}},
- async submit(request:Request){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request,'human');const input=await parseWorkspaceBody(request,newServiceSchema);return response({submission:await submitMarketService(p,input)},201);}catch(e){return workspaceFailure(e);}},
+ async catalog(request:Request){try{assertMarketEnabled();assertWorkspaceRequest(request,true);const body=await marketCatalogPage(marketPageFromRequest(request),workspaceRequestOrigin(request));return Response.json(assertMarketDto(body),{headers:{'Cache-Control':'public, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});}catch(e){return workspaceFailure(e);}},
+ async services(request:Request){try{assertMarketEnabled();const options=marketPageFromRequest(request,['mineCursor']),p=await authenticateWorkspaceRequest(request,undefined,true),origin=workspaceRequestOrigin(request),snapshot=await marketServiceSnapshot();const publicPage=pageMarketServices(snapshot,options,origin,undefined,60*1024),mineCursor=new URL(request.url).searchParams.get('mineCursor'),minePage=pageMarketServices(snapshot,{limit:options.limit,...(mineCursor!==null?{cursor:mineCursor}:{})},origin,p.ownerId,60*1024);return response({services:publicPage.services,mine:minePage.services,paused:snapshot.paused,nextCursor:publicPage.nextCursor,mineNextCursor:minePage.nextCursor,partialResults:publicPage.partialResults||minePage.partialResults});}catch(e){return workspaceFailure(e);}},
+ async submission(request:Request,id:string){try{assertMarketEnabled();z.string().uuid().parse(id);const p=await authenticateWorkspaceRequest(request);return response({submission:await readMarketSubmission(p,id,workspaceRequestOrigin(request))});}catch(e){return workspaceFailure(e);}},
+ async permissions(request:Request){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request,'human'),store=configuredWorkspaceStore();if(request.method==='GET')return response({permission:(await store.readMarketPermissionSnapshot(p)).permission});const input=await parseWorkspaceBody(request,marketPermissionChangeSchema,1024);return response(await store.changeMarketPermissions(p,input));}catch(e){return workspaceFailure(e);}},
+ async submit(request:Request){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request);await marketSubmissionGuard(p);const input=await parseWorkspaceBody(request,newServiceSchema);return response({submission:await submitMarketService(p,input)},201);}catch(e){return workspaceFailure(e);}},
  async withdraw(request:Request,id:string){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request,'human');await parseWorkspaceBody(request,z.object({action:z.literal('withdraw')}).strict(),1024);return response(await withdrawService(p,id));}catch(e){return workspaceFailure(e);}},
- async orders(request:Request){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request);return response({orders:await listMarketOrders(p)});}catch(e){return workspaceFailure(e);}},
+ async orders(request:Request){try{assertMarketEnabled();const options=marketPageFromRequest(request),p=await authenticateWorkspaceRequest(request,undefined,true);return response(await listMarketOrdersPage(p,options));}catch(e){return workspaceFailure(e);}},
  async create(request:Request){try{assertMarketEnabled();if(process.env.BAZAAR_ENABLE_MARKET_PURCHASES!=='true')throw new WorkspaceError('PURCHASES_PAUSED');const p=await authenticateWorkspaceRequest(request);return response({order:await createMarketOrder(p,await parseWorkspaceBody(request,newOrderSchema))},201);}catch(e){return workspaceFailure(e);}},
  async read(request:Request,id:string){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request);return response({order:await readMarketOrder(p,id)});}catch(e){return workspaceFailure(e);}},
  async action(request:Request,id:string){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request),body=await parseWorkspaceBody(request,orderActionSchema,18000);
- if(body.action==='prepare'||body.action==='pay'){if(process.env.BAZAAR_ENABLE_MARKET_PURCHASES!=='true')throw new WorkspaceError('PURCHASES_PAUSED');if(body.action==='prepare')return response({payment:await prepareMarketPayment(p,id)});return response({order:await payMarketOrder(p,id,body.signedXdr)});}
+ if(body.action==='prepare'||body.action==='pay'){throw new WorkspaceError('PAYMENT_PROTOCOL_MISMATCH',409);}
  if(body.action==='reconcile'){const order=await readMarketOrder(p,id);return response({order:order.paymentProtocol?await reconcileMarketX402Payment(p,id):await verifyMarketPayment(p,id)});}
  return response({order:await sellerOrderAction(p,id,body)});
  }catch(e){return workspaceFailure(e);}},
