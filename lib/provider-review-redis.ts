@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { ReviewStoreError, type ProviderReviewStore, type ReviewState } from "./provider-review-store.ts";
 import type { ReviewRedis } from "./provider-review-runtime.ts";
+import { recordOperationalStorageBounds } from './acceptance-meter.ts';
+
+export const REVIEW_ENVELOPE_MAX_BYTES = 1024 * 1024;
 
 // Compare the complete observed envelope, including its unique revision. No TTL:
 // an uncertain activation must survive restarts and submission expiry.
@@ -24,7 +27,7 @@ export function createRedisReviewStore<T>(redis: ReviewRedis, prefix: string,
     let state: ReviewState<T>;
     if (raw === null) state = { version: 1, records: [] };
     else {
-      if (typeof raw !== "string") throw new ReviewStoreError("Invalid review envelope.");
+      if (typeof raw !== "string" || Buffer.byteLength(raw) > REVIEW_ENVELOPE_MAX_BYTES) throw new ReviewStoreError("Invalid review envelope.");
       let envelope;
       try { envelope = JSON.parse(raw); } catch { throw new ReviewStoreError("Invalid review envelope."); }
       if (!envelope || Object.keys(envelope).sort().join(",") !== "revision,state,version" || envelope.version !== 1
@@ -32,12 +35,15 @@ export function createRedisReviewStore<T>(redis: ReviewRedis, prefix: string,
       state = envelope.state;
     }
     validate(state);
+    recordOperationalStorageBounds({ review: raw === null ? 0 : Buffer.byteLength(raw as string) + Buffer.byteLength(key) });
     const before = JSON.stringify(state);
     const result = await operation(state);
     validate(state);
     const detached = structuredClone(result);
     if (JSON.stringify(state) === before) return detached;
     const next = JSON.stringify({ version: 1, revision: randomUUID(), state });
+    if (Buffer.byteLength(next) > REVIEW_ENVELOPE_MAX_BYTES) throw new ReviewStoreError("Review storage capacity exhausted.");
+    recordOperationalStorageBounds({ review: Buffer.byteLength(next) + Buffer.byteLength(key) });
     // Never retry a callback or write: a rejected response may hide a committed SET.
     const committed = await redis.eval(COMPARE_AND_SET, [key], [raw === null ? "missing" : "present", raw === null ? "" : raw as string, next]);
     if (committed !== 1) throw new ReviewStoreError("Review write conflicted or was not confirmed.");

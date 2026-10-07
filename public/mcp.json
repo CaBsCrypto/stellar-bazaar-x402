@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "bazaar": {
+      "type": "http",
+      "url": "https://bazaar.browns.studio/api/mcp",
+      "headers": {
+        "Authorization": "Bearer TU_ACCESO_DE_AGENTE"
+      }
+    }
+  }
+}

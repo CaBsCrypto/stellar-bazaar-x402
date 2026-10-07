@@ -12,13 +12,18 @@ export function parseBuyerBudget(amount){if(typeof amount!=='string'||!/^(0|[1-9
 /** The MCP endpoint is stateless; each bounded POST is an explicit JSON-RPC call. */
 export function createBuyerMcpTool({origin,agentToken,marketFetch}){
  const endpoint=new URL('/api/mcp',originOnly(origin));if(!buyerAccessValid(agentToken))throw Error('AGENT_ACCESS_REQUIRED');let id=0;
- return async(name,args={})=>{if(!['create_market_order','get_market_order','list_market_orders','get_operation_history'].includes(name))throw Error('UNSUPPORTED_BUYER_TOOL');const requestId=++id;
+ return async(name,args={})=>{if(!['get_service','list_market_services','create_market_order','get_market_order','list_market_orders','get_operation_history'].includes(name))throw Error('UNSUPPORTED_BUYER_TOOL');const requestId=++id;
   const response=await marketFetch(endpoint,{method:'POST',redirect:'error',headers:{authorization:'Bearer '+agentToken,'content-type':'application/json',accept:'application/json, text/event-stream','mcp-protocol-version':'2025-03-26'},body:JSON.stringify({jsonrpc:'2.0',id:requestId,method:'tools/call',params:{name,arguments:args}})});
   if(!response.ok)throw Error('MCP_REQUEST_UNCONFIRMED');let message;try{message=await response.json();}catch{throw Error('MCP_RESPONSE_UNCONFIRMED');}
   if(message.jsonrpc!=='2.0'||message.id!==requestId||message.error||!message.result)throw Error('MCP_RESPONSE_UNCONFIRMED');const result=message.result;let body;
   try{body=result.structuredContent??JSON.parse(result.content.find(item=>item.type==='text').text);}catch{throw Error('MCP_RESPONSE_UNCONFIRMED');}
   if(result.isError){const error=Error('MCP_TOOL_REJECTED');error.publicCode=/^[A-Z][A-Z0-9_]{1,80}$/.test(body.error?.code??body.code??'')?(body.error?.code??body.code):undefined;throw error;}return body;
  };
+}
+
+export async function readBuyerMarketHistory(runtime,{limit=10,cursor}={}){
+ if(!Number.isInteger(limit)||limit<1||limit>20||cursor!==undefined&&!/^[a-zA-Z0-9_-]{1,2048}$/.test(cursor))throw Error('HISTORY_PAGE_LIMIT');
+ return runtime.marketTool('list_market_orders',{limit,...(cursor?{cursor}:{})});
 }
 
 export async function configureBuyerRuntime({store,agentAccess,stellarSecret,origin=defaultBuyerOrigin,maxSponsoredFeeStroops=1000000}){

@@ -15,12 +15,15 @@ import "./buyer-execution.css";
 import "./buyer-execution-additions.css";
 import "@/styles/ui.css";
 
+export const maxDuration = 15;
+
 export const metadata: Metadata = {
+  metadataBase: new URL('https://bazaar.browns.studio'),
   title: "Stellar Bazaar x402 — Marketplace de Servicios de IA para Agentes Autónomos",
   description: "Capa de descubrimiento y enrutamiento de pagos x402 en Stellar Testnet (USDC) para herramientas MCP y APIs consumidas por agentes autónomos de IA.",
   openGraph: {
     title: "Stellar Bazaar x402 — Marketplace de Servicios de IA para Agentes",
-    description: "Descubre, invoca y monetiza APIs mediante W3C WebMCP y micropagos instantáneos x402 en USDC sobre Stellar.",
+    description: "Conecta tu agente por MCP, publica servicios y compra entregas de texto con x402 y USDC de Stellar testnet.",
     url: "https://bazaar.browns.studio",
     siteName: "Stellar Bazaar x402",
     images: [
@@ -37,7 +40,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Stellar Bazaar x402 — AI Agent Marketplace",
-    description: "Descubre, invoca y monetiza APIs mediante W3C WebMCP y micropagos instantáneos x402 en USDC sobre Stellar.",
+    description: "Conecta tu agente por MCP, publica servicios y compra entregas de texto con x402 y USDC de Stellar testnet.",
     images: ["/cover.jpg"],
   },
 };
@@ -47,7 +50,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="es">
       <body>
         {children}
-        <WebMCPProvider />
+        {process.env.BAZAAR_ENABLE_MARKETPLACE !== 'true' && <WebMCPProvider />}
       </body>
     </html>
   );

@@ -9,11 +9,12 @@ const response=(status,body)=>Response.json(body,{status,headers:{'cache-control
 function authorized(request,token){const candidate=/^Bearer ([a-zA-Z0-9_-]{43})$/.exec(request.headers.get('authorization')??'')?.[1];return candidate&&timingSafeEqual(Buffer.from(candidate),Buffer.from(token));}
 async function inputBody(request){const reader=request.body?.getReader();if(!reader)throw Error('INVALID_REQUEST');let bytes=0;const parts=[];try{for(;;){const {done,value}=await reader.read();if(done)break;bytes+=value.byteLength;if(bytes>16384){await reader.cancel();throw Error('REQUEST_TOO_LARGE');}parts.push(value);}}finally{reader.releaseLock();}return JSON.parse(Buffer.concat(parts).toString('utf8'));}
 /** Wrap your existing trusted adapter execute({operationId,attemptId,input}) => {text}. */
-export function createSellerRuntime({adapter,store,providerAccess,route='/v1/marketplace-text',maxRequests=100}){
- if(typeof adapter?.execute!=='function'||!store?.journal||!store?.acquireLock||!/^[a-zA-Z0-9_-]{43}$/.test(providerAccess??'')||!Number.isInteger(maxRequests)||maxRequests<1||maxRequests>1000)throw Error('RUNTIME_CONFIGURATION_REQUIRED');sellerRoute(route);let requests=0;
+export function createSellerRuntime({adapter,store,providerAccess,route='/v1/marketplace-text',maxRequests=100,now=Date.now}){
+ if(typeof adapter?.execute!=='function'||!store?.journal||!store?.acquireLock||!/^[a-zA-Z0-9_-]{43}$/.test(providerAccess??'')||!Number.isInteger(maxRequests)||maxRequests<1||maxRequests>1000||typeof now!=='function')throw Error('RUNTIME_CONFIGURATION_REQUIRED');sellerRoute(route);let requests=0,minute;
  return async request=>{
   if(new URL(request.url).pathname!==route||request.method!=='POST')return response(404,{error:'NOT_FOUND'});
   if(!authorized(request,providerAccess))return response(401,{error:'UNAUTHORIZED'});
+  const current=Math.floor(now()/60000);if(current!==minute){minute=current;requests=0;}
   if(++requests>maxRequests)return response(429,{error:'RUNTIME_QUOTA',retryAfter:60});
   let packet;try{packet=await inputBody(request);}catch{return response(400,{error:'INVALID_REQUEST'});}
   if(!sellerUuid.test(packet?.operationId??'')||!sellerUuid.test(packet?.attemptId??'')||!packet.input||typeof packet.input!=='object'||Array.isArray(packet.input)||Object.keys(packet).sort().join(',')!=='attemptId,input,operationId'||Object.values(packet.input).some(v=>!['string','number','boolean'].includes(typeof v)||typeof v==='string'&&v.length>2000||typeof v==='number'&&!Number.isFinite(v)))return response(400,{error:'INVALID_REQUEST'});

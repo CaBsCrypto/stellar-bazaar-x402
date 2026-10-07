@@ -136,9 +136,13 @@ node examples/marketplace-seller-mcp.mjs watch /private/seller-store 10
 ```
 
 This session polls at intervals of at least 60 seconds for at most ten polls,
-uses one MCP connection, reads at most five pages of twenty orders per poll and
-executes one order at a time. Each HTTP request, including MCP initialization,
-counts toward a 100-request session cap. It stops at the bound, quota, uncertainty
+uses one MCP connection, reads one explicit page of twenty orders per poll and
+executes one order at a time. The encrypted scan journal saves the returned
+cursor after processing that page. Another invocation continues from this cursor
+even when the history has more than one hundred orders. List and services commands
+also return a cursor for the next explicit page. Each HTTP request, including MCP
+initialization, counts toward a 100-request per-minute limit. It stops at the
+bound, quota, uncertainty
 or an existing unresolved intent. HTTP 429 stops the session and reports
 `Retry-After`; schedule a later explicit session only after that time. No permanent
 connection or always-running service is implied.

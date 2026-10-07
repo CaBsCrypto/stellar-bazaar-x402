@@ -12,6 +12,7 @@ import {WorkspaceError,type WorkspacePrincipal} from './workspace-types.ts';
 import {authenticateWorkspaceRequest,parseWorkspaceBody,workspaceFailure,workspaceHeaders,workspaceRequestOrigin} from './workspace-http.ts';
 import {configuredMarketX402Store,type MarketX402Settlement,type MarketX402Store} from './marketplace-x402-store.ts';
 import {meteredExternal} from './acceptance-meter.ts';
+import {operationalRequestGate} from './operational-budget.ts';
 
 export const MARKET_X402_PROTOCOL='x402-stellar-exact-v2' as const;
 export const MARKET_X402_FACILITATOR='https://channels.openzeppelin.com/x402/testnet';
@@ -138,6 +139,7 @@ export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,or
  if(!record){
   if(o.phase!=='awaiting-payment')throw new WorkspaceError('X402_SETTLEMENT_UNAVAILABLE',409);
   if(process.env.BAZAAR_X402_MARKETPLACE_ENABLED!=='true'||process.env.BAZAAR_ENABLE_MARKET_PURCHASES!=='true'||await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
+  await operationalRequestGate({profile:'authenticated',newOperation:true});
   const challenge=createMarketX402Challenge(o,origin);record=await deps.store.transact(s=>{if(s.records.some(r=>r.operationId===id))throw new WorkspaceError('OPERATION_CONFLICT',409);const time=new Date().toISOString(),r:MarketX402Settlement={operationId:id,buyerOwnerId:p.ownerId,orderBinding:marketX402OrderBinding(o),challenge,phase:'challenged',createdAt:time,updatedAt:time};s.records.push(r);return r;});
  }
  assertRecordBinding(record,o);
@@ -145,6 +147,7 @@ export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,or
  const proof=parseProof(signature,record,o);
  if(record.payloadHash){if(record.payloadHash!==proof.payloadHash||record.authorizationFingerprint!==proof.authorizationFingerprint)throw new WorkspaceError('OPERATION_CONFLICT',409);if(record.phase==='confirmed')return paidResponse(await finalizePaid(deps,o,record),record,origin);throw new WorkspaceError(record.phase==='rejected'?'X402_PAYMENT_REJECTED':'X402_PAYMENT_OUTCOME_UNCERTAIN',record.phase==='rejected'?402:409);}
  if(process.env.BAZAAR_X402_MARKETPLACE_ENABLED!=='true'||process.env.BAZAAR_ENABLE_MARKET_PURCHASES!=='true'||await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
+ await operationalRequestGate({profile:'authenticated',newOperation:true});
  const attemptId=randomUUID();record=await deps.store.transact(s=>{const r=s.records.find(v=>v.operationId===id);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.phase!=='challenged')throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.records.some(v=>v.authorizationFingerprint===proof.authorizationFingerprint))throw new WorkspaceError('X402_AUTHORIZATION_REUSE',409);Object.assign(r,proof,{attemptId,phase:'verifying',updatedAt:new Date().toISOString()});return r;});
  try{
   const verified=await deps.facilitator.verify(proof.payload,record.challenge.accepts[0]);

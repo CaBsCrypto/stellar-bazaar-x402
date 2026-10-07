@@ -1,5 +1,8 @@
 {
   "buildCommand": "next build --webpack",
+  "functions": {
+    "app/api/**/route.ts": { "maxDuration": 60 }
+  },
   "git": {
     "deploymentEnabled": {
       "mission/identity-pilot": false,

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { measuredHandler, measuredRead, meteredRedis, meteredExternal, recordOperationalStorageBounds } from '../lib/acceptance-meter.ts';
+import { COMMIT_MARKET_PERMISSION_LUA } from '../lib/workspace-store.ts';
 const names = ['BAZAAR_OPERATIONAL_METER', 'BAZAAR_OPERATIONAL_BUDGET', 'BAZAAR_ACCEPTANCE_METER', 'BAZAAR_WORKSPACE_PREFIX'];
 const old = Object.fromEntries(names.map(name => [name, process.env[name]]));
 Object.assign(process.env, { BAZAAR_OPERATIONAL_METER: 'true', BAZAAR_OPERATIONAL_BUDGET: 'false', BAZAAR_ACCEPTANCE_METER: 'false', BAZAAR_WORKSPACE_PREFIX: 'bazaar-workspace:pilot-' + 'b'.repeat(32) });
@@ -22,6 +23,8 @@ try {
   assert.equal(response.headers.get('x-bazaar-redis-requests'), '2'); assert.equal(response.headers.get('x-bazaar-redis-commands-upper-bound'), '10');
   assert.equal(response.headers.get('x-bazaar-external-rpc'), '1'); assert.equal(response.headers.get('x-bazaar-external-outbound-payload-bytes'), '12');
   assert.equal(response.headers.get('x-bazaar-market-stored-bytes-upper-bound'), '444'); assert.equal(response.headers.get('x-bazaar-storage-observation'), 'prospective-upper-bound');
+  const grantResponse=await run(()=>command(['eval',COMMIT_MARKET_PERMISSION_LUA,4,key,key+':owner',key+':marker',key+':permission','registry','document','marker','old','new']));
+  assert.equal(grantResponse.headers.get('x-bazaar-redis-requests'),'1');assert.equal(grantResponse.headers.get('x-bazaar-redis-commands-upper-bound'),'6');
   const before = calls;
   await assert.rejects(run(() => command(['get', 'unrelated:private'])), /OPERATIONAL_KEY_DENIED/); assert.equal(calls, before);
   await assert.rejects(run(() => command(['eval', "for i=1,3 do redis.call('GET',KEYS[1]) end", 1, key])), /OPERATIONAL_SCRIPT_UNBOUNDED/); assert.equal(calls, before);

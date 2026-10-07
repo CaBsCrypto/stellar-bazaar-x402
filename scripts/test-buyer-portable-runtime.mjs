@@ -9,8 +9,8 @@ import {Address,Keypair,Networks,SorobanDataBuilder,Transaction,xdr} from '@stel
 import {encodePaymentRequiredHeader,encodePaymentResponseHeader} from '@x402/core/http';
 import {openPortableSecretStore} from '../examples/buyer-portable-secret-store.mjs';
 import {readPrivateInput} from '../examples/buyer-private-input.mjs';
-import {configureBuyerRuntime,createPortableBuyerRuntime,increaseBuyerBudget,parseBuyerBudget} from '../examples/buyer-portable-runtime.mjs';
-import {buyerIdentity,buyerProtocol,buyerCanonical,createMarketplaceBuyerIntent,runMarketplaceBuyerIntent,recoverBuyerIntent,discoverBuyerService,buyerAccessValid,createBuyerSpendBudget} from '../examples/marketplace-x402-buyer.mjs';
+import {configureBuyerRuntime,createPortableBuyerRuntime,increaseBuyerBudget,parseBuyerBudget,readBuyerMarketHistory} from '../examples/buyer-portable-runtime.mjs';
+import {buyerIdentity,buyerProtocol,buyerCanonical,createMarketplaceBuyerIntent,runMarketplaceBuyerIntent,recoverBuyerIntent,discoverBuyerService,buyerAccessValid,createBuyerSpendBudget,createBoundedBuyerFetch} from '../examples/marketplace-x402-buyer.mjs';
 
 const directory=await mkdtemp(join(tmpdir(),'bazaar-portable-buyer-')),password=Buffer.from('synthetic passphrase '+randomBytes(16).toString('hex'));
 const payer=Keypair.random(),seller=Keypair.random(),agentAccess=randomBytes(32).toString('base64url'),origin='https://bazaar.browns.studio';
@@ -24,14 +24,16 @@ async function fakeFetch(url,init){const target=new URL(url),body=init.body?JSON
   return Response.json({jsonrpc:'2.0',id:1,result:{latestLedger:1000,minResourceFee:'587252',transactionData:new SorobanDataBuilder().setResourceFee('587252').build().toXDR('base64'),results:[{auth:[entry.toXDR('base64')],xdr:xdr.ScVal.scvVoid().toXDR('base64')}]}});
  }
  assert.equal(target.origin,origin);
- if(target.pathname==='/api/market/catalog'){assert.equal(new Headers(init.headers).has('authorization'),false);return Response.json({services:[{card,cardHash,status:'activated',purchase:{protocol:buyerProtocol}}]});}
+ if(target.pathname==='/api/market/catalog'){assert.equal(new Headers(init.headers).has('authorization'),false);return Response.json(target.searchParams.get('cursor')==='second_page'?{services:[{card,cardHash,status:'activated',purchase:{protocol:buyerProtocol}}],nextCursor:null}:{services:Array.from({length:10},(_,i)=>({card:{...card,id:'another-service-'+i},status:'activated'})),nextCursor:'second_page'});}
  assert.equal(new Headers(init.headers).get('authorization'),'Bearer '+agentAccess);
  if(target.pathname==='/api/mcp'){
   assert.equal(body.method,'tools/call');const {name,arguments:args}=body.params;let result;
   if(name==='create_market_order'){
    assert.equal(args.paymentProtocol,buyerProtocol);assert.equal(orders.has(args.operationId),false);
    const order={...args,card,inputHash:hash(buyerCanonical(args.input)),destination:seller.publicKey(),settlement:buyerIdentity,amount:'0.01',phase:'awaiting-payment'};orders.set(args.operationId,order);result={httpStatus:201,order};
-  }else{assert.equal(name,'get_market_order');result={httpStatus:200,order:orders.get(args.operationId)};}
+  }else if(name==='get_service'){assert.equal(args.id,card.id);result={resource:card,cardHash,status:'activated'};}
+  else if(name==='list_market_orders'){assert.equal(args.limit,10);result={orders:[...orders.values()],nextCursor:args.cursor?null:'history_page'};}
+  else{assert.equal(name,'get_market_order');result={httpStatus:200,order:orders.get(args.operationId)};}
   return Response.json({jsonrpc:'2.0',id:body.id,result:{content:[{type:'text',text:JSON.stringify(result)}]}});
  }
  const operationId=target.pathname.split('/')[4],order=orders.get(operationId);assert.ok(order);assert.equal(target.pathname,'/api/market/orders/'+operationId+'/x402');assert.equal(init.method,'POST');
@@ -53,7 +55,13 @@ try{
  await store.write('first',{value:'private'},{createOnly:true});await assert.rejects(store.write('first',{}, {createOnly:true}),/EEXIST/);const first=await readFile(join(directory,'store','first.sealed'));await writeFile(join(directory,'store','swapped.sealed'),first,{mode:0o600});await assert.rejects(store.read('swapped'),/AUTHENTICATION_FAILED/);
  const envelope=JSON.parse(first),cipher=Buffer.from(envelope.ciphertext,'base64url');cipher[0]^=1;envelope.ciphertext=cipher.toString('base64url');await writeFile(join(directory,'store','first.sealed'),JSON.stringify(envelope)+'\n',{mode:0o600});await assert.rejects(store.read('first'),/AUTHENTICATION_FAILED/);
  const journal=store.journal('tamper');await journal.initialize({phase:'prepared'});await journal.append({phase:'signed'});const journalRaw=await readFile(join(directory,'store','tamper.journal'),'utf8'),lines=journalRaw.trimEnd().split('\n');await writeFile(join(directory,'store','tamper.journal'),[lines[1],lines[0]].join('\n')+'\n',{mode:0o600});await assert.rejects(journal.read(),/AUTHENTICATION_FAILED/);await writeFile(join(directory,'store','tamper.journal'),journalRaw,{mode:0o600});await appendFile(join(directory,'store','tamper.journal'),'{"version":1');await assert.rejects(journal.read(),/JOURNAL_UNCONFIRMED/);await assert.rejects(journal.append({phase:'replay'}),/JOURNAL_UNCONFIRMED/);
- const pending=await prepare(),runtime=await runtimeFor(pending);assert.equal((await discoverBuyerService(origin,card.id,runtime)).cardHash,cardHash);lost=true;await assert.rejects(runMarketplaceBuyerIntent(pending,runtime),/TRANSPORT_UNCONFIRMED/);runtime.dispose();assert.equal(pending.phase,'payment-uncertain');assert.equal(totalSignatures,1);assert.equal(totalPosts,1);
+ const pending=await prepare(),runtime=await runtimeFor(pending);assert.equal((await discoverBuyerService(origin,card.id,runtime)).cardHash,cardHash);
+ const publicFetch=createBoundedBuyerFetch({origin,fetchImpl:fakeFetch});
+ await assert.rejects(discoverBuyerService(origin,card.id,{marketFetch:publicFetch}),error=>error.message==='SERVICE_NOT_IN_CATALOG_PAGE'&&error.nextCursor==='second_page');
+ assert.equal((await discoverBuyerService(origin,card.id,{marketFetch:publicFetch,catalogCursor:'second_page'})).cardHash,cardHash);
+ const countBefore=calls.length;for(const query of ['?limit=21','?cursor=a&cursor=b','?other=a'])await assert.rejects(publicFetch(origin+'/api/market/catalog'+query,{method:'GET'}),/UNBOUND_TRANSPORT/);assert.equal(calls.length,countBefore);
+ assert.equal((await readBuyerMarketHistory(runtime)).nextCursor,'history_page');assert.equal((await readBuyerMarketHistory(runtime,{cursor:'history_page'})).nextCursor,null);await assert.rejects(readBuyerMarketHistory(runtime,{limit:21}),/HISTORY_PAGE_LIMIT/);
+ lost=true;await assert.rejects(runMarketplaceBuyerIntent(pending,runtime),/TRANSPORT_UNCONFIRMED/);runtime.dispose();assert.equal(pending.phase,'payment-uncertain');assert.equal(totalSignatures,1);assert.equal(totalPosts,1);
  const resumed=await runtimeFor(pending),conserved=await resumed.journal.read();await assert.rejects(runMarketplaceBuyerIntent(conserved,resumed),/READ_RECOVERY/);assert.equal((await recoverBuyerIntent(conserved,resumed)).phase,'paid');assert.equal(totalSignatures,1);assert.equal(totalPosts,1);assert.equal(calls.at(-1).path,'/api/mcp');resumed.dispose();lost=false;
  const paid2=await prepare(),runtime2=await runtimeFor(paid2);await runMarketplaceBuyerIntent(paid2,runtime2);runtime2.dispose();assert.equal(totalPosts,2);const refused=await prepare(),runtime3=await runtimeFor(refused);await assert.rejects(runMarketplaceBuyerIntent(refused,runtime3),/SPEND_LIMIT_EXHAUSTED/);assert.equal(totalPosts,2);assert.equal(totalSignatures,2);runtime3.dispose();
  const before=await store.journal('buyer-budget').read();assert.equal(before.reservations.length,2);assert.equal(before.maximumAtomic,'200000');await increaseBuyerBudget({store,maximumAtomic:'400000'});const increased=await store.journal('buyer-budget').read();assert.deepEqual(increased.reservations,before.reservations);assert.equal(increased.maximumAtomic,'400000');await assert.rejects(increaseBuyerBudget({store,maximumAtomic:'200000'}),/INCREASE_REQUIRED/);

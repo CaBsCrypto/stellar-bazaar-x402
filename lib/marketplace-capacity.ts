@@ -1,6 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {WorkspaceError} from './workspace-types.ts';
+import {recordOperationalStorageBounds} from './acceptance-meter.ts';
 import {sha,canonical} from './marketplace-identity.ts';
 import {validateMarketState,type MarketRedis,type MarketOrder,type MarketState} from './marketplace-store.ts';
 import {validateMarketX402State,type MarketX402State,type MarketX402Settlement} from './marketplace-x402-store.ts';
@@ -108,6 +109,7 @@ export async function commitCapacityStore(redis:MarketRedis,prefix:string,kind:'
  const oldMarket=kind==='market'?expectedRaw:other as string|null,oldSettlement=kind==='settlement'?expectedRaw:other as string|null;
  const newMarket=kind==='market'?(nextRaw??oldMarket):oldMarket,newSettlement=kind==='settlement'?(nextRaw??oldSettlement):oldSettlement;
  const projected=projectCapacity(newMarket,newSettlement,storedLedger as string|null);
+ recordOperationalStorageBounds({market:{committedBytes:projected.marketUsed,reservedBytes:projected.marketRemaining},settlement:{committedBytes:projected.settlementUsed,reservedBytes:projected.settlementRemaining}});
  const before=snapshot(oldMarket,oldSettlement),after=snapshot(newMarket,newSettlement);
  if(kind==='settlement'&&before.market.paused&&after.settlements.records.some(r=>['verifying','settling'].includes(r.phase)&&before.settlements.records.find(old=>old.operationId===r.operationId)?.phase!==r.phase))throw new WorkspaceError('PURCHASES_PAUSED',503);
  const expected=(raw:string|null)=>[raw===null?'missing':'present',raw??''];

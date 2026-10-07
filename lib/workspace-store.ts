@@ -1,4 +1,4 @@
-import { meteredRedis } from './acceptance-meter.ts';
+import { meteredRedis, recordOperationalStorageBounds } from './acceptance-meter.ts';
 // Server-only persistence. No legacy aliases, fallback, expiry or uncertain-outcome retry.
 import { createHash, randomUUID } from "node:crypto";
 import { channel } from "node:diagnostics_channel";
@@ -72,7 +72,11 @@ function validateRegistry(raw: string, marker: string, legacy: WorkspaceLegacyRe
     if (m.accessIntents.length !== m.generation - 1 || m.accessIntents.some((intent, i) => intent.expectedGeneration !== i + 1 || intent.generation !== i + 2 || intent.revoked !== (m.revoked && i === m.accessIntents.length - 1))) throw unavailable("registry-intents");
     for (const hash of unique) { if (hashes.has(hash) || legacy.hashes.includes(hash)) throw unavailable("registry-hashes"); hashes.add(hash); }
   }
-  if (registry.workspaces.reduce((n, m) => n + m.documentBytes, bytes(raw)) > WORKSPACE_LIMITS.globalBytes) throw unavailable();
+  const committedBytes = registry.workspaces.reduce((n, m) => n + m.documentBytes, bytes(raw));
+  if (committedBytes > WORKSPACE_LIMITS.globalBytes) throw unavailable();
+  // Permission documents are separate keys. Reserve their bounded possible size;
+  // this metric is a projection, not a claim that every owner has granted access.
+  recordOperationalStorageBounds({ workspace: { committedBytes, reservedBytes: registry.workspaces.length * 4096 } });
   return registry;
 }
 function validateDocument(raw: string, meta: Meta): Document {
@@ -121,7 +125,10 @@ type PermissionSnapshot = Snapshot & { permissionRaw: string | null; guard?: Mar
 interface Backend { read(ownerId?: string): Promise<Snapshot>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string) => Promise<void>) => Promise<T>): Promise<T>; readPermission(ownerId: string): Promise<PermissionSnapshot>; transactPermission<T>(ownerId: string, callback: (snapshot: PermissionSnapshot, commit: (permission: string) => Promise<void>) => Promise<T>): Promise<T> }
 export const READ_MARKET_PERMISSION_LUA = `return {redis.call('GET', KEYS[1]) or '', redis.call('GET', KEYS[2]) or '', redis.call('GET', KEYS[3]) or '', redis.call('GET', KEYS[4]) or ''}`;
 export const COMMIT_MARKET_PERMISSION_LUA = `
-for i=1,4 do if (redis.call('GET',KEYS[i]) or '') ~= ARGV[i] then return 0 end end
+if (redis.call('GET',KEYS[1]) or '') ~= ARGV[1] then return 0 end
+if (redis.call('GET',KEYS[2]) or '') ~= ARGV[2] then return 0 end
+if (redis.call('GET',KEYS[3]) or '') ~= ARGV[3] then return 0 end
+if (redis.call('GET',KEYS[4]) or '') ~= ARGV[4] then return 0 end
 redis.call('SET',KEYS[4],ARGV[5]); return 1`;
 // Only this error proves the Lua comparison rejected a write before any effect.
 class RedisCompareConflict extends WorkspaceError { constructor() { super("WORKSPACE_CONFLICT", 409); } }
@@ -227,7 +234,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       d.revision = randomUUID(); const raw = JSON.stringify(d); if (bytes(raw) > WORKSPACE_LIMITS.ownerBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409);
       meta.documentRevision = d.revision; meta.documentBytes = bytes(raw); registry.revision = randomUUID(); const reg = JSON.stringify(registry);
       if (bytes(reg) > WORKSPACE_LIMITS.registryBytes || registry.workspaces.reduce((n, m) => n + m.documentBytes, bytes(reg)) > WORKSPACE_LIMITS.globalBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409);
-      validateDocument(raw, meta); await commit(reg, raw);
+      validateDocument(raw, meta); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, raw);
     }
     return result;
   }); });

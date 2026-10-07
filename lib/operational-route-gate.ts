@@ -26,7 +26,12 @@ export function earlyRouteGate(request: Request): EarlyRouteResult {
   const origin = request.headers.get('origin');
   if (!expected || url.origin !== expected || origin && origin !== expected) return { code: 'INVALID_REQUEST', status: 400 };
   if (url.search) {
-    if (['/api/market/catalog','/api/market/orders','/api/market/services'].includes(path) && method === 'GET') {
+    if (path === '/api/operations' && method === 'GET') {
+      const params=url.searchParams;
+      if([...params.keys()].some(key=>!['limit','cursor'].includes(key)||params.getAll(key).length!==1)) return {code:'INVALID_REQUEST',status:400};
+      const limit=params.get('limit');if(limit!==null&&(!/^[1-9]\d?$/.test(limit)||Number(limit)>20))return {code:'INVALID_REQUEST',status:400};
+      const cursor=params.get('cursor');if(cursor!==null&&(!/^[a-zA-Z0-9_-]{1,2048}$/.test(cursor)||Buffer.byteLength(cursor)>2048))return {code:'INVALID_REQUEST',status:400};
+    } else if (['/api/market/catalog','/api/market/orders','/api/market/services'].includes(path) && method === 'GET') {
       const params=url.searchParams, allowed=path==='/api/market/services'?['limit','cursor','mineCursor']:['limit','cursor'];
       if ([...params.keys()].some(key=>!allowed.includes(key)||params.getAll(key).length!==1)) return {code:'INVALID_REQUEST',status:400};
       const limit=params.get('limit'); if(limit!==null&&(!/^[1-9]\d?$/.test(limit)||Number(limit)>20)) return {code:'INVALID_REQUEST',status:400};

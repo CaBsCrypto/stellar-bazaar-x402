@@ -3,7 +3,7 @@ import { createServer } from 'node:http';
 import { spawn } from 'node:child_process';
 import { randomUUID, randomBytes } from 'node:crypto';
 import { submitProviderDraft, listProviderSubmissionsForOperator, getSubmissionStatus, setReviewStoreForTests } from '../lib/provider-self-listing.ts';
-import { createRedisReviewStore } from '../lib/provider-review-redis.ts';
+import { createRedisReviewStore, REVIEW_ENVELOPE_MAX_BYTES } from '../lib/provider-review-redis.ts';
 import { getReviewRedis, getReviewPrefix, reviewSharedConfigured, setReviewRedisForTests } from '../lib/provider-review-runtime.ts';
 
 const prefix='bazaar-review:local-test';
@@ -36,6 +36,10 @@ await assert.rejects(store().transact(s=>{add(s,4);throw Error('abort');}));asse
 for(const bad of ['{bad',JSON.stringify({version:1,revision:'bad',state:{version:1,records:[]}}),JSON.stringify({version:1,revision:'00000000-0000-4000-8000-000000000000',state:{version:2,records:[]}})]){
   data.set(key,bad);await assert.rejects(store().transact(()=>null));assert.equal(data.get(key),bad);
 }data.set(key,valid);
+const beforeCapacity=writes;
+await assert.rejects(store().transact(s=>s.records.push({submission:9,tokenHash:'x'.repeat(REVIEW_ENVELOPE_MAX_BYTES),digest:'d'})),/capacity exhausted/);
+assert.equal(writes,beforeCapacity);assert.equal(data.get(key),valid);
+data.set(key,'x'.repeat(REVIEW_ENVELOPE_MAX_BYTES+1));await assert.rejects(store().transact(()=>null),/Invalid review envelope/);assert.equal(writes,beforeCapacity);data.set(key,valid);
 
 // Independent Node processes share a loopback-only fake Redis REST endpoint.
 const server=createServer(async(req,res)=>{try{let body='';for await(const chunk of req)body+=chunk;const c=JSON.parse(body);const result=c[0]==='GET'?await redis.get(c[1]):await redis.eval(c[1],[c[3]],c.slice(4));res.setHeader('content-type','application/json');res.end(JSON.stringify({result}));}catch{res.statusCode=500;res.end('{}');}});

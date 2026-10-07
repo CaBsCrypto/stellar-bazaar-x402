@@ -4,7 +4,7 @@ import {pathToFileURL} from 'node:url';
 import {randomUUID} from 'node:crypto';
 import {openPortableSecretStore} from './buyer-portable-secret-store.mjs';
 import {readPrivateInput} from './buyer-private-input.mjs';
-import {defaultBuyerOrigin,configureBuyerRuntime,createPortableBuyerRuntime,increaseBuyerBudget,parseBuyerBudget,summarizeBuyerIntent} from './buyer-portable-runtime.mjs';
+import {defaultBuyerOrigin,configureBuyerRuntime,createPortableBuyerRuntime,increaseBuyerBudget,parseBuyerBudget,summarizeBuyerIntent,readBuyerMarketHistory} from './buyer-portable-runtime.mjs';
 import {createBoundedBuyerFetch,createMarketplaceBuyerIntent,discoverBuyerService,runMarketplaceBuyerIntent,inspectBuyerOrder,recoverBuyerIntent} from './marketplace-x402-buyer.mjs';
 import {originOnly} from './private-mcp-client.mjs';
 
@@ -20,8 +20,9 @@ export async function main(argv=process.argv.slice(2)){
  const args=[...argv],pipe=args.includes('--secret-stdin');if(pipe)args.splice(args.indexOf('--secret-stdin'),1);let origin=defaultBuyerOrigin;const at=args.indexOf('--origin');if(at>=0){origin=originOnly(args[at+1]);args.splice(at,2);}if(args.some(arg=>arg.startsWith('--')))throw Error('INVALID_OPTION');
  const [command,directory,arg,extra]=args;if(!commands.includes(command))throw Error('Use configure, access, signer, discover, prepare, buy, inspect, recover, budget, budget-increase or history.');
  if(command==='discover'){
-  if(args.length>2||pipe)throw Error('INVALID_COMMAND');const response=await createBoundedBuyerFetch({origin})(new URL('/api/market/catalog',origin),{method:'GET',redirect:'error'});if(!response.ok)throw Error('CATALOG_UNCONFIRMED');const body=await response.json();
-  console.log(JSON.stringify(directory?await discoverBuyerService(origin,directory,{marketFetch:createBoundedBuyerFetch({origin})}):body));return;
+  if(args.length>3||pipe||arg&&!directory)throw Error('INVALID_COMMAND');const marketFetch=createBoundedBuyerFetch({origin});
+  if(directory){console.log(JSON.stringify(await discoverBuyerService(origin,directory,{marketFetch,catalogCursor:arg})));return;}
+  const response=await marketFetch(new URL('/api/market/catalog',origin),{method:'GET',redirect:'error'});if(!response.ok)throw Error('CATALOG_UNCONFIRMED');console.log(JSON.stringify(await response.json()));return;
  }
  const sizes={configure:[2,2],access:[2,2],signer:[2,2],prepare:[4,4],buy:[3,3],inspect:[3,3],recover:[3,3],budget:[2,2],'budget-increase':[3,3],history:[2,4]};
  if(!directory||args.length<sizes[command][0]||args.length>sizes[command][1]||command!=='configure'&&at>=0)throw Error('INVALID_COMMAND');
@@ -40,7 +41,7 @@ export async function main(argv=process.argv.slice(2)){
    if(command==='prepare'){
     const bytes=await readFile(resolve(extra));if(bytes.length>65536)throw Error('PUBLIC_INPUT_TOO_LARGE');const input=JSON.parse(bytes),service=await discoverBuyerService(runtime.origin,arg,runtime);const intent=createMarketplaceBuyerIntent({origin:runtime.origin,card:service.card,input,payer:runtime.payer,operationId:randomUUID()});await store.journal('buyer.'+intent.operationId).initialize(intent);result=summarizeBuyerIntent(intent);
    }else if(command==='budget'){const budget=runtime.budgetSnapshot();result={maximumAtomic:budget.maximumAtomic,reservedAtomic:budget.reservations.reduce((sum,item)=>sum+BigInt(item.amount),0n).toString(),reservations:budget.reservations.length};}
-   else if(command==='history'){const limit=arg===undefined?10:Number(arg);if(!Number.isInteger(limit)||limit<1||limit>20)throw Error('HISTORY_PAGE_LIMIT');result=await runtime.marketTool('get_operation_history',{limit,...(extra?{cursor:extra}:{})});}
+   else if(command==='history'){result=await readBuyerMarketHistory(runtime,{limit:arg===undefined?10:Number(arg),cursor:extra});}
    else{const intent=await runtime.journal.read();if(command==='buy')await runMarketplaceBuyerIntent(intent,runtime);else if(command==='recover')await recoverBuyerIntent(intent,runtime);else intent.order=await inspectBuyerOrder(intent,runtime);result=summarizeBuyerIntent(intent);}
   }
   console.log(JSON.stringify({ok:true,...result}));

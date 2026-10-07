@@ -10,7 +10,11 @@ const token = 'a'.repeat(43), id = 'b'.repeat(8) + '-1111-4111-8111-' + 'c'.repe
 const request = (path, method = 'GET', headers = {}, body) => new Request('https://bazaar.example' + path, { method, headers, ...(body === undefined ? {} : { body }) });
 try {
   assert.equal(routeBoundaryEnabled(), true);
+  for(const path of ['/','/open','/catalogo','/hub','/publish','/history']) {
+    for(const method of ['GET','HEAD']) {const response=await proxy(new NextRequest('https://bazaar.example'+path,{method}));assert.equal(response.headers.get('x-middleware-next'),'1',path+' must pass the actual boundary');}
+  }
   for (const path of ['/api/x402/ledger-brief', '/api/admin/stats', '/api/publish', '/api/buyer-execution/reference']) assert.equal(pilotRoutePolicy(path, 'POST'), 'deny');
+  for(const path of ['/api/discovery/resources','/api/discovery/search'])assert.equal((await proxy(new NextRequest('https://bazaar.example'+path))).status,404,'Legacy unpaged catalog must stop before storage');
   for (const path of ['/llms.txt', '/BUYER.md','/mcp.json', '/BUYER_AGENT_KIT.md', '/SELLER_AGENT_KIT.md', '/skills/buyer/SKILL.md', '/skills/seller/SKILL.md']) assert.equal(pilotRoutePolicy(path, 'GET'), 'allow');
   assert.equal(earlyRouteGate(request('/api/market/catalog')), undefined);
   assert.equal(earlyRouteGate(request('/api/market/services/' + id)).status, 401);
@@ -26,6 +30,7 @@ try {
   assert.equal(await earlyBodyGate(request('/api/mcp', 'POST', { 'content-type': 'application/json' }, JSON.stringify({ method: 'tools/call', params: { name: 'search_services' } }))), undefined);
   assert.equal(await earlyBodyGate(request('/api/mcp', 'POST', { 'content-type': 'application/json' }, JSON.stringify({ method: 'tools/call', params: { name: 'list_market_services' } }))), undefined);
   const cursor=Buffer.from(JSON.stringify({version:1,scope:'orders:ow_test',createdAt:'2026-10-07T00:00:00.000Z',id})).toString('base64url');
+  assert.equal((await proxy(new NextRequest('https://bazaar.example/api/operations?limit=20',{headers:{authorization:'Bearer '+token}}))).headers.get('x-middleware-next'),'1','Retained operation history must remain readable');
   for(const path of ['/api/market/orders?limit=20','/api/market/orders?limit=20&cursor='+cursor,'/api/market/services?limit=20&cursor='+cursor+'&mineCursor='+cursor]) {
     const response=await proxy(new NextRequest('https://bazaar.example'+path,{headers:{authorization:'Bearer '+token}}));assert.equal(response.headers.get('x-middleware-next'),'1','First/second private page must pass the actual proxy');
   }

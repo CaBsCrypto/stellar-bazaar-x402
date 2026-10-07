@@ -172,8 +172,14 @@ export async function runMarketplaceBuyerIntent(intent,options){
  try{await createBuyerOrderOnce(intent,options);await requestBuyerChallengeOnce(intent,options);await authorizeBuyerOnce(intent,options);return await payBuyerOnce(intent,options);}finally{activeBuyers.delete(key);}
 }
 export async function discoverBuyerService(origin,serviceId,options){
- const response=await options.marketFetch(new URL(options.catalogPath??'/api/market/catalog',originOnly(origin)),{method:'GET',redirect:'error'});if(!response.ok)throw Error('CATALOG_UNCONFIRMED');const body=await jsonBody(response),service=body.services?.find(item=>item.card?.id===serviceId&&item.status==='activated');
- if(!service||!cardValid(service.card)||digest(buyerCanonical(service.card))!==service.cardHash)throw Error('SERVICE_NOT_ACTIVE');return clone(service);
+ let service;
+ if(options.marketTool){const body=await options.marketTool('get_service',{id:serviceId});service={...body,card:body.resource};}
+ else{
+  const url=new URL(options.catalogPath??'/api/market/catalog',originOnly(origin));if(options.catalogCursor)url.searchParams.set('cursor',options.catalogCursor);
+  const response=await options.marketFetch(url,{method:'GET',redirect:'error'});if(!response.ok)throw Error('CATALOG_UNCONFIRMED');const body=await jsonBody(response);service=body.services?.find(item=>item.card?.id===serviceId&&item.status==='activated');
+  if(!service&&body.nextCursor){const error=Error('SERVICE_NOT_IN_CATALOG_PAGE');error.nextCursor=body.nextCursor;throw error;}
+ }
+ if(!service||service.status!=='activated'||!cardValid(service.card)||digest(buyerCanonical(service.card))!==service.cardHash)throw Error('SERVICE_NOT_ACTIVE');return clone(service);
 }
 
 /** Reservations are never released after a lost signer/transport response. */
@@ -193,7 +199,8 @@ export function createBoundedBuyerFetch({origin,fetchImpl=fetch,timeoutMs=12000,
  const exactOrigin=originOnly(origin);if(!exactOrigin.startsWith('https://')||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>12000||!Number.isInteger(maxResponseBytes)||maxResponseBytes<1||maxResponseBytes>1048576)throw Error('INVALID_TRANSPORT_CONFIGURATION');
  return async(input,init={})=>{
   const url=new URL(String(input)),method=(init.method??'GET').toUpperCase(),headers=new Headers(init.headers),body=init.body??'';
-  if(url.origin!==exactOrigin||url.username||url.password||url.search||url.hash||!['GET','POST'].includes(method)||typeof body!=='string'||Buffer.byteLength(body)>65536||method==='GET'&&body)throw Error('UNBOUND_TRANSPORT_TARGET');
+  if(url.origin!==exactOrigin||url.username||url.password||url.hash||!['GET','POST'].includes(method)||typeof body!=='string'||Buffer.byteLength(body)>65536||method==='GET'&&body)throw Error('UNBOUND_TRANSPORT_TARGET');
+  if(url.search){const params=url.searchParams;if(url.pathname!=='/api/market/catalog'||method!=='GET'||[...params.keys()].some(key=>!['limit','cursor'].includes(key)||params.getAll(key).length!==1)||params.has('limit')&&!/^(?:[1-9]|1[0-9]|20)$/.test(params.get('limit'))||params.has('cursor')&&!/^[a-zA-Z0-9_-]{1,2048}$/.test(params.get('cursor')))throw Error('UNBOUND_TRANSPORT_TARGET');}
   let requestHeaderBytes=0;for(const[key,value]of headers)requestHeaderBytes+=Buffer.byteLength(key+': '+value+'\r\n');
   const metadata={origin:url.origin,path:url.pathname,method,payloadHash:digest(body),requestBytes:Buffer.byteLength(body)+requestHeaderBytes,requestBodyBytes:Buffer.byteLength(body),requestHeaderBytes};await beforeRequest?.(metadata);
   const controller=new AbortController(),abort=()=>controller.abort(),timer=setTimeout(abort,timeoutMs);init.signal?.addEventListener('abort',abort,{once:true});let responseBodyBytes=0,responseHeaderBytes=0,reader,status;

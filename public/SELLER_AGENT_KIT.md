@@ -31,7 +31,10 @@ must never cause another provider execution. A lost delivery acknowledgement
 permits only explicit replay of the frozen delivery for the original attempt.
 
 Opt-in watch polls at least every 60 seconds, at most ten times, with one
-execution at a time and a 100-request session cap including MCP initialization.
+execution at a time and a 100-request per-minute limit including MCP initialization.
+Each list command reads one page and returns a cursor. Watch durably saves its
+scan cursor after processing a page, so another invocation continues through
+catalogs and histories exceeding 100 records without repeating executions.
 Stop on uncertainty, quota or unresolved state, and respect Retry-After.
 Hosting, TLS, scheduler, process supervision and encrypted backups belong to the
 participant. The kit requires no Vercel authentication for public Bazaar.

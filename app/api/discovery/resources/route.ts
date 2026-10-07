@@ -9,6 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export const GET = measuredHandler(async (req: NextRequest) => {
+  if (process.env.BAZAAR_ENABLE_MARKETPLACE === 'true') return NextResponse.json({error:{code:'USE_MARKET_CATALOG'}},{status:404,headers:{'Cache-Control':'no-store'}});
   const p = req.nextUrl.searchParams;
   const registry = await readDynamicServiceCards();
   const dynamicServices = registry.entries.map((d) => toPaidService(d.card));

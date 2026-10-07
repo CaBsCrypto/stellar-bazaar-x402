@@ -7,7 +7,7 @@ import { pilotCards } from "./pilot-cards.ts";
 import { parseServiceCardShape } from "./service-card-schema.ts";
 import {configuredMarketStore} from './marketplace-store.ts';
 import {configuredWorkspaceStore} from './workspace-store.ts';
-import {getSubmissionForOperator} from './provider-self-listing.ts';
+import {getMarketReviewSnapshot} from './provider-self-listing.ts';
 
 export interface DynamicEntry {
   id: string;
@@ -119,13 +119,15 @@ export async function readDynamicServiceCards(): Promise<{ entries: DynamicEntry
   const visible = async (snapshot: {entries:DynamicEntry[];available:boolean}) => {
     if (!pilot) return snapshot;
     const owned = await configuredMarketStore().transact(s => s.services.filter(v => !v.withdrawn));
+    const [activeOwners,reviews]=await Promise.all([configuredWorkspaceStore().activeOwnerIds(owned.map(v=>v.ownerId)),getMarketReviewSnapshot(owned.map(v=>v.submissionId))]);
+    if(!reviews.ok)throw Error('REVIEW_UNAVAILABLE');
+    const reviewById=new Map(reviews.value.map(v=>[v.submissionId,v]));
     const entries: DynamicEntry[] = [];
     for (const entry of snapshot.entries) {
       const service = owned.find(v => v.card.id === entry.id && v.cardHash === entry.hash);
-      if (!service || !await configuredWorkspaceStore().isOwnerActive(service.ownerId)) continue;
-      const review = await getSubmissionForOperator(service.submissionId, false);
-      if (!review.ok) { if (review.error.code === 'STORE_UNAVAILABLE') throw Error('REVIEW_UNAVAILABLE'); continue; }
-      if (review.value.status === 'activated' && computeCardHash(review.value.card) === entry.hash) entries.push(entry);
+      if (!service || !activeOwners.has(service.ownerId)) continue;
+      const review = reviewById.get(service.submissionId);
+      if (review?.status === 'activated' && computeCardHash(review.card) === entry.hash) entries.push(entry);
     }
     return {...snapshot,entries};
   };

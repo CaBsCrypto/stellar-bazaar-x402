@@ -5,9 +5,16 @@
   "license": "Apache-2.0",
   "type": "module",
   "engines": {
-    "node": "22.x"
+    "node": "24.x"
   },
   "scripts": {
+    "test:market:capacity": "node --experimental-strip-types scripts/test-market-capacity.mjs",
+    "test:market:mcp": "node --experimental-strip-types scripts/test-open-market-mcp.mjs",
+    "test:buyer:portable": "node --experimental-strip-types scripts/test-buyer-portable-runtime.mjs",
+    "test:seller:external": "node --experimental-strip-types scripts/test-external-seller-kit.mjs",
+    "buyer": "node examples/buyer-cli.mjs",
+    "seller": "node examples/marketplace-seller-mcp.mjs",
+    "seller:runtime": "node examples/seller-runtime.mjs",
     "test:marketplace": "node --experimental-strip-types scripts/test-marketplace.mjs",
     "test:marketplace:x402": "node --experimental-strip-types scripts/test-marketplace-x402.mjs",
     "test:marketplace:x402:buyer": "node scripts/test-marketplace-x402-buyer.mjs",

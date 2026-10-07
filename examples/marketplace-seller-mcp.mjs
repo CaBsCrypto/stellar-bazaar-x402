@@ -48,8 +48,8 @@ async function main(){
   };
   if(command==='prepare'){await prepare(argument);console.log(JSON.stringify({operationId:argument,phase:'prepared'}));return;}
   await withSellerMcp({agentAccess:config.agentAccess,maxRequests:command==='watch'?100:30},async transport=>{
-   if(command==='list'){const orders=await listSellerOrders(transport);console.log(JSON.stringify({orders:orders.map(v=>({operationId:v.operationId,serviceId:v.serviceId,phase:v.phase,paymentVerified:Boolean(v.paymentVerifiedAt)}))}));return;}
-   if(command==='services'){const services=await listSellerServices(transport);console.log(JSON.stringify({services:services.map(v=>({serviceId:v.card.id,cardHash:v.cardHash,status:v.status,purchase:v.purchase}))}));return;}
+   if(command==='list'){const {orders,nextCursor}=await listSellerOrders(transport,{cursor:argument});console.log(JSON.stringify({orders:orders.map(v=>({operationId:v.operationId,serviceId:v.serviceId,phase:v.phase,paymentVerified:Boolean(v.paymentVerifiedAt)})),nextCursor}));return;}
+   if(command==='services'){const {services,nextCursor}=await listSellerServices(transport,{cursor:argument});console.log(JSON.stringify({services:services.map(v=>({serviceId:v.card.id,cardHash:v.cardHash,status:v.status,purchase:v.purchase})),nextCursor}));return;}
    if(command==='inspect'){
     if(!sellerUuid.test(argument??''))throw Error('OPERATION_ID_REQUIRED');const intent=validateSellerIntent(await store.journal('seller.'+argument).read());const order=await inspectSellerIntent(intent,transport);console.log(JSON.stringify({operationId:intent.operationId,localPhase:intent.phase,phase:order?.phase,textFrozen:Boolean(intent.textHash),paymentVerified:Boolean(order?.paymentVerifiedAt)}));return;
    }
@@ -77,7 +77,12 @@ async function main(){
     }finally{await release();}
    };
    if(command==='watch'){
-    const watchRelease=await store.acquireLock('seller.watch');try{const result=await watchSellerOrders({polls:Number(argument??10),poll:async()=>{const values=await listSellerOrders(transport);return values.filter(v=>v.serviceId===config.card.id);},processOrder:async order=>{const name='seller.'+order.operationId;if(await readSellerJournal(store.journal(name)))throw Error('EXISTING_INTENT_REQUIRES_RECOVERY');await prepare(order.operationId);await action(order.operationId,'execute');},sleep:ms=>new Promise(r=>setTimeout(r,ms))});console.log(JSON.stringify({...result,mcpRequests:transport.requestCount()}));}finally{await watchRelease();}return;
+    const watchRelease=await store.acquireLock('seller.watch');try{
+     const scanJournal=store.journal('seller.scan');let scan=await readSellerJournal(scanJournal),nextCursor;
+     if(scan&&(scan.version!==1||scan.cursor!==null&&typeof scan.cursor!=='string'))throw Error('INVALID_SCAN_STATE');
+     if(!scan){scan={version:1,cursor:null};await scanJournal.initialize(scan);}
+     const result=await watchSellerOrders({polls:Number(argument??10),poll:async()=>{const page=await listSellerOrders(transport,{cursor:scan.cursor??undefined});nextCursor=page.nextCursor;return page.orders.filter(v=>v.serviceId===config.card.id);},afterPage:async()=>{scan={version:1,cursor:nextCursor};await scanJournal.append(scan);},processOrder:async order=>{const name='seller.'+order.operationId;if(await readSellerJournal(store.journal(name)))throw Error('EXISTING_INTENT_REQUIRES_RECOVERY');await prepare(order.operationId);await action(order.operationId,'execute');},sleep:ms=>new Promise(r=>setTimeout(r,ms))});console.log(JSON.stringify({...result,nextCursor:scan.cursor,mcpRequests:transport.requestCount()}));
+    }finally{await watchRelease();}return;
    }
    console.log(JSON.stringify(await action(argument,command)));
   });

@@ -15,13 +15,17 @@ import { getServicePortfolio } from "@/lib/service-portfolio";
 import { measuredRead } from "@/lib/acceptance-meter";
 import { isCanonicalUsdcTestnet } from "@/lib/payment-assets";
 import type { ServiceCard } from "@/lib/types";
+import {marketServiceSnapshot} from '@/lib/marketplace';
 import "../../history/deliveries.css";
 import "../portfolio.css";
 export const dynamic = "force-dynamic";
 export function generateStaticParams() { return services.map(({id})=>({id})); }
 export default async function ResourcePage({params}: {params: Promise<{id:string}>}) {
- const {id}=await params; let service=getService(id); let partialRegistry=false; let marketCard: ServiceCard | undefined;
- if (!service) {
+ const {id}=await params; const marketEnabled=process.env.BAZAAR_ENABLE_MARKETPLACE==='true'; let service=marketEnabled?undefined:getService(id); let partialRegistry=false; let marketCard: ServiceCard | undefined;
+ if(marketEnabled){
+  const snapshot=await measuredRead(marketServiceSnapshot),record=snapshot.records.find(r=>r.active&&r.service.card.id===id);
+  if(!record)notFound();marketCard=record.service.card;service={...toPaidService(marketCard),latency:'No declarada',output:['Entrega de texto reportada por el agente vendedor']};
+ } else if (!service) {
   const registry=await measuredRead(() => readDynamicServiceCards());
   const found=registry.entries.find(entry=>entry.id===id);
   if (!registry.available && !found) return <main><Navbar/><section className="shell portfolio-page" role="status"><h1>No se pudo consultar el registro</h1><p>No podemos confirmar los datos de este servicio en este momento. Vuelve a cargar la página para reintentar o regresa al catálogo.</p><a href="/catalogo">Volver al catálogo</a></section><Footer/></main>;

@@ -25,19 +25,18 @@ export function bindSellerOrder(intent,order,allowed){
  const binding={transactionHash:order.transactionHash,inputHash:order.inputHash,input:structuredClone(input),amount:order.amount,destination:order.destination,identity:structuredClone(order.settlement),paymentProtocol:order.paymentProtocol};
  if(intent.binding&&canonical(intent.binding)!==canonical(binding))throw Error('ORDER_CHANGED');return binding;
 }
-export async function listSellerOrders(options){
- const orders=[];let cursor;const seen=new Set();
- for(let page=0;page<5;page++){
-  const body=await sellerTool(options,'list_market_orders',{limit:20,...(cursor?{cursor}:{})});if(!Array.isArray(body.orders))throw Error('INVALID_ORDER_LIST');orders.push(...body.orders.filter(v=>v.perspective==='sale'));
-  if(!body.nextCursor)return orders;if(typeof body.nextCursor!=='string'||seen.has(body.nextCursor))throw Error('INVALID_ORDER_CURSOR');seen.add(body.nextCursor);cursor=body.nextCursor;
- }throw Error('ORDER_PAGE_BOUND_REACHED');
+function pageInput({limit=20,cursor}={}){
+ if(!Number.isInteger(limit)||limit<1||limit>20||cursor!==undefined&&(typeof cursor!=='string'||!cursor.length||cursor.length>2048))throw Error('INVALID_PAGE_INPUT');
+ return {limit,...(cursor?{cursor}:{})};
 }
-export async function listSellerServices(options){
- const services=[];let cursor;const seen=new Set();
- for(let page=0;page<5;page++){
-  const body=await sellerTool(options,'list_market_services',{limit:20,...(cursor?{cursor}:{})});if(!Array.isArray(body.services))throw Error('INVALID_SERVICE_LIST');services.push(...body.services);
-  if(!body.nextCursor)return services;if(typeof body.nextCursor!=='string'||seen.has(body.nextCursor))throw Error('INVALID_SERVICE_CURSOR');seen.add(body.nextCursor);cursor=body.nextCursor;
- }throw Error('SERVICE_PAGE_BOUND_REACHED');
+function pageCursor(value,prior){if(value===null||value===undefined)return null;if(typeof value!=='string'||!value.length||value.length>2048||value===prior)throw Error('INVALID_PAGE_CURSOR');return value;}
+export async function listSellerOrders(options,page){
+ const input=pageInput(page),body=await sellerTool(options,'list_market_orders',input);if(!Array.isArray(body.orders))throw Error('INVALID_ORDER_LIST');
+ return {orders:body.orders.filter(v=>v.perspective==='sale'),nextCursor:pageCursor(body.nextCursor,input.cursor)};
+}
+export async function listSellerServices(options,page){
+ const input=pageInput(page),body=await sellerTool(options,'list_market_services',input);if(!Array.isArray(body.services))throw Error('INVALID_SERVICE_LIST');
+ return {services:body.services,nextCursor:pageCursor(body.nextCursor,input.cursor)};
 }
 export async function inspectSellerIntent(intent,options){const {order}=await sellerTool(options,'get_market_order',{operationId:intent.operationId});return {...order,perspective:order?.sellerOwnerId===intent.ownerId?'sale':order?.perspective};}
 export async function claimSellerIntent(intent,options){
@@ -99,7 +98,7 @@ export async function failSellerIntent(intent,options,reason){
  const {order}=await sellerTool(options,'fail_market_order',{operationId:intent.operationId,attemptId:intent.attemptId,reason});bindSellerOrder(intent,{...order,perspective:order?.perspective??'sale'},['delivery-failed']);if(order.failure!==reason)throw Error('FAILURE_CHANGED');intent.phase='delivery-failed';await persist(intent,options);return order;
 }
 /** Opt-in bounded polling: at most ten polls, one execution at a time, no retries. */
-export async function watchSellerOrders({poll,processOrder,polls=10,intervalMs=60000,sleep=ms=>new Promise(r=>setTimeout(r,ms))}){
+export async function watchSellerOrders({poll,processOrder,afterPage=async()=>{},polls=10,intervalMs=60000,sleep=ms=>new Promise(r=>setTimeout(r,ms))}){
  if(!Number.isInteger(polls)||polls<1||polls>10||intervalMs<60000)throw Error('INVALID_WATCH_BOUNDS');const seen=new Set();let executed=0;
  for(let i=0;i<polls;i++){
   let orders;try{orders=await poll();}catch(error){if(error.httpStatus===429)return {polls:i+1,executed,stopped:'quota',retryAfter:error.retryAfter};throw error;}
@@ -108,6 +107,7 @@ export async function watchSellerOrders({poll,processOrder,polls=10,intervalMs=6
    if(order.phase!=='paid'||seen.has(order.operationId))continue;seen.add(order.operationId);
    try{await processOrder(order);executed++;}catch(error){if(error.httpStatus===429)return {polls:i+1,executed,stopped:'quota',retryAfter:error.retryAfter};return {polls:i+1,executed,stopped:'unconfirmed'};}
   }
+  await afterPage();
   if(i+1<polls)await sleep(intervalMs);
  }return {polls,executed,stopped:'bound'};
 }

@@ -8,10 +8,11 @@ export function publicBazaarApi(path: string, method: string) {
 }
 export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redirect' | 'deny' {
   if (process.env.BAZAAR_ENABLE_MARKETPLACE === 'true') {
+    if (['/api/discovery/resources','/api/discovery/search'].includes(path)) return 'deny';
     if (['GET','HEAD'].includes(method) && path === '/') return 'allow';
     if (['GET','HEAD'].includes(method) && ['/MARKETPLACE_PILOT.md','/WORKSPACE_AGENT.md','/PROVIDER_ONBOARDING.md','/HISTORY_CONNECTION.md','/BUYER.md','/BUYER_AGENT_KIT.md','/SELLER_AGENT_KIT.md','/llms.txt','/mcp.json'].includes(path)) return 'allow';
     if (['GET','HEAD'].includes(method) && /^\/skills\/(buyer|seller|recovery)\/SKILL\.md$/.test(path)) return 'allow';
-    if (['GET','HEAD'].includes(method) && ['/catalogo','/hub','/publish'].includes(path)) return 'allow';
+    if (['GET','HEAD'].includes(method) && ['/catalogo','/hub','/open','/publish'].includes(path)) return 'allow';
     if (['GET','HEAD'].includes(method) && /^\/resources\/[a-z0-9-]+$/.test(path)) return 'allow';
     if (method === 'GET' && ['/api/discovery/resources','/api/discovery/search','/api/market/catalog'].includes(path)) return 'allow';
     if (method === 'OPTIONS' && path === '/api/discovery/search') return 'allow';
