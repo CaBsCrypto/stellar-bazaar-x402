@@ -1,10 +1,13 @@
 {
   "buildCommand": "next build --webpack",
+  "regions": ["iad1"],
   "functions": {
     "app/api/**/route.ts": { "maxDuration": 60 }
   },
   "git": {
     "deploymentEnabled": {
+      "main": false,
+      "codex/bazaar-open-release": false,
       "mission/identity-pilot": false,
       "fix/operational-guards": false,
       "review/base-webmcp": false,

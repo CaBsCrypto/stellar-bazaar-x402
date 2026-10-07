@@ -31,6 +31,8 @@ try {
   assert.equal(await earlyBodyGate(request('/api/mcp', 'POST', { 'content-type': 'application/json' }, JSON.stringify({ method: 'tools/call', params: { name: 'list_market_services' } }))), undefined);
   const cursor=Buffer.from(JSON.stringify({version:1,scope:'orders:ow_test',createdAt:'2026-10-07T00:00:00.000Z',id})).toString('base64url');
   assert.equal((await proxy(new NextRequest('https://bazaar.example/api/operations?limit=20',{headers:{authorization:'Bearer '+token}}))).headers.get('x-middleware-next'),'1','Retained operation history must remain readable');
+  for(const query of ['view=tasks&limit=20','view=events&limit=20&status=completed&from=2026-10-01','view=operations&limit=20&cursor='+cursor,'download=1&operationId='+id])assert.equal((await proxy(new NextRequest('https://bazaar.example/api/activity?'+query,{headers:{authorization:'Bearer '+token}}))).headers.get('x-middleware-next'),'1','Retained activity filters must remain readable');
+  for(const query of ['view=tasks&limit=21','view=tasks&view=events','status=unknown','download=1','from=bad','cursor=bad%3D'])assert.equal(earlyRouteGate(request('/api/activity?'+query,'GET',{authorization:'Bearer '+token})).status,400);
   for(const path of ['/api/market/orders?limit=20','/api/market/orders?limit=20&cursor='+cursor,'/api/market/services?limit=20&cursor='+cursor+'&mineCursor='+cursor]) {
     const response=await proxy(new NextRequest('https://bazaar.example'+path,{headers:{authorization:'Bearer '+token}}));assert.equal(response.headers.get('x-middleware-next'),'1','First/second private page must pass the actual proxy');
   }

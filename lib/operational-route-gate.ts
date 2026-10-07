@@ -26,7 +26,15 @@ export function earlyRouteGate(request: Request): EarlyRouteResult {
   const origin = request.headers.get('origin');
   if (!expected || url.origin !== expected || origin && origin !== expected) return { code: 'INVALID_REQUEST', status: 400 };
   if (url.search) {
-    if (path === '/api/operations' && method === 'GET') {
+    if(path==='/api/activity'&&method==='GET') {
+      const params=url.searchParams,allowed=['view','limit','cursor','taskId','agentId','from','to','status','operationId','download'];
+      if([...params.keys()].some(key=>!allowed.includes(key)||params.getAll(key).length!==1))return {code:'INVALID_REQUEST',status:400};
+      const limit=params.get('limit');if(limit!==null&&(!/^[1-9]\d?$/.test(limit)||Number(limit)>20))return {code:'INVALID_REQUEST',status:400};
+      for(const key of ['taskId','agentId','operationId']) {const value=params.get(key);if(value!==null&&!/^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,159}$/.test(value))return {code:'INVALID_REQUEST',status:400};}
+      for(const key of ['from','to']) {const value=params.get(key);if(value!==null&&(!/^\d{4}-\d{2}-\d{2}$/.test(value)||!Number.isFinite(Date.parse(value))))return {code:'INVALID_REQUEST',status:400};}
+      const cursor=params.get('cursor');if(cursor!==null&&!/^[a-zA-Z0-9_-]{1,1024}$/.test(cursor))return {code:'INVALID_REQUEST',status:400};
+      if(params.has('view')&&!['tasks','events','operations'].includes(params.get('view')!)||params.has('status')&&!['active','completed','error','legacy'].includes(params.get('status')!)||params.has('download')&&(params.get('download')!=='1'||!params.has('operationId')))return {code:'INVALID_REQUEST',status:400};
+    } else if (path === '/api/operations' && method === 'GET') {
       const params=url.searchParams;
       if([...params.keys()].some(key=>!['limit','cursor'].includes(key)||params.getAll(key).length!==1)) return {code:'INVALID_REQUEST',status:400};
       const limit=params.get('limit');if(limit!==null&&(!/^[1-9]\d?$/.test(limit)||Number(limit)>20))return {code:'INVALID_REQUEST',status:400};
