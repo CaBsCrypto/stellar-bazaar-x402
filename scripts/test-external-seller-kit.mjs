@@ -1,0 +1,86 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {mkdtemp,readFile,writeFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {spawnSync} from 'node:child_process';
+import {Keypair} from '@stellar/stellar-sdk';
+import {createSellerCard,assertSellerCard,sellerHash as hash,sellerCanonical as canonical} from '../examples/seller-service-card.mjs';
+import {createSellerIntent,executeSellerIntent,deliverSellerIntent,claimSellerIntent,recoverSellerIntent,uncertainSellerIntent,failSellerIntent,watchSellerOrders,listSellerOrders} from '../examples/seller-marketplace-worker.mjs';
+import {createSellerHttpAdapter} from '../examples/seller-http-adapter.mjs';
+import {createSellerRuntime} from '../examples/seller-runtime.mjs';
+import {withSellerMcp,SELLER_BAZAAR_ENDPOINT} from '../examples/marketplace-seller-mcp.mjs';
+import {openPortableSecretStore} from '../examples/buyer-portable-secret-store.mjs';
+import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts';
+import {marketCard} from '../lib/marketplace.ts';
+
+const origin='https://seller.example.com',ownerId='ow_local_seller',agentId=randomUUID(),providerAccess='p'.repeat(43);
+const destination=Keypair.fromRawEd25519Seed(Buffer.alloc(32,1)).publicKey();
+const publication=createSellerCard({id:'external-text',name:'External text',description:'Returns text from an existing participant service.',providerName:'Local participant',providerOrigin:origin,destination});
+assert.equal(publication.cardHash,computeCanonicalServiceCardHash(publication.card));assert.equal(Object.hasOwn(publication.card,'cardHash'),false);assert.deepEqual(marketCard(publication.card),publication.card);
+const result=body=>({isError:false,structuredContent:body,content:[]});
+function fixture(){
+ const intent=createSellerIntent({operationId:randomUUID(),cardHash:publication.cardHash,serviceId:publication.card.id,providerOrigin:origin,ownerId,agentId});
+ let order={operationId:intent.operationId,cardHash:publication.cardHash,serviceId:intent.serviceId,card:structuredClone(publication.card),sellerOwnerId:ownerId,buyerOwnerId:'ow_buyer',perspective:'sale',phase:'paid',input:{prompt:'Texto privado'},inputHash:hash(canonical({prompt:'Texto privado'})),paymentProtocol:'x402-stellar-exact-v2',amount:'0.01',destination,settlement:publication.card.payment.identity,transactionHash:'b'.repeat(64),paymentVerifiedAt:new Date().toISOString()};
+ let providerCalls=0,loseClaim=false,loseProvider=false,loseDelivery=false;const saved=[],calls=[];
+ const options={persistIntent:async value=>saved.push(structuredClone(value)),adapter:{execute:async packet=>{providerCalls++;assert.equal(saved.at(-1).phase,'provider-started');assert.equal(packet.operationId,intent.operationId);assert.equal(packet.attemptId,intent.attemptId);if(loseProvider)throw Error('LOST_PROVIDER');return {text:'Frozen output'};}},callTool:async(name,args)=>{
+  calls.push({name,args:structuredClone(args)});if(name==='get_market_order')return result({order:structuredClone(order)});if(name==='list_market_orders')return result({orders:[structuredClone(order)],nextCursor:null});
+  if(name==='claim_market_order'){order={...order,phase:'executing',attemptId:args.attemptId,agentId};if(loseClaim)throw Error('LOST_CLAIM');}
+  else if(name==='deliver_market_order'){order={...order,phase:'delivered',delivery:{text:args.text,sha256:hash(args.text),reference:'bazaar-order:'+intent.operationId}};if(loseDelivery)throw Error('LOST_DELIVERY');}
+  else if(name==='uncertain_market_order')order={...order,phase:'execution-uncertain',executionUncertainty:args.reason};
+  else if(name==='fail_market_order')order={...order,phase:'delivery-failed',failure:args.reason};else throw Error('UNEXPECTED_TOOL');return result({order:structuredClone(order)});
+ }};
+ return {intent,options,saved,calls,get order(){return order;},set order(value){order=value;},get providerCalls(){return providerCalls;},set loseClaim(value){loseClaim=value;},set loseProvider(value){loseProvider=value;},set loseDelivery(value){loseDelivery=value;}};
+}
+let scenarios=1;
+const successful=fixture();await executeSellerIntent(successful.intent,successful.options);assert.deepEqual(successful.saved.map(v=>v.phase),['claim-started','claimed','provider-started','generated','delivery-started','delivered']);await assert.rejects(executeSellerIntent(successful.intent,successful.options),/EXISTING_INTENT/);await deliverSellerIntent(successful.intent,successful.options);assert.equal(successful.providerCalls,1);scenarios++;
+const lost=fixture();lost.loseProvider=true;await assert.rejects(executeSellerIntent(lost.intent,lost.options),/EXECUTION_UNCERTAIN/);assert.equal(lost.intent.phase,'execution-uncertain');await assert.rejects(executeSellerIntent(lost.intent,lost.options),/EXISTING_INTENT/);await recoverSellerIntent(lost.intent,lost.options);await uncertainSellerIntent(lost.intent,lost.options);await failSellerIntent(lost.intent,lost.options,'Owner-confirmed failure');assert.equal(lost.providerCalls,1);assert.equal(lost.order.transactionHash,'b'.repeat(64));scenarios++;
+const ack=fixture();ack.loseDelivery=true;await assert.rejects(executeSellerIntent(ack.intent,ack.options),/LOST_DELIVERY/);assert.equal(ack.intent.phase,'delivery-uncertain');assert.ok(ack.saved.some(v=>v.phase==='generated'&&v.textHash===hash(v.text)));await recoverSellerIntent(ack.intent,ack.options);assert.equal(ack.intent.phase,'delivered');ack.loseDelivery=false;await deliverSellerIntent(ack.intent,ack.options);assert.equal(ack.providerCalls,1);scenarios++;
+const claimLost=fixture();claimLost.loseClaim=true;await assert.rejects(claimSellerIntent(claimLost.intent,claimLost.options),/LOST_CLAIM/);assert.equal(claimLost.intent.phase,'claim-started');assert.ok(claimLost.saved[0].binding);await recoverSellerIntent(claimLost.intent,claimLost.options);assert.equal(claimLost.intent.phase,'claimed');await executeSellerIntent(claimLost.intent,claimLost.options);assert.equal(claimLost.providerCalls,1);assert.equal(claimLost.calls.filter(v=>v.name==='claim_market_order').length,1);scenarios++;
+const fresh=fixture();await failSellerIntent(fresh.intent,fresh.options,'Manual failure');assert.equal(fresh.providerCalls,0);scenarios++;
+const prepared=fixture();assert.equal((await recoverSellerIntent(prepared.intent,prepared.options)).phase,'paid');assert.equal(prepared.intent.phase,'prepared');assert.equal(prepared.providerCalls,0);scenarios++;
+for(const mutate of [o=>delete o.paymentVerifiedAt,o=>o.phase='awaiting-payment',o=>o.sellerOwnerId='ow_other',o=>o.perspective='purchase',o=>o.cardHash='a'.repeat(64),o=>o.inputHash='c'.repeat(64),o=>o.amount='0.02',o=>o.transactionHash='invalid',o=>o.card.payment.identity.issuer=destination,o=>o.card.payment.marketplace.resourceTemplate='/legacy',o=>o.destination=Keypair.random().publicKey()]){
+ const v=fixture();const order=structuredClone(v.order);mutate(order);v.order=order;await assert.rejects(executeSellerIntent(v.intent,v.options));assert.equal(v.providerCalls,0);scenarios++;
+}
+const wrongAgent=fixture();await claimSellerIntent(wrongAgent.intent,wrongAgent.options);wrongAgent.order={...wrongAgent.order,agentId:randomUUID()};await assert.rejects(executeSellerIntent(wrongAgent.intent,wrongAgent.options),/CLAIM_CONFLICT/);assert.equal(wrongAgent.providerCalls,0);scenarios++;
+const tampered=fixture();await executeSellerIntent(tampered.intent,tampered.options);tampered.intent.text+='changed';await assert.rejects(deliverSellerIntent(tampered.intent,tampered.options),/DELIVERY_NOT_FROZEN/);assert.equal(tampered.providerCalls,1);scenarios++;
+const parallel=fixture();const running=executeSellerIntent(parallel.intent,parallel.options);await assert.rejects(executeSellerIntent(structuredClone(parallel.intent),parallel.options),/CONCURRENT_EXECUTION/);await running;assert.equal(parallel.providerCalls,1);scenarios++;
+for(const crashPhase of ['provider-started','generated']){
+ const v=fixture();let effect=0;v.options.adapter={execute:async()=>{effect++;return {text:'Freeze before delivery'};}};v.options.persistIntent=async snapshot=>{v.saved.push(structuredClone(snapshot));if(snapshot.phase===crashPhase)throw Error('SIMULATED_CRASH');};
+ await assert.rejects(executeSellerIntent(v.intent,v.options),/SIMULATED_CRASH/);const snapshot=v.saved.at(-1);assert.equal(effect,crashPhase==='provider-started'?0:1);await assert.rejects(executeSellerIntent(snapshot,v.options),/EXISTING_INTENT/);assert.equal(effect,crashPhase==='provider-started'?0:1);scenarios++;
+}
+let polls=0,effects=0,sleeps=0;
+assert.deepEqual(await watchSellerOrders({polls:10,poll:async()=>{polls++;return [{operationId:'same',phase:'paid'}];},processOrder:async()=>effects++,sleep:async ms=>{assert.equal(ms,60000);sleeps++;}}),{polls:10,executed:1,stopped:'bound'});assert.equal(polls,10);assert.equal(effects,1);assert.equal(sleeps,9);scenarios++;
+const quota=Object.assign(Error('QUOTA'),{httpStatus:429,retryAfter:'60'});const stop=await watchSellerOrders({poll:async()=>{throw quota;},processOrder:async()=>{throw Error('NO_EXECUTION');},sleep:async()=>{throw Error('NO_RETRY');}});assert.equal(stop.stopped,'quota');assert.equal(stop.retryAfter,'60');assert.equal((await watchSellerOrders({poll:async()=>[{phase:'execution-uncertain'}],processOrder:async()=>{throw Error('NO_EXECUTION');}})).stopped,'uncertainty');await assert.rejects(watchSellerOrders({polls:11}));scenarios++;
+let pages=0;const paged=await listSellerOrders({callTool:async(name,args)=>{pages++;assert.equal(args.limit,20);if(pages===1)return result({orders:[{perspective:'sale',operationId:'one'}],nextCursor:'next'});assert.equal(args.cursor,'next');return result({orders:[{perspective:'purchase'},{perspective:'sale',operationId:'two'}],nextCursor:null});}});assert.equal(paged.length,2);scenarios++;
+let requests=0;const agentAccess='a'.repeat(43);
+await withSellerMcp({agentAccess,fetcher:async(url,init)=>{
+ requests++;assert.equal(String(url),SELLER_BAZAAR_ENDPOINT);assert.equal(init.redirect,'error');assert.equal(new Headers(init.headers).get('authorization'),'Bearer '+agentAccess);
+ if(init.method==='GET')return new Response(null,{status:405});const body=JSON.parse(init.body);assert.ok(!init.body.includes(agentAccess));
+ if(body.method==='initialize')return Response.json({jsonrpc:'2.0',id:body.id,result:{protocolVersion:body.params.protocolVersion,capabilities:{tools:{}},serverInfo:{name:'local-mock',version:'1'}}},{headers:{'mcp-session-id':'local'}});
+ if(body.method==='notifications/initialized')return new Response(null,{status:202});
+ if(body.method==='tools/call')return Response.json({jsonrpc:'2.0',id:body.id,result:result({orders:[],nextCursor:null})});throw Error('UNEXPECTED_TRANSPORT');
+}},async options=>{assert.deepEqual(await listSellerOrders(options),[]);assert.ok(options.requestCount()>=3);});assert.ok(requests>=3&&requests<=5);scenarios++;
+let quotaRequests=0;await assert.rejects(withSellerMcp({agentAccess,fetcher:async()=>{quotaRequests++;return new Response(null,{status:429,headers:{'retry-after':'120'}});}},async()=>{throw Error('NO_ACTION');}),error=>error.httpStatus===429&&error.retryAfter==='120');assert.equal(quotaRequests,1);scenarios++;
+
+const directory=await mkdtemp(join(tmpdir(),'bazaar-seller-test-'));const password=Buffer.from('private test password');let store;
+try{
+ store=await openPortableSecretStore({directory:join(directory,'store'),password,create:true});let calls=0;
+ const runtime=createSellerRuntime({providerAccess,store,adapter:{execute:async()=>{calls++;return {text:'Runtime frozen'};}},maxRequests:3});const operationId=randomUUID(),attemptId=randomUUID();const request=input=>new Request(origin+'/v1/marketplace-text',{method:'POST',headers:{authorization:'Bearer '+providerAccess,'content-type':'application/json'},body:JSON.stringify({operationId,attemptId,input})});
+ const first=await runtime(request({prompt:'owned'}));assert.equal(first.status,200);const original=await first.json();const replay=await runtime(request({prompt:'owned'}));assert.deepEqual(await replay.json(),original);assert.equal(calls,1);assert.equal((await runtime(request({prompt:'changed'}))).status,409);assert.equal((await runtime(request({prompt:'owned'}))).status,429);assert.equal(calls,1);scenarios++;
+ const failedId=randomUUID();const failed=createSellerRuntime({providerAccess,store,adapter:{execute:async()=>{calls++;throw Error('LOST');}}});const failedRequest=()=>new Request(origin+'/v1/marketplace-text',{method:'POST',headers:{authorization:'Bearer '+providerAccess},body:JSON.stringify({operationId:failedId,attemptId,input:{prompt:'owned'}})});assert.equal((await failed(failedRequest())).status,409);assert.equal((await failed(failedRequest())).status,409);assert.equal(calls,2);scenarios++;
+ const lockName='seller.'+randomUUID(),release=await store.acquireLock(lockName);await assert.rejects(store.acquireLock(lockName),/STORE_LOCKED/);store.dispose();store=await openPortableSecretStore({directory:join(directory,'store'),password});await assert.rejects(store.acquireLock(lockName),/STORE_LOCKED/);await release();scenarios++;
+ const entry=store.journal('crash.frozen');const lock=await store.acquireLock('crash.frozen');await entry.initialize({phase:'provider-started'});await entry.append({phase:'generated',text:'Frozen',textHash:hash('Frozen')});await lock();store.dispose();store=await openPortableSecretStore({directory:join(directory,'store'),password});assert.equal((await store.journal('crash.frozen').read()).phase,'generated');scenarios++;
+ let httpCalls=0;const adapter=createSellerHttpAdapter({providerOrigin:origin,allowedOrigins:[origin],providerAccess,fetcher:async(url,init)=>{httpCalls++;assert.equal(url,origin+'/v1/marketplace-text');assert.equal(init.redirect,'error');const packet=JSON.parse(init.body);return Response.json({operationId:packet.operationId,attemptId:packet.attemptId,text:'HTTP frozen',textHash:hash('HTTP frozen'),contentType:'text/plain'});}});assert.deepEqual(await adapter.execute({operationId,attemptId,input:{prompt:'owned'}}),{text:'HTTP frozen'});assert.equal(httpCalls,1);assert.throws(()=>createSellerHttpAdapter({providerOrigin:origin,allowedOrigins:['https://other.example.com'],providerAccess}),/ALLOWLIST/);scenarios++;
+ const corrupt=join(directory,'store','crash.frozen.journal');await writeFile(corrupt,(await readFile(corrupt)).subarray(0,-1));await assert.rejects(store.journal('crash.frozen').read(),/JOURNAL_UNCONFIRMED/);scenarios++;
+ for(const crashAt of ['before','after','frozen']){
+  const crashDirectory=join(directory,'process-'+crashAt),operationId=randomUUID();const child=spawnSync(process.execPath,[fileURLToPath(new URL('./fixtures/external-seller-crash.mjs',import.meta.url)),crashDirectory,operationId,crashAt],{windowsHide:true,encoding:'utf8'});assert.equal(child.status,crashAt==='before'?17:crashAt==='after'?18:19,child.stderr);
+  const reopened=await openPortableSecretStore({directory:crashDirectory,password});try{
+   await assert.rejects(reopened.acquireLock('seller.'+operationId),/STORE_LOCKED/);const durable=await reopened.journal('seller.'+operationId).read();assert.equal(durable.phase,crashAt==='frozen'?'generated':'provider-started');
+   let repeatedEffects=0;await assert.rejects(executeSellerIntent(durable,{adapter:{execute:async()=>{repeatedEffects++;}}}),/EXISTING_INTENT/);assert.equal(repeatedEffects,0);
+   if(crashAt==='before')await assert.rejects(readFile(join(crashDirectory,'effect.marker')),error=>error.code==='ENOENT');else assert.equal(await readFile(join(crashDirectory,'effect.marker'),'utf8'),'one synthetic effect\n');
+  }finally{reopened.dispose();}scenarios++;
+ }
+}finally{store?.dispose();password.fill(0);await rm(directory,{recursive:true,force:true});}
+console.log(JSON.stringify({status:'PASS',scenarios,providerRetries:0,externalRequests:0,payments:0,coverage:['native-card-hash','paid-owner-agent-binding','claim-recovery','crash-before-and-after-provider','frozen-delivery-replay','encrypted-journal-lock','runtime-idempotency','watch-bounds','quota-stop','pagination','owned-endpoint-allowlist']}));
