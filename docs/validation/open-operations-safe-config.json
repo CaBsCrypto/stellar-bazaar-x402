@@ -60,11 +60,13 @@
     "NEXT_PUBLIC_BAZAAR_MARKETPLACE": "true",
     "NEXT_PUBLIC_APP_URL": "https://bazaar.browns.studio",
     "BAZAAR_ENABLE_OPEN_WORKSPACES": "false",
-    "BAZAAR_ENABLE_MARKETPLACE": "false",
+    "BAZAAR_ENABLE_MARKETPLACE": "true",
     "BAZAAR_ENABLE_SELF_LISTING_INTAKE": "false",
     "BAZAAR_ENABLE_PROVIDER_ACTIVATION": "false",
     "BAZAAR_OPERATIONAL_METER": "false",
-    "BAZAAR_OPERATIONAL_BUDGET": "false"
+    "BAZAAR_OPERATIONAL_BUDGET": "false",
+    "BAZAAR_WORKSPACE_REDIS_REST_URL": "https://build-only.invalid",
+    "BAZAAR_WORKSPACE_REDIS_REST_TOKEN": "offline-build-placeholder"
   },
   "removeAcceptanceMetadata": [
     "BAZAAR_ACCEPTANCE_STORAGE_CAPS_JSON",
@@ -73,11 +75,13 @@
     "BAZAAR_ACCEPTANCE_CATALOG_CARD_ID"
   ],
   "buildSecretNamesMustBeAbsent": [
-    "BAZAAR_WORKSPACE_REDIS_REST_URL", "BAZAAR_WORKSPACE_REDIS_REST_TOKEN",
     "BAZAAR_REVIEW_REDIS_REST_URL", "BAZAAR_REVIEW_REDIS_REST_TOKEN",
     "UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN", "KV_REST_API_URL", "KV_REST_API_TOKEN",
     "BAZAAR_MARKET_REVIEW_SECRET", "BAZAAR_PROVIDER_PREVIEW_BYPASS", "STELLAR_X402_FACILITATOR_API_KEY"
   ],
+  "buildWorkspaceConnectionIsSynthetic": true,
+  "buildMustPerformZeroStoreReads": true,
+  "builtPagesMustExcludeLegacyWebMcpProvider": true,
   "recommendedFunctionDuration": {
     "projectDefaultSeconds": 60,
     "apiRouteSeconds": 60,
