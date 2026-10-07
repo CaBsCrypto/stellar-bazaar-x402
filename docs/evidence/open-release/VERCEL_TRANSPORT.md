@@ -20,6 +20,7 @@ is imported or run by this helper.
 ```js
 import {
   prepareOpenVercelTransfer, createOpenVercelTransport, openVercelReservation,
+  createOpenVercelJournal,
 } from './scripts/open-vercel-transport.mjs';
 
 // The existing project/team, audited build and reviewed private options come
@@ -37,6 +38,7 @@ const transfer = await prepareOpenVercelTransfer({
   mode: 'prebuilt-upload', // alternative: 'source-inline'
   files: auditedFiles, // [{path,size,sha1,sha256,mode?}]
   auditedExtraPaths: [], // explicit reviewed prebuilt filePathMap references
+  publicTemplateHashes: {}, // optional exact {'.env.example': trackedSha256}
   deploymentOptions: privateReviewedDeploymentOptions,
   limits: {
     maximumStatusReads: reviewedStatusReads,
@@ -64,7 +66,7 @@ const transport = await createOpenVercelTransport({
   ...transfer,
   acceptancePlan: frozen,
   controller: sharedController, // preparation controller before first deploy
-  journal: privateStore.journal('vercel.' + segmentId),
+  journal: createOpenVercelJournal({store: privateStore, name: 'vercel.' + segmentId}),
   segmentId, // frozen UUID; independent initial/replacement segments
   acquireLock: () => privateStore.acquireLock('vercel.' + segmentId),
   credentialProvider: loadExistingConfiguredVercelTokenIntoMemory,
@@ -102,6 +104,22 @@ from the same audited files/options in the execution process and require its
 `transferHash` to equal the independently reviewed value before constructing
 the transport. The constructor requires that hash and segment UUID in the two
 frozen `vercelTransfers` entries, so config/body changes after review reject. The `opaque` object cannot be serialized as a secret packet.
+
+The sole environment-template exception is the exact root path `.env.example`
+in `prebuilt-upload` mode. It must be included in `auditedExtraPaths`, have the
+exact manifest SHA-256 in `publicTemplateHashes`, and match
+`frozen.sourceBinding.files['.env.example']` at construction. The transfer hash
+includes this mapping. All other `.env` paths remain rejected, and the literal
+secret scanner applies to the public template too.
+
+Use `createOpenVercelJournal`, under the same exclusive store lock, for real
+upload segments. A generic full-snapshot journal exceeds its 16 MiB bound as
+hundreds of upload traces grow. This adapter fsyncs an immutable encrypted
+revision containing array deltas, then fsyncs a compact encrypted head marker.
+It preserves every revision and verifies the chain on reopening. A failed head
+write leaves an immutable orphan that blocks the next write; it never silently
+reposts or repairs that uncertainty. Owner protection of encrypted backups is
+still required against whole-directory rollback.
 
 Each source-inline file must be in the historical source allowlist. Prebuilt
 files must be below `.vercel/output/`, or an explicit reviewed extra path used
@@ -201,6 +219,7 @@ Run locally:
 
 ```powershell
 node scripts/open-test-vercel-transport.mjs
+node scripts/open-test-vercel-journal.mjs
 node scripts/open-test-acceptance-controller.mjs --source-root .
 ```
 
@@ -209,3 +228,6 @@ public files. It checks fragmented/chunked byte hashes, aggregate/journal order,
 one creation, private report redaction, replay/tamper, lost response, missing
 files, 429, caps and incomplete exports. It reads no existing credentials,
 creates no deployment and cannot grant an independent review PASS.
+The journal fixture checks 600 logical uploads with 1,801 durable snapshots,
+encrypted revision/head tampering, incomplete head writes, and same-process
+counter rollback. It uses temporary synthetic secrets only.

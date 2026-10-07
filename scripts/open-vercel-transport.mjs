@@ -19,18 +19,18 @@ const opaqueTransfers=new WeakMap();
 
 /** Read-only preparation; private deployment options and upload bytes remain
  * in an opaque object. The returned plan is safe to include in the review. */
-export async function prepareOpenVercelTransfer({root,planId,sourceSha,projectId,teamId,name,target,autoAssignCustomDomains=false,productionOrigin,mode,files,auditedExtraPaths=[],deploymentOptions={},limits,logWindow}){
+export async function prepareOpenVercelTransfer({root,planId,sourceSha,projectId,teamId,name,target,autoAssignCustomDomains=false,productionOrigin,mode,files,auditedExtraPaths=[],publicTemplateHashes={},deploymentOptions={},limits,logWindow}){
  check(uuid.test(planId??'')&&/^[a-f0-9]{40}$/.test(sourceSha??'')&&/^prj_[A-Za-z0-9]{1,120}$/.test(projectId??'')&&/^team_[A-Za-z0-9]{1,120}$/.test(teamId??''),'FROZEN_EXISTING_DEPLOYMENT_IDENTITY_REQUIRED');
  check(/^[a-z0-9][a-z0-9-]{0,99}$/.test(name??'')&&['preview','production'].includes(target)&&['source-inline','prebuilt-upload'].includes(mode),'EXPLICIT_DEPLOYMENT_MODE_REQUIRED');
  check(!productionOrigin||productionOrigin==='https://bazaar.browns.studio','EXACT_PRODUCTION_ORIGIN_REQUIRED');
  check(typeof autoAssignCustomDomains==='boolean'&&(!autoAssignCustomDomains||target==='production'&&productionOrigin==='https://bazaar.browns.studio'),'EXPLICIT_DOMAIN_ASSIGNMENT_REQUIRED');
- check(Array.isArray(files)&&files.length>0&&Array.isArray(auditedExtraPaths),'EXPLICIT_AUDITED_FILE_MANIFEST_REQUIRED');
+ check(Array.isArray(files)&&files.length>0&&Array.isArray(auditedExtraPaths),'EXPLICIT_AUDITED_FILE_MANIFEST_REQUIRED');check(publicTemplateHashes&&Object.keys(publicTemplateHashes).every(k=>k==='.env.example'&&sha.test(publicTemplateHashes[k])),'EXACT_PUBLIC_TEMPLATE_HASH_REQUIRED');
  const cap={...limits};check(keys(cap)==='maximumLogPages,maximumRequestBytes,maximumResponseBytes,maximumStatusReads,requestHeaderBytes,timeoutMs'&&Object.values(cap).every(natural)&&cap.maximumStatusReads<=100&&cap.maximumLogPages<=100&&cap.maximumRequestBytes>cap.requestHeaderBytes&&cap.maximumRequestBytes<=1024**3&&cap.maximumResponseBytes>=1024&&cap.maximumResponseBytes<=16*1048576&&cap.requestHeaderBytes>=8192&&cap.requestHeaderBytes<=65536&&cap.timeoutMs>=1000&&cap.timeoutMs<=60000,'EXPLICIT_FINITE_TRANSFER_LIMITS_REQUIRED');
  if(logWindow)check(cap.maximumLogPages>0&&keys(logWindow)==='endDate,startDate'&&natural(logWindow.startDate)&&natural(logWindow.endDate)&&logWindow.endDate>logWindow.startDate&&logWindow.endDate-logWindow.startDate<=900000,'FROZEN_LOG_WINDOW_REQUIRED');else check(cap.maximumLogPages===0,'LOG_WINDOW_REQUIRED');
  const base=resolve(root),paths=new Set(),blobs=new Map(),manifest=[];check((await lstat(base)).isDirectory()&&!(await lstat(base)).isSymbolicLink(),'TRUSTED_SOURCE_ROOT_REQUIRED');
  for(const file of files){
   const path=file.path?.replaceAll('\\','/');check(typeof path==='string'&&!path.startsWith('/')&&!path.includes(':')&&!path.split('/').some(p=>!p||p==='.'||p==='..')&&!paths.has(path),'UPLOAD_PATH_DENIED');paths.add(path);
-  check(!/(?:^|\/)\.env(?:\.|$)|(?:^|\/)(?:auth|credentials|secret|wallet|packet)\.(?:json|bin|enc)$/.test(path),'PRIVATE_UPLOAD_PATH_DENIED');
+  const publicTemplate=mode==='prebuilt-upload'&&path==='.env.example'&&auditedExtraPaths.includes(path)&&publicTemplateHashes[path]===file.sha256;check(publicTemplate||!/(?:^|\/)\.env(?:\.|$)|(?:^|\/)(?:auth|credentials|secret|wallet|packet)\.(?:json|bin|enc)$/.test(path),'PRIVATE_UPLOAD_PATH_DENIED');
   check(mode==='source-inline'?(/^(app|lib|components|public|styles)\//.test(path)||sourceRoots.has(path)):(path.startsWith('.vercel/output/')||auditedExtraPaths.includes(path)),'AUDITED_UPLOAD_ALLOWLIST_REQUIRED');
   const absolute=resolve(base,path),rel=relative(base,absolute);check(rel&&!rel.startsWith('..'+sep)&&rel!=='..'&&!rel.includes(':')&&!(await lstat(absolute)).isSymbolicLink(),'UPLOAD_PATH_DENIED');let walked=base;for(const part of path.split('/')){walked=resolve(walked,part);check(!(await lstat(walked)).isSymbolicLink(),'UPLOAD_PATH_DENIED');}check((await lstat(absolute)).isFile(),'UPLOAD_FILE_REQUIRED');
   check(natural(file.size)&&file.size+cap.requestHeaderBytes<=cap.maximumRequestBytes,'UPLOAD_REQUEST_CAP');check((await lstat(absolute)).size===file.size,'UPLOAD_INPUT_CHANGED');const data=await readFile(absolute);check(natural(file.size)&&data.length===file.size&&digest(data,'sha1')===file.sha1&&digest(data)===file.sha256,'UPLOAD_INPUT_CHANGED');
@@ -49,11 +49,30 @@ export async function prepareOpenVercelTransfer({root,planId,sourceSha,projectId
  if(mode==='prebuilt-upload')for(const bytes of blobs.values())check(bytes.length+cap.requestHeaderBytes<=cap.maximumRequestBytes,'UPLOAD_REQUEST_CAP');
  const uploads=mode==='prebuilt-upload'?[...blobs.keys()].sort():[],maximumRequests=uploads.length+1+cap.maximumStatusReads+cap.maximumLogPages;
  const reservation=zero();reservation.httpRequests=reservation.externalRequests=maximumRequests;reservation.outboundBytes=body.length+uploads.reduce((n,id)=>n+blobs.get(id).length,0)+maximumRequests*cap.requestHeaderBytes;reservation.inboundBytes=maximumRequests*cap.maximumResponseBytes;check(resources.every(k=>natural(reservation[k])),'TRANSFER_BOUND_OVERFLOW');
- const plan={version:1,kind:'open-vercel-transfer',planId,sourceSha,projectId,teamId,name,target,autoAssignCustomDomains,...(productionOrigin?{productionOrigin}:{}),mode,origins:['https://api.vercel.com',...(logWindow?['https://vercel.com']:[])],manifest,payloadFingerprint,configurationHash,bodySha256:digest(body),bodyBytes:body.length,uploadDigests:uploads,limits:cap,...(logWindow?{logWindow:{...logWindow}}:{}),reservation,automaticRetries:0,createAttempts:1,captureScope:'Exclusive native HTTPS HTTP/1.1 plaintext representation, including actual serialized headers and chunk framing; excludes TLS handshake/record overhead, DNS, retransmissions and other processes.'};plan.transferHash=digest(plan);
+ const plan={version:1,kind:'open-vercel-transfer',planId,sourceSha,projectId,teamId,name,target,autoAssignCustomDomains,...(productionOrigin?{productionOrigin}:{}),mode,publicTemplateHashes:{...publicTemplateHashes},origins:['https://api.vercel.com',...(logWindow?['https://vercel.com']:[])],manifest,payloadFingerprint,configurationHash,bodySha256:digest(body),bodyBytes:body.length,uploadDigests:uploads,limits:cap,...(logWindow?{logWindow:{...logWindow}}:{}),reservation,automaticRetries:0,createAttempts:1,captureScope:'Exclusive native HTTPS HTTP/1.1 plaintext representation, including actual serialized headers and chunk framing; excludes TLS handshake/record overhead, DNS, retransmissions and other processes.'};plan.transferHash=digest(plan);
  const opaque=Object.freeze({kind:'private-vercel-transfer'});opaqueTransfers.set(opaque,{body,blobs});return {plan,opaque};
 }
 
 export function openVercelReservation(plan){return structuredClone(plan.reservation);}
+
+/** Compact immutable encrypted revisions. Hundreds of uploads must not append
+ * growing full snapshots to the portable journal's 16 MiB bounded head. Hold
+ * the transport's exclusive store lock for every read/append. No compaction,
+ * truncation, orphan recovery or existing encrypted-record overwrite occurs. */
+export function createOpenVercelJournal({store,name}){
+ check(store?.read&&store?.write&&store?.journal&&/^[a-z0-9][a-z0-9._-]{0,59}$/.test(name??''),'PRIVATE_VERCEL_JOURNAL_CONFIGURATION_REQUIRED');
+ const head=store.journal(name+'.head'),arrays=['traces','uploads','uploadAttempts'];let cached,cachedHead;
+ const recordName=n=>name+'.r'+String(n);const project=value=>{const base=structuredClone(value);for(const key of arrays)delete base[key];return base;};
+ async function read(){const latest=await head.read();check(latest?.version===1&&natural(latest.sequence)&&sha.test(latest.recordHash??''),'VERCEL_JOURNAL_HEAD_UNCONFIRMED');if(cachedHead){check(latest.sequence>=cachedHead.sequence,'VERCEL_JOURNAL_COUNTER_ROLLBACK');if(canonical(latest)===canonical(cachedHead))return structuredClone(cached);}
+  let state={},previous='0'.repeat(64);for(let n=0;n<=latest.sequence;n++){const record=await store.read(recordName(n));check(record?.version===1&&record.sequence===n&&record.previous===previous&&record.base&&record.arrays,'VERCEL_JOURNAL_REVISION_UNCONFIRMED');previous=digest(record);state={...structuredClone(record.base),...Object.fromEntries(arrays.map(key=>{const delta=record.arrays[key],old=state[key]??[];check(delta&&natural(delta.prefix)&&delta.prefix<=old.length&&Array.isArray(delta.tail),'VERCEL_JOURNAL_DELTA_CHANGED');return [key,[...old.slice(0,delta.prefix),...structuredClone(delta.tail)]];}))};}check(previous===latest.recordHash,'VERCEL_JOURNAL_HASH_CHANGED');cached=state;cachedHead=latest;return structuredClone(state);
+ }
+ async function save(value,initial){if(initial){try{await head.read();throw Error('VERCEL_JOURNAL_ALREADY_EXISTS');}catch(error){if(error.code!=='ENOENT')throw error;}}else await read();const next=structuredClone(value),sequence=initial?0:cachedHead.sequence+1;check(natural(sequence),'VERCEL_JOURNAL_SEQUENCE_OVERFLOW');const record={version:1,sequence,previous:initial?'0'.repeat(64):cachedHead.recordHash,base:project(next),arrays:{}};
+  for(const key of arrays){const old=initial?[]:cached[key]??[],current=next[key]??[];check(Array.isArray(current),'VERCEL_JOURNAL_ARRAY_REQUIRED');let prefix=0;while(prefix<Math.min(old.length,current.length)&&canonical(old[prefix])===canonical(current[prefix]))prefix++;record.arrays[key]={prefix,tail:current.slice(prefix)};}
+  // A head-write failure leaves an immutable orphan and blocks the next append.
+  await store.write(recordName(sequence),record,{createOnly:true});const marker={version:1,sequence,recordHash:digest(record)};if(initial)await head.initialize(marker);else await head.append(marker);cached=next;cachedHead=marker;
+ }
+ return {read,initialize:value=>save(value,true),append:value=>save(value,false)};
+}
 
 /** Counts TLS application plaintext, without recording tokens, headers, bodies,
  * or log messages. Each request owns one socket (agent:false). */
@@ -99,6 +118,7 @@ export async function createOpenVercelTransport({plan,opaque,acceptancePlan,cont
  const unhashed={...plan};delete unhashed.transferHash;check(plan.kind==='open-vercel-transfer'&&digest(unhashed)===plan.transferHash&&opaqueTransfers.has(opaque),'PREPARED_TRANSFER_REQUIRED');
  check(acceptancePlan.planId===plan.planId&&acceptancePlan.sourceSha===plan.sourceSha&&sha.test(acceptancePlan.planHash??'')&&uuid.test(segmentId??''),'FROZEN_SOURCE_TRANSFER_BINDING_REQUIRED');
  check(acceptancePlan.vercelTransfers?.length===2&&acceptancePlan.vercelTransfers.every(t=>uuid.test(t.segmentId??'')&&sha.test(t.transferHash??''))&&new Set(acceptancePlan.vercelTransfers.map(t=>t.segmentId)).size===2&&acceptancePlan.vercelTransfers.some(t=>t.segmentId===segmentId&&t.transferHash===plan.transferHash),'REVIEWED_TRANSFER_HASH_REQUIRED');
+ for(const [path,hash]of Object.entries(plan.publicTemplateHashes))check(acceptancePlan.sourceBinding?.files?.[path]===hash,'TRACKED_PUBLIC_TEMPLATE_BINDING_REQUIRED');
  if(plan.autoAssignCustomDomains){const proof=acceptancePlan.deploymentProject;check(plan.target==='production'&&plan.productionOrigin===acceptancePlan.origin&&proof?.projectId===plan.projectId&&proof.teamId===plan.teamId&&proof.origin===plan.productionOrigin&&proof.verified===true&&sha.test(proof.evidenceSha256??'')&&Array.isArray(proof.customDomains)&&proof.customDomains.length===1&&proof.customDomains[0]===new URL(plan.productionOrigin).hostname,'EXACT_VERIFIED_PRODUCTION_DOMAIN_REQUIRED');}
  const profile=acceptancePlan.profiles['root:deployment'];check(profile?.origin==='https://api.vercel.com'&&profile.maximumCalls===2&&resources.every(k=>natural(profile.reservation[k])&&profile.reservation[k]>=plan.reservation[k]),'ROOT_TRANSFER_RESERVATION_TOO_SMALL');
  check(typeof controller?.reserveRootTransport==='function'&&typeof controller?.recordRootTransportEvidence==='function'&&typeof credentialProvider==='function'&&typeof acquireLock==='function'&&journal?.read&&journal?.initialize&&journal?.append,'PRIVATE_TRANSPORT_DEPENDENCIES_REQUIRED');
