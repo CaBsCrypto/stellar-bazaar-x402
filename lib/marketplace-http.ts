@@ -1,3 +1,6 @@
+import {demoIngress,isNestedMcpRequest} from './demo-http.ts';
+import {demoEnabled} from './demo-wallet.ts';
+import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {authenticateWorkspaceRequest,assertWorkspaceRequest,parseWorkspaceBody,workspaceFailure,workspaceHeaders,workspaceRequestOrigin} from './workspace-http.ts';
 import {assertMarketEnabled,newServiceSchema,newOrderSchema,orderActionSchema,submitMarketService,marketCatalogPage,marketServiceSnapshot,pageMarketServices,readMarketSubmission,withdrawService,createMarketOrder,listMarketOrdersPage,readMarketOrder,sellerOrderAction,marketOperator} from './marketplace.ts';
@@ -16,7 +19,16 @@ import {reconcileMarketX402Payment} from './marketplace-x402.ts';
 
 const response=(value:unknown,status=200)=>Response.json(assertMarketDto(value),{status,headers:workspaceHeaders});
 export const marketHandlers={
- async catalog(request:Request){try{assertMarketEnabled();assertWorkspaceRequest(request,true);const body=await marketCatalogPage(marketPageFromRequest(request),workspaceRequestOrigin(request));return Response.json(assertMarketDto(body),{headers:{'Cache-Control':'public, no-store','X-Content-Type-Options':'nosniff','Referrer-Policy':'no-referrer'}});}catch(e){return workspaceFailure(e);}},
+ async catalog(request:Request){try{
+ await demoIngress(request);assertMarketEnabled();assertWorkspaceRequest(request,true);
+ const observed=demoEnabled()&&request.headers.has('authorization')&&!isNestedMcpRequest(request);
+ const requestId=observed?z.string().uuid().parse(request.headers.get('x-bazaar-query-id')??randomUUID()):undefined;
+ const principal=observed?await authenticateWorkspaceRequest(request,undefined,true):undefined;
+ const body=await marketCatalogPage(marketPageFromRequest(request),workspaceRequestOrigin(request));
+ if(principal&&requestId){const store=configuredWorkspaceStore(),identity=(await store.walletIdentity(principal)).identity;
+ await store.forPrincipal(principal).recordQuery(principal.ownerId,{requestId,tool:'http_market_catalog',agentId:principal.agentId,...(identity.wallet?{wallet:identity.wallet.wallet}:{}),recordedAt:new Date().toISOString(),outcome:'ok',resultCount:body.services.length,inputHash:sha(new URL(request.url).search),resultHash:sha(JSON.stringify(body)),evidence:'bazaar-observed'});}
+ return Response.json(assertMarketDto(body),{headers:{...workspaceHeaders,'Cache-Control':observed?'private, no-store':'public, no-store'}});
+ }catch(e){return workspaceFailure(e);}},
  async services(request:Request){try{assertMarketEnabled();const options=marketPageFromRequest(request,['mineCursor']),p=await authenticateWorkspaceRequest(request,undefined,true),origin=workspaceRequestOrigin(request),snapshot=await marketServiceSnapshot();const publicPage=pageMarketServices(snapshot,options,origin,undefined,60*1024),mineCursor=new URL(request.url).searchParams.get('mineCursor'),minePage=pageMarketServices(snapshot,{limit:options.limit,...(mineCursor!==null?{cursor:mineCursor}:{})},origin,p.ownerId,60*1024);return response({services:publicPage.services,mine:minePage.services,paused:snapshot.paused,nextCursor:publicPage.nextCursor,mineNextCursor:minePage.nextCursor,partialResults:publicPage.partialResults||minePage.partialResults});}catch(e){return workspaceFailure(e);}},
  async submission(request:Request,id:string){try{assertMarketEnabled();z.string().uuid().parse(id);const p=await authenticateWorkspaceRequest(request);return response({submission:await readMarketSubmission(p,id,workspaceRequestOrigin(request))});}catch(e){return workspaceFailure(e);}},
  async permissions(request:Request){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request,'human'),store=configuredWorkspaceStore();if(request.method==='GET')return response({permission:(await store.readMarketPermissionSnapshot(p)).permission});const input=await parseWorkspaceBody(request,marketPermissionChangeSchema,1024);return response(await store.changeMarketPermissions(p,input));}catch(e){return workspaceFailure(e);}},

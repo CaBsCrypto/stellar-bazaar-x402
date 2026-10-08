@@ -1,3 +1,4 @@
+import {demoEnabled} from './demo-wallet.ts';
 import {createHmac,timingSafeEqual} from 'node:crypto';
 import {StrKey} from '@stellar/stellar-sdk';
 import {z} from 'zod';
@@ -83,6 +84,8 @@ export async function createMarketOrder(p:WorkspacePrincipal,input:z.infer<typeo
  if(!StrKey.isValidEd25519PublicKey(input.payer))throw new WorkspaceError('INVALID_PAYER',400);
  const prior=await configuredMarketStore().transact(s=>s.orders.find(v=>v.operationId===input.operationId));
  if(prior){authorizeOrder(prior,p);if(prior.buyerOwnerId!==p.ownerId||prior.serviceId!==input.serviceId||prior.cardHash!==input.cardHash||prior.payer!==input.payer||prior.paymentProtocol!==input.paymentProtocol||canonical(prior.input)!==canonical(input.input))throw new WorkspaceError('OPERATION_CONFLICT',409);return prior;}
+ const walletSnapshot=demoEnabled()?await configuredWorkspaceStore().walletIdentity(p):undefined;
+ if(walletSnapshot?.identity.wallet?.wallet!==input.payer && demoEnabled())throw new WorkspaceError('WALLET_VERIFICATION_REQUIRED',403);
  const service=await configuredMarketStore().transact(s=>s.services.find(v=>v.card.id===input.serviceId&&!v.withdrawn));
  if(!service||service.cardHash!==input.cardHash||(await reviewed(service))?.status!=='activated')throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);
  if(service.card.payment.marketplace?.protocol!==input.paymentProtocol)throw new WorkspaceError('PAYMENT_PROTOCOL_MISMATCH',409);
@@ -90,7 +93,7 @@ export async function createMarketOrder(p:WorkspacePrincipal,input:z.infer<typeo
  marketCard(service.card); // Legacy records remain readable, but cannot start another legacy payment.
  if(service.ownerId===p.ownerId)throw new WorkspaceError('SELF_PURCHASE_DISABLED',409);validateInput(service.card,input.input);
  const now=new Date().toISOString(),order:MarketOrder={...input,...(input.paymentProtocol?{inputHash:sha(canonical(input.input))}:{}),buyerOwnerId:p.ownerId,sellerOwnerId:service.ownerId,card:service.card,destination:service.card.payment.destination,amount:service.card.payment.amount,settlement:{...service.card.payment.identity!},memoHash:orderMemo(p.ownerId,input.operationId,input.cardHash,input.input),phase:'awaiting-payment',createdAt:now,updatedAt:now};
- return configuredMarketStore().transact(s=>{if(s.paused)throw new WorkspaceError('MARKET_PAUSED');if(s.orders.some(v=>v.operationId===input.operationId))throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.services.find(v=>v.submissionId===service.submissionId)?.withdrawn)throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);s.orders.push(order);return order;});
+ return configuredMarketStore().transact(s=>{if(s.paused)throw new WorkspaceError('MARKET_PAUSED');if(s.orders.some(v=>v.operationId===input.operationId))throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.services.find(v=>v.submissionId===service.submissionId)?.withdrawn)throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);s.orders.push(order);return order;},walletSnapshot?.guard);
 }
 export async function readMarketOrder(p:WorkspacePrincipal,id:string){return configuredMarketStore().transact(s=>{const o=s.orders.find(v=>v.operationId===id);if(!o)throw new WorkspaceError('NOT_FOUND',404);authorizeOrder(o,p);return o;});}
 export async function listMarketOrders(p:WorkspacePrincipal){return configuredMarketStore().transact(s=>s.orders.filter(o=>o.buyerOwnerId===p.ownerId||o.sellerOwnerId===p.ownerId).map(o=>({...o,perspective:o.buyerOwnerId===p.ownerId?'purchase':'sale'})));}

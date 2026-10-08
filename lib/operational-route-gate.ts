@@ -4,6 +4,7 @@ import { publicOperationalMcpTools } from './operational-pressure.ts';
 
 export type EarlyRouteResult = { code: string; status: number } | undefined;
 export function routeBodyLimit(path: string) {
+  if (['/api/account/wallet/challenge','/api/account/wallet/complete'].includes(path)) return 1024;
   if (path === '/api/mcp') return 65536;
   if (path === '/api/workspaces' || /^\/api\/workspaces\/[^/]+\/access$/.test(path)) return 1024;
   if (path === '/api/market/operations-budget' || path === '/api/market/agent-permissions') return 8192;

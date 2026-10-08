@@ -1,3 +1,4 @@
+import {demoIngress} from "./demo-http.ts";
 import { isIP } from "node:net";
 import { assertWorkspaceCreationAdmission, workspaceGlobalRequestLimits } from "./workspace-admission.ts";
 import { z } from "zod";
@@ -8,7 +9,7 @@ import { createWorkspaceSchema, workspaceAccessSchema, WorkspaceError, type Work
 import {workspacePublicOrigin} from './workspace-public-origin.ts';
 import {configuredMarketStore} from './marketplace-store.ts';
 export const workspaceHeaders = { "Cache-Control": "private, no-store", Vary: "Authorization", "X-Content-Type-Options": "nosniff", "Referrer-Policy": "no-referrer" };
-export function workspaceFailure(e: unknown) { const error = e instanceof WorkspaceError ? e : e instanceof z.ZodError ? new WorkspaceError("INVALID_REQUEST", 400) : new WorkspaceError("WORKSPACE_UNAVAILABLE", 503); return Response.json({ error: { code: error.code } }, { status: error.status, headers: { ...workspaceHeaders, ...(error.status === 429 ? { "Retry-After": String(error.retryAfter ?? 60) } : {}) } }); }
+export function workspaceFailure(e: unknown) { const error = e instanceof WorkspaceError ? e : e instanceof z.ZodError ? new WorkspaceError("INVALID_REQUEST", 400) : new WorkspaceError("WORKSPACE_UNAVAILABLE", 503); return Response.json({ error: { code: error.code } }, { status: process.env.BAZAAR_PUBLIC_DEMO === "true" && error.code === "WORKSPACE_CAPACITY" ? 503 : error.status, headers: { ...workspaceHeaders, ...(error.status === 429 ? { "Retry-After": String(error.retryAfter ?? 60) } : {}) } }); }
 /** NextURL normalizes loopback IPs to localhost. Host only validates our configured authority. */
 export function workspaceRequestOrigin(request: Request): string {
   const url = new URL(request.url);
@@ -47,17 +48,17 @@ export async function parseWorkspaceBody<T>(request: Request, schema: z.ZodType<
   try { return schema.parse(JSON.parse(Buffer.concat(chunks).toString("utf8"))); } catch { throw new WorkspaceError("INVALID_REQUEST", 400); }
 }
 export async function authenticateWorkspaceRequest(request: Request, role?: WorkspaceRole, allowQuery = false) {
-  assertWorkspaceRequest(request, allowQuery); const principal = await requireWorkspacePrincipal(request.headers.get("authorization"), role);
+  await demoIngress(request); assertWorkspaceRequest(request, allowQuery); const principal = await requireWorkspacePrincipal(request.headers.get("authorization"), role);
   await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.generation, principal.role === "bootstrap" ? workspaceBearerHash(request.headers.get("authorization")) : undefined);
   return principal;
 }
-function trustedIp(request: Request) {
+export function trustedIp(request: Request) {
   if (process.env.VERCEL === "1") { const ip = request.headers.get("x-vercel-forwarded-for")?.split(",")[0].trim(); if (ip && isIP(ip)) return ip; }
   return ["127.0.0.1", "localhost", "[::1]"].includes(new URL(request.url).hostname) ? "loopback" : "untrusted";
 }
 export function createWorkspaceHandlers() {
   return {
-    async POST(request: Request) { try { assertWorkspaceRequest(request); const bootstrapHash = workspaceBearerHash(request.headers.get("authorization")); assertWorkspaceCreationAdmission(bootstrapHash); const input = await parseWorkspaceBody(request, createWorkspaceSchema, 1024); const allowNew = process.env.BAZAAR_WORKSPACE_CREATION_PAUSED !== 'true' && (process.env.BAZAAR_ENABLE_MARKETPLACE !== 'true' || !await configuredMarketStore().transact(s=>s.paused??false)); const store = configuredWorkspaceStore(), result = await store.createWorkspace(input, bootstrapHash, trustedIp(request), allowNew); if (!result.created || !workspaceGlobalRequestLimits()) await store.consumeRequest(result.record.ownerId, result.record.generation, bootstrapHash); return Response.json({ version: "1", ...result }, { status: result.created ? 201 : 200, headers: workspaceHeaders }); } catch (e) { return workspaceFailure(e); } },
-    async access(request: Request, workspaceId: string) { try { assertWorkspaceRequest(request); const bootstrapHash = workspaceBearerHash(request.headers.get("authorization")); const principal = await requireWorkspacePrincipal(request.headers.get("authorization"), "bootstrap"); if (principal.workspaceId !== workspaceId) throw new WorkspaceError("FORBIDDEN", 403); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.generation, bootstrapHash); const input = await parseWorkspaceBody(request, workspaceAccessSchema, 1024); const result = await configuredWorkspaceStore().changeAccess(workspaceId, bootstrapHash, input); return Response.json({ version: "1", ...result }, { headers: workspaceHeaders }); } catch (e) { return workspaceFailure(e); } },
+    async POST(request: Request) { try { await demoIngress(request); assertWorkspaceRequest(request); const bootstrapHash = workspaceBearerHash(request.headers.get("authorization")); assertWorkspaceCreationAdmission(bootstrapHash); const input = await parseWorkspaceBody(request, createWorkspaceSchema, 1024); const allowNew = process.env.BAZAAR_WORKSPACE_CREATION_PAUSED !== 'true' && (process.env.BAZAAR_ENABLE_MARKETPLACE !== 'true' || !await configuredMarketStore().transact(s=>s.paused??false)); const store = configuredWorkspaceStore(), result = await store.createWorkspace(input, bootstrapHash, trustedIp(request), allowNew); if (!result.created || !workspaceGlobalRequestLimits()) await store.consumeRequest(result.record.ownerId, result.record.generation, bootstrapHash); return Response.json({ version: "1", ...result }, { status: result.created ? 201 : 200, headers: workspaceHeaders }); } catch (e) { return workspaceFailure(e); } },
+    async access(request: Request, workspaceId: string) { try { await demoIngress(request); assertWorkspaceRequest(request); const bootstrapHash = workspaceBearerHash(request.headers.get("authorization")); const principal = await requireWorkspacePrincipal(request.headers.get("authorization"), "bootstrap"); if (principal.workspaceId !== workspaceId) throw new WorkspaceError("FORBIDDEN", 403); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.generation, bootstrapHash); const input = await parseWorkspaceBody(request, workspaceAccessSchema, 1024); const result = await configuredWorkspaceStore().changeAccess(workspaceId, bootstrapHash, input); return Response.json({ version: "1", ...result }, { headers: workspaceHeaders }); } catch (e) { return workspaceFailure(e); } },
   };
 }

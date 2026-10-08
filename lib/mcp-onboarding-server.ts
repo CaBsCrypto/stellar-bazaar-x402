@@ -1,3 +1,5 @@
+import {demoInstructions} from "./demo-instructions.ts";
+import {demoEnabled} from "./demo-wallet.ts";
 import { testnetFundingInstructions } from "./testnet-funding";
 import { historyConnection } from "./history-connection";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -81,7 +83,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
   const server = new McpServer({
     name: "stellar-bazaar-discovery",
     version: MCP_VERSION,
-  });
+  }, {instructions:demoInstructions});
 
   server.registerTool(
     "get_bazaar_capabilities",
@@ -93,6 +95,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
     async () =>
       result({
         ...pilotCapabilityCard,
+        demo:{enabled:demoEnabled(),network:'stellar:testnet',guide:'/DEMO_TESTNET.md',instructions:demoInstructions,identityTool:'get_bazaar_identity',walletTools:['request_wallet_binding','complete_wallet_binding'],emailRequired:false,agentsPerAccount:1,walletsPerAccount:1,walletRequiredForNewOrders:demoEnabled(),queries:'bazaar-observed',queryHistoryTool:'get_bazaar_query_history',quotas:demoEnabled()?{registrationsPerDay:50,registrationsPerIpHour:5,authenticatedPerAccountMinute:60,ingressGlobalMinute:120,ingressPerIpMinute:30}:null},
         ...(marketEnabled()?{serviceStatusValues:['activated','awaiting-control-proof','pending-manual-review','withdrawn'],policy:{metadataUntrusted:true,arbitraryUrlsRejected:true,execution:'seller-external-agent'}}:{}),
         historyConnection,
         testnetFunding: { instructions: testnetFundingInstructions, automatic: false },
@@ -102,7 +105,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           creationTool: "create_bazaar_workspace", enabled:process.env.BAZAAR_ENABLE_OPEN_WORKSPACES==='true',
           humanView:"/agent-chat", guide:"/WORKSPACE_AGENT.md", agentRunsExternally:true,
           emailRequired:false, operatorApprovalRequired:false, automaticPolling:false,
-          payments:marketEnabled()?'x402-stellar-exact-v2':'disabled', fileUploads:false,
+          payments:marketEnabled()&&process.env.BAZAAR_X402_MARKETPLACE_ENABLED==='true'?'x402-stellar-exact-v2':'disabled', fileUploads:false,
           marketplace: {enabled:marketEnabled(),catalog:'/api/market/catalog',orders:'/api/market/orders',submissionTool:'submit_market_service',submissionStatusTool:'get_market_submission',submissionPermission:{scope:'market:submit',endpoint:'/api/market/agent-permissions',grantRole:'human',generationBound:true},buyerTools:['list_market_services','create_market_order','get_market_order'],sellerTools:['list_market_orders','claim_market_order','deliver_market_order','fail_market_order','uncertain_market_order'],feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
           storage:process.env.BAZAAR_WORKSPACE_BACKEND??'not-configured',
           creationAccess:"Save UUID, bootstrap/human/agent accesses privately before creation. Send hashes only; bootstrap uses Authorization. Server assigns owner.",

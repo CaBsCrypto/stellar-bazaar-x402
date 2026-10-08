@@ -8,6 +8,8 @@
     "node": "24.x"
   },
   "scripts": {
+    "test:demo:wallet": "node --experimental-strip-types scripts/test-demo-wallet.mjs",
+    "demo:preflight": "node --experimental-strip-types scripts/demo-preflight.mjs",
     "test:market:capacity": "node --experimental-strip-types scripts/test-market-capacity.mjs",
     "test:market:mcp": "node --experimental-strip-types scripts/test-open-market-mcp.mjs",
     "test:buyer:portable": "node --experimental-strip-types scripts/test-buyer-portable-runtime.mjs",

@@ -7,6 +7,11 @@ export function publicBazaarApi(path: string, method: string) {
     method === 'OPTIONS' && path === '/api/discovery/search' || path === '/api/mcp' && method === 'GET';
 }
 export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redirect' | 'deny' {
+  if (process.env.BAZAAR_PUBLIC_DEMO === 'true') {
+    if (['GET','HEAD'].includes(method) && path === '/DEMO_TESTNET.md') return 'allow';
+    if (method === 'GET' && ['/api/account/identity','/api/account/queries'].includes(path)) return 'allow';
+    if (method === 'POST' && ['/api/account/wallet/challenge','/api/account/wallet/complete'].includes(path)) return 'allow';
+  }
   if (process.env.BAZAAR_ENABLE_MARKETPLACE === 'true') {
     if (['/api/discovery/resources','/api/discovery/search'].includes(path)) return 'deny';
     if (['GET','HEAD'].includes(method) && path === '/') return 'allow';

@@ -1,3 +1,9 @@
+import {z} from "zod";
+import {randomUUID,createHash} from "node:crypto";
+import {demoIngress} from "@/lib/demo-http";
+import {demoEnabled} from "@/lib/demo-wallet";
+import {configuredWorkspaceStore} from "@/lib/workspace-store";
+import {authenticateWorkspaceRequest,workspaceFailure} from "@/lib/workspace-http";
 import { measuredHandler } from '../../../lib/acceptance-meter.ts';
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createOnboardingMcpServer } from "@/lib/mcp-onboarding-server";
@@ -12,8 +18,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 async function handlePOST(request: Request) {
+  try {await demoIngress(request);} catch(e){return workspaceFailure(e);}
   try { await readBoundedSubmission(request.clone(), 64 * 1024); }
   catch (error) { return Response.json({ jsonrpc: "2.0", id: null, error: { code: -32600, message: "Invalid or oversized MCP request" } }, { status: error instanceof Error && error.message === "PAYLOAD_TOO_LARGE" ? 413 : 400, headers: workspaceHeaders }); }
+  const queryTools=new Set(['get_bazaar_capabilities','list_services','search_services','get_service','list_workflow_bundles','get_workflow_bundle','get_bazaar_skills','list_market_services']);
+  const rpc=await request.clone().json().catch(()=>null);
+  let queryPrincipal;
+  let queryRequestId:string|undefined;
+  const observe=demoEnabled()&&request.headers.has('authorization')&&rpc?.method==='tools/call'&&queryTools.has(rpc?.params?.name);
+  if(observe){try{queryRequestId=z.string().uuid().parse(request.headers.get('x-bazaar-query-id')??randomUUID());queryPrincipal=await authenticateWorkspaceRequest(request);}catch(e){return workspaceFailure(e);}}
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,
@@ -32,6 +45,10 @@ async function handlePOST(request: Request) {
   }, providerMcpContext(request), workspaceMcpContext(request), request);
   await server.connect(transport);
   const response = await transport.handleRequest(request);
+  if(queryPrincipal){try{
+    const raw=await response.clone().text(),body=JSON.parse(raw),requestId=queryRequestId!,store=configuredWorkspaceStore(),identity=(await store.walletIdentity(queryPrincipal)).identity;
+    await store.forPrincipal(queryPrincipal).recordQuery(queryPrincipal.ownerId,{requestId,tool:rpc.params.name,agentId:queryPrincipal.agentId,...(identity.wallet?{wallet:identity.wallet.wallet}:{}),recordedAt:new Date().toISOString(),outcome:body.error||body.result?.isError?'error':'ok',inputHash:createHash('sha256').update(JSON.stringify(rpc.params)).digest('hex'),resultHash:createHash('sha256').update(raw).digest('hex'),evidence:'bazaar-observed'});
+  }catch(e){return workspaceFailure(e);}}
   for (const [name, value] of Object.entries(workspaceHeaders)) response.headers.set(name, value);
   return response;
 }

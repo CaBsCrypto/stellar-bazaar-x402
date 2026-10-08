@@ -6,8 +6,8 @@ if (typeof window !== "undefined") throw new Error("Workspace admission is serve
 export function workspaceGlobalRequestLimits(): { minute: number; day: number } | undefined {
   const admission = process.env.BAZAAR_WORKSPACE_ADMISSION ?? "open";
   if (admission !== "open" && admission !== "invite-only") throw new WorkspaceError("WORKSPACE_UNAVAILABLE");
-  const minute = process.env.BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE;
-  const day = process.env.BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY;
+  const minute = process.env.BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE ?? (process.env.BAZAAR_PUBLIC_DEMO === "true" ? "120" : undefined);
+  const day = process.env.BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY ?? (process.env.BAZAAR_PUBLIC_DEMO === "true" ? "10000" : undefined);
   if (!minute && !day && admission !== "invite-only") return undefined;
   if (!minute || !day || !/^[1-9]\d{0,3}$/.test(minute) || !/^[1-9]\d{0,4}$/.test(day) ||
       Number(minute) > 1000 || Number(day) > 10000) throw new WorkspaceError("WORKSPACE_UNAVAILABLE");

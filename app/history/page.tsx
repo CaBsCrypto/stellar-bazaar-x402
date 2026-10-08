@@ -10,6 +10,6 @@ export const metadata: Metadata = {
 };
 
 export default function HistoryPage() {
-  return <HistoryEntry marketEnabled={process.env.BAZAAR_ENABLE_MARKETPLACE === 'true'} />;
+  return <HistoryEntry marketEnabled={process.env.BAZAAR_ENABLE_MARKETPLACE === 'true'} demoEnabled={process.env.BAZAAR_PUBLIC_DEMO === 'true'} />;
 }
 
