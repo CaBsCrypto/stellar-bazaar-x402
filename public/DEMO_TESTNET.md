@@ -45,15 +45,18 @@ La configuración MCP usa `url: https://bazaar.browns.studio/api/mcp` y
 `headers: { Authorization: "Bearer <acceso-del-agente>" }`. Guarda el acceso
 en la configuración privada del cliente; nunca en argumentos de herramientas.
 
-En el repositorio, `node examples/bind-demo-wallet.mjs` verifica la wallet usando
-únicamente MCP. Configura en el entorno local `BAZAAR_AGENT_ACCESS`,
-`BAZAAR_LOCAL_WALLET_SEED` y, para preview, `BAZAAR_MCP_URL`. La seed se usa
-exclusivamente en el proceso del cliente. El ejemplo firma el desafío, no realiza
-pagos y no activa ni financia cuentas; la wallet debe existir ya en Testnet.
-Para una respuesta incierta consulta primero `get_bazaar_identity`.
+En el repositorio, configura primero el almacén cifrado local del comprador:
+`node examples/buyer-cli.mjs configure ./mi-comprador` (para preview agrega
+`--origin https://<origen-de-preview>`). Introduce passphrase, acceso y seed por
+terminal oculta o pipe privado; nunca por argumentos, variables de entorno o URLs.
+Después ejecuta `node examples/bind-demo-wallet.mjs ./mi-comprador` e introduce
+la passphrase. Este ejemplo usa únicamente MCP y la seed en el proceso local:
+firma el desafío, no realiza pagos, no activa ni financia cuentas. La wallet debe
+existir ya en Testnet. Ante una respuesta incierta consulta primero
+`get_bazaar_identity`.
 
 Después usa el comprador portable existente `examples/buyer-cli.mjs` y su guía
-`/BUYER_AGENT_KIT.md`. La prueba publicada de pago necesita la autorización
+`/BUYER.md`. La prueba publicada de pago necesita la autorización
 separada de servicio, cantidad e importe; no se ejecuta durante este ejemplo.
 
 Si el historial no se confirma, la consulta devuelve un error recuperable;

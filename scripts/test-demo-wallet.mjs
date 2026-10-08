@@ -79,6 +79,14 @@ try{
  assert.equal((await mcpPost(rpcRequest('tools/call',queryParams,false))).status,200);
  assert.equal((await store.forPrincipal(h.agent).queries(h.agent.ownerId)).length,1);
  assert.equal((await mcpPost(rpcRequest('tools/call',queryParams,true,'not-a-uuid'))).status,400);
+ const rootRpc=rpcRequest('tools/call',{name:'request_wallet_binding',arguments:{wallet:other.publicKey()}});rootRpc.headers.set('authorization','Bearer '+h.tokens.bootstrap);
+ const rootDenied=await mcpPost(rootRpc),rootBody=await rootDenied.json();assert.equal(rootBody.result.isError,true);assert.equal(JSON.parse(rootBody.result.content[0].text).httpStatus,403);
+ const cliAccount=await account('cli-fixture'),cliKey=Keypair.random();
+ globalThis.fetch=async(url,init)=>{const href=url instanceof Request?url.url:String(url);if(href===origin+'/api/mcp')return mcpPost(new Request(url,init));assert.equal(href,'https://horizon-testnet.stellar.org/accounts/'+cliKey.publicKey());return Response.json({account_id:cliKey.publicKey(),thresholds:{low_threshold:0,med_threshold:0,high_threshold:0},signers:[{key:cliKey.publicKey(),type:'ed25519_public_key',weight:1}]});};
+ const {bindDemoWallet}=await import('../examples/bind-demo-wallet.mjs');
+ assert.equal((await bindDemoWallet({url:origin+'/api/mcp',agentAccess:cliAccount.tokens.agent,keypair:cliKey})).wallet.wallet,cliKey.publicKey());
+
+
 
 }finally{globalThis.fetch=originalFetch;setWorkspaceStoreForTests(undefined);}
 // The public profile enforces the exact five-registration IP and sixty-request account caps.
@@ -93,5 +101,5 @@ Date.now=()=>now()+240000;
 for(let i=0;i<120;i++)await store.consumeIngress('ip-'+i);
 const before=JSON.stringify([...data]);await assert.rejects(store.consumeIngress('fresh-ip'),/DEMO_RATE_LIMIT/);assert.equal(JSON.stringify([...data]),before);
 Date.now=now;
-console.log(JSON.stringify({status:'PASS',walletProof:true,singleUse:true,expiry:true,crossAccountIsolation:true,walletUniqueness:true,recoveryReplacement:true,lostAckReadRecovery:true,CASConflictNoEffect:true,queryDedup:true,globalIngressLimit:true,mcpInitialize:true,mcpQueryObservation:true,anonymousQueryPrivacy:true,httpWalletProof:true,invalidProofSkipsNetwork:true,perIpRegistrationLimit:true,accountRequestLimit:true,externalRequests:0,realPayments:0}));
+console.log(JSON.stringify({status:'PASS',walletProof:true,singleUse:true,expiry:true,crossAccountIsolation:true,walletUniqueness:true,recoveryReplacement:true,lostAckReadRecovery:true,CASConflictNoEffect:true,queryDedup:true,globalIngressLimit:true,recoveryCredentialRejectedByMcp:true,mcpInitialize:true,mcpQueryObservation:true,anonymousQueryPrivacy:true,developerExampleMcpProof:true,httpWalletProof:true,invalidProofSkipsNetwork:true,perIpRegistrationLimit:true,accountRequestLimit:true,externalRequests:0,realPayments:0}));
 

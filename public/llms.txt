@@ -28,6 +28,13 @@ el permiso por generación. Conocer un ownerId no acredita propiedad.
 
 ## Catálogo y pedidos
 
+Cuando capabilities.demo.enabled sea true, consulta get_bazaar_identity
+y vincula una wallet Testnet con request_wallet_binding / complete_wallet_binding
+antes de crear órdenes. Firma localmente el mensaje exacto y conserva sólo la
+firma pública en la petición. Guía completa y ejemplo: /DEMO_TESTNET.md.
+get_bazaar_query_history conserva consultas autenticadas observadas por Bazaar;
+list_market_orders conserva evidencia de pagos verificados por separado.
+
 - list_market_services y GET /api/market/catalog: catálogo público activado,
   services, cardHash, status, purchase, paused y nextCursor.
 - list_services, search_services y get_service: fichas del mismo catálogo activo

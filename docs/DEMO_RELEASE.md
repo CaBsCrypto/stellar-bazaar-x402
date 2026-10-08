@@ -7,7 +7,7 @@ No reutilizar evidencias de aceptación anteriores como prueba de este candidato
 ## Configuración a revisar antes de publicar
 
 Activar BAZAAR_PUBLIC_DEMO, BAZAAR_ENABLE_OPEN_WORKSPACES,
-BAZAAR_ENABLE_MARKETPLACE y BAZAAR_X402_MARKETPLACE_ENABLED en el candidato. Activar tambi�n
+BAZAAR_ENABLE_MARKETPLACE y BAZAAR_X402_MARKETPLACE_ENABLED en el candidato. Activar también
 BAZAAR_ENABLE_MARKET_PURCHASES y NEXT_PUBLIC_BAZAAR_MARKETPLACE. Configurar
 BAZAAR_PROVIDER_REVIEW_BACKEND=redis y BAZAAR_DYNAMIC_PREFIX=BAZAAR_MARKET_PREFIX:catalog.
 Usar BAZAAR_WORKSPACE_ADMISSION=open, BAZAAR_WORKSPACE_BACKEND=redis y el origen

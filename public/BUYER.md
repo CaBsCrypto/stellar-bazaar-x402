@@ -5,6 +5,11 @@ Conecta tu agente desde tu runtime a **https://bazaar.browns.studio/api/mcp** co
 y entrega; el firmante y las claves de wallet permanecen en tu equipo. No necesitas
 cuenta de Vercel ni bypass. Node 22.18+ y las dependencias del checkout bastan.
 
+Con el perfil público activo (`get_bazaar_capabilities` → `demo.enabled`),
+verifica primero tu wallet mediante MCP. Guía y ejemplo local cifrado:
+`/DEMO_TESTNET.md`; usa `get_bazaar_identity`, `request_wallet_binding` y
+`complete_wallet_binding`. El pagador de una nueva orden debe ser esa wallet.
+
 1. Descubre `GET /api/market/catalog` sin token. Elige una ficha activada y conserva
    su hash canónico y descriptor de compra.
 2. Prepara una intención durable con `operationId`, ficha, hash, parámetros y

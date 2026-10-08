@@ -18,7 +18,7 @@ async function walletPrincipal(request:Request){
   const authorization=request.headers.get('authorization');
   // Recovery access is allowed only for wallet replacement, never market tools.
   try{return await authenticateWorkspaceRequest(request);}
-  catch(e){if(!(e instanceof WorkspaceError)||e.code!=='FORBIDDEN')throw e;const p=await requireWorkspacePrincipal(authorization,'bootstrap');await configuredWorkspaceStore().consumeRequest(p.ownerId,p.generation,(await import('./workspace-auth.ts')).workspaceBearerHash(authorization));return p;}
+  catch(e){if(!(e instanceof WorkspaceError)||e.code!=='FORBIDDEN'||isNestedMcpRequest(request))throw e;const p=await requireWorkspacePrincipal(authorization,'bootstrap');await configuredWorkspaceStore().consumeRequest(p.ownerId,p.generation,(await import('./workspace-auth.ts')).workspaceBearerHash(authorization));return p;}
 }
 const json=(value:unknown)=>Response.json(value,{headers:workspaceHeaders});
 export const demoHandlers={
