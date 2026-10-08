@@ -33,12 +33,12 @@ check(measure().marketRemaining>30000&&measure().settlementRemaining>0);
 // preserving the admitted payment's future completion space in both stores.
 await market.transact(s=>{for(let i=0;i<105;i++)s.orders.push(order());});
 check((await market.transact(s=>s.orders.length))===106);
-let rejected=false,extra=0;
-while(!rejected){try{await market.transact(s=>s.orders.push(order('x'.repeat(2000))));extra++;}catch(e){assert.equal(e.code,'MARKET_CAPACITY');rejected=true;}}
+let rejected=false,extra=0,capacityCode;
+while(!rejected){try{await market.transact(s=>s.orders.push(order('x'.repeat(2000))));extra++;}catch(e){assert.ok(['MARKET_CAPACITY','PAYMENT_RECOVERY_CAPACITY'].includes(e.code));capacityCode=e.code;rejected=true;}}
 check(extra>0);
 const reserved=measure();check(reserved.marketUsed<MARKET_CAPACITY_BYTES&&reserved.marketUsed+reserved.marketRemaining<=MARKET_CAPACITY_BYTES);
 const bytesBefore=redis.data.get(prefix+':state');
-await assert.rejects(()=>market.transact(s=>s.orders.push(order('x'.repeat(2000)))),e=>e.code==='MARKET_CAPACITY');tests++;
+await assert.rejects(()=>market.transact(s=>s.orders.push(order('x'.repeat(2000)))),e=>e.code===capacityCode);tests++;
 assert.equal(redis.data.get(prefix+':state'),bytesBefore);tests++;
 
 await settlement.transact(s=>{s.records[0].phase='settling';});

@@ -2,7 +2,7 @@
 
 This workspace now separates two evidence levels: one verified external
 Website Intelligence purchase on Stellar Testnet, and two deterministic local
-contract fixtures. Bazaar displays and exports the provider result but never
+contract fixtures available only through checkout scripts. Bazaar displays and exports the provider result but never
 stores a buyer seed, signs an authorization, or repeats a payment from the UI.
 
 ## Current demonstrable flows
@@ -19,12 +19,12 @@ The versioned core is `bazaar.execution-request/v1` plus
 `bazaar.delivery-envelope/v1`. The envelope binds service, HTTP method, fixed
 route, canonical input hash, idempotency key and canonical result hash.
 
-- **Script creation / Creación de guion:** local synchronous fixture returning a
+- **Script creation / Creación de guion:** a scripts-only local synchronous fixture returning a
   structured script and canonical result hash.
-- **Video repurpose / Edición de video:** local async fixture returning a job ID,
+- **Video repurpose / Edición de video:** a scripts-only local async fixture returning a job ID,
   progress, and an inert upload handoff. A status action at the fixed, allowlisted
   Bazaar route deterministically transitions it to `completed` with a metadata-only
-  fixture artifact and verifiable manifest hash. It uploads or stores no file and
+  fixture artifact and verifiable manifest hash. This handler is invoked directly by the local test; there is no hosted status endpoint. It uploads or stores no file and
   exposes no arbitrary URL.
 
 Negative conformance covers binding tamper, input tamper, expiry, replay with
@@ -34,17 +34,13 @@ mismatch. All payment fields remain `not-performed`.
 
 ## Reference sequence
 
-1. The buyer selects deterministic inputs.
-2. `POST /api/buyer-execution/reference` with `action=challenge` returns HTTP 402
-   and a `bazaar.execution-request/v1` request explicitly marked as a local
-   fixture with `settlement=not-performed`.
-3. The UI simulates a buyer-owned external-client authorization. It creates no
-   signature and accesses no wallet.
-4. `action=execute` accepts only the fixed local reference service and a challenge
-   bound to the exact inputs. No arbitrary provider URL can be supplied.
-5. The fixture returns a script immediately or a video job that can be polled to
-   completion. Bazaar displays the result in a `bazaar.delivery-envelope/v1`
-   beside canonical SHA-256 result and artifact hashes.
+1. Run `node --experimental-strip-types scripts/test-buyer-execution.mjs` from the checkout. The test chooses deterministic inputs.
+2. The test directly invokes `scripts/fixtures/buyer-execution-handler.ts` with a loopback HTTP `Request` and `action=challenge`. This produces a simulated HTTP 402 and a `bazaar.execution-request/v1` request with `settlement=not-performed`; no network request is made.
+3. The test supplies its fixed local fixture authorization. It creates no signature and accesses no wallet.
+4. `action=execute` accepts only the fixed reference service and a challenge bound to those inputs. No arbitrary provider URL can be supplied.
+5. The fixture returns a script or a video job that the test can poll to completion, with canonical result and artifact hashes.
+
+`/api/buyer-execution/reference` now returns 404 for every HTTP method in every environment. The public page has no fixture execution controls, and application modules do not import the simulator. `scripts/test-no-hosted-payment-fixtures.mjs` verifies this boundary. These fixtures provide local contract evidence only; they cannot validate a preview or production purchase.
 
 The envelope says `evidence=local-fixture-only`, has no transaction hash or ledger,
 and never claims settlement or independently verified quality.

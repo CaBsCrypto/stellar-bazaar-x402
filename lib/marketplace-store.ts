@@ -9,6 +9,8 @@ import {computeCanonicalServiceCardHash} from './canonical-service-card.ts';
 import {sha,canonical,orderMemo} from './marketplace-identity.ts';
 import {isCanonicalUsdcTestnet,sameCreditIdentity} from './payment-assets.ts';
 import {commitCapacityStore,MARKET_CAPACITY_BYTES,type MarketCommitGuard} from './marketplace-capacity.ts';
+import {marketFileDeliverySchema,marketFileReservationSchema,validateMarketFiles,marketFileCleanupSchema,MARKET_FILE_CLEANUP_CAPACITY_BYTES,type MarketFileCleanup} from './market-file-delivery-schema.ts';
+import {marketRecoverySchema,type MarketRecovery,MARKET_RECOVERY_CAPACITY_BYTES} from './market-retention-schema.ts';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const account = z.string().regex(/^G[A-Z2-7]{55}$/);
@@ -25,6 +27,8 @@ export const marketOrderSchema = z.object({
   transactionHash: hash.optional(), paymentVerifiedAt: z.string().datetime().optional(),
   attemptId: z.string().uuid().optional(), agentId: z.string().optional(),
   delivery: z.object({text,sha256:hash,recordedAt:z.string().datetime(),reference:z.string()}).strict().optional(),
+  fileReservation:marketFileReservationSchema.optional(),
+  fileDelivery:marketFileDeliverySchema.optional(),
   failure: text.optional(),
   executionUncertainty: text.optional(),
 }).strict();
@@ -32,13 +36,21 @@ export type MarketOrder = Omit<z.infer<typeof marketOrderSchema>, 'card'> & {car
 export type MarketService = {submissionId:string;ownerId:string;cardHash:string;card:ServiceCard;withdrawn:boolean;createdAt:string};
 const serviceSchema = z.object({submissionId:z.string().uuid(),ownerId:z.string(),cardHash:hash,card:z.unknown(),withdrawn:z.boolean(),createdAt:z.string().datetime()}).strict();
 const stateSchema = z.object({version:z.literal(1),services:z.array(serviceSchema),orders:z.array(marketOrderSchema),
+  archived:z.array(marketRecoverySchema).optional(),
+  fileCleanup:z.array(marketFileCleanupSchema).optional(),
+  maintenance:z.object({workspaceCursor:z.string().max(64).optional(),reconciliationCursor:z.string().uuid().optional(),cleanupCursor:z.string().uuid().optional(),lastRunAt:z.string().datetime().optional()}).strict().optional(),
   paused:z.boolean().optional(),
   operatorQuota:z.object({minute:z.number().int(),count:z.number().int().nonnegative()}).strict().optional()}).strict();
-export type MarketState = {version:1;services:MarketService[];orders:MarketOrder[];paused?:boolean;operatorQuota?:{minute:number;count:number}};
+export type MarketState = {version:1;services:MarketService[];orders:MarketOrder[];archived?:MarketRecovery[];fileCleanup?:MarketFileCleanup[];maintenance?:{workspaceCursor?:string;reconciliationCursor?:string;cleanupCursor?:string;lastRunAt?:string};paused?:boolean;operatorQuota?:{minute:number;count:number}};
 export interface MarketStore { transact<T>(op:(state:MarketState)=>T,guard?:MarketCommitGuard):Promise<T> }
 export interface MarketRedis {get(key:string):Promise<unknown>;eval(script:string,keys:string[],args:string[]):Promise<unknown>}
 export function validateMarketState(raw:unknown):asserts raw is MarketState {
   const s=stateSchema.parse(raw);
+  const ids=[...s.orders.map(o=>o.operationId),...(s.archived??[]).map(o=>o.operationId)];
+  if(new Set(ids).size!==ids.length||Buffer.byteLength(JSON.stringify(s.archived??[]))>MARKET_RECOVERY_CAPACITY_BYTES)throw Error('INVALID_RECOVERY_STATE');
+  if(new Set((s.fileCleanup??[]).map(c=>c.operationId)).size!==(s.fileCleanup??[]).length||Buffer.byteLength(JSON.stringify(s.fileCleanup??[]))>MARKET_FILE_CLEANUP_CAPACITY_BYTES||(s.fileCleanup??[]).some(c=>!s.archived?.some(a=>a.operationId===c.operationId&&a.buyerOwnerId===c.buyerOwnerId)))throw Error('INVALID_FILE_CLEANUP_STATE');
+  const fingerprints=(s.archived??[]).flatMap(o=>o.authorizationFingerprint?[o.authorizationFingerprint]:[]);
+  if(new Set(fingerprints).size!==fingerprints.length)throw Error('INVALID_RECOVERY_STATE');
   if(new Set(s.services.map(v=>v.submissionId)).size!==s.services.length || new Set(s.services.map(v=>(v.card as ServiceCard).id)).size!==s.services.length || new Set(s.orders.map(v=>v.operationId)).size!==s.orders.length) throw Error('INVALID_MARKET_STATE');
   for(const v of [...s.services,...s.orders]) if(!parseServiceCardShape(v.card).ok||computeCanonicalServiceCardHash(v.card as ServiceCard)!==v.cardHash) throw Error('INVALID_MARKET_CARD');
   for(const o of s.orders) {
@@ -57,6 +69,7 @@ export function validateMarketState(raw:unknown):asserts raw is MarketState {
     if(['executing','execution-uncertain','delivered','delivery-failed'].includes(o.phase)&&(!o.attemptId||!o.agentId)) throw Error('MISSING_CLAIM');
     if(o.phase==='execution-uncertain'&&!o.executionUncertainty)throw Error('MISSING_EXECUTION_UNCERTAINTY');
     if((o.phase==='delivered')!==Boolean(o.delivery)) throw Error('INVALID_DELIVERY_PHASE');
+    validateMarketFiles(o as MarketOrder);
   }
 }
 export function marketPrefix(){const p=process.env.BAZAAR_MARKET_PREFIX;if(!/^bazaar-market:pilot-[a-f0-9]{32}$/.test(p??''))throw new WorkspaceError('MARKET_UNAVAILABLE');return p!;}
@@ -74,7 +87,7 @@ export function createMarketStore(redis:MarketRedis,prefix:string):MarketStore {
     validateMarketState(state);const before=JSON.stringify(state),result=op(state);if(result instanceof Promise)throw Error('ASYNC_MARKET_CALLBACK_FORBIDDEN');validateMarketState(state);
     if(before!==JSON.stringify(state)){
       const next=JSON.stringify({version:1,revision:randomUUID(),state});
-      if(Buffer.byteLength(next)>MARKET_CAPACITY_BYTES)throw new WorkspaceError('MARKET_CAPACITY',409);
+      if(Buffer.byteLength(next)>MARKET_CAPACITY_BYTES)throw new WorkspaceError('MARKET_CAPACITY',503);
       await commitCapacityStore(redis,prefix,'market',raw as string|null,next,guard);
     }else if(guard)await commitCapacityStore(redis,prefix,'market',raw as string|null,null,guard);
     return structuredClone(result);

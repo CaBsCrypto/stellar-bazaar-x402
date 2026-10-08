@@ -5,6 +5,9 @@ import {recordOperationalStorageBounds} from './acceptance-meter.ts';
 import {sha,canonical} from './marketplace-identity.ts';
 import {validateMarketState,type MarketRedis,type MarketOrder,type MarketState} from './marketplace-store.ts';
 import {validateMarketX402State,type MarketX402State,type MarketX402Settlement} from './marketplace-x402-store.ts';
+import {deliveryStorage} from './delivery-contract.ts';
+import {MARKET_FILE_METADATA_BYTES,maximumMarketFileCleanupBytes,MARKET_FILE_CLEANUP_CAPACITY_BYTES} from './market-file-delivery-schema.ts';
+import {maximumMarketRecoveryBytes,MARKET_RECOVERY_CAPACITY_BYTES} from './market-retention-schema.ts';
 
 export const MARKET_CAPACITY_BYTES=524288;
 export const SETTLEMENT_CAPACITY_BYTES=131072;
@@ -18,7 +21,12 @@ const widestText='\u0000'.repeat(2000); // Six JSON bytes per UTF-16 character, 
 const uuid='ffffffff-ffff-4fff-bfff-ffffffffffff',digest='f'.repeat(64),date='9999-12-31T23:59:59.999Z';
 function binding(o:MarketOrder){return sha(canonical({operationId:o.operationId,owner:o.buyerOwnerId,protocol:o.paymentProtocol,cardHash:o.cardHash,inputHash:o.inputHash,payer:o.payer,destination:o.destination,amount:o.amount,settlement:o.settlement}));}
 /** Immutable card/input/payload bytes plus the widest allowed future fields. */
-export function maximumMarketRecordBytes(o:MarketOrder){return bytes({...o,phase:'delivered',updatedAt:date,settlementAttemptId:uuid,transactionHash:digest,paymentVerifiedAt:date,attemptId:uuid,agentId:'agent_'+digest.slice(0,32),executionUncertainty:widestText,failure:widestText,delivery:{text:widestText,sha256:digest,recordedAt:date,reference:'bazaar-order:'+o.operationId}});}
+export function maximumMarketRecordBytes(o:MarketOrder){
+ const {fileDelivery:_delivery,...record}=o;
+ const base=bytes({...record,phase:'delivered',updatedAt:date,settlementAttemptId:uuid,transactionHash:digest,paymentVerifiedAt:date,attemptId:uuid,agentId:'agent_'+digest.slice(0,32),executionUncertainty:widestText,failure:widestText,delivery:{text:widestText,sha256:digest,recordedAt:date,reference:'bazaar-order:'+o.operationId}});
+ // File metadata and pending-to-available growth must fit before taking payment.
+ return deliveryStorage(o.card.delivery).mode==='text'?base:base+MARKET_FILE_METADATA_BYTES+128;
+}
 export function maximumSettlementRecordBytes(r:MarketX402Settlement){return bytes({...r,phase:'confirmed',updatedAt:date,attemptId:uuid,payloadHash:digest,authorizationFingerprint:digest,transactionHash:digest,responseHash:digest,outcome:{success:true,network:'stellar:testnet',transaction:digest,payer:'G'+'A'.repeat(55)}});}
 function envelope<T>(raw:string|null,empty:T,cap:number):T{
  if(raw===null)return empty;
@@ -40,7 +48,21 @@ function snapshot(marketRaw:string|null,settlementRaw:string|null){
 }
 export function projectCapacity(marketRaw:string|null,settlementRaw:string|null,ledgerRaw:string|null){
  const {market,settlements}=snapshot(marketRaw,settlementRaw),next=ledger(ledgerRaw),orders=new Map(market.orders.map(o=>[o.operationId,o])),records=new Map(settlements.records.map(r=>[r.operationId,r]));
+ const recoveryUsed=bytes(market.archived??[]),recoveryReserved=market.orders.reduce((n,o)=>n+maximumMarketRecoveryBytes(o),0);
+ if(recoveryUsed+recoveryReserved>MARKET_RECOVERY_CAPACITY_BYTES)throw new WorkspaceError('PAYMENT_RECOVERY_CAPACITY',503);
+ const cleanupReserved=market.orders.reduce((n,o)=>n+maximumMarketFileCleanupBytes(o),0);
+ if(bytes(market.fileCleanup??[])+cleanupReserved>MARKET_FILE_CLEANUP_CAPACITY_BYTES)throw new WorkspaceError('FILE_CLEANUP_CAPACITY',503);
+ const archivedAuthorizations=new Set((market.archived??[]).flatMap(o=>o.authorizationFingerprint?[o.authorizationFingerprint]:[]));
+ if(settlements.records.some(r=>r.authorizationFingerprint&&archivedAuthorizations.has(r.authorizationFingerprint)))throw new WorkspaceError('X402_AUTHORIZATION_REUSE',409);
  const entries=new Map(next.entries.map(e=>[e.operationId,e]));
+ for(const id of entries.keys())if(!orders.has(id))entries.delete(id);
+ // Admit file orders only while their complete future metadata still fits.
+ for(const o of market.orders.filter(o=>deliveryStorage(o.card.delivery).mode!=='text')){
+  const r=records.get(o.operationId),terminal=['delivered','delivery-failed'].includes(o.phase)&&(!r||r.phase==='confirmed'||r.phase==='rejected');
+  if(terminal){entries.delete(o.operationId);continue;}
+  const old=entries.get(o.operationId);
+  if(!old)entries.set(o.operationId,{operationId:o.operationId,binding:binding(o),marketMaximumBytes:maximumMarketRecordBytes(o),settlementMaximumBytes:0});
+ }
  // Older paid orders keep their completion capacity without changing historical records.
  for(const o of market.orders.filter(o=>!o.paymentProtocol&&o.phase!=='awaiting-payment')){
   if(['delivered','delivery-failed'].includes(o.phase)){entries.delete(o.operationId);continue;}
@@ -56,10 +78,11 @@ export function projectCapacity(marketRaw:string|null,settlementRaw:string|null,
   if(r.phase==='challenged')continue;
   if(!r.payload||!r.payloadHash||r.orderBinding!==binding(o))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
   const old=entries.get(r.operationId),wanted:Entry={operationId:r.operationId,binding:binding(o),marketMaximumBytes:maximumMarketRecordBytes(o),settlementMaximumBytes:maximumSettlementRecordBytes(r)};
-  if(old&&(old.binding!==wanted.binding||old.marketMaximumBytes<wanted.marketMaximumBytes||old.settlementMaximumBytes<wanted.settlementMaximumBytes))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
-  if(!old)entries.set(r.operationId,wanted);
+  const fileUpgrade=Boolean(old&&old.settlementMaximumBytes===0&&deliveryStorage(o.card.delivery).mode!=='text');
+  if(old&&(old.binding!==wanted.binding||old.marketMaximumBytes<wanted.marketMaximumBytes||(!fileUpgrade&&old.settlementMaximumBytes<wanted.settlementMaximumBytes)))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
+  if(!old||fileUpgrade)entries.set(r.operationId,wanted);
  }
- let marketRemaining=0,settlementRemaining=0;
+ let marketRemaining=cleanupReserved,settlementRemaining=0;
  for(const e of entries.values()){
   const o=orders.get(e.operationId),r=records.get(e.operationId);
   if(!o||(!r&&e.settlementMaximumBytes!==0)||e.binding!==binding(o))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);

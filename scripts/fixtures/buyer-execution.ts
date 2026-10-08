@@ -1,10 +1,11 @@
 import { createHash } from "node:crypto";
-import { canonicalResultSha256 } from "./delivery-result.ts";
+import { canonicalResultSha256 } from "../../lib/delivery-result.ts";
 
 export const EXECUTION_REQUEST_VERSION = "bazaar.execution-request/v1" as const;
 export const DELIVERY_ENVELOPE_VERSION = "bazaar.delivery-envelope/v1" as const;
 export const LOCAL_DEMO_AUTHORIZATION = "buyer-policy-approved-local-demo" as const;
-export const FIXTURE_STATUS_ENDPOINT = "/api/buyer-execution/reference" as const;
+// Inert local fixture identifier; never a deployed Bazaar API endpoint.
+export const FIXTURE_STATUS_ENDPOINT = "/fixtures/buyer-execution/reference" as const;
 const MIN_TTL_MS = 1_000;
 const MAX_TTL_MS = 300_000;
 

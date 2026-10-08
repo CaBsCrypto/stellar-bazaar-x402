@@ -1,0 +1,45 @@
+{
+  "version": 1,
+  "date": "2026-10-08T05:12:56.376Z",
+  "candidateBaseCommit": "179263e0e2716b6fad3985110786d3ff208ec575",
+  "candidateWorkingTree": "uncommitted sources at invocation",
+  "scope": "isolated local process; actual storage backends only where marked",
+  "r2": "pass-direct-only",
+  "redis": "not-run",
+  "hosted": false,
+  "actualTransactions": 0,
+  "providerExecutions": 0,
+  "payment": "local dependency fixture only; no payment in direct-storage mode",
+  "checks": [
+    "R2 direct interrupted upload explicitly absent",
+    "R2 rejects corrupt checksum",
+    "R2 rejects altered signed MIME",
+    "R2 rejects altered signed length",
+    "R2 direct upload image",
+    "R2 conditional overwrite denied image",
+    "R2 direct actual HEAD image",
+    "R2 direct GET bytes image",
+    "R2 direct Range 206 image",
+    "R2 direct unsigned object denied image",
+    "R2 direct upload captions",
+    "R2 conditional overwrite denied captions",
+    "R2 direct actual HEAD captions",
+    "R2 direct GET bytes captions",
+    "R2 direct Range 206 captions",
+    "R2 direct unsigned object denied captions",
+    "actual short signed GET expires"
+  ],
+  "cleanup": {
+    "r2": true,
+    "redis": "not-applicable"
+  },
+  "syntheticObjects": 2,
+  "syntheticRedisKeys": 0,
+  "complete": false,
+  "pending": [
+    "hosted preview HTTP/MCP and browser flow",
+    "authorized real Testnet payment and provider execution",
+    "seven-day wall-clock and lifecycle verification",
+    "real Redis account, order and retention acceptance"
+  ]
+}

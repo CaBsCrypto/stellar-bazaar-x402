@@ -25,7 +25,9 @@ const conversationSchema = z.object({ conversationId: workspaceIdentifierSchema,
 const taskSchema = z.object({ taskId: workspaceIdentifierSchema, conversationId: workspaceIdentifierSchema, humanMessageId: workspaceIdentifierSchema, text: workspaceTextSchema, status: z.enum(["pending", "claimed", "responded", "uncertain"]), createdAt: iso, attemptId: workspaceIdentifierSchema.optional(), agentId: z.string().optional(), responseMessageId: workspaceIdentifierSchema.optional(), operationId: workspaceIdentifierSchema.optional() }).strict();
 // Input schemas are strict; records add server metadata separately below.
 const querySchema = z.object({requestId:uuid, tool:z.string().min(1).max(80), agentId:z.string(), wallet:walletAddressSchema.optional(), recordedAt:iso, outcome:z.enum(["ok","error"]), resultCount:z.number().int().nonnegative().optional(), inputHash:workspaceHashSchema, resultHash:workspaceHashSchema, evidence:z.literal("bazaar-observed")}).strict();
-const docSchema = z.object({ version: z.literal(1), ownerId: z.string(), revision: uuid, queries:z.array(querySchema).max(100).optional(), conversations: z.array(z.object({ digest: workspaceHashSchema, record: conversationSchema }).strict()).max(100), tasks: z.array(z.object({ digest: workspaceHashSchema, claimDigest: workspaceHashSchema.optional(), responseDigest: workspaceHashSchema.optional(), record: taskSchema }).strict()).max(500), operations: z.array(z.object({ digest: workspaceHashSchema, record: z.unknown() }).strict()).max(1000), events: z.array(z.object({ digest: workspaceHashSchema, record: z.unknown() }).strict()).max(1000) }).strict();
+const replayMarkerSchema = z.object({ kind:z.enum(["query","conversation","task","message","operation","event"]), id:workspaceIdentifierSchema, digest:workspaceHashSchema, resultHash:workspaceHashSchema.optional() }).strict();
+type ReplayMarker = z.infer<typeof replayMarkerSchema>;
+const docSchema = z.object({ version: z.literal(1), ownerId: z.string(), revision: uuid, retentionDays:z.literal(7).optional(), replayMarkers:z.array(replayMarkerSchema).max(WORKSPACE_LIMITS.replayMarkers).optional(), queries:z.array(querySchema).max(100).optional(), conversations: z.array(z.object({ digest: workspaceHashSchema, record: conversationSchema }).strict()).max(100), tasks: z.array(z.object({ digest: workspaceHashSchema, claimDigest: workspaceHashSchema.optional(), responseDigest: workspaceHashSchema.optional(), record: taskSchema }).strict()).max(500), operations: z.array(z.object({ digest: workspaceHashSchema, record: z.unknown() }).strict()).max(1000), events: z.array(z.object({ digest: workspaceHashSchema, record: z.unknown() }).strict()).max(1000) }).strict();
 type Registry = z.infer<typeof registrySchema>;
 type Meta = z.infer<typeof metaSchema>;
 const frozenUuid = z.string().regex(/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/);
@@ -48,7 +50,42 @@ return 1`;
 const digest = (v: unknown) => createHash("sha256").update(canonicalOperationJson(v)).digest("hex");
 const bytes = (v: string) => Buffer.byteLength(v, "utf8");
 const emptyRegistry = (): Registry => ({ version: 1, revision: randomUUID(), workspaces: [], creationWindows: [], requestWindows: [] });
-const emptyDocument = (ownerId: string): Document => ({ version: 1, ownerId, revision: randomUUID(), conversations: [], tasks: [], operations: [], events: [] });
+const emptyDocument = (ownerId: string): Document => ({ version: 1, ownerId, revision: randomUUID(), ...(demoEnabled()?{retentionDays:7 as const}:{}), conversations: [], tasks: [], operations: [], events: [] });
+export const workspaceContentExpiresAt = (recordedAt: string) => Date.parse(recordedAt) + WORKSPACE_LIMITS.contentRetentionMs;
+const liveContent = (recordedAt: string, now: number) => workspaceContentExpiresAt(recordedAt) > now;
+const retentionActive = (d:Document) => demoEnabled() || d.retentionDays===7;
+function replayMarker(d:Document,kind:ReplayMarker["kind"],id:string) { return d.replayMarkers?.find(m=>m.kind===kind&&m.id===id); }
+function rememberReplay(d:Document,marker:ReplayMarker) {
+  d.replayMarkers??=[]; const old=replayMarker(d,marker.kind,marker.id);
+  if(old){if(old.digest!==marker.digest)throw unavailable("replay-marker-conflict");return;}
+  if(d.replayMarkers.length>=WORKSPACE_LIMITS.replayMarkers)throw new WorkspaceError("WORKSPACE_CAPACITY",503);
+  d.replayMarkers.push(marker);
+}
+function rejectExpiredReplay(d:Document,kind:ReplayMarker["kind"],id:string,inputHash?:string) {
+  const marker=replayMarker(d,kind,id);if(!marker)return;
+  const active=kind==="conversation"?d.conversations.some(c=>c.record.conversationId===id):kind==="task"?d.tasks.some(t=>t.record.taskId===id):kind==="message"?d.conversations.some(c=>c.record.messages.some(m=>m.messageId===id)):kind==="operation"?d.operations.some(o=>o.record.clientOperationId===id):kind==="event"?d.events.some(e=>e.record.eventId===id):d.queries?.some(q=>q.requestId===id);
+  if(active)return; // Live records still perform their original digest comparison.
+  if(inputHash!==undefined&&marker.digest!==inputHash)throw new WorkspaceError("WORKSPACE_CONFLICT",409);
+  throw new WorkspaceError("WORKSPACE_CONTENT_EXPIRED",410);
+}
+/** Drop private content while keeping only bounded identifiers and fingerprints.
+ * Marketplace payment records are held by another store and never pass here. */
+function pruneDocument(d:Document,now:number):number {
+  if(!retentionActive(d))return 0;
+  d.retentionDays=7;let removed=0;
+  d.queries=(d.queries??[]).filter(q=>{if(liveContent(q.recordedAt,now))return true;rememberReplay(d,{kind:"query",id:q.requestId,digest:digest({tool:q.tool,agentId:q.agentId,inputHash:q.inputHash}),resultHash:q.resultHash});removed++;return false;});
+  const expiredConversations=new Set(d.conversations.filter(c=>!liveContent(c.record.createdAt,now)).map(c=>c.record.conversationId));
+  const expiredTasks=new Set(d.tasks.filter(t=>expiredConversations.has(t.record.conversationId)||!liveContent(t.record.createdAt,now)).map(t=>t.record.taskId));
+  d.tasks=d.tasks.filter(t=>{if(!expiredTasks.has(t.record.taskId))return true;rememberReplay(d,{kind:"task",id:t.record.taskId,digest:t.digest});removed++;return false;});
+  d.conversations=d.conversations.filter(c=>{
+    c.record.messages=c.record.messages.filter(m=>{if(!expiredTasks.has(m.taskId))return true;rememberReplay(d,{kind:"message",id:m.messageId,digest:digest({messageId:m.messageId,taskId:m.taskId})});removed++;return false;});
+    if(!expiredConversations.has(c.record.conversationId))return true;
+    rememberReplay(d,{kind:"conversation",id:c.record.conversationId,digest:c.digest});removed++;return false;
+  });
+  d.operations=d.operations.filter(o=>{if(liveContent(o.record.recordedAt,now))return true;rememberReplay(d,{kind:"operation",id:o.record.clientOperationId,digest:o.digest});removed++;return false;});
+  d.events=d.events.filter(e=>{if(liveContent(e.record.recordedAt,now))return true;rememberReplay(d,{kind:"event",id:e.record.eventId,digest:e.digest});removed++;return false;});
+  return removed;
+}
 const unavailable = (phase = "store-unavailable") => { fileDiagnostics.publish({ phase, code: "UNAVAILABLE" }); return new WorkspaceError("WORKSPACE_UNAVAILABLE"); };
 function consumeGlobalQuota(registry: Registry, now: number, limits: ReturnType<typeof workspaceGlobalRequestLimits>) {
   if (!limits) return;
@@ -89,8 +126,10 @@ function validateDocument(raw: string, meta: Meta): Document {
   if (bytes(raw) !== meta.documentBytes) throw unavailable("owner-size");
   const d = docSchema.parse(JSON.parse(raw)) as Document;
   if(d.queries?.some(q=>q.agentId!==meta.agentId)||new Set(d.queries?.map(q=>q.requestId)).size!==(d.queries?.length??0))throw unavailable("query-binding");
+  if(new Set(d.replayMarkers?.map(m=>m.kind+":"+m.id)).size!==(d.replayMarkers?.length??0))throw unavailable("replay-marker-binding");
   if (d.ownerId !== meta.ownerId || d.revision !== meta.documentRevision) throw unavailable("owner-identity");
   const conversations = new Set<string>(), messages = new Set<string>(), tasks = new Set<string>(), operations = new Set<string>(), events = new Set<string>();
+  const expiredOperations=new Set(d.replayMarkers?.filter(m=>m.kind==="operation").map(m=>m.id));
   for (const c of d.conversations) {
     if (conversations.has(c.record.conversationId) || c.digest !== digest({ conversationId: c.record.conversationId, title: c.record.title })) throw unavailable();
     conversations.add(c.record.conversationId);
@@ -106,7 +145,7 @@ function validateDocument(raw: string, meta: Meta): Document {
     const { recordedAt, evidence, ...input } = entry.record;
     activitySchema.parse(input); iso.parse(recordedAt);
     if (evidence !== "agent-reported" || entry.digest !== digest(input) || events.has(input.eventId) || input.agentId !== meta.agentId || input.mode === "testnet" || input.kind === "payment-reported") throw unavailable();
-    if (input.operationId && !operations.has(input.operationId)) throw unavailable(); events.add(input.eventId);
+    if (input.operationId && !operations.has(input.operationId) && !expiredOperations.has(input.operationId)) throw unavailable(); events.add(input.eventId);
   }
   for (const t of d.tasks) {
     const r = t.record, c = d.conversations.find(c => c.record.conversationId === r.conversationId)?.record;
@@ -115,7 +154,7 @@ function validateDocument(raw: string, meta: Meta): Document {
     if (r.status === "pending" ? !!(r.attemptId || r.agentId || t.claimDigest || t.responseDigest) : !r.attemptId || r.agentId !== meta.agentId || t.claimDigest !== digest({ taskId: r.taskId, attemptId: r.attemptId, agentId: r.agentId })) throw unavailable();
     if (r.status === "responded") {
       const response = c!.messages.find(m => m.messageId === r.responseMessageId && m.actor === "agent" && m.taskId === r.taskId);
-      if (!response || response.operationId !== r.operationId || t.responseDigest !== digest({ taskId: r.taskId, attemptId: r.attemptId, messageId: response.messageId, text: response.text, operationId: response.operationId }) || (r.operationId && !operations.has(r.operationId))) throw unavailable();
+      if (!response || response.operationId !== r.operationId || t.responseDigest !== digest({ taskId: r.taskId, attemptId: r.attemptId, messageId: response.messageId, text: response.text, operationId: response.operationId }) || (r.operationId && !operations.has(r.operationId) && !expiredOperations.has(r.operationId))) throw unavailable();
     } else if (r.responseMessageId || r.operationId || t.responseDigest) throw unavailable();
     tasks.add(r.taskId);
   }
@@ -229,17 +268,17 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     if (!/^ow_[a-f0-9]{32}$/.test(ownerId)) throw unavailable();
     const s = await backend.read(ownerId), registry = readRegistry(s.registryRaw, s.marker, reservations());
     const meta = registry.workspaces.find(m => m.ownerId === ownerId); if (!meta) throw new WorkspaceError("NOT_FOUND", 404);
-    authorized(meta, role); return { registry, meta, document: validateDocument(s.documentRaw, meta) };
+    authorized(meta, role); const document=validateDocument(s.documentRaw, meta);pruneDocument(document,Date.now());return { registry, meta, document };
   });
-  const mutateOwner = <T>(ownerId: string, role: WorkspaceRole | undefined, fn: (d: Document, meta: Meta) => T) => safe(() => {
+  const mutateOwner = <T>(ownerId: string, role: WorkspaceRole | undefined, fn: (d: Document, meta: Meta) => T, implicitPrune=true) => safe(() => {
     if (!/^ow_[a-f0-9]{32}$/.test(ownerId)) throw unavailable();
     return backend.transact(ownerId, async (s, commit) => {
     const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId); if (!meta) throw new WorkspaceError("NOT_FOUND", 404);
-    authorized(meta, role); const d = validateDocument(s.documentRaw, meta), before = JSON.stringify(d), result = fn(d, meta);
+    authorized(meta, role); const d = validateDocument(s.documentRaw, meta), before = JSON.stringify(d);if(implicitPrune)pruneDocument(d,Date.now());const result = fn(d, meta);
     if (JSON.stringify(d) !== before) {
-      d.revision = randomUUID(); const raw = JSON.stringify(d); if (bytes(raw) > WORKSPACE_LIMITS.ownerBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409);
+      d.revision = randomUUID(); const raw = JSON.stringify(d); if (bytes(raw) > WORKSPACE_LIMITS.ownerBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", retentionActive(d)?503:409);
       meta.documentRevision = d.revision; meta.documentBytes = bytes(raw); registry.revision = randomUUID(); const reg = JSON.stringify(registry);
-      if (bytes(reg) > WORKSPACE_LIMITS.registryBytes || registry.workspaces.reduce((n, m) => n + m.documentBytes, bytes(reg)) > WORKSPACE_LIMITS.globalBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409);
+      if (bytes(reg) > WORKSPACE_LIMITS.registryBytes || registry.workspaces.reduce((n, m) => n + m.documentBytes, bytes(reg)) > WORKSPACE_LIMITS.globalBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", retentionActive(d)?503:409);
       validateDocument(raw, meta); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, raw);
     }
     return result;
@@ -252,6 +291,17 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     readRegistry(raw,"workspace-v1",reservations());await commit(raw,"");return value;
   }));
   const store = {
+    async retentionOwnerIds():Promise<string[]> {return safe(async()=>{
+      const s=await backend.read(),registry=readRegistry(s.registryRaw,s.marker,reservations());
+      if(principal){const m=registry.workspaces.find(m=>m.ownerId===principal.ownerId);if(!m)throw new WorkspaceError("UNAUTHORIZED",401);authorized(m,principal.role);return [m.ownerId];}
+      return registry.workspaces.map(m=>m.ownerId);
+    });},
+    async pruneExpiredContent(ownerId:string,now=Date.now()) {
+      if(!Number.isSafeInteger(now)||now<0)throw new WorkspaceError("INVALID_REQUEST",400);
+      // A scoped client cannot choose a future clock and erase fresh content.
+      if(principal&&now>Date.now())throw new WorkspaceError("FORBIDDEN",403);
+      return mutateOwner(ownerId,principal?.role??"bootstrap",d=>{const removed=pruneDocument(d,now);return {ownerId,removed,retentionDays:7};},false);
+    },
     async walletIdentity(p:WorkspacePrincipal) {return safe(async()=>{
       const s=await backend.readPermission(p.ownerId),registry=readRegistry(s.registryRaw,s.marker,reservations()),meta=registry.workspaces.find(m=>m.ownerId===p.ownerId);
       if(!meta||meta.revoked||meta.workspaceId!==p.workspaceId||meta.agentId!==p.agentId||meta.generation!==p.generation)throw new WorkspaceError("UNAUTHORIZED",401);
@@ -280,28 +330,41 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         if(meta.wallet&&p.role!=="bootstrap")throw new WorkspaceError("WALLET_RECOVERY_REQUIRED",403);
         verifyWalletProof(c,signature);
         if(registry.workspaces.some(m=>m.ownerId!==p.ownerId&&!m.revoked&&m.wallet?.wallet===c.wallet))throw new WorkspaceError("WALLET_ALREADY_BOUND",409);
-        meta.wallet={wallet:c.wallet,network:"stellar:testnet",verifiedAt:new Date().toISOString(),challengeId:c.challengeId};delete meta.walletChallenge;
+        meta.wallet={wallet:c.wallet,network:"stellar:testnet",verifiedAt:new Date(Date.now()).toISOString(),challengeId:c.challengeId};delete meta.walletChallenge;
         return {wallet:meta.wallet};
       });
     },
     async recordQuery(ownerId:string,input:z.infer<typeof querySchema>) {
       const parsed=querySchema.parse(input);return mutateOwner(ownerId,undefined,(d,m)=>{
         if(parsed.agentId!==m.agentId)throw new WorkspaceError("FORBIDDEN",403);
+        const inputFingerprint=digest({tool:parsed.tool,agentId:parsed.agentId,inputHash:parsed.inputHash}),marker=replayMarker(d,"query",parsed.requestId);
+        if(marker){if(marker.digest!==inputFingerprint)throw new WorkspaceError("QUERY_CONFLICT",409);return;}
         d.queries??=[];const old=d.queries.find(q=>q.requestId===parsed.requestId);
         if(old){if(old.tool!==parsed.tool||old.agentId!==parsed.agentId||old.inputHash!==parsed.inputHash)throw new WorkspaceError("QUERY_CONFLICT",409);return;}
-        d.queries.unshift(parsed);d.queries=d.queries.slice(0,100);
+        // Reserve the marker with content admission: its eventual expiration can
+        // never need extra replay slots when the bounded history is already full.
+        if(retentionActive(d))rememberReplay(d,{kind:"query",id:parsed.requestId,digest:inputFingerprint,resultHash:parsed.resultHash});
+        d.queries.unshift({...parsed,recordedAt:new Date(Date.now()).toISOString()});
+        if(retentionActive(d))for(const evicted of d.queries.slice(100))rememberReplay(d,{kind:"query",id:evicted.requestId,digest:digest({tool:evicted.tool,agentId:evicted.agentId,inputHash:evicted.inputHash}),resultHash:evicted.resultHash});
+        d.queries=d.queries.slice(0,100);
       });
     },
     async queries(ownerId:string) {return (await readOwner(ownerId)).document.queries??[];},
-    async consumeIngress(ip:string) {return safe(()=>backend.transact(undefined,async(s,commit)=>{
-      const registry=readRegistry(s.registryRaw,s.marker,reservations()),now=Date.now(),minute=Math.floor(now/60000);
-      registry.creationWindows=registry.creationWindows.filter(w=>w.until>now);
-      for(const spec of [{key:"ingress:global:"+minute,max:120},{key:"ingress:ip:"+digest(ip)+":"+minute,max:30}]){
-        let w=registry.creationWindows.find(w=>w.key===spec.key);if(w&&w.count>=spec.max)throw new WorkspaceError("DEMO_RATE_LIMIT",429,Math.ceil(((minute+1)*60000-now)/1000));
-        if(!w){w={key:spec.key,count:0,until:(minute+1)*60000};registry.creationWindows.push(w);}w.count++;
-      }
-      registry.revision=randomUUID();const raw=JSON.stringify(registry);readRegistry(raw,"workspace-v1",reservations());await commit(raw,"");
-    }));},
+    async consumeIngress(ip:string) {return safe(async()=>{
+      const attempts=process.env.BAZAAR_ACCEPTANCE_METER==='true'&&process.env.BAZAAR_ACCEPTANCE_X402==='true'?1:8;
+      for(let attempt=0;attempt<attempts;attempt++)try{
+        await backend.transact(undefined,async(s,commit)=>{
+          const registry=readRegistry(s.registryRaw,s.marker,reservations()),now=Date.now(),minute=Math.floor(now/60000);
+          registry.creationWindows=registry.creationWindows.filter(w=>w.until>now);
+          for(const spec of [{key:"ingress:global:"+minute,max:WORKSPACE_LIMITS.demoIngressPerMinute},{key:"ingress:ip:"+digest(ip)+":"+minute,max:WORKSPACE_LIMITS.demoIngressPerMinute}]){
+            let w=registry.creationWindows.find(w=>w.key===spec.key);if(w&&w.count>=spec.max)throw new WorkspaceError("DEMO_RATE_LIMIT",429,Math.max(1,Math.ceil(((minute+1)*60000-now)/1000)));
+            if(!w){w={key:spec.key,count:0,until:(minute+1)*60000};registry.creationWindows.push(w);}w.count++;
+          }
+          registry.revision=randomUUID();const raw=JSON.stringify(registry);readRegistry(raw,"workspace-v1",reservations());await commit(raw,"");
+        });return;
+      }catch(e){if(!(e instanceof RedisCompareConflict))throw e;}
+      throw unavailable("ingress-contention");
+    });},
     async activeOwnerIds(ownerIds: readonly string[]): Promise<Set<string>> { return safe(async () => {
       const s = await backend.read(), registry = readRegistry(s.registryRaw, s.marker, reservations()), wanted = new Set(ownerIds);
       return new Set(registry.workspaces.filter(m => wanted.has(m.ownerId) && !m.revoked).map(m => m.ownerId));
@@ -389,10 +452,10 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
           registry.requestWindows = registry.requestWindows.filter(w => w.until > now);
           registry.requestWindows.push({ ownerId, count: 1, until: now + 60000 });
         }
-        const windows = [{ key: "global:" + Math.floor(now / 86400000), until: (Math.floor(now / 86400000) + 1) * 86400000, max: WORKSPACE_LIMITS.dailyCreations }, { key: "ip:" + digest(trustedIp) + ":" + Math.floor(now / 3600000), until: (Math.floor(now / 3600000) + 1) * 3600000, max: demoEnabled()?5:WORKSPACE_LIMITS.hourlyCreationsPerIp }];
-        for (const w of windows) { let old = registry.creationWindows.find(v => v.key === w.key); if (old && old.count >= w.max) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429); if (!old) { old = { key: w.key, count: 0, until: w.until }; registry.creationWindows.push(old); } old.count++; }
+        const windows = [{ key: "global:" + Math.floor(now / 86400000), until: (Math.floor(now / 86400000) + 1) * 86400000, max: demoEnabled()?WORKSPACE_LIMITS.demoDailyCreations:WORKSPACE_LIMITS.dailyCreations }, { key: "ip:" + digest(trustedIp) + ":" + Math.floor(now / 3600000), until: (Math.floor(now / 3600000) + 1) * 3600000, max: demoEnabled()?WORKSPACE_LIMITS.demoHourlyCreationsPerIp:WORKSPACE_LIMITS.hourlyCreationsPerIp }];
+        for (const w of windows) { let old = registry.creationWindows.find(v => v.key === w.key); if (old && old.count >= w.max) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429,Math.max(1,Math.ceil((w.until-now)/1000))); if (!old) { old = { key: w.key, count: 0, until: w.until }; registry.creationWindows.push(old); } old.count++; }
         const d = emptyDocument(ownerId), raw = JSON.stringify(d);
-        const meta: Meta = { creationId: input.creationId, workspaceId: randomUUID(), ownerId, agentId: "agent_" + randomUUID().replaceAll("-", ""), bootstrapHash, initialHumanHash: input.humanAccessHash, initialAgentHash: input.agentAccessHash, humanHash: input.humanAccessHash, agentHash: input.agentAccessHash, retiredHashes: [], accessIntents: [], generation: 1, revoked: false, createdAt: new Date().toISOString(), documentRevision: d.revision, documentBytes: bytes(raw) };
+        const meta: Meta = { creationId: input.creationId, workspaceId: randomUUID(), ownerId, agentId: "agent_" + randomUUID().replaceAll("-", ""), bootstrapHash, initialHumanHash: input.humanAccessHash, initialAgentHash: input.agentAccessHash, humanHash: input.humanAccessHash, agentHash: input.agentAccessHash, retiredHashes: [], accessIntents: [], generation: 1, revoked: false, createdAt: new Date(Date.now()).toISOString(), documentRevision: d.revision, documentBytes: bytes(raw) };
         registry.workspaces.push(meta); registry.revision = randomUUID(); const reg = JSON.stringify(registry); readRegistry(reg, "workspace-v1", legacy); await commit(reg, raw); return { record: receipt(meta), created: true };
       }); } catch (e) {
         if (!(e instanceof RedisCompareConflict)) throw e;
@@ -450,7 +513,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
           consumeGlobalQuota(registry, now, globalLimits);
           registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
           if (!w) { w = { ownerId, count: 0, until: now + 60000 }; registry.requestWindows.push(w); }
-          if (w.count >= (demoEnabled()?60:WORKSPACE_LIMITS.requestsPerMinute)) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429);
+          if (w.count >= (demoEnabled()?WORKSPACE_LIMITS.demoRequestsPerMinute:WORKSPACE_LIMITS.requestsPerMinute)) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429,Math.max(1,Math.ceil((w.until-now)/1000)));
           w.count++; registry.revision = randomUUID(); const reg = JSON.stringify(registry); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, "");
         }); return; }
         catch (e) { if (!(e instanceof RedisCompareConflict)) throw e; }
@@ -461,28 +524,28 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     async getConversation(ownerId: string, id: string): Promise<WorkspaceConversation | null> { workspaceIdentifierSchema.parse(id); const { document: d } = await readOwner(ownerId); const c = d.conversations.find(v => v.record.conversationId === id)?.record; return c ? { ...c, tasks: d.tasks.filter(t => t.record.conversationId === id).map(t => t.record) } : null; },
     async createConversation(ownerId: string, input: { conversationId: string; title: string }) {
       const parsed = z.object({ conversationId: workspaceIdentifierSchema, title: z.string().min(1).max(160).refine(v => v.trim().length > 0 && !/[\u0000-\u001f]/.test(v)) }).strict().parse(input);
-      return mutateOwner(ownerId, "human", d => { const hash = digest(parsed), old = d.conversations.find(c => c.record.conversationId === parsed.conversationId); if (old) { if (old.digest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); return { record: old.record, created: false }; } const record = { ...parsed, createdAt: new Date().toISOString(), messages: [] }; d.conversations.push({ digest: hash, record }); return { record, created: true }; });
+      return mutateOwner(ownerId, "human", d => { const hash = digest(parsed);if(retentionActive(d))rejectExpiredReplay(d,"conversation",parsed.conversationId,hash);const old = d.conversations.find(c => c.record.conversationId === parsed.conversationId); if (old) { if (old.digest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); return { record: old.record, created: false }; } const record = { ...parsed, createdAt: new Date(Date.now()).toISOString(), messages: [] }; if(retentionActive(d))rememberReplay(d,{kind:"conversation",id:parsed.conversationId,digest:hash});d.conversations.push({ digest: hash, record }); return { record, created: true }; });
     },
     async sendHumanMessage(ownerId: string, input: { conversationId: string; messageId: string; taskId: string; text: string }) {
       const parsed = z.object({ conversationId: workspaceIdentifierSchema, messageId: workspaceIdentifierSchema, taskId: workspaceIdentifierSchema, text: workspaceTextSchema }).strict().parse(input);
-      return mutateOwner(ownerId, "human", d => { const hash = digest(parsed), old = d.tasks.find(t => t.record.taskId === parsed.taskId); if (old) { if (old.digest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); const record = d.conversations.find(c => c.record.conversationId === parsed.conversationId)!.record.messages.find(m => m.messageId === parsed.messageId)!; return { record, created: false }; } if (d.conversations.some(c => c.record.messages.some(m => m.messageId === parsed.messageId))) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); const c = d.conversations.find(c => c.record.conversationId === parsed.conversationId); if (!c) throw new WorkspaceError("NOT_FOUND", 404); const recordedAt = new Date().toISOString(); const record = { ...parsed, actor: "human" as const, recordedAt }; c.record.messages.push(record); d.tasks.push({ digest: hash, record: { taskId: parsed.taskId, conversationId: parsed.conversationId, humanMessageId: parsed.messageId, text: parsed.text, createdAt: recordedAt, status: "pending" } }); return { record, created: true }; });
+      return mutateOwner(ownerId, "human", d => { const hash = digest(parsed);if(retentionActive(d)){rejectExpiredReplay(d,"task",parsed.taskId,hash);rejectExpiredReplay(d,"message",parsed.messageId);}const old = d.tasks.find(t => t.record.taskId === parsed.taskId); if (old) { if (old.digest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); const record = d.conversations.find(c => c.record.conversationId === parsed.conversationId)!.record.messages.find(m => m.messageId === parsed.messageId)!; return { record, created: false }; } if (d.conversations.some(c => c.record.messages.some(m => m.messageId === parsed.messageId))) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); const c = d.conversations.find(c => c.record.conversationId === parsed.conversationId); if (!c) throw new WorkspaceError("NOT_FOUND", 404); const recordedAt = new Date(Date.now()).toISOString(); const record = { ...parsed, actor: "human" as const, recordedAt }; if(retentionActive(d)){rememberReplay(d,{kind:"task",id:parsed.taskId,digest:hash});rememberReplay(d,{kind:"message",id:parsed.messageId,digest:digest({messageId:parsed.messageId,taskId:parsed.taskId})});}c.record.messages.push(record); d.tasks.push({ digest: hash, record: { taskId: parsed.taskId, conversationId: parsed.conversationId, humanMessageId: parsed.messageId, text: parsed.text, createdAt: recordedAt, status: "pending" } }); return { record, created: true }; });
     },
     async listAgentTasks(ownerId: string): Promise<WorkspaceTask[]> { return (await readOwner(ownerId, "agent")).document.tasks.map(t => t.record); },
     async claimTask(ownerId: string, input: { taskId: string; attemptId: string; agentId: string }) {
       const parsed = z.object({ taskId: workspaceIdentifierSchema, attemptId: workspaceIdentifierSchema, agentId: workspaceIdentifierSchema }).strict().parse(input);
-      return mutateOwner(ownerId, "agent", (d, m) => { if (parsed.agentId !== m.agentId) throw new WorkspaceError("FORBIDDEN", 403); const t = d.tasks.find(t => t.record.taskId === parsed.taskId); if (!t) throw new WorkspaceError("NOT_FOUND", 404); const hash = digest(parsed); if (t.record.status !== "pending") { if (t.claimDigest !== hash) throw new WorkspaceError("TASK_ALREADY_CLAIMED", 409); return { record: t.record, created: false }; } t.claimDigest = hash; Object.assign(t.record, { status: "claimed", attemptId: parsed.attemptId, agentId: m.agentId }); return { record: t.record, created: true }; });
+      return mutateOwner(ownerId, "agent", (d, m) => { if (parsed.agentId !== m.agentId) throw new WorkspaceError("FORBIDDEN", 403); if(retentionActive(d))rejectExpiredReplay(d,"task",parsed.taskId);const t = d.tasks.find(t => t.record.taskId === parsed.taskId); if (!t) throw new WorkspaceError("NOT_FOUND", 404); const hash = digest(parsed); if (t.record.status !== "pending") { if (t.claimDigest !== hash) throw new WorkspaceError("TASK_ALREADY_CLAIMED", 409); return { record: t.record, created: false }; } t.claimDigest = hash; Object.assign(t.record, { status: "claimed", attemptId: parsed.attemptId, agentId: m.agentId }); return { record: t.record, created: true }; });
     },
     async respondToTask(ownerId: string, input: { taskId: string; attemptId: string; messageId: string; text: string; operationId?: string }) {
       const parsed = z.object({ taskId: workspaceIdentifierSchema, attemptId: workspaceIdentifierSchema, messageId: workspaceIdentifierSchema, text: workspaceTextSchema, operationId: workspaceIdentifierSchema.optional() }).strict().parse(input);
-      return mutateOwner(ownerId, "agent", (d, m) => { const t = d.tasks.find(t => t.record.taskId === parsed.taskId); if (!t) throw new WorkspaceError("NOT_FOUND", 404); if (t.record.attemptId !== parsed.attemptId || t.record.agentId !== m.agentId || !["claimed", "responded"].includes(t.record.status)) throw new WorkspaceError("TASK_NOT_CLAIMED", 409); const hash = digest(parsed); if (t.record.status === "responded") { if (t.responseDigest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); return { record: t.record, created: false }; } if (d.conversations.some(c => c.record.messages.some(m => m.messageId === parsed.messageId))) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); if (parsed.operationId && !d.operations.some(o => o.record.clientOperationId === parsed.operationId)) throw new WorkspaceError("OPERATION_NOT_FOUND", 404); const c = d.conversations.find(c => c.record.conversationId === t.record.conversationId)!; c.record.messages.push({ messageId: parsed.messageId, taskId: parsed.taskId, conversationId: t.record.conversationId, actor: "agent", text: parsed.text, recordedAt: new Date().toISOString(), ...(parsed.operationId ? { operationId: parsed.operationId } : {}) }); t.responseDigest = hash; Object.assign(t.record, { status: "responded", responseMessageId: parsed.messageId, ...(parsed.operationId ? { operationId: parsed.operationId } : {}) }); return { record: t.record, created: true }; });
+      return mutateOwner(ownerId, "agent", (d, m) => { if(retentionActive(d)){rejectExpiredReplay(d,"task",parsed.taskId);rejectExpiredReplay(d,"message",parsed.messageId);}const t = d.tasks.find(t => t.record.taskId === parsed.taskId); if (!t) throw new WorkspaceError("NOT_FOUND", 404); if (t.record.attemptId !== parsed.attemptId || t.record.agentId !== m.agentId || !["claimed", "responded"].includes(t.record.status)) throw new WorkspaceError("TASK_NOT_CLAIMED", 409); const hash = digest(parsed); if (t.record.status === "responded") { if (t.responseDigest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); return { record: t.record, created: false }; } if (d.conversations.some(c => c.record.messages.some(m => m.messageId === parsed.messageId))) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); if (parsed.operationId && !d.operations.some(o => o.record.clientOperationId === parsed.operationId) && !replayMarker(d,"operation",parsed.operationId)) throw new WorkspaceError("OPERATION_NOT_FOUND", 404); const c = d.conversations.find(c => c.record.conversationId === t.record.conversationId)!; if(retentionActive(d))rememberReplay(d,{kind:"message",id:parsed.messageId,digest:digest({messageId:parsed.messageId,taskId:parsed.taskId})});c.record.messages.push({ messageId: parsed.messageId, taskId: parsed.taskId, conversationId: t.record.conversationId, actor: "agent", text: parsed.text, recordedAt: new Date(Date.now()).toISOString(), ...(parsed.operationId ? { operationId: parsed.operationId } : {}) }); t.responseDigest = hash; Object.assign(t.record, { status: "responded", responseMessageId: parsed.messageId, ...(parsed.operationId ? { operationId: parsed.operationId } : {}) }); return { record: t.record, created: true }; });
     },
     operations: {
-      async append(ownerId: string, input: OperationHistoryInput) { const parsed = parseOperationHistoryInput(input); enforceUnpaid(parsed); return mutateOwner(ownerId, "agent", (d, m) => { if (parsed.agentId && parsed.agentId !== m.agentId) throw new WorkspaceError("FORBIDDEN", 403); const authoritative = { ...parsed, agentId: m.agentId }; const hash = digest(authoritative), old = d.operations.find(o => o.record.clientOperationId === parsed.clientOperationId); if (old) { if (old.digest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); return { record: old.record, created: false }; } const record: OperationHistoryRecord = { ...authoritative, id: randomUUID(), recordedAt: new Date().toISOString(), evidence: "agent-reported" }; d.operations.unshift({ digest: hash, record }); return { record, created: true }; }); },
+      async append(ownerId: string, input: OperationHistoryInput) { const parsed = parseOperationHistoryInput(input); enforceUnpaid(parsed); return mutateOwner(ownerId, "agent", (d, m) => { if (parsed.agentId && parsed.agentId !== m.agentId) throw new WorkspaceError("FORBIDDEN", 403); const authoritative = { ...parsed, agentId: m.agentId }; const hash = digest(authoritative);if(retentionActive(d))rejectExpiredReplay(d,"operation",parsed.clientOperationId,hash);const old = d.operations.find(o => o.record.clientOperationId === parsed.clientOperationId); if (old) { if (old.digest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); return { record: old.record, created: false }; } const record: OperationHistoryRecord = { ...authoritative, id: randomUUID(), recordedAt: new Date(Date.now()).toISOString(), evidence: "agent-reported" }; if(retentionActive(d))rememberReplay(d,{kind:"operation",id:parsed.clientOperationId,digest:hash});d.operations.unshift({ digest: hash, record }); return { record, created: true }; }); },
       async all(ownerId: string) { return (await readOwner(ownerId)).document.operations.map(o => o.record); },
       async list(ownerId: string, limit = 20) { if (!Number.isInteger(limit) || limit < 1 || limit > 100) throw new WorkspaceError("INVALID_REQUEST", 400); return (await readOwner(ownerId)).document.operations.slice(0, limit).map(o => o.record); },
     },
     events: {
-      async append(ownerId: string, input: ActivityInput) { const parsed = activitySchema.parse(input); if (parsed.mode === "testnet" || parsed.kind === "payment-reported") throw new WorkspaceError("WORKSPACE_UNPAID_ONLY", 403); return mutateOwner(ownerId, "agent", (d, m) => { if (parsed.agentId && parsed.agentId !== m.agentId) throw new WorkspaceError("FORBIDDEN", 403); const authoritative = { ...parsed, agentId: m.agentId }; if (parsed.operationId && !d.operations.some(o => o.record.clientOperationId === parsed.operationId)) throw new WorkspaceError("OPERATION_NOT_FOUND", 404); const hash = digest(authoritative), old = d.events.find(e => e.record.eventId === parsed.eventId); if (old) { if (old.digest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); return { record: old.record, created: false }; } const record: ActivityEvent = { ...authoritative, recordedAt: new Date().toISOString(), evidence: "agent-reported" }; d.events.unshift({ digest: hash, record }); return { record, created: true }; }); },
+      async append(ownerId: string, input: ActivityInput) { const parsed = activitySchema.parse(input); if (parsed.mode === "testnet" || parsed.kind === "payment-reported") throw new WorkspaceError("WORKSPACE_UNPAID_ONLY", 403); return mutateOwner(ownerId, "agent", (d, m) => { if (parsed.agentId && parsed.agentId !== m.agentId) throw new WorkspaceError("FORBIDDEN", 403); const authoritative = { ...parsed, agentId: m.agentId }; if (parsed.operationId && !d.operations.some(o => o.record.clientOperationId === parsed.operationId) && !replayMarker(d,"operation",parsed.operationId)) throw new WorkspaceError("OPERATION_NOT_FOUND", 404); const hash = digest(authoritative);if(retentionActive(d))rejectExpiredReplay(d,"event",parsed.eventId,hash);const old = d.events.find(e => e.record.eventId === parsed.eventId); if (old) { if (old.digest !== hash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409); return { record: old.record, created: false }; } const record: ActivityEvent = { ...authoritative, recordedAt: new Date(Date.now()).toISOString(), evidence: "agent-reported" }; if(retentionActive(d))rememberReplay(d,{kind:"event",id:parsed.eventId,digest:hash});d.events.unshift({ digest: hash, record }); return { record, created: true }; }); },
       async all(ownerId: string) { return (await readOwner(ownerId)).document.events.map(e => e.record); },
     },
   };

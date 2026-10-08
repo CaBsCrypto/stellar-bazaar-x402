@@ -89,8 +89,9 @@ try{
 
 
 }finally{globalThis.fetch=originalFetch;setWorkspaceStoreForTests(undefined);}
-// The public profile enforces the exact five-registration IP and sixty-request account caps.
-for(let i=0;i<5;i++)await account('same-ip');await assert.rejects(account('same-ip'),/WORKSPACE_RATE_LIMIT/);
+// Venue Wi-Fi can admit more than five participants; the complete 200 cap is
+// exercised independently by test-workspace-retention.mjs.
+for(let i=0;i<6;i++)await account('same-ip');
 Date.now=()=>now()+120000;
 for(let i=0;i<60;i++)await store.consumeRequest(a.agent.ownerId,a.agent.generation);
 await assert.rejects(store.consumeRequest(a.agent.ownerId,a.agent.generation),/WORKSPACE_RATE_LIMIT/);

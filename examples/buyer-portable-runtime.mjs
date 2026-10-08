@@ -2,12 +2,13 @@ import {Keypair,Networks} from '@stellar/stellar-sdk';
 import {basicNodeSigner} from '@stellar/stellar-sdk/contract';
 import {buyerAccessValid,createBoundedBuyerFetch,createBuyerSpendBudget} from './marketplace-x402-buyer.mjs';
 import {originOnly} from './private-mcp-client.mjs';
+import {marketAmountAtomic,marketAtomicValid} from './market-price.mjs';
 
 export const defaultBuyerOrigin='https://bazaar.browns.studio';
 const version=1,rpcOrigin='https://soroban-testnet.stellar.org';
 function configValid(config){if(config?.version!==version||originOnly(config.origin)!==config.origin||!config.origin.startsWith('https://')||!buyerAccessValid(config.agentAccess)||!Keypair.fromSecret(config.stellarSecret).publicKey()||!Number.isInteger(config.maxSponsoredFeeStroops)||config.maxSponsoredFeeStroops<1||config.maxSponsoredFeeStroops>1000000)throw Error('INVALID_BUYER_CONFIGURATION');return config;}
 function budgetValid(state){if(state?.version!==version||typeof state.maximumAtomic!=='string'||!/^[1-9][0-9]{0,19}$/.test(state.maximumAtomic)||!Array.isArray(state.reservations))throw Error('INVALID_SPEND_BUDGET');createBuyerSpendBudget({...state,persistReservations:async()=>{}});return state;}
-export function parseBuyerBudget(amount){if(typeof amount!=='string'||!/^(0|[1-9][0-9]{0,12})(\.[0-9]{1,7})?$/.test(amount))throw Error('INVALID_USDC_BUDGET');const [whole,fraction='']=amount.split('.');const atomic=(BigInt(whole)*10000000n+BigInt(fraction.padEnd(7,'0'))).toString();if(atomic==='0')throw Error('INVALID_USDC_BUDGET');return atomic;}
+export function parseBuyerBudget(amount){try{return marketAmountAtomic(amount);}catch{throw Error('INVALID_USDC_BUDGET');}}
 
 /** The MCP endpoint is stateless; each bounded POST is an explicit JSON-RPC call. */
 export function createBuyerMcpTool({origin,agentToken,marketFetch}){
@@ -17,7 +18,7 @@ export function createBuyerMcpTool({origin,agentToken,marketFetch}){
   if(!response.ok)throw Error('MCP_REQUEST_UNCONFIRMED');let message;try{message=await response.json();}catch{throw Error('MCP_RESPONSE_UNCONFIRMED');}
   if(message.jsonrpc!=='2.0'||message.id!==requestId||message.error||!message.result)throw Error('MCP_RESPONSE_UNCONFIRMED');const result=message.result;let body;
   try{body=result.structuredContent??JSON.parse(result.content.find(item=>item.type==='text').text);}catch{throw Error('MCP_RESPONSE_UNCONFIRMED');}
-  if(result.isError){const error=Error('MCP_TOOL_REJECTED');error.publicCode=/^[A-Z][A-Z0-9_]{1,80}$/.test(body.error?.code??body.code??'')?(body.error?.code??body.code):undefined;throw error;}return body;
+  if(result.isError){if(name==='get_market_order'&&body.httpStatus===410&&body.error?.code==='ORDER_CONTENT_EXPIRED'&&body.recoveryOnly===true&&body.operation)return body;const error=Error('MCP_TOOL_REJECTED');error.publicCode=/^[A-Z][A-Z0-9_]{1,80}$/.test(body.error?.code??body.code??'')?(body.error?.code??body.code):undefined;throw error;}return body;
  };
 }
 
@@ -33,7 +34,7 @@ export async function configureBuyerRuntime({store,agentAccess,stellarSecret,ori
  await store.write('buyer-config',config,{createOnly:!existing});return {origin:config.origin,payer:Keypair.fromSecret(config.stellarSecret).publicKey(),maximumAtomic:(await store.journal('buyer-budget').read()).maximumAtomic};
 }
 export async function increaseBuyerBudget({store,maximumAtomic}){
- const journal=store.journal('buyer-budget'),previous=budgetValid(await journal.read());if(typeof maximumAtomic!=='string'||!/^[1-9][0-9]{0,19}$/.test(maximumAtomic)||BigInt(maximumAtomic)<=BigInt(previous.maximumAtomic))throw Error('BUDGET_INCREASE_REQUIRED');
+ const journal=store.journal('buyer-budget'),previous=budgetValid(await journal.read());if(!marketAtomicValid(maximumAtomic)||BigInt(maximumAtomic)<=BigInt(previous.maximumAtomic))throw Error('BUDGET_INCREASE_REQUIRED');
  const next=budgetValid({...previous,maximumAtomic});await journal.append(next);return {maximumAtomic,reservedAtomic:next.reservations.reduce((sum,item)=>sum+BigInt(item.amount),0n).toString(),reservations:next.reservations.length};
 }
 
@@ -51,4 +52,4 @@ export async function createPortableBuyerRuntime({store,operationId,fetchImpl=fe
  return options;
 }
 
-export function summarizeBuyerIntent(intent){return {operationId:intent.operationId,phase:intent.phase,payer:intent.payer,cardHash:intent.cardHash,inputHash:intent.inputHash,signed:Boolean(intent.signedPayload||intent.signedAuthorizationTransaction),...(intent.lastFailure?{lastFailure:intent.lastFailure}:{}),...(intent.order?{orderPhase:intent.order.phase,paid:Boolean(intent.order.paymentVerifiedAt),delivered:Boolean(intent.order.delivery),transactionHash:intent.order.transactionHash,...(intent.order.delivery?{delivery:intent.order.delivery}:{}),...(intent.order.failure?{failure:intent.order.failure}:{})}:{})};}
+export function summarizeBuyerIntent(intent){return {operationId:intent.operationId,phase:intent.phase,payer:intent.payer,cardHash:intent.cardHash,inputHash:intent.inputHash,signed:Boolean(intent.signedPayload||intent.signedAuthorizationTransaction),...(intent.lastFailure?{lastFailure:intent.lastFailure}:{}),...(intent.order?{orderPhase:intent.order.phase,paid:Boolean(intent.order.paymentVerifiedAt),delivered:Boolean(intent.order.delivery),contentExpired:Boolean(intent.order.contentExpired),transactionHash:intent.order.transactionHash,...(intent.order.delivery?{delivery:intent.order.delivery}:{}),...(intent.order.failure?{failure:intent.order.failure}:{})}:{})};}

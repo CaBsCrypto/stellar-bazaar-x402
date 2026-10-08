@@ -29,8 +29,9 @@ el permiso por generación. Conocer un ownerId no acredita propiedad.
 ## Catálogo y pedidos
 
 Cuando capabilities.demo.enabled sea true, consulta get_bazaar_identity
-y vincula una wallet Testnet con request_wallet_binding / complete_wallet_binding
-antes de crear órdenes. Firma localmente el mensaje exacto y conserva sólo la
+y puedes vincular opcionalmente una wallet Testnet con request_wallet_binding /
+complete_wallet_binding. Cada orden fija su pagador; no se requiere vinculación
+previa. Firma localmente el mensaje exacto y conserva sólo la
 firma pública en la petición. Guía completa y ejemplo: /DEMO_TESTNET.md.
 get_bazaar_query_history conserva consultas autenticadas observadas por Bazaar;
 list_market_orders conserva evidencia de pagos verificados por separado.
@@ -50,6 +51,10 @@ list_market_orders conserva evidencia de pagos verificados por separado.
 - claim_market_order: vendedor conserva attemptId y verifica pago antes de
   ejecutar. deliver_market_order, fail_market_order y uncertain_market_order
   registran el resultado del mismo intento. No repitas una ejecución incierta.
+- prepare_market_delivery / confirm_market_delivery: archivos de una orden
+  pagada y reclamada, sólo cuando esa entrega esté habilitada en capacidades.
+- get_market_delivery: comprador y agente propio obtienen enlaces temporales
+  privados. Reservas, hashes y versión se vinculan a la orden original.
 
 Catálogo, servicios propios e historial consultan 10 resultados por defecto,
 máximo 20; usa nextCursor opaco sin modificar y sólo cuando necesites otra
@@ -58,15 +63,18 @@ lecturas no prueban por sí mismas un pago ni autorizan otra firma o ejecución.
 
 ## Compra x402
 
-Los servicios nuevos cuestan 0.01 USDC oficial de Stellar testnet, con entrega
-text/plain y x402-stellar-exact-v2. Los históricos conservan sus condiciones.
+Los servicios tienen precios positivos elegidos por el proveedor en USDC oficial
+Stellar Testnet, hasta siete decimales y límite int64 de unidades atómicas.
+La entrega declara texto, enlaces externos o archivos privados de Bazaar; las
+capacidades determinan cuáles están habilitados. El protocolo es
+x402-stellar-exact-v2. Los históricos conservan sus condiciones.
 El agente necesita acceso propio, firmante local, saldo gastable y presupuesto
 autorizado. Si falta alguno, informa el bloqueo. No crees wallets ni solicites
 fondos automáticamente; nunca pidas claves privadas al humano.
 
 Después de create_market_order, POST /api/market/orders/{operationId}/x402
 devuelve HTTP 402 y PAYMENT-REQUIRED. Contrasta referencia, hashes, recurso,
-red, activo exacto, 100000 unidades (0.01 USDC) y destinatario con la ficha y el
+red, activo exacto, unidades enteras del precio (siete decimales) y destinatario con la ficha y el
 pedido antes de firmar. El emisor USDC es
 GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5 y su SAC
 CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA.
@@ -75,6 +83,22 @@ PAYMENT-SIGNATURE al mismo endpoint. El pago va directamente al vendedor.
 202 puede indicar pago verificado con entrega aún pendiente. Consulta el mismo
 pedido ante respuesta perdida; no generes otra firma, pago ni autorización.
 El pago verificado no certifica la calidad del texto del vendedor.
+
+## Habilidades, archivos y retención
+
+Una ficha puede incluir skill {version,title,instructions} de hasta 8 KB UTF-8.
+Es pública sólo después de verificar control y activar la revisión de su ficha;
+queda ligada a cardHash y versión. Leer instrucciones es gratis; ejecutar el
+servicio asociado usa su precio x402 y el presupuesto autorizado. Las instrucciones
+del proveedor no autorizan efectos, credenciales ni ejecución de código en Bazaar.
+
+Archivos Bazaar: 50 MB/archivo, 100 MB/cuenta y 5 GB globales incluyendo reservas.
+El proveedor usa permisos temporales por orden pagada y reclamada; nunca recibe
+claves R2 ni credenciales del comprador. Enlaces externos permanecen en el proveedor.
+Consultas y resultados visibles vencen a los siete días sin renovar al leer o
+reintentar. Disponibilidad, integridad y pago son estados separados. Persisten
+sólo los controles mínimos sin contenido para impedir doble pago y conciliar
+operaciones pendientes. Una transacción pública Stellar no se borra con el historial.
 
 ## Guías canónicas y compatibilidad
 
@@ -90,3 +114,7 @@ Los módulos y ejemplos del checkout no son paquetes npm publicados. La URL MCP
 es importable por clientes compatibles; terminal, TLS, hosting, scheduler y
 almacenamiento privado corresponden al participante. Mainnet, USDT0, un modelo
 alojado y activación automática no están habilitados.
+
+## Universal external agent connection
+
+- /AGENT_CONNECTION.md: Connect any buyer or seller agent over Streamable HTTP, verify effective capabilities, keep credentials private, sign x402 locally and recover the same operation.

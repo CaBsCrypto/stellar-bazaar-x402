@@ -1,0 +1,9 @@
+# Evidencia parcial de almacenamiento
+
+El 8 de octubre de 2026 se ejecutó `validate-market-storage-isolated.mjs --execute` con una credencial temporal autorizada y dos objetos sintéticos pequeños en un prefijo local nuevo de R2. Las **17 comprobaciones directas de R2 pasaron**: ausencia inicial, checksum/tipo/tamaño alterados, prohibición de sobrescritura, HEAD real, descarga íntegra, Range 206, denegación de acceso sin firma y vencimiento real de un GET corto. Se usaron PNG y VTT; no se comprobó reproducción de MP4. Los dos objetos generados se eliminaron al terminar.
+
+La evidencia saneada está en [storage-backend-validation.json](storage-backend-validation.json). Se genera con `node scripts/sanitize-market-storage-evidence.mjs`, que sólo copia códigos, etiquetas permitidas y contadores. No contiene llaves, tokens, enlaces firmados, contenido de cuentas ni URLs de backend. El commit identifica la base del checkout; los cambios invocados todavía no constituyen un commit publicado.
+
+Las pruebas locales separadas pasaron con **86 verificaciones de archivos** y **28 de retención**, usando el modelo real de cuentas, firmas SDK y Redis/R2 simulados. Cubren la admisión cerrada con recuperación existente, rechazo de nueva admisión ante un probe fallido, manifiesto inmutable, aislamiento, revocación, vencimiento, y rechazo de claves de limpieza corruptas antes de eliminar objetos. También pasaron TypeScript y las pruebas previas de entregas y visualización. Estas pruebas locales no validan backends en nube ni pagos.
+
+**Pendiente:** Redis real con dos cuentas y persistencia de órdenes; preview pública con HTTP, MCP y navegador; pago Testnet real autorizado por separado; entrega del proveedor; y verificación real de siete días/ciclo de vida. La fecha de retención controlada del harness prueba el código sin esperar una semana. El resultado completo permanece pendiente y no se presenta como aceptación de producción.

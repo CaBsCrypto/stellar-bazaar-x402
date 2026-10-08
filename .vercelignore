@@ -1,4 +1,9 @@
 .git
+.vercel
+.codex
+.agents
+.aws
+work
 .next
 node_modules
 target

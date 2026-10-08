@@ -5,7 +5,7 @@ import type {PaymentPayload,PaymentRequired,PaymentRequirements,SettleResponse,V
 import {z} from 'zod';
 import {canonical,sha} from './marketplace-identity.ts';
 import {configuredMarketStore,type MarketOrder} from './marketplace-store.ts';
-import {readMarketOrder,assertMarketEnabled} from './marketplace.ts';
+import {readMarketOrder,readMarketRecovery,assertMarketEnabled,assertMarketPurchaseAdmission} from './marketplace.ts';
 import {isCanonicalUsdcTestnet} from './payment-assets.ts';
 import {decimalToAtomic} from './operation-history-client.ts';
 import {WorkspaceError,type WorkspacePrincipal} from './workspace-types.ts';
@@ -71,7 +71,7 @@ export function createMarketX402Challenge(o:MarketOrder,origin:string):PaymentRe
 }
 
 /** Fingerprint actual credentials/nonce, independent of mutable x402 metadata. */
-export function marketX402Authorization(xdrString:string,o:MarketOrder,submitted=false){
+export function marketX402Authorization(xdrString:string,o:Pick<MarketOrder,'settlement'|'payer'|'destination'|'amount'>,submitted=false){
  try{
   if(!xdrString||Buffer.byteLength(xdrString)>24000)throw Error();
   const envelope=TransactionBuilder.fromXDR(xdrString,Networks.TESTNET);
@@ -103,6 +103,17 @@ function assertRecordBinding(record:MarketX402Settlement,o:MarketOrder){
 }
 async function boundRecord(store:MarketX402Store,o:MarketOrder){const record=await store.transact(s=>s.records.find(r=>r.operationId===o.operationId));if(!record)throw new WorkspaceError('X402_SETTLEMENT_BINDING_MISMATCH',409);assertRecordBinding(record,o);return record;}
 async function updateRecord(store:MarketX402Store,o:MarketOrder,attemptId:string,change:(r:MarketX402Settlement)=>void){return store.transact(s=>{const r=s.records.find(v=>v.operationId===o.operationId);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.attemptId!==attemptId)throw new WorkspaceError('OPERATION_CONFLICT',409);change(r);r.updatedAt=new Date().toISOString();return r;});}
+/** A settling call can finish after seven-day maintenance erased its content.
+ * Preserve only its matching transaction identifier, never the signed payload,
+ * provider response, prompt or result. Confirmation still requires a ledger read. */
+async function retainArchivedOutcome(o:MarketOrder,record:MarketX402Settlement,outcome:SettleResponse){
+ if(outcome.network!=='stellar:testnet'||outcome.payer!==o.payer||typeof outcome.transaction!=='string'||!/^[a-f0-9]{64}$/.test(outcome.transaction))return false;
+ return configuredMarketStore().transact(s=>{
+  const archived=s.archived?.find(r=>r.operationId===o.operationId);if(!archived)return false;
+  if(archived.buyerOwnerId!==o.buyerOwnerId||archived.sellerOwnerId!==o.sellerOwnerId||archived.orderBinding!==marketX402OrderBinding(o)||!record.authorizationFingerprint||archived.authorizationFingerprint!==record.authorizationFingerprint||!['uncertain','confirmed'].includes(archived.paymentPhase)||(archived.transactionHash&&archived.transactionHash!==outcome.transaction))throw new WorkspaceError('OPERATION_CONFLICT',409);
+  archived.transactionHash=outcome.transaction;return true;
+ });
+}
 async function markOrder(o:MarketOrder,attemptId:string,uncertain=false,transactionHash?:string){return configuredMarketStore().transact(s=>{const r=s.orders.find(v=>v.operationId===o.operationId);if(!r||marketX402OrderBinding(r)!==marketX402OrderBinding(o)||r.settlementAttemptId&&r.settlementAttemptId!==attemptId||transactionHash&&r.transactionHash&&r.transactionHash!==transactionHash)throw new WorkspaceError('OPERATION_CONFLICT',409);if(!uncertain&&s.paused)throw new WorkspaceError('MARKET_PAUSED',503);if(r.phase==='awaiting-payment'||['payment-submitting','payment-uncertain'].includes(r.phase)){r.settlementAttemptId=attemptId;r.phase=uncertain?'payment-uncertain':'payment-submitting';if(transactionHash)r.transactionHash=transactionHash;r.updatedAt=new Date().toISOString();}return r;});}
 async function markUncertain(deps:MarketX402Dependencies,o:MarketOrder,record:MarketX402Settlement){
  if(!record.attemptId)return;
@@ -128,9 +139,29 @@ function paidResponse(order:MarketOrder,record:MarketX402Settlement,origin:strin
  if(record.outcome?.success)response.headers.set('PAYMENT-RESPONSE',encodePaymentResponseHeader(record.outcome));return response;
 }
 export async function reconcileMarketX402Payment(p:WorkspacePrincipal,id:string,deps=dependencies()){
- const o=await readMarketOrder(p,id);buyer(p,o);const record=await boundRecord(deps.store,o);
- if(!(record.transactionHash||record.outcome?.transaction)||!['settled','confirmed','uncertain'].includes(record.phase))throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+ let o:MarketOrder;
+ try{o=await readMarketOrder(p,id);}catch(e){if(!(e instanceof WorkspaceError)||e.code!=='ORDER_CONTENT_EXPIRED')throw e;const recovery=await readMarketRecovery(p,id);if(!recovery||recovery.buyerOwnerId!==p.ownerId||!['human','agent'].includes(p.role))throw new WorkspaceError('NOT_FOUND',404);await reconcileMarketGuardianOrder(id,deps);return (await readMarketRecovery(p,id))!;}
+ buyer(p,o);const record=await boundRecord(deps.store,o);
+ if(!(record.transactionHash||record.outcome?.transaction)||!['settling','settled','confirmed','uncertain'].includes(record.phase))throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
  try{return await finalizePaid(deps,o,record);}catch(e){await markUncertain(deps,o,record);throw e;}
+}
+/** Internal guardian recovery reads the chain only; it never resubmits a payment. */
+export async function reconcileArchivedMarketPayment(id:string,deps=dependencies()){
+ const r=await configuredMarketStore().transact(s=>s.archived?.find(r=>r.operationId===id));
+ if(!r||r.paymentProtocol!==MARKET_X402_PROTOCOL||!r.transactionHash||!r.authorizationFingerprint)throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+ if(r.paymentPhase==='confirmed')return r;
+ const chain=await deps.rpc.transaction(r.transactionHash);
+ if(chain.status!=='SUCCESS'||!chain.envelopeXdr)throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+ const proof=marketX402Authorization(chain.envelopeXdr,r,true);
+ if(proof.transactionHash!==r.transactionHash||proof.fingerprint!==r.authorizationFingerprint)throw new WorkspaceError('X402_PAYMENT_NOT_VERIFIED',409);
+ return configuredMarketStore().transact(s=>{const current=s.archived?.find(o=>o.operationId===id);if(!current||current.orderBinding!==r.orderBinding||current.transactionHash!==r.transactionHash||current.authorizationFingerprint!==r.authorizationFingerprint)throw new WorkspaceError('OPERATION_CONFLICT',409);current.paymentPhase='confirmed';current.paymentVerifiedAt=new Date().toISOString();return current;});
+}
+export async function reconcileMarketGuardianOrder(id:string,deps=dependencies()){
+ const o=await configuredMarketStore().transact(s=>s.orders.find(o=>o.operationId===id));
+ if(!o)return reconcileArchivedMarketPayment(id,deps);
+ const record=await boundRecord(deps.store,o);
+ if(!(record.transactionHash||record.outcome?.transaction)||!['settling','settled','confirmed','uncertain'].includes(record.phase))throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+ return finalizePaid(deps,o,record);
 }
 export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,origin:string,signature?:string,deps=dependencies()):Promise<Response>{
  assertMarketEnabled();
@@ -138,24 +169,25 @@ export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,or
  let record=await deps.store.transact(s=>s.records.find(r=>r.operationId===id));
  if(!record){
   if(o.phase!=='awaiting-payment')throw new WorkspaceError('X402_SETTLEMENT_UNAVAILABLE',409);
-  if(process.env.BAZAAR_X402_MARKETPLACE_ENABLED!=='true'||process.env.BAZAAR_ENABLE_MARKET_PURCHASES!=='true'||await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
+  assertMarketPurchaseAdmission();if(await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
   await operationalRequestGate({profile:'authenticated',newOperation:true});
-  const challenge=createMarketX402Challenge(o,origin);record=await deps.store.transact(s=>{if(s.records.some(r=>r.operationId===id))throw new WorkspaceError('OPERATION_CONFLICT',409);const time=new Date().toISOString(),r:MarketX402Settlement={operationId:id,buyerOwnerId:p.ownerId,orderBinding:marketX402OrderBinding(o),challenge,phase:'challenged',createdAt:time,updatedAt:time};s.records.push(r);return r;});
+  const challenge=createMarketX402Challenge(o,origin);record=await deps.store.transact(s=>{assertMarketPurchaseAdmission();if(s.records.some(r=>r.operationId===id))throw new WorkspaceError('OPERATION_CONFLICT',409);const time=new Date().toISOString(),r:MarketX402Settlement={operationId:id,buyerOwnerId:p.ownerId,orderBinding:marketX402OrderBinding(o),challenge,phase:'challenged',createdAt:time,updatedAt:time};s.records.push(r);return r;});
  }
  assertRecordBinding(record,o);
  if(!signature){if(record.phase==='confirmed')return paidResponse(await finalizePaid(deps,o,record),record,origin);if(record.phase!=='challenged')throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);return Response.json(record.challenge,{status:402,headers:{...workspaceHeaders,'PAYMENT-REQUIRED':encodePaymentRequiredHeader(record.challenge)}});}
  const proof=parseProof(signature,record,o);
  if(record.payloadHash){if(record.payloadHash!==proof.payloadHash||record.authorizationFingerprint!==proof.authorizationFingerprint)throw new WorkspaceError('OPERATION_CONFLICT',409);if(record.phase==='confirmed')return paidResponse(await finalizePaid(deps,o,record),record,origin);throw new WorkspaceError(record.phase==='rejected'?'X402_PAYMENT_REJECTED':'X402_PAYMENT_OUTCOME_UNCERTAIN',record.phase==='rejected'?402:409);}
- if(process.env.BAZAAR_X402_MARKETPLACE_ENABLED!=='true'||process.env.BAZAAR_ENABLE_MARKET_PURCHASES!=='true'||await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
+ assertMarketPurchaseAdmission();if(await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
  await operationalRequestGate({profile:'authenticated',newOperation:true});
- const attemptId=randomUUID();record=await deps.store.transact(s=>{const r=s.records.find(v=>v.operationId===id);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.phase!=='challenged')throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.records.some(v=>v.authorizationFingerprint===proof.authorizationFingerprint))throw new WorkspaceError('X402_AUTHORIZATION_REUSE',409);Object.assign(r,proof,{attemptId,phase:'verifying',updatedAt:new Date().toISOString()});return r;});
+ const attemptId=randomUUID();record=await deps.store.transact(s=>{assertMarketPurchaseAdmission();const r=s.records.find(v=>v.operationId===id);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.phase!=='challenged')throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.records.some(v=>v.authorizationFingerprint===proof.authorizationFingerprint))throw new WorkspaceError('X402_AUTHORIZATION_REUSE',409);Object.assign(r,proof,{attemptId,phase:'verifying',updatedAt:new Date().toISOString()});return r;});
  try{
   const verified=await deps.facilitator.verify(proof.payload,record.challenge.accepts[0]);
   if(verified.isValid!==true||verified.payer!==o.payer){await updateRecord(deps.store,o,attemptId,r=>{r.phase='rejected';});throw new WorkspaceError('X402_PAYMENT_REJECTED',402);}
   await markOrder(o,attemptId);
   record=await updateRecord(deps.store,o,attemptId,r=>{if(r.phase!=='verifying')throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='settling';});
   const outcome=await deps.facilitator.settle(proof.payload,record.challenge.accepts[0]);
-  record=await updateRecord(deps.store,o,attemptId,r=>{r.responseHash=sha(canonical(outcome));if(outcome.network==='stellar:testnet'&&outcome.payer===o.payer&&/^[a-f0-9]{64}$/.test(outcome.transaction))r.transactionHash=outcome.transaction;});
+  try{record=await updateRecord(deps.store,o,attemptId,r=>{r.responseHash=sha(canonical(outcome));if(outcome.network==='stellar:testnet'&&outcome.payer===o.payer&&/^[a-f0-9]{64}$/.test(outcome.transaction))r.transactionHash=outcome.transaction;});}
+  catch(e){if(await retainArchivedOutcome(o,record,outcome))throw new WorkspaceError('ORDER_CONTENT_EXPIRED',410);throw e;}
   if(outcome.success!==true||outcome.network!=='stellar:testnet'||outcome.payer!==o.payer||!/^[a-f0-9]{64}$/.test(outcome.transaction))throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
   const receipt:SettleResponse={success:true,network:'stellar:testnet',transaction:outcome.transaction,payer:outcome.payer};
   record=await updateRecord(deps.store,o,attemptId,r=>{r.outcome=receipt;r.phase='settled';});

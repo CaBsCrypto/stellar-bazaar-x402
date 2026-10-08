@@ -1,0 +1,40 @@
+{
+  "evidenceType": "public-read-only-mcp-metadata",
+  "request": {
+    "method": "GET",
+    "url": "https://bazaar.browns.studio/api/mcp",
+    "authentication": "none",
+    "redirects": "rejected"
+  },
+  "observedAt": "2026-10-08T05:14:29.046Z",
+  "response": {
+    "status": 200,
+    "serverName": "stellar-bazaar-discovery",
+    "version": "0.5.0",
+    "protocol": "MCP",
+    "transport": "streamable-http",
+    "toolCount": 8,
+    "tools": [
+      "get_bazaar_capabilities",
+      "list_services",
+      "search_services",
+      "get_service",
+      "list_workflow_bundles",
+      "get_workflow_bundle",
+      "validate_service_card",
+      "get_operation_history"
+    ]
+  },
+  "candidateSource": {
+    "file": "lib/mcp-tool-contract.ts",
+    "version": "1.0.0",
+    "toolCount": 34,
+    "status": "local-candidate-not-demonstrated-deployed"
+  },
+  "limits": [
+    "This observation covers public metadata at one time only.",
+    "It does not prove initialize/tools/list negotiation or enabled functions.",
+    "It does not prove workspace creation, Redis/R2, purchases, delivery or private history in production.",
+    "No production credential, account creation, mutation or transaction was used."
+  ]
+}

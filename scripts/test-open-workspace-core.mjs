@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
-import { mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises';
+import { join, resolve, relative, isAbsolute, sep } from 'node:path';
 import { spawn } from 'node:child_process';
 import fsPromises from 'node:fs/promises';
 import { syncBuiltinESMExports } from 'node:module';
@@ -20,7 +19,10 @@ const hash = value => createHash('sha256').update(value).digest('hex');
 const credentials = () => Object.fromEntries(['bootstrap','human','agent'].map(role => [role, randomBytes(32).toString('base64url')]));
 const body = c => ({ creationId: randomUUID(), humanAccessHash: hash(c.human), agentAccessHash: hash(c.agent) });
 const request = (path, token, value, extra = {}) => new Request('http://127.0.0.1:43210'+path, { method: value === undefined ? 'GET' : 'POST', headers: { authorization: 'Bearer '+token, ...(value === undefined ? {} : { 'content-type':'application/json' }), ...extra }, ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
-const dir = await mkdtemp(join(tmpdir(), 'bazaar-workspace-core-'));
+// Keep all synthetic files in the ignored checkout rather than OS temp, whose
+// atomic rename permissions can differ from the workspace sandbox on Windows.
+const temporaryRoot=resolve('.vercel');await mkdir(temporaryRoot,{recursive:true});
+const dir = await mkdtemp(join(temporaryRoot, 'bazaar-workspace-core-'));
 const previous = { ...process.env };
 const isolatedEnv = Object.fromEntries(['SystemRoot','WINDIR','PATH','TEMP','TMP'].filter(k => process.env[k]).map(k => [k,process.env[k]]));
 let children = [], server;
@@ -167,4 +169,4 @@ try {
     assert.equal(limited,true);assert.ok(Buffer.byteLength(await readFile(join(quotaDir,'local-test','owner-'+first.ownerId+'.json'),'utf8'))<=WORKSPACE_LIMITS.ownerBytes);
   }finally{Date.now=realNow;}
   console.log(JSON.stringify({ok:true,fileHttpProcesses:3,fileReboot:true,concurrentCreates:8,creationBarrierRequests:6,identicalCreationRebind:true,boundedLockContention:true,redisRestProtocolDouble:true,redisConcurrentCreates:8,atomicGeneration:true,rotationTombstones:true,lostAckRecovery:true,corruptionFailsClosed:true,legacyCollision:true,unpaidOnly:true,noExternalUploads:true,noCredentialAliases:true,limitsEnforced:true,limits:WORKSPACE_LIMITS}));
-} finally { setWorkspaceStoreForTests(undefined); children.forEach(c=>c.kill()); if(server)await new Promise(r=>server.close(r)); assert.ok(resolve(dir).startsWith(resolve(tmpdir()))); assert.ok(dir.includes('bazaar-workspace-core-')); await rm(dir,{recursive:true,force:true}); for(const key of Object.keys(process.env)) if(!(key in previous))delete process.env[key];Object.assign(process.env,previous); }
+} finally { setWorkspaceStoreForTests(undefined); children.forEach(c=>c.kill()); if(server)await new Promise(r=>server.close(r)); const cleanupPath=relative(temporaryRoot,resolve(dir));assert.ok(cleanupPath&&!isAbsolute(cleanupPath)&&cleanupPath!=='..'&&!cleanupPath.startsWith('..'+sep)&&cleanupPath.startsWith('bazaar-workspace-core-')); await rm(dir,{recursive:true,force:true}); for(const key of Object.keys(process.env)) if(!(key in previous))delete process.env[key];Object.assign(process.env,previous); }

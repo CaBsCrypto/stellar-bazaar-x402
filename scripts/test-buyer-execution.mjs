@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { createExecutionRequest, DELIVERY_ENVELOPE_VERSION, EXECUTION_REQUEST_VERSION, executeFixtureRequest, FIXTURE_STATUS_ENDPOINT, LOCAL_DEMO_AUTHORIZATION, pollFixtureStatus, reconcileEnvelope, resetFixtureReplayCache } from "../lib/buyer-execution.ts";
+import { createExecutionRequest, DELIVERY_ENVELOPE_VERSION, EXECUTION_REQUEST_VERSION, executeFixtureRequest, FIXTURE_STATUS_ENDPOINT, LOCAL_DEMO_AUTHORIZATION, pollFixtureStatus, reconcileEnvelope, resetFixtureReplayCache } from "./fixtures/buyer-execution.ts";
+import { localBuyerFixture } from './fixtures/buyer-execution-handler.ts';
 resetFixtureReplayCache(); const now = new Date("2026-08-26T12:00:00.000Z");
 const script = createExecutionRequest({ serviceId: "script-creator", input: { topic: "Stellar x402", durationSeconds: 60 }, idempotencyKey: "script-demo", now });
 assert.equal(script.version, EXECUTION_REQUEST_VERSION); assert.equal(script.method, "POST"); assert.equal(script.route, "/fixtures/script");
@@ -29,5 +30,35 @@ assert.equal(reconcileEnvelope(script, { ...scriptDelivery, delivery: { ...scrip
 assert.equal(reconcileEnvelope(video, { ...videoCompleted, delivery: { ...videoCompleted.delivery, statusEndpoint: "/api/untrusted" } }), false);
 assert.equal(reconcileEnvelope(video, { ...videoCompleted, delivery: { ...videoCompleted.delivery, artifactManifest: [] } }), false, "completed fixture artifacts require a one-to-one manifest");
 const baseUrl = process.env.BASE_URL;
-if (baseUrl) { for (const serviceId of ["script-creator", "video-repurpose"]) { const input = serviceId === "script-creator" ? { topic: "smoke" } : { sourceName: "smoke.mp4" }; const challenged = await fetch(`${baseUrl}/api/buyer-execution/reference`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "challenge", serviceId, input, idempotencyKey: `smoke-${serviceId}` }) }); assert.equal(challenged.status, 402); assert.equal(challenged.headers.get("x-bazaar-demo"), "local-no-settlement"); const body = await challenged.json(); const delivered = await fetch(`${baseUrl}/api/buyer-execution/reference`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "execute", executionRequest: body.executionRequest, demoAuthorization: LOCAL_DEMO_AUTHORIZATION }) }); assert.equal(delivered.status, 200); const deliveredBody = await delivered.json(); assert.equal(deliveredBody.envelope.payment.status, "not-performed"); if (serviceId === "video-repurpose") { const polled = await fetch(`${baseUrl}/api/buyer-execution/reference`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "status", executionRequest: body.executionRequest, jobId: deliveredBody.envelope.delivery.jobId }) }); assert.equal(polled.status, 200); const polledBody = await polled.json(); assert.equal(polledBody.envelope.delivery.status, "completed"); assert.equal(polledBody.envelope.delivery.artifactManifest.length, 1); } } const page = await fetch(`${baseUrl}/buyer-execution`); assert.equal(page.status, 200); const html = (await page.text()).toLowerCase(); for (const marker of ["creación de guion", "script creation", "edición de video", "video repurpose", "sin upload", "external execution"]) assert.ok(html.includes(marker), marker); }
+// Explicit local invocation exercises the fixture transport without publishing it.
+for (const serviceId of ['script-creator', 'video-repurpose']) {
+  const invoke = body => localBuyerFixture(new Request('http://127.0.0.1/fixtures/buyer-execution/reference', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+  const input = serviceId === 'script-creator' ? { topic: 'smoke' } : { sourceName: 'smoke.mp4' };
+  const challenged = await invoke({ action: 'challenge', serviceId, input, idempotencyKey: `smoke-${serviceId}` });
+  assert.equal(challenged.status, 402);
+  assert.equal(challenged.headers.get('x-bazaar-demo'), 'local-no-settlement');
+  const body = await challenged.json();
+  const delivered = await invoke({ action: 'execute', executionRequest: body.executionRequest, demoAuthorization: LOCAL_DEMO_AUTHORIZATION });
+  assert.equal(delivered.status, 200);
+  const deliveredBody = await delivered.json();
+  assert.equal(deliveredBody.envelope.payment.status, 'not-performed');
+  if (serviceId === 'video-repurpose') {
+    const polled = await invoke({ action: 'status', executionRequest: body.executionRequest, jobId: deliveredBody.envelope.delivery.jobId });
+    assert.equal(polled.status, 200);
+    const polledBody = await polled.json();
+    assert.equal(polledBody.envelope.delivery.status, 'completed');
+    assert.equal(polledBody.envelope.delivery.artifactManifest.length, 1);
+  }
+}
+if (baseUrl) {
+  for (const action of ['challenge', 'execute', 'status']) {
+    const response = await fetch(`${baseUrl}/api/buyer-execution/reference`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, demoAuthorization: LOCAL_DEMO_AUTHORIZATION }) });
+    assert.equal(response.status, 404, 'hosted fixture must remain unavailable');
+  }
+  const page = await fetch(`${baseUrl}/buyer-execution`);
+  assert.equal(page.status, 200);
+  const html = (await page.text()).toLowerCase();
+  assert.ok(html.includes('historical testnet evidence'));
+  assert.ok(!html.includes('autorizar y ejecutar fixture'));
+}
 console.log("buyer execution and delivery v1: PASS");

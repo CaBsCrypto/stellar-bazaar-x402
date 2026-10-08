@@ -17,8 +17,9 @@ async function inputs(command,pipe){
 }
 export async function main(argv=process.argv.slice(2)){
  if(Number(process.versions.node.split('.')[0])<22)throw Error('NODE_22_REQUIRED');
- const args=[...argv],pipe=args.includes('--secret-stdin');if(pipe)args.splice(args.indexOf('--secret-stdin'),1);let origin=defaultBuyerOrigin;const at=args.indexOf('--origin');if(at>=0){origin=originOnly(args[at+1]);args.splice(at,2);}if(args.some(arg=>arg.startsWith('--')))throw Error('INVALID_OPTION');
+ const args=[...argv],pipe=args.includes('--secret-stdin');if(pipe)args.splice(args.indexOf('--secret-stdin'),1);let origin=defaultBuyerOrigin;const at=args.indexOf('--origin');if(at>=0){origin=originOnly(args[at+1]);args.splice(at,2);}let maxAtomic='100000';const maxAt=args.indexOf('--max-price');if(maxAt>=0){maxAtomic=parseBuyerBudget(args[maxAt+1]);args.splice(maxAt,2);}if(args.some(arg=>arg.startsWith('--')))throw Error('INVALID_OPTION');
  const [command,directory,arg,extra]=args;if(!commands.includes(command))throw Error('Use configure, access, signer, discover, prepare, buy, inspect, recover, budget, budget-increase or history.');
+ if(maxAt>=0&&command!=='prepare')throw Error('MAX_PRICE_PREPARE_ONLY');
  if(command==='discover'){
   if(args.length>3||pipe||arg&&!directory)throw Error('INVALID_COMMAND');const marketFetch=createBoundedBuyerFetch({origin});
   if(directory){console.log(JSON.stringify(await discoverBuyerService(origin,directory,{marketFetch,catalogCursor:arg})));return;}
@@ -39,7 +40,7 @@ export async function main(argv=process.argv.slice(2)){
   else{
    runtime=await createPortableBuyerRuntime({store,operationId:['buy','inspect','recover'].includes(command)?arg:undefined});
    if(command==='prepare'){
-    const bytes=await readFile(resolve(extra));if(bytes.length>65536)throw Error('PUBLIC_INPUT_TOO_LARGE');const input=JSON.parse(bytes),service=await discoverBuyerService(runtime.origin,arg,runtime);const intent=createMarketplaceBuyerIntent({origin:runtime.origin,card:service.card,input,payer:runtime.payer,operationId:randomUUID()});await store.journal('buyer.'+intent.operationId).initialize(intent);result=summarizeBuyerIntent(intent);
+    const bytes=await readFile(resolve(extra));if(bytes.length>65536)throw Error('PUBLIC_INPUT_TOO_LARGE');const input=JSON.parse(bytes),service=await discoverBuyerService(runtime.origin,arg,runtime);const intent=createMarketplaceBuyerIntent({origin:runtime.origin,card:service.card,input,payer:runtime.payer,operationId:randomUUID(),maxAtomic});await store.journal('buyer.'+intent.operationId).initialize(intent);result=summarizeBuyerIntent(intent);
    }else if(command==='budget'){const budget=runtime.budgetSnapshot();result={maximumAtomic:budget.maximumAtomic,reservedAtomic:budget.reservations.reduce((sum,item)=>sum+BigInt(item.amount),0n).toString(),reservations:budget.reservations.length};}
    else if(command==='history'){result=await readBuyerMarketHistory(runtime,{limit:arg===undefined?10:Number(arg),cursor:extra});}
    else{const intent=await runtime.journal.read();if(command==='buy')await runMarketplaceBuyerIntent(intent,runtime);else if(command==='recover')await recoverBuyerIntent(intent,runtime);else intent.order=await inspectBuyerOrder(intent,runtime);result=summarizeBuyerIntent(intent);}

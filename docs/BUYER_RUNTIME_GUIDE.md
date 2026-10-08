@@ -8,7 +8,9 @@ dependencias (`npm ci`), un espacio ya creado y una wallet Stellar testnet propi
 con USDC autorizado y saldo suficiente. Este cliente no obtiene fondos ni crea
 trustlines.
 
-Cada pedido paga exactamente **0.01 USDC testnet directamente al vendedor**.
+Cada pedido paga exactamente **el precio de la ficha revisada en USDC Testnet,
+directamente al vendedor**. Vincular previamente la wallet en Bazaar es opcional;
+la autorización del pagador se verifica en cada pago x402.
 El cliente verifica la identidad Circle testnet: emisor
 `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`, SAC
 `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`, passphrase
@@ -96,6 +98,12 @@ envía una vez `PAYMENT-SIGNATURE` al mismo endpoint
 testnet se usa para preparar y simular la autorización. No hay envío directo del
 cliente a Horizon ni custodia de fondos por Bazaar.
 
+El máximo por compra predeterminado es 0.01 USDC. Un servicio más caro requiere
+una decisión explícita al preparar: `prepare RUTA_PRIVADA ID_SERVICIO entrada.json
+--max-price 0.03`. El límite se conserva en la intención cifrada, valida el precio
+exacto de la ficha y no amplía el presupuesto total. Importes cero, negativos,
+notación exponencial, más de siete decimales o unidades fuera de int64 se rechazan.
+
 Un resultado `paid` prueba el pago; la entrega puede seguir pendiente. Cuando el
 vendedor registre texto o fallo, consúltalo:
 
@@ -111,6 +119,15 @@ la misma lectura y conserva el estado observado. Ninguno firma, reenvía un pago
 ni vuelve a ejecutar al vendedor. El historial privado usa páginas de 10 por
 defecto y admite hasta 20; conserva el cursor devuelto para la siguiente página.
 
+Después del vencimiento de siete días, `get_market_order` puede devolver HTTP 410
+con un control mínimo del pago y `ORDER_CONTENT_EXPIRED`. El cliente sólo acepta
+ese control para una lectura, valida el mismo hash de intención, ficha, entrada,
+pagador, precio, destino y activo, y muestra `contentExpired: true`. No restaura
+texto ni archivos. Un control confirmado requiere transacción y fecha verificadas;
+un pago incierto permanece incierto. `buy` rechaza el intento vencido antes de
+crear, firmar o transmitir. La conciliación del identificador original es
+independiente del contenido y nunca utiliza otro pago.
+
 Si una respuesta se pierde, conserva el UUID y el almacén y ejecuta `inspect` o
 `recover`. Un pedido iniciado no vuelve a `prepared`, aunque el servidor aún diga
 `awaiting-payment`. Una firma perdida o una segunda simulación incierta no genera
@@ -120,8 +137,9 @@ de fallo; requieren lectura del mismo pedido y nunca habilitan un reenvío.
 
 ## Presupuesto durable del dueño
 
-El presupuesto inicial es **0.02 USDC testnet total**, suficiente para dos
-reservas de 0.01. Una reserva se escribe antes de firmar y se conserva ante
+El presupuesto inicial es **0.02 USDC Testnet total**, suficiente para dos compras
+de 0.01 o una combinación menor o igual a ese total. La reserva usa el importe
+exacto de cada ficha. Se escribe antes de firmar y se conserva ante
 incertidumbre, fallo o falta de capacidad; no se libera por un estado leído.
 
 ```sh

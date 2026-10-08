@@ -33,6 +33,28 @@ function Pager({name, limit, page, next, busy, onLimit, onPage}: {name: string; 
   return <nav className={styles.pager} aria-label={`Páginas de ${name}`}><label>Por página<select value={limit} disabled={busy} onChange={e => onLimit(Number(e.target.value))}><option value={10}>10</option><option value={20}>20</option></select></label><button disabled={busy || page === 0} onClick={() => onPage(-1)}>Anterior</button><span>Página {page + 1}</span><button disabled={busy || !next} onClick={() => onPage(1)}>Siguiente</button></nav>;
 }
 
+type PrivateFile=NonNullable<MarketOrder['fileDelivery']>['files'][number]&{expiresAt?:string;integrity?:string};
+function MarketplaceFiles({order,access}:{order:Order;access:string}){
+ const [files,setFiles]=useState<PrivateFile[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const generation=useRef(0),controller=useRef<AbortController|null>(null);
+ useEffect(()=>{generation.current++;setFiles([]);setError('');return()=>{generation.current++;controller.current?.abort();};},[access,order.operationId]);
+ useEffect(()=>{if(!files.length)return;const end=Math.min(...files.map(f=>Date.parse(f.expiresAt??order.fileDelivery!.expiresAt)));const timer=setTimeout(()=>setFiles([]),Math.max(0,end-Date.now()));return()=>clearTimeout(timer);},[files,order.fileDelivery]);
+ const delivery=order.fileDelivery;if(!delivery)return null;
+ const expired=Date.parse(delivery.expiresAt)<=Date.now();
+ const visibleFiles:PrivateFile[]=files.length?files:delivery.files.map(({url: _url,...file})=>file);
+ async function load(){
+  controller.current?.abort();controller.current=new AbortController();const current=++generation.current,signal=controller.current.signal;setBusy(true);setError('');
+  try{const response=await serializedPrivateRead(access,signal,()=>fetch(`/api/market/orders/${order.operationId}/deliveries`,{headers:{Authorization:'Bearer '+access},cache:'no-store',redirect:'error',signal}));const body=await response.json();if(current!==generation.current)return;if(!response.ok)throw Error(body.error?.code??'FILE_ACCESS_UNAVAILABLE');setFiles(body.delivery.files);}
+  catch(e){if(current===generation.current)setError(e instanceof Error?e.message:'FILE_ACCESS_UNAVAILABLE');}
+  finally{if(current===generation.current)setBusy(false);}
+ }
+ return <section aria-label='Archivos de la entrega'><h5>Archivos · {delivery.mode==='bazaar'?'Conservados por Bazaar':'Alojados por el proveedor'}</h5><p>Disponibles hasta <time>{delivery.expiresAt}</time>. {delivery.mode==='external'?'Disponibilidad e integridad declaradas por el proveedor.':'La integridad de bytes se verifica por separado del pago.'}</p>
+  {expired?<p>El plazo del contenido terminó. Conserva el comprobante de la compra.</p>:order.perspective==='purchase'?<button disabled={busy} onClick={()=>void load()}>{busy?'Preparando acceso…':'Abrir archivos privados'}</button>:<p>El acceso a los archivos de Bazaar pertenece al comprador.</p>}
+  {error&&<p role='alert'>{error}. Recupera esta misma entrega; no repitas el pago.</p>}
+  {visibleFiles.map(file=><div key={file.id}><p>{file.name} · {file.size} bytes · {file.status==='available'?'Disponible':'Pendiente de subida'}</p><p>SHA-256: <code>{file.sha256}</code></p>{file.url&&<><a href={file.url} target='_blank' rel='noreferrer'>Descargar o abrir archivo</a>{['video/mp4','video/webm'].includes(file.mediaType)&&<video controls preload='metadata' src={file.url} style={{maxWidth:'100%'}}>Tu navegador no reproduce este video.</video>}{['image/png','image/jpeg','image/webp','image/gif','image/avif'].includes(file.mediaType)&&<img src={file.url} alt={file.name} referrerPolicy='no-referrer' style={{maxWidth:'100%'}}/>}</>}</div>)}
+ </section>;
+}
+
 export default function MarketplaceWorkspace({access, onLock, view='all'}: {access: string; onLock: () => void; view?: 'history' | 'all'}) {
   const [mine, setMine] = useState<Service[]>([]), [orders, setOrders] = useState<Order[]>([]);
   const [busy, setBusy] = useState(false), [error, setError] = useState(''), [paused, setPaused] = useState(false);
@@ -107,7 +129,7 @@ export default function MarketplaceWorkspace({access, onLock, view='all'}: {acce
   }
   return <section className={styles.panel} aria-labelledby='market-workspace-title'>
     <div className={styles.header}><div><p>Stellar testnet · espacio privado</p><h2 id='market-workspace-title'>Compras, ventas y mis servicios</h2></div><button onClick={lock}>Bloquear espacio</button></div>
-    <p>Tu agente descubre, compra y ejecuta desde tu infraestructura. Los nuevos pedidos usan x402 y cuestan 0.01 USDC oficial de testnet. El historial conserva las condiciones de cada pedido anterior.</p>
+    <p>Tu agente descubre, compra y ejecuta desde tu infraestructura. Cada ficha declara su precio en USDC oficial de Stellar Testnet; el pedido conserva esas condiciones. El historial privado dura siete días.</p>
     <p><a href='/catalogo'>Ver catálogo público</a> · <a href='/hub'>Conectar mi agente por MCP</a></p>
     <button disabled={busy} onClick={() => void run(ctx => loadOrders(ctx))}>Actualizar esta página de pedidos</button>
     <button disabled={busy} onClick={() => { setServicesVisible(true); void run(async ctx => { await loadMine(ctx); await loadPermission(ctx); }); }}>Mis servicios y permiso de publicación</button>
@@ -118,6 +140,7 @@ export default function MarketplaceWorkspace({access, onLock, view='all'}: {acce
     {orders.map(order => <article key={order.operationId}><h4>{order.perspective === 'sale' ? 'Venta' : 'Compra'} · {order.card.name}</h4><p>{statuses[order.phase]}</p><p>{order.amount} {order.card.payment.asset} · <time>{order.updatedAt}</time></p><p>Referencia: <code>{order.operationId}</code></p><details><summary>Condiciones del pedido</summary><p>Comprador: <code>{order.payer}</code></p><p>Destinatario: <code>{order.destination}</code></p><p>Protocolo: {order.paymentProtocol ?? 'registro histórico'}</p><p>Hash de la ficha: <code>{order.cardHash}</code></p></details>
       {order.transactionHash && <p><a href={`https://stellar.expert/explorer/testnet/tx/${order.transactionHash}`} target='_blank' rel='noreferrer'>Transacción testnet</a> · {order.paymentVerifiedAt ? 'Verificada por Bazaar' : 'Sin confirmación'}</p>}
       {order.delivery && <><p>Entrega reportada por vendedor · <code>{order.delivery.reference}</code></p><pre>{order.delivery.text}</pre><p>El pago verificado no certifica la calidad de la entrega.</p></>}
+      {order.fileDelivery&&<MarketplaceFiles key={`${access}-${order.operationId}`} order={order} access={access}/>}
       {order.failure && <p>Fallo de entrega: {order.failure}</p>}
       {order.phase === 'awaiting-payment' && <p>Tu agente debe recuperar este mismo pedido y su archivo de intención antes de continuar.</p>}
       {order.phase === 'execution-uncertain' && <p>Se conserva el pago y el intento de ejecución. Revisa la evidencia con el vendedor antes de resolver; no se ejecuta de nuevo automáticamente.</p>}

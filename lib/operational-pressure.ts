@@ -22,7 +22,9 @@ export function operationalRequestClass(request?: Request): OperationalRequestCl
     return { profile: ['/api/discovery/resources', '/api/discovery/search', '/api/market/catalog', '/api/mcp'].includes(path) ? 'public' : 'recovery', newOperation: false };
   }
   if (path === '/api/market/control' || path === '/api/market/operations-budget' || path === '/api/market/review' ||
+      path === '/api/market/guardian' || path === '/api/account/wallet/complete' ||
       /^\/api\/market\/orders\/[^/]+\/x402$/.test(path) ||
+      /^\/api\/market\/orders\/[^/]+\/deliveries(?:\/confirm)?$/.test(path) ||
       /^\/api\/workspaces\/[^/]+\/access$/.test(path) || ['/api/operations', '/api/activity', '/api/activity/connection'].includes(path) ||
       /^\/api\/agent-tasks\/[^/]+\/response$/.test(path)) return { profile: 'recovery', newOperation: false };
   // The payment handler must distinguish a fresh submission from a persisted attempt.
@@ -32,7 +34,7 @@ export function operationalRequestClass(request?: Request): OperationalRequestCl
 const mcpNewWork = new Set(['submit_market_service', 'create_market_order', 'create_bazaar_workspace', 'submit_provider_request']);
 const mcpMetadata=new Set(['get_bazaar_capabilities','list_workflow_bundles','get_workflow_bundle','validate_service_card','get_bazaar_skills']);
 export const publicOperationalMcpTools = new Set(['get_bazaar_capabilities', 'list_market_services', 'list_services', 'search_services', 'get_service', 'list_workflow_bundles', 'get_workflow_bundle', 'validate_service_card', 'get_bazaar_skills']);
-const mcpRecovery = new Set(['list_market_services', 'get_market_submission', 'get_market_order', 'list_market_orders', 'get_operation_history', 'get_provider_request_status', 'list_bazaar_agent_tasks', 'claim_market_order', 'deliver_market_order', 'fail_market_order', 'uncertain_market_order', 'claim_bazaar_agent_task', 'respond_bazaar_agent_task', 'record_bazaar_operation', 'record_bazaar_activity']);
+const mcpRecovery = new Set(['get_bazaar_identity', 'get_bazaar_query_history', 'complete_wallet_binding', 'list_market_services', 'get_market_submission', 'get_market_order', 'list_market_orders', 'get_operation_history', 'get_provider_request_status', 'list_bazaar_agent_tasks', 'claim_market_order', 'prepare_market_delivery', 'confirm_market_delivery', 'get_market_delivery', 'deliver_market_order', 'fail_market_order', 'uncertain_market_order', 'claim_bazaar_agent_task', 'respond_bazaar_agent_task', 'record_bazaar_operation', 'record_bazaar_activity']);
 function validBootstrapCreation(request:Request,input:unknown) {
   return request.headers.get('content-type')?.split(';')[0].trim()==='application/json' &&
     /^Bearer [a-zA-Z0-9_-]{32,128}$/.test(request.headers.get('authorization')??'') &&

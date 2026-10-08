@@ -7,6 +7,7 @@ import {Account,Address,Asset,BASE_FEE,Contract,Keypair,Networks,Operation,StrKe
 import {Api,parseRawSimulation} from '@stellar/stellar-sdk/rpc';
 import {decodePaymentRequiredHeader,decodePaymentResponseHeader,encodePaymentSignatureHeader} from '@x402/core/http';
 import {originOnly} from './private-mcp-client.mjs';
+import {marketAmountAtomic,isMarketAmount,marketAtomicValid} from './market-price.mjs';
 
 export const buyerProtocol='x402-stellar-exact-v2';
 export const buyerIdentity={kind:'stellar-classic-credit',network:'stellar:testnet',code:'USDC',issuer:'GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5'};
@@ -23,26 +24,33 @@ function sponsoredFeeLimit(options,requirements){
 }
 const proofPhases=['paid','executing','execution-uncertain','delivered','delivery-failed'];
 const endpoint=intent=>new URL('/api/market/orders/'+intent.operationId+'/x402',intent.origin).href;
-function cardValid(card){return card&&card.network==='stellar:testnet'&&card.payment?.scheme==='exact'&&card.payment?.asset==='USDC'&&card.payment?.amount==='0.01'&&StrKey.isValidEd25519PublicKey(card.payment.destination??'')&&buyerCanonical(card.payment.identity)===buyerCanonical(buyerIdentity)&&card.payment.marketplace?.protocol===buyerProtocol&&card.payment.marketplace?.resourceTemplate==='/api/market/orders/{operationId}/x402';}
+function cardValid(card){return card&&card.network==='stellar:testnet'&&card.payment?.scheme==='exact'&&card.payment?.asset==='USDC'&&isMarketAmount(card.payment?.amount)&&StrKey.isValidEd25519PublicKey(card.payment.destination??'')&&buyerCanonical(card.payment.identity)===buyerCanonical(buyerIdentity)&&card.payment.marketplace?.protocol===buyerProtocol&&card.payment.marketplace?.resourceTemplate==='/api/market/orders/{operationId}/x402';}
 export function createMarketplaceBuyerIntent({origin,card,input,payer,operationId=randomUUID(),maxAtomic='100000'}){
  const intent={version:1,origin:originOnly(origin),operationId,card:clone(card),cardHash:digest(buyerCanonical(card)),input:clone(input),inputHash:digest(buyerCanonical(input)),payer,maxAtomic,paymentProtocol:buyerProtocol,phase:'prepared',createdAt:new Date().toISOString()};
  validateIntent(intent);return intent;
 }
 function validateIntent(intent){
- if(intent?.version!==1||!uuid.test(intent.operationId??'')||originOnly(intent.origin)!==intent.origin||intent.paymentProtocol!==buyerProtocol||!cardValid(intent.card)||digest(buyerCanonical(intent.card))!==intent.cardHash||digest(buyerCanonical(intent.input))!==intent.inputHash||!StrKey.isValidEd25519PublicKey(intent.payer??'')||!intent.input||typeof intent.input!=='object'||Array.isArray(intent.input)||intent.maxAtomic!=='100000')throw Error('INVALID_BUYER_INTENT');
+ if(intent?.version!==1||!uuid.test(intent.operationId??'')||originOnly(intent.origin)!==intent.origin||intent.paymentProtocol!==buyerProtocol||!cardValid(intent.card)||digest(buyerCanonical(intent.card))!==intent.cardHash||digest(buyerCanonical(intent.input))!==intent.inputHash||!StrKey.isValidEd25519PublicKey(intent.payer??'')||!intent.input||typeof intent.input!=='object'||Array.isArray(intent.input)||!marketAtomicValid(intent.maxAtomic)||BigInt(marketAmountAtomic(intent.card.payment.amount))>BigInt(intent.maxAtomic))throw Error('INVALID_BUYER_INTENT');
  if(intent.challenge)validateChallenge(intent,intent.challenge);
  if(intent.challenge&&digest(buyerCanonical(intent.challenge))!==intent.challengeHash)throw Error('PAYMENT_CHALLENGE_CHANGED');
  if(intent.signedPayload&&(digest(buyerCanonical(intent.signedPayload))!==intent.payloadHash||encodePaymentSignatureHeader(intent.signedPayload)!==intent.paymentSignature))throw Error('SIGNED_PAYLOAD_CHANGED');
 }
 function boundOrder(intent,order){
- if(!order||order.operationId!==intent.operationId||order.paymentProtocol!==buyerProtocol||order.cardHash!==intent.cardHash||digest(buyerCanonical(order.card))!==intent.cardHash||order.serviceId!==intent.card.id||order.inputHash!==intent.inputHash||buyerCanonical(order.input)!==buyerCanonical(intent.input)||order.payer!==intent.payer||order.destination!==intent.card.payment.destination||order.amount!=='0.01'||buyerCanonical(order.settlement)!==buyerCanonical(buyerIdentity))throw Error('ORDER_BINDING_CHANGED');
+ if(!order||order.operationId!==intent.operationId||order.paymentProtocol!==buyerProtocol||order.cardHash!==intent.cardHash||digest(buyerCanonical(order.card))!==intent.cardHash||order.serviceId!==intent.card.id||order.inputHash!==intent.inputHash||buyerCanonical(order.input)!==buyerCanonical(intent.input)||order.payer!==intent.payer||order.destination!==intent.card.payment.destination||order.amount!==intent.card.payment.amount||buyerCanonical(order.settlement)!==buyerCanonical(buyerIdentity))throw Error('ORDER_BINDING_CHANGED');
  if(proofPhases.includes(order.phase)&&(!/^[a-f0-9]{64}$/.test(order.transactionHash??'')||!Number.isFinite(Date.parse(order.paymentVerifiedAt))))throw Error('UNVERIFIED_PAYMENT');
  if(order.delivery&&(order.delivery.sha256!==digest(order.delivery.text)||order.delivery.reference!=='bazaar-order:'+intent.operationId||order.delivery.text.length>2000))throw Error('DELIVERY_CHANGED');
  return order;
 }
+function boundRecovery(intent,body){
+ const control=body?.operation,expectedIntentHash=digest(buyerCanonical({operationId:intent.operationId,serviceId:intent.card.id,cardHash:intent.cardHash,payer:intent.payer,input:intent.input,paymentProtocol:buyerProtocol}));
+ if(body?.recoveryOnly!==true||body.error?.code!=='ORDER_CONTENT_EXPIRED'||!control||control.operationId!==intent.operationId||control.intentHash!==expectedIntentHash||control.cardHash!==intent.cardHash||control.inputHash!==intent.inputHash||control.payer!==intent.payer||control.destination!==intent.card.payment.destination||control.amount!==intent.card.payment.amount||control.paymentProtocol!==buyerProtocol||buyerCanonical(control.settlement)!==buyerCanonical(buyerIdentity)||!['unpaid','rejected','uncertain','confirmed'].includes(control.paymentPhase)||intent.order?.buyerOwnerId&&intent.order.buyerOwnerId!==control.buyerOwnerId)throw Error('RECOVERY_BINDING_CHANGED');
+ if(control.paymentPhase==='confirmed'&&(!/^[a-f0-9]{64}$/.test(control.transactionHash??'')||!Number.isFinite(Date.parse(control.paymentVerifiedAt))))throw Error('UNVERIFIED_PAYMENT');
+ // Do not treat unavailable content as another payable intent or an available delivery.
+ return {operationId:intent.operationId,buyerOwnerId:control.buyerOwnerId,payer:control.payer,destination:control.destination,amount:control.amount,phase:control.paymentPhase==='confirmed'?'paid':control.paymentPhase==='rejected'?'payment-rejected':control.paymentPhase==='unpaid'?'awaiting-payment':'payment-uncertain',paymentPhase:control.paymentPhase,contentExpired:true,recoveryOnly:true,...(control.transactionHash?{transactionHash:control.transactionHash}:{}),...(control.paymentVerifiedAt?{paymentVerifiedAt:control.paymentVerifiedAt}:{})};
+}
 function validateChallenge(intent,challenge){
  const route=new URL(endpoint(intent)).pathname,requirements=challenge?.accepts?.[0];
- if(challenge?.x402Version!==2||challenge.accepts?.length!==1||challenge.resource?.url!==endpoint(intent)||challenge.resource?.mimeType!=='application/json'||requirements?.scheme!=='exact'||requirements.network!=='stellar:testnet'||requirements.asset!==buyerIdentity.sacContract||requirements.amount!=='100000'||requirements.payTo!==intent.card.payment.destination||!Number.isInteger(requirements.maxTimeoutSeconds)||requirements.maxTimeoutSeconds<1||requirements.maxTimeoutSeconds>300||requirements.extra?.areFeesSponsored!==true||requirements.extra.resourceUrl!==endpoint(intent)||requirements.extra.route!==route||requirements.extra.method!=='POST'||requirements.extra.operationId!==intent.operationId||requirements.extra.cardHash!==intent.cardHash||requirements.extra.inputHash!==intent.inputHash)throw Error('PAYMENT_CHALLENGE_CHANGED');
+ if(challenge?.x402Version!==2||challenge.accepts?.length!==1||challenge.resource?.url!==endpoint(intent)||challenge.resource?.mimeType!=='application/json'||requirements?.scheme!=='exact'||requirements.network!=='stellar:testnet'||requirements.asset!==buyerIdentity.sacContract||requirements.amount!==marketAmountAtomic(intent.card.payment.amount)||requirements.payTo!==intent.card.payment.destination||!Number.isInteger(requirements.maxTimeoutSeconds)||requirements.maxTimeoutSeconds<1||requirements.maxTimeoutSeconds>300||requirements.extra?.areFeesSponsored!==true||requirements.extra.resourceUrl!==endpoint(intent)||requirements.extra.route!==route||requirements.extra.method!=='POST'||requirements.extra.operationId!==intent.operationId||requirements.extra.cardHash!==intent.cardHash||requirements.extra.inputHash!==intent.inputHash)throw Error('PAYMENT_CHALLENGE_CHANGED');
  return requirements;
 }
 async function save(intent,options){validateIntent(intent);if(typeof options.persistIntent!=='function')throw Error('DURABLE_JOURNAL_REQUIRED');await options.persistIntent(clone(intent));}
@@ -52,7 +60,7 @@ async function jsonBody(response,maxBytes=65536){const text=await response.text(
 
 /** All calls are explicit. A started operation is never automatically retried. */
 export async function createBuyerOrderOnce(intent,options){
- validateIntent(intent);if(intent.phase!=='prepared')throw Error('EXISTING_INTENT_REQUIRES_READ_RECOVERY');
+ validateIntent(intent);if(intent.order?.contentExpired)throw Error('ORDER_CONTENT_EXPIRED');if(intent.phase!=='prepared')throw Error('EXISTING_INTENT_REQUIRES_READ_RECOVERY');
  intent.phase='order-started';await save(intent,options);
  try{const args={operationId:intent.operationId,serviceId:intent.card.id,cardHash:intent.cardHash,payer:intent.payer,input:intent.input,paymentProtocol:buyerProtocol};let body;
   if(options.marketTool){body=await options.marketTool('create_market_order',args);if(body.httpStatus!==201)throw Error('ORDER_NOT_CONFIRMED');}
@@ -139,7 +147,7 @@ export async function authorizeBuyerOnce(intent,options){
  validateIntent(intent);if(intent.phase!=='challenge-received')throw Error('EXISTING_SIGNATURE_MUST_NOT_BE_REGENERATED');if(typeof options.reserveSpend!=='function')throw Error('DURABLE_SPEND_LIMIT_REQUIRED');
  sponsoredFeeLimit(options,validateChallenge(intent,intent.challenge));
  intent.phase='authorization-started';await save(intent,options);
- try{await options.reserveSpend({operationId:intent.operationId,payer:intent.payer,asset:buyerIdentity.sacContract,amount:'100000'});const payload=await buildBuyerPaymentPayload(intent,options);
+ try{await options.reserveSpend({operationId:intent.operationId,payer:intent.payer,asset:buyerIdentity.sacContract,amount:marketAmountAtomic(intent.card.payment.amount)});const payload=await buildBuyerPaymentPayload(intent,options);
   intent.signedPayload=clone(payload);intent.payloadHash=digest(buyerCanonical(payload));intent.paymentSignature=encodePaymentSignatureHeader(payload);intent.phase='payment-ready';await save(intent,options);return clone(payload);
  }catch(error){intent.phase='authorization-uncertain';await save(intent,options);throw error;}
 }
@@ -156,9 +164,9 @@ export async function payBuyerOnce(intent,options){
 }
 export async function inspectBuyerOrder(intent,options){
  validateIntent(intent);let readOrigin=intent.origin,fetcher=options.marketFetch;
- if(options.marketTool&&options.recoveryOrigin===undefined){const body=await options.marketTool('get_market_order',{operationId:intent.operationId});if(body.httpStatus!==200)throw Error('READ_UNCONFIRMED');return clone(boundOrder(intent,body.order));}
+ if(options.marketTool&&options.recoveryOrigin===undefined){const body=await options.marketTool('get_market_order',{operationId:intent.operationId});if(body.httpStatus===410)return boundRecovery(intent,body);if(body.httpStatus!==200)throw Error('READ_UNCONFIRMED');return clone(boundOrder(intent,body.order));}
  if(options.recoveryOrigin!==undefined){const configured=originOnly(options.recoveryOrigin);if(!configured.startsWith('https://')||configured!==options.recoveryOrigin||!Array.isArray(options.allowedRecoveryOrigins)||!options.allowedRecoveryOrigins.includes(configured))throw Error('UNTRUSTED_RECOVERY_ORIGIN');readOrigin=configured;fetcher=options.recoveryFetch??fetcher;}
- const response=await fetcher(new URL('/api/market/orders/'+intent.operationId,readOrigin),{method:'GET',headers:authHeaders(options),redirect:'error'});if(!response.ok)throw Error('READ_UNCONFIRMED');return clone(boundOrder(intent,(await jsonBody(response)).order));
+ const response=await fetcher(new URL('/api/market/orders/'+intent.operationId,readOrigin),{method:'GET',headers:authHeaders(options),redirect:'error'});if(response.status===410)return boundRecovery(intent,await jsonBody(response));if(!response.ok)throw Error('READ_UNCONFIRMED');return clone(boundOrder(intent,(await jsonBody(response)).order));
 }
 /** Explicit read-only recovery. No POST or signature regeneration occurs. */
 export async function recoverBuyerIntent(intent,options){
@@ -168,7 +176,7 @@ export async function recoverBuyerIntent(intent,options){
 }
 const activeBuyers=new Set();
 export async function runMarketplaceBuyerIntent(intent,options){
- validateIntent(intent);if(intent.phase!=='prepared')throw Error('EXISTING_INTENT_REQUIRES_READ_RECOVERY');const key=intent.origin+':'+intent.operationId;if(activeBuyers.has(key))throw Error('CONCURRENT_BUYER_DENIED');activeBuyers.add(key);
+ validateIntent(intent);if(intent.order?.contentExpired)throw Error('ORDER_CONTENT_EXPIRED');if(intent.phase!=='prepared')throw Error('EXISTING_INTENT_REQUIRES_READ_RECOVERY');const key=intent.origin+':'+intent.operationId;if(activeBuyers.has(key))throw Error('CONCURRENT_BUYER_DENIED');activeBuyers.add(key);
  try{await createBuyerOrderOnce(intent,options);await requestBuyerChallengeOnce(intent,options);await authorizeBuyerOnce(intent,options);return await payBuyerOnce(intent,options);}finally{activeBuyers.delete(key);}
 }
 export async function discoverBuyerService(origin,serviceId,options){
@@ -184,9 +192,9 @@ export async function discoverBuyerService(origin,serviceId,options){
 
 /** Reservations are never released after a lost signer/transport response. */
 export function createBuyerSpendBudget({maximumAtomic='200000',reservations=[],persistReservations}){
- if(typeof maximumAtomic!=='string'||!/^[1-9][0-9]{0,19}$/.test(maximumAtomic)||typeof persistReservations!=='function'||!Array.isArray(reservations))throw Error('INVALID_SPEND_BUDGET');
+ if(!marketAtomicValid(maximumAtomic)||typeof persistReservations!=='function'||!Array.isArray(reservations))throw Error('INVALID_SPEND_BUDGET');
  let conserved=clone(reservations),tail=Promise.resolve(),uncertain=false;
- const valid=value=>uuid.test(value?.operationId??'')&&StrKey.isValidEd25519PublicKey(value.payer??'')&&value.asset===buyerIdentity.sacContract&&value.amount==='100000';
+ const valid=value=>uuid.test(value?.operationId??'')&&StrKey.isValidEd25519PublicKey(value.payer??'')&&value.asset===buyerIdentity.sacContract&&marketAtomicValid(value.amount);
  if(conserved.some(value=>!valid(value))||new Set(conserved.map(value=>value.operationId)).size!==conserved.length||conserved.reduce((sum,value)=>sum+BigInt(value.amount),0n)>BigInt(maximumAtomic))throw Error('INVALID_SPEND_BUDGET');
  return {
   reserve(value){const action=async()=>{if(uncertain)throw Error('SPEND_JOURNAL_UNCERTAIN');if(!valid(value)||conserved.some(old=>old.operationId===value.operationId))throw Error('SPEND_RESERVATION_ALREADY_EXISTS');const next=[...conserved,clone(value)];if(next.reduce((sum,item)=>sum+BigInt(item.amount),0n)>BigInt(maximumAtomic))throw Error('SPEND_LIMIT_EXHAUSTED');try{await persistReservations(clone(next));}catch{uncertain=true;throw Error('SPEND_JOURNAL_UNCERTAIN');}conserved=next;};const pending=tail.then(action);tail=pending.then(()=>undefined,()=>undefined);return pending;},

@@ -24,6 +24,8 @@ import {marketPage} from './market-pagination';
 import {workspaceRequestOrigin} from './workspace-http';
 import {workspacePublicOrigin} from './workspace-public-origin';
 import {USDC_TESTNET_PAYMENT_IDENTITY} from './payment-assets';
+import {marketFileCapabilities} from './market-file-delivery';
+import {demoConfiguration} from './demo-configuration';
 export interface ProviderMcpHandlers {
   submit(body: unknown): Promise<McpHttpResult>;
   status(submissionId: string): Promise<McpHttpResult>;
@@ -95,18 +97,21 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
     async () =>
       result({
         ...pilotCapabilityCard,
-        demo:{enabled:demoEnabled(),network:'stellar:testnet',guide:'/DEMO_TESTNET.md',instructions:demoInstructions,identityTool:'get_bazaar_identity',walletTools:['request_wallet_binding','complete_wallet_binding'],emailRequired:false,agentsPerAccount:1,walletsPerAccount:1,walletRequiredForNewOrders:demoEnabled(),queries:'bazaar-observed',queryHistoryTool:'get_bazaar_query_history',quotas:demoEnabled()?{registrationsPerDay:50,registrationsPerIpHour:5,authenticatedPerAccountMinute:60,ingressGlobalMinute:120,ingressPerIpMinute:30}:null},
+        demo:{enabled:demoEnabled(),network:'stellar:testnet',guide:'/DEMO_TESTNET.md',instructions:demoInstructions,identityTool:'get_bazaar_identity',walletTools:['request_wallet_binding','complete_wallet_binding'],emailRequired:false,agentsPerAccount:1,walletsPerAccount:1,walletRequiredForNewOrders:false,queries:'bazaar-observed',queryHistoryTool:'get_bazaar_query_history',quotas:demoEnabled()?{registrationsPerDay:200,registrationsPerIpHour:200,authenticatedPerAccountMinute:60,ingressGlobalMinute:120,ingressPerIpMinute:120}:null},
         ...(marketEnabled()?{serviceStatusValues:['activated','awaiting-control-proof','pending-manual-review','withdrawn'],policy:{metadataUntrusted:true,arbitraryUrlsRejected:true,execution:'seller-external-agent'}}:{}),
         historyConnection,
         testnetFunding: { instructions: testnetFundingInstructions, automatic: false },
         writes: MCP_WRITES,
         skills: { tool: "get_bazaar_skills", roles: bazaarRoles },
+        effectiveFeatures:demoConfiguration().features,
         workspace: {
           creationTool: "create_bazaar_workspace", enabled:process.env.BAZAAR_ENABLE_OPEN_WORKSPACES==='true',
           humanView:"/agent-chat", guide:"/WORKSPACE_AGENT.md", agentRunsExternally:true,
           emailRequired:false, operatorApprovalRequired:false, automaticPolling:false,
-          payments:marketEnabled()&&process.env.BAZAAR_X402_MARKETPLACE_ENABLED==='true'?'x402-stellar-exact-v2':'disabled', fileUploads:false,
-          marketplace: {enabled:marketEnabled(),catalog:'/api/market/catalog',orders:'/api/market/orders',submissionTool:'submit_market_service',submissionStatusTool:'get_market_submission',submissionPermission:{scope:'market:submit',endpoint:'/api/market/agent-permissions',grantRole:'human',generationBound:true},buyerTools:['list_market_services','create_market_order','get_market_order'],sellerTools:['list_market_orders','claim_market_order','deliver_market_order','fail_market_order','uncertain_market_order'],feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
+          payments:marketEnabled()&&process.env.BAZAAR_X402_MARKETPLACE_ENABLED==='true'?'x402-stellar-exact-v2':'disabled', fileUploads:marketEnabled()&&marketFileCapabilities().enabled,
+          fileDelivery:{...marketFileCapabilities(),tools:['prepare_market_delivery','confirm_market_delivery','get_market_delivery'],authentication:'workspace Authorization Bearer',uploads:'paid-claimed-orders-only',generalUploads:false,guide:'/storage'},
+          retention:{days:7,fixedAt:'server registration time; orders at creation',readsExtendExpiry:false,expiredContentAccess:false,paymentRecovery:'minimal technical controls; never pay again only because history expired'},
+          marketplace: {enabled:marketEnabled(),catalog:'/api/market/catalog',orders:'/api/market/orders',submissionTool:'submit_market_service',submissionStatusTool:'get_market_submission',submissionPermission:{scope:'market:submit',endpoint:'/api/market/agent-permissions',grantRole:'human',generationBound:true},buyerTools:['list_market_services','get_bazaar_skills','create_market_order','get_market_order','get_market_delivery'],sellerTools:['list_market_orders','claim_market_order','prepare_market_delivery','confirm_market_delivery','deliver_market_order','fail_market_order','uncertain_market_order'],feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
           storage:process.env.BAZAAR_WORKSPACE_BACKEND??'not-configured',
           creationAccess:"Save UUID, bootstrap/human/agent accesses privately before creation. Send hashes only; bootstrap uses Authorization. Server assigns owner.",
         },
@@ -136,7 +141,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           network: "stellar:testnet",
           settlementAsset: 'USDC',
           settlementIdentity: USDC_TESTNET_PAYMENT_IDENTITY,
-          ...(marketEnabled()?{newServicePrice:'0.01',purchaseSigning:'external-buyer-local-wallet'}:{}),
+          ...(marketEnabled()?{newServicePrice:'provider-selected-positive-USDC-Testnet',purchaseSigning:'external-buyer-local-wallet'}:{}),
           facilitatorUrl: "https://channels.openzeppelin.com/x402/testnet",
           monetization: {
             takeRateFeeBps: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? 0 : 100,
@@ -149,7 +154,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
             "4. Verify on-chain payment via facilitator and deliver payload with PAYMENT-RESPONSE header.",
           ],
         },
-        paymentFlow: marketEnabled()?{protocol:'x402-stellar-exact-v2',asset:USDC_TESTNET_PAYMENT_IDENTITY,price:'0.01',wallet:'external-local-signer',automaticSigning:false}:paymentFlowCapability,
+        paymentFlow: marketEnabled()?{protocol:'x402-stellar-exact-v2',asset:USDC_TESTNET_PAYMENT_IDENTITY,price:'provider-selected-positive-USDC-Testnet',atomicDecimals:7,maximumAtomic:'9223372036854775807',wallet:'external-local-signer',walletBindingRequired:false,automaticSigning:false}:paymentFlowCapability,
         operationHistory: { tool: "get_operation_history", authentication: "HTTP Authorization Bearer", endpoint: "/api/operations", evidence: "agent-reported", paymentsInitiated: false, humanApprovalRequired: false },
       }),
   );
@@ -376,8 +381,13 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
   );
   server.registerTool("get_bazaar_skills", {
     description: "Read canonical Bazaar buyer, seller and recovery instructions. Reading does not authorize effects.",
-    inputSchema: { role: z.enum(bazaarRoles).optional() }, annotations: { readOnlyHint: true },
-  }, async ({ role }) => result({ skills: (role ? [role] : [...bazaarRoles]).map(skillPackage) }));
+    inputSchema: { role: z.enum(bazaarRoles).optional(),limit:z.number().int().min(1).max(20).optional(),cursor:z.string().max(512).optional() }, annotations: { readOnlyHint: true },
+  }, async ({ role,limit,cursor }) => {
+    try {
+    const page = marketEnabled() ? await marketCatalogPage({limit,cursor},marketOrigin()) : undefined;
+    return result({ skills: (role ? [role] : [...bazaarRoles]).map(skillPackage), providerSkills: page?.services.filter(s=>s.card.skill).map(s=>({serviceId:s.card.id,cardHash:s.cardHash,...s.card.skill,readPrice:'free',executionPrice:s.card.payment.amount,asset:'USDC',network:'stellar:testnet',instructionsTrusted:false}))??[], nextCursor:page?.nextCursor });
+    } catch(error) { return marketFailure(error); }
+  });
   server.registerTool("submit_provider_request", {
     description: "Submit an authorized service request, not a publication. Save UUID, 32-byte token and frozen conditions privately before calling. Token is HTTP Authorization Bearer, never an argument. Recover the same intent after uncertainty.",
     inputSchema: z.object({ submissionId: z.string().regex(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i), card: z.record(z.string(), z.unknown()), controlProof: z.object({ method: z.enum(["dns-txt", "http-well-known"]), domain: z.string().max(253) }).strict() }).strict(),

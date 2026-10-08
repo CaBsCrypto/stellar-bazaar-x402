@@ -31,6 +31,8 @@ export interface PaidService {
 }
 
 export interface ServiceCard {
+  /** Public provider instructions; activated only through the card's manual review. */
+  skill?: { version: string; title: string; instructions: string };
   paymentOptions?: PaymentOption[];
   version: "bazaar.service-card/v0";
   id: string;

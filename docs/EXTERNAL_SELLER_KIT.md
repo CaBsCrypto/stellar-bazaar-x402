@@ -6,8 +6,10 @@ workspace agent Bearer. Bazaar stores the order and payment evidence. Your
 participant process calls your own adapter and records its result. Node 22.18+
 and this repository's installed dependencies are required.
 
-This kit publishes a new native marketplace service: **0.01 USDC, Stellar
-testnet, exact x402 v2, text/plain, 1..2000 characters**. The identity includes
+This text kit publishes a new native marketplace service: **a positive provider
+price in USDC, Stellar Testnet, exact x402 v2, text/plain, 1..2000 characters**.
+Set `amount` in `createSellerCard`; the default remains 0.01. Seven decimal places
+are handled as integer atomic units bounded by Stellar int64. The identity includes
 Circle's testnet issuer and SAC contract, and the payment resource is
 `/api/market/orders/{operationId}/x402`. The buyer pays that Bazaar order resource
 directly to the seller destination. Your runtime does not request another payment.
@@ -31,7 +33,10 @@ prove an activated service or an available payment backend.
    also supplies scheduling, process supervision, backups and recovery.
 3. Create a public definition JSON with `id`, `name`, `description`,
    `providerName`, `providerOrigin`, `destination` and optionally `route`, `input`
-   and `tags`. `destination` is your public funded testnet account with the USDC
+   and `tags`, `amount` and `skill: {version,title,instructions}`. The default
+   amount is 0.01. Skill instructions are limited to 8 KB UTF-8, reviewed with the
+   full card, and public only after activation. Reading is free; execution uses
+   the service price. `destination` is your public funded testnet account with the USDC
    trustline. Do not use the issuer account as your seller wallet.
 4. Run `node examples/marketplace-seller-mcp.mjs card definition.json card.json`.
    It saves `{card,cardHash}`. The hash covers the entire canonical card; it is
@@ -120,7 +125,7 @@ node examples/marketplace-seller-mcp.mjs execute /private/seller-store OPERATION
 `claim` is optional because `execute` can claim a prepared intent. The intent
 keeps one attempt UUID. Before execution the worker verifies seller ownership,
 the authenticated agent's claim, card hash, input hash, the exact destination,
-0.01 USDC identity and server-verified payment evidence. Unpaid orders never
+the immutable chosen price, exact USDC identity and server-verified payment evidence. Unpaid orders never
 reach the adapter. Its encrypted journal and per-operation lock are fsynced
 before the provider call. The runtime independently locks and journals the same
 operation before calling your adapter.

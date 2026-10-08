@@ -1,0 +1,20 @@
+{
+  "date": "2026-10-08T03:43:51.779Z",
+  "provider": "Cloudflare R2",
+  "synthetic": true,
+  "bytes": 68,
+  "checks": [
+    "presigned upload",
+    "production CORS preflight",
+    "unlisted CORS origin denied",
+    "HEAD checksum/type/size",
+    "private signed download byte equality",
+    "Range 206",
+    "unsigned download denied",
+    "other owner key absent"
+  ],
+  "payments": false,
+  "deployed": false,
+  "unsignedStatus": 400,
+  "ok": true
+}

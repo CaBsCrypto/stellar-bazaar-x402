@@ -8,7 +8,8 @@ export function publicBazaarApi(path: string, method: string) {
 }
 export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redirect' | 'deny' {
   if (process.env.BAZAAR_PUBLIC_DEMO === 'true') {
-    if (['GET','HEAD'].includes(method) && path === '/DEMO_TESTNET.md') return 'allow';
+    if (['GET','HEAD'].includes(method) && ['/DEMO_TESTNET.md','/AGENT_CONNECTION.md'].includes(path)) return 'allow';
+    if (['GET','HEAD'].includes(method) && ['/demo','/storage','/demo-qr.svg'].includes(path)) return 'allow';
     if (method === 'GET' && ['/api/account/identity','/api/account/queries'].includes(path)) return 'allow';
     if (method === 'POST' && ['/api/account/wallet/challenge','/api/account/wallet/complete'].includes(path)) return 'allow';
   }
@@ -23,6 +24,11 @@ export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redir
     if (method === 'OPTIONS' && path === '/api/discovery/search') return 'allow';
     if (['GET','POST'].includes(method) && ['/api/market/services','/api/market/orders','/api/market/agent-permissions','/api/market/operations-budget'].includes(path)) return 'allow';
     if (method === 'POST' && /^\/api\/market\/orders\/[a-f0-9-]{36}\/x402$/i.test(path)) return 'allow';
+    if (['GET','POST'].includes(method) && /^\/api\/market\/orders\/[a-f0-9-]{36}\/deliveries$/i.test(path)) return 'allow';
+    if (method === 'POST' && /^\/api\/market\/orders\/[a-f0-9-]{36}\/deliveries\/confirm$/i.test(path)) return 'allow';
+    if (['GET','POST'].includes(method) && path === '/api/market/guardian') return 'allow';
+    if (method === 'GET' && path === '/api/market/guardian/tick') return 'allow';
+    if (['GET','HEAD'].includes(method) && path === '/market-operations') return 'allow';
     if (method === 'POST' && ['/api/market/review','/api/market/control'].includes(path)) return 'allow';
     if (/^\/api\/market\/(services|orders)\/[a-f0-9-]{36}$/i.test(path) && ['POST','GET'].includes(method)) return 'allow';
     if (['GET','HEAD'].includes(method) && /^\/(images|icons|fonts)\//.test(path)) return 'allow';

@@ -2,14 +2,15 @@
 
 Use `https://bazaar.browns.studio/api/mcp` with your own workspace agent Bearer.
 Run the agent and provider on your own hosting. A sample, an idea or a text echo
-is not an implemented AI service. Establish the service's actual input and text
+is not an implemented AI service. Establish the service's actual input and
 delivery before submitting a card.
 
 The external kit in `docs/EXTERNAL_SELLER_KIT.md` and
 `examples/marketplace-seller-mcp.mjs` provides encrypted setup, native card
-preparation, submission and execution. Its current publication contract is 0.01
-USDC on Stellar testnet, Circle's exact issuer and SAC identity, x402 exact v2
-resource `/api/market/orders/{operationId}/x402`, and 1..2000 text characters. A
+preparation, submission and execution. Choose a positive price in USDC on Stellar
+Testnet (up to seven decimals, at most Stellar signed-int64 atomic units), with
+Circle's exact issuer and SAC identity and x402 exact v2 resource
+`/api/market/orders/{operationId}/x402`. The text worker supports 1..2000 characters. A
 paid older provider endpoint needs a distinct service and an adapter that avoids
 a second payment. Generate the entire canonical card hash outside the card.
 
@@ -20,6 +21,34 @@ using the same UUID. Read `list_market_services` for activated cards and the
 current purchase availability. Sending a draft does not approve or activate it.
 The operator verifies domain control, approves and activates. A workspace
 generation change or revocation invalidates the agent's submission grant.
+
+A card may include `skill: {version,title,instructions}`: versioned UTF-8
+instructions up to 8 KB, included in the full card hash and manual review.
+Only activated cards publish those instructions. Reading is free; executing
+the associated service uses its x402 price. Bazaar does not execute uploaded code.
+Changing price, instructions or delivery requires a new card and review; old
+orders retain their original card. Withdraw an obsolete listing to close new purchases.
+
+Declare `delivery.storage` as `{mode:"text"}` (also the legacy default),
+`{mode:"external",maxFiles:10}` or
+`{mode:"bazaar",maxFiles:10,maxTotalBytes:100000000,maxFileBytes:50000000}`.
+Use lower declared limits when possible. Bazaar storage reserves capacity before
+admission and enforces 50 MB/file, 100 MB/account and 5 GB globally, including
+pending reservations. Check enabled capabilities before advertising file delivery.
+
+For a paid order claimed by your agent, preserve immutable file bytes and
+SHA-256 before `prepare_market_delivery`; upload using only the temporary
+authorization and required headers returned, then call `confirm_market_delivery`.
+Recovery uses the same order, attempt and file identifiers, never another provider
+execution or payment. Bazaar verifies object size, type and checksum before
+availability; the buyer obtains temporary links with `get_market_delivery`.
+You never receive R2 keys or the buyer's credentials. The text worker below
+remains a text adapter; an external file agent uses the announced file tools.
+The portable file helper is `examples/market-file-delivery.mjs`; reproducible
+setup, explicit recovery and encrypted-journal integration are documented in
+`docs/MARKET_FILE_AGENT_GUIDE.md` in the checkout.
+For external links, retain hosting and allow recovery of the same delivery without
+another charge. Visible results expire after seven days; reads do not extend retention.
 
 Use list, prepare, claim, execute, deliver, fail, recover and uncertain commands
 against an encrypted local store. The generic adapter exports
