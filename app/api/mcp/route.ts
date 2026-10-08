@@ -54,21 +54,45 @@ async function handlePOST(request: Request) {
   return response;
 }
 
-function handleGET() {
-  return Response.json({
-    ok: true,
-    name: "stellar-bazaar-discovery",
-    version: MCP_VERSION,
-    protocol: "MCP",
-    transport: "streamable-http",
-    mode: MCP_MODE,
-    endpoint: "/api/mcp",
-    tools: MCP_TOOLS,
-    writes: MCP_WRITES,
-    paidCall: false,
-    signing: false,
-    custody: false,
+function requestsEventStreamOnly(accept: string | null) {
+  const ranges = (accept ?? "").split(",").map((range) => {
+    const [mediaType, ...parameters] = range.trim().toLowerCase().split(";");
+    const qualityParameters = parameters.map((parameter) => parameter.trim()).filter((parameter) => /^q\s*=/.test(parameter));
+    const rawQuality = qualityParameters[0]?.split("=")[1]?.trim();
+    const quality = qualityParameters.length === 0 ? 1 : qualityParameters.length === 1 && /^[01](?:\.\d{0,3})?$/.test(rawQuality ?? "") && Number(rawQuality) <= 1 ? Number(rawQuality) : 0;
+    return { mediaType: mediaType.trim(), quality };
   });
+  const qualityFor = (mediaType: string) => Math.max(-1, ...ranges.filter((range) => range.mediaType === mediaType).map((range) => range.quality));
+  // An explicit exclusion takes precedence over less specific JSON wildcards.
+  const jsonQuality = ["application/json", "application/*", "*/*"].map(qualityFor).find((quality) => quality >= 0) ?? 0;
+  return qualityFor("text/event-stream") > 0 && jsonQuality === 0;
+}
+
+async function handleGET(request: Request) {
+  try {
+    await demoIngress(request);
+    // The stateless transport has no standalone SSE stream. The SDK treats 405
+    // as an unsupported stream and continues using POST JSON-RPC requests.
+    if (requestsEventStreamOnly(request.headers.get("accept"))) {
+      return new Response(null, { status: 405, headers: { ...workspaceHeaders, Allow: "POST" } });
+    }
+    return Response.json({
+      ok: true,
+      name: "stellar-bazaar-discovery",
+      version: MCP_VERSION,
+      protocol: "MCP",
+      transport: "streamable-http",
+      mode: MCP_MODE,
+      endpoint: "/api/mcp",
+      tools: MCP_TOOLS,
+      writes: MCP_WRITES,
+      paidCall: false,
+      signing: false,
+      custody: false,
+    }, { headers: workspaceHeaders });
+  } catch (error) {
+    return workspaceFailure(error);
+  }
 }
 
 function handleDELETE() {
