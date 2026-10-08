@@ -1,0 +1,25 @@
+{
+  "candidate": "520ea2a835c96bece3317ae96a40a1c4e343d4ea",
+  "deploymentId": "dpl_Gt15QXTKBW2Q29CthVXd4CqN3vGj",
+  "previewOrigin": "https://stellar-bazaar-x402-4k4fvufe4-cabscryptocontacto-6028s-projects.vercel.app",
+  "checks": [
+    {
+      "method": "GET",
+      "status": 204,
+      "exactOriginAllowed": true
+    },
+    {
+      "method": "PUT",
+      "status": 204,
+      "exactOriginAllowed": true
+    },
+    {
+      "case": "unlisted-origin",
+      "status": 403,
+      "blocked": true
+    }
+  ],
+  "objectWrites": 0,
+  "credentialsSent": false,
+  "publicBucketEnabled": false
+}

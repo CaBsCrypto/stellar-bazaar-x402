@@ -1,0 +1,34 @@
+{
+  "status": "PASS",
+  "category": "Read-only hosted delta using official MCP SDK through Vercel CLI operator protection bypass",
+  "candidate": "094ca7e7a5a68bd6a8998c3ce7cefb6935057bf5",
+  "deploymentId": "dpl_G1JFmtHym322WyZFhgXYJrxo6q5z",
+  "url": "https://stellar-bazaar-x402-ge8feauei-cabscryptocontacto-6028s-projects.vercel.app",
+  "baselineCandidate": "520ea2a835c96bece3317ae96a40a1c4e343d4ea",
+  "baselineDeploymentId": "dpl_Gt15QXTKBW2Q29CthVXd4CqN3vGj",
+  "mcpVersion": "1.0.0",
+  "tools": 34,
+  "sdkClients": 2,
+  "requests": 17,
+  "checks": [
+    "JSON_METADATA_GET_200",
+    "SSE_GET_405_ALLOW_POST",
+    "UNCHANGED_REDIS_AND_R2_NAMESPACE_FINGERPRINTS",
+    "NATIVE_MCP_SDK_ACCOUNT_A_AND_PERSISTED_PRIVATE_HISTORY",
+    "NATIVE_MCP_SDK_ACCOUNT_B_PRIVATE_ISOLATION",
+    "ORIGINAL_ACCEPTANCE_AND_CREDENTIAL_FILES_UNCHANGED"
+  ],
+  "baselineFilesUnchanged": true,
+  "namespaceFingerprintsMatched": true,
+  "publicExternalClientValidated": false,
+  "temporaryRequestFilesRemoved": true,
+  "newAccounts": 0,
+  "credentialRotations": 0,
+  "newOrders": 0,
+  "realPayments": 0,
+  "productionPublished": false,
+  "pending": [
+    "Public production MCP client without operator protection bypass",
+    "Authorized Testnet purchase and paid file delivery remain part of the original acceptance roadmap"
+  ]
+}

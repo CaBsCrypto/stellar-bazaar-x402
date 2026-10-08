@@ -1,8 +1,8 @@
 {
   "version": 1,
-  "date": "2026-10-08T05:12:56.376Z",
-  "candidateBaseCommit": "179263e0e2716b6fad3985110786d3ff208ec575",
-  "candidateWorkingTree": "uncommitted sources at invocation",
+  "date": "2026-10-08T05:21:52.908Z",
+  "candidateBaseCommit": "520ea2a835c96bece3317ae96a40a1c4e343d4ea",
+  "candidateWorkingTree": "frozen source commit; evidence-only changes after invocation",
   "scope": "isolated local process; actual storage backends only where marked",
   "r2": "pass-direct-only",
   "redis": "not-run",

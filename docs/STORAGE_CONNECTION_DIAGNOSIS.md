@@ -6,11 +6,15 @@ El almacenamiento configurado es **Cloudflare R2**, compatible con la API S3. No
 
 Vercel tiene, en Preview y Production, los cinco nombres `BAZAAR_S3_BUCKET`, `BAZAAR_S3_REGION`, `BAZAAR_S3_ENDPOINT`, `BAZAAR_S3_ACCESS_KEY_ID` y `BAZAAR_S3_SECRET_ACCESS_KEY`. Las dos credenciales se guardaron como sensibles, bajo autorización, y no están en Git. La presencia en configuración no demuestra por sí sola que un despliegue histórico las reciba; cada candidato debe comprobar el runtime y hacer una lectura autenticada del bucket.
 
-El token `bazaar-vercel-deliverables` permite Object Read & Write únicamente en ese bucket. El token administrativo preexistente se conserva. La validación local autorizada utiliza otra clave temporal, limitada al mismo bucket por 24 horas; se revoca y se borra su copia local al terminar.
+El token `bazaar-vercel-deliverables` permite Object Read & Write únicamente en ese bucket. El token administrativo preexistente se conserva. La clave temporal `bazaar-local-validation-20261008`, utilizada para la validación local aislada y limitada al mismo bucket, **ya fue revocada**. Su copia `.vercel/r2-validation-secrets.json` también se eliminó bajo aprobación. Esta revocación no corresponde al token que utiliza Vercel.
 
-CORS contiene únicamente el origen público `https://bazaar.browns.studio` y la preview anterior explícita. Admite GET, HEAD y PUT, las cabeceras de contenido, checksum, escritura condicional y Range, y un preflight de 300 segundos. Una nueva preview requiere añadir su origen exacto antes de probar reproducción en navegador; no se usará un comodín ni un bucket público.
+CORS contiene únicamente el origen público `https://bazaar.browns.studio` y los orígenes exactos de las previews identificadas como `8fye` (anterior), `4k4` (candidato 520) y `ge8` (candidato final 094). Admite GET, HEAD y PUT, las cabeceras de contenido, checksum, escritura condicional y Range, y un preflight de 300 segundos. Los preflight comprobados para GET y PUT de la preview final devolvieron `204`; un origen ajeno obtuvo `403`. Una nueva preview requiere añadir su origen exacto antes de probar reproducción en navegador; no se usará un comodín ni un bucket público.
 
-Las pruebas directas anteriores con subtítulos sintéticos comprobaron PUT/HEAD/GET/Range, checksum, bloqueo sin firma y CORS; su evidencia sanitizada está en `r2-storage-validation.json`. En esta implementación se comprobaron además una imagen PNG y subtítulos VTT reales contra R2: igualdad de bytes, tipo, tamaño, checksum y lectura parcial. Los objetos de esta última prueba se eliminaron en su ámbito sintético exacto. Esto no demuestra un pago Testnet ni reproducción de video en una orden alojada.
+Las pruebas directas anteriores con subtítulos sintéticos comprobaron PUT/HEAD/GET/Range, checksum, bloqueo sin firma y CORS; su evidencia sanitizada está en `r2-storage-validation.json`. La repetición final sobre el candidato fijado `520ea2a835c96bece3317ae96a40a1c4e343d4ea` pasó 17 controles directos con PNG y VTT contra R2: bytes, tipo, tamaño, checksum, Range, firmas, vencimiento y rechazo de alteraciones y sobrescritura. Sus dos objetos se eliminaron en su ámbito sintético exacto. La evidencia saneada está en `docs/evidence/market-storage-isolated/storage-backend-validation.json`. Esto no demuestra un pago Testnet ni reproducción de video en una orden alojada.
+
+La preview `4k4` del candidato 520 **pasó 16 comprobaciones alojadas**: configuración efectiva del runtime y conexión Redis/R2, cuentas públicas, consultas e historial privado, MCP y revocación del agente. Sus registros y consultas realizaron operaciones duraderas sobre Redis real del despliegue. Esto es distinto de la prueba local de Redis: la exportación local de credenciales sigue sin autorización y esa prueba no se ejecutó. El catálogo estaba vacío, por lo que no se ejecutó el rechazo de subida de una orden impagada usando al agente vendedor propietario; las comprobaciones alojadas no cierran ese caso ni el flujo completo de compra y entrega.
+
+La preview final `ge8`, candidato `094ca7e7a5a68bd6a8998c3ce7cefb6935057bf5`, pasó la corrección del GET MCP/SSE con dos clientes del SDK oficial. Conservó las mismas huellas de espacios, identidad e historial de las dos cuentas y su aislamiento tras el despliegue. Son seis comprobaciones adicionales mediante 17 solicitudes, con acceso de operador a la preview protegida; todavía no demuestran acceso público externo. La evidencia está en `docs/evidence/demo-preview-sdk-delta-094ca7e.json`.
 
 ## Uso dentro de la aplicación
 
@@ -32,8 +36,9 @@ El cron y su credencial requieren validación autenticada del despliegue. Una ll
 
 ## Validación pendiente
 
-- Redis real aislado con dos cuentas, reinicio, concurrencia, cuotas y vencimiento; la exportación local limitada de dos variables sensibles está pendiente de autorización y puede requerir un mecanismo distinto del exportador de Vercel.
-- Preview del candidato: runtime, R2, registro, MCP, revocación, privacidad y rechazo de archivos para órdenes impagadas.
+- Redis real local aislado con dos cuentas, reinicio, concurrencia, cuotas y vencimiento: no autorizado ni ejecutado. Las operaciones duraderas ya comprobadas en la preview no sustituyen esas pruebas locales específicas.
+- Cliente MCP público externo sin acceso de operador: pendiente de la publicación autorizada; el SDK oficial y CORS ya pasaron en la preview final protegida.
+- Rechazo de archivos para una orden impagada del vendedor propietario: pendiente porque la preview 520 tenía el catálogo vacío.
 - Compra Testnet autorizada por separado para texto e imagen/video; comprobar pago, entrega, integridad, reproducción, respuesta perdida y recuperación sin pagar de nuevo.
 - Autorización final de producción y recorrido desde un cliente público externo.
 

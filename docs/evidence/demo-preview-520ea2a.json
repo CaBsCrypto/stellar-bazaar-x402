@@ -1,0 +1,89 @@
+{
+  "status": "PASS",
+  "category": "Hosted preview via Vercel operator protection bypass",
+  "candidate": "520ea2a835c96bece3317ae96a40a1c4e343d4ea",
+  "deploymentId": "dpl_Gt15QXTKBW2Q29CthVXd4CqN3vGj",
+  "url": "https://stellar-bazaar-x402-4k4fvufe4-cabscryptocontacto-6028s-projects.vercel.app",
+  "mcpVersion": "1.0.0",
+  "tools": 34,
+  "requests": 14,
+  "resumed": true,
+  "checksInheritedFromEarlierRun": true,
+  "checks": [
+    "MCP_1_0_0_METADATA",
+    "STREAMABLE_MCP_INITIALIZE",
+    "EXACT_34_TOOL_SUITE",
+    "PUBLIC_CAPABILITIES_AND_RESTRICTIONS",
+    "BUYER_SELLER_RECOVERY_INSTRUCTIONS",
+    "DEPLOYED_R2_REDIS_NAMESPACE_CONFIGURATION",
+    "DEPLOYED_READ_ONLY_R2_BUCKET_PROBE",
+    "OPERATOR_STATUS_REQUIRES_AUTH",
+    "MANUAL_HOSTED_GUARDIAN_TICK_AUTH_AND_EXECUTION",
+    "TWO_PUBLIC_SYNTHETIC_ACCOUNTS",
+    "DURABLE_REGISTRATION_REPLAY",
+    "AUTHENTICATED_MCP_WITHOUT_WALLET_BINDING",
+    "OBSERVED_QUERY_DEDUP_AND_ANONYMOUS_PRIVACY",
+    "PRIVATE_HISTORY_SEPARATE_FROM_VERIFIED_PAYMENTS",
+    "THREE_FILE_TOOLS_REQUIRE_AUTH_AND_BOUND_ORDER",
+    "AGENT_ROTATION_REVOKES_OLD_ACCESS_PRESERVES_ACCOUNT"
+  ],
+  "notRun": [
+    {
+      "case": "SCHEDULED_VERCEL_GUARDIAN_EXECUTION",
+      "reason": "VERCEL_CRON_RUNS_ONLY_ON_PRODUCTION_NOT_PREVIEW"
+    },
+    {
+      "case": "UNPAID_OWNING_SELLER_FILE_GATE",
+      "reason": "NO_REVIEWED_ACTIVE_SERVICE_IN_ISOLATED_PREVIEW"
+    }
+  ],
+  "runtimeConfiguration": {
+    "r2Configured": true,
+    "checks": {
+      "r2Bucket": true,
+      "r2Region": true,
+      "r2Endpoint": true,
+      "r2AccessKey": true,
+      "r2SecretKey": true,
+      "workspaceRedisBackend": true,
+      "workspaceRedisUrl": true,
+      "workspaceRedisToken": true,
+      "reviewRedisBackend": true,
+      "reviewRedisUrl": true,
+      "reviewRedisToken": true,
+      "workspaceNamespace": true,
+      "marketNamespace": true,
+      "reviewNamespace": true,
+      "namespacesIndependent": true,
+      "namespaceFamilyMatches": true,
+      "namespaceStageMatches": true,
+      "fileNamespace": true,
+      "noServerPayer": true,
+      "guardianCronCredential": true,
+      "guardianCronMatchesOperator": true
+    }
+  },
+  "guardianTick": {
+    "manualProtectedClient": true,
+    "correctCredentialAccepted": true,
+    "anonymousRejected": true,
+    "wrongCredentialRejected": true,
+    "browserOriginRejected": true,
+    "paymentResubmission": false,
+    "scheduledExecutionValidated": false
+  },
+  "privateCredentialsStored": true,
+  "temporaryRequestFilesRemoved": true,
+  "realPayments": 0,
+  "mainnetRequests": 0,
+  "productionPublished": false,
+  "publicExternalClientValidated": false,
+  "pending": [
+    "Authorized Testnet payment and image/video delivery",
+    "Positive file upload, checksum, download and expiry through a paid hosted order",
+    "Seven-day physical cloud cleanup over time",
+    "Paired preview/production namespace evidence",
+    "Actual scheduled Vercel guardian execution after authorized production publication",
+    "Public production QR acceptance"
+  ]
+}

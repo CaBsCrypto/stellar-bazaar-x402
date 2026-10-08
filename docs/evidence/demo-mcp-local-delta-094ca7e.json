@@ -1,0 +1,29 @@
+{
+  "candidate": "094ca7e7a5a68bd6a8998c3ce7cefb6935057bf5",
+  "baselineCandidate": "520ea2a835c96bece3317ae96a40a1c4e343d4ea",
+  "environment": "local",
+  "applicationChange": "MCP GET transport negotiation and anonymous ingress quotas",
+  "checks": [
+    {"command": "node scripts/test-mcp-stateless-transport.mjs", "status": "PASS"},
+    {"command": "node scripts/test-demo-wallet.mjs", "status": "PASS"},
+    {"command": "node scripts/test-open-market-mcp.mjs", "status": "PASS"},
+    {"command": "npm run build -- --webpack", "status": "PASS"}
+  ],
+  "transport": {
+    "officialMcpSdkClient": true,
+    "toolCount": 34,
+    "acceptHeaderCases": 18,
+    "exclusiveSseGet": "405 Allow: POST",
+    "metadataGet": "JSON",
+    "quotaPersistence": "workspace store with local Redis API/Lua CAS test double",
+    "metadataQuota": 120,
+    "rateLimitStatus": 429,
+    "storageFailureStatus": 503
+  },
+  "baselineReleaseSuites": 23,
+  "newSuiteAddedToReleaseRunner": true,
+  "entireReleaseRunnerRepeated": false,
+  "actualRedisLocalValidated": false,
+  "networkPayments": 0,
+  "productionValidated": false
+}
