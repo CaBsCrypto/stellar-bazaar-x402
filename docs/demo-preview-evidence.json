@@ -1,0 +1,26 @@
+{
+  "status": "PASS",
+  "candidate": "58df555a178d3a8bf21274a6e0dab7d4355b5966",
+  "deploymentId": "dpl_7XJKb95bzrgENrHDfUBTzdk5WgBz",
+  "url": "https://stellar-bazaar-x402-8fyeox5ce-cabscryptocontacto-6028s-projects.vercel.app",
+  "requests": 17,
+  "checks": [
+    "hosted MCP 0.9.0",
+    "initialize instructions",
+    "31 tools",
+    "two synthetic registrations",
+    "registration replay",
+    "private stable identity",
+    "query dedup, anonymous privacy and account isolation",
+    "wallet challenge origin and invalid signature rejection",
+    "cross-account wallet challenge rejection",
+    "revocation"
+  ],
+  "realPayments": 0,
+  "mainnetRequests": 0,
+  "pending": [
+    "funded Testnet wallet positive binding",
+    "reviewed text service",
+    "authorized developer payment and delivery"
+  ]
+}

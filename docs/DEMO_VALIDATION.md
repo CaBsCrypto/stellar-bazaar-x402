@@ -68,3 +68,30 @@ la página del despliegue confirma Blocked y explica el motivo.
 
 La producción actual conserva su versión. No entregar estas pruebas locales
 como evidencia de pagos verificados en producción al hackathon.
+
+## Conexión corregida y aceptación de preview
+
+Cuenta GitHub verificada: CaBsCrypto, con permisos de administración y push
+sobre CaBsCrypto/stellar-bazaar-x402. El fallo provenía de la identidad Git global
+de ejemplo y de un origin que apuntaba a la copia local beta-open-release.
+Se configuró sólo este checkout con 0xCaBs y el correo noreply de CaBsCrypto;
+el remoto local se conservó como local-release y origin apunta al GitHub original.
+No se modificó la configuración global ni se hizo push a main.
+
+Candidato probado: `58df555a178d3a8bf21274a6e0dab7d4355b5966`.
+Despliegue: `dpl_7XJKb95bzrgENrHDfUBTzdk5WgBz`, target Preview, estado Ready.
+
+URL: https://stellar-bazaar-x402-8fyeox5ce-cabscryptocontacto-6028s-projects.vercel.app
+
+Aceptación remota: PASS, 17 solicitudes mediante Vercel CLI contra el despliegue
+y Redis reales. Incluyó MCP 0.9.0, initialize e instrucciones Testnet, 31 herramientas,
+dos registros sintéticos, replay de registro, identidad privada estable, consultas
+sin duplicación, ausencia de historial anónimo, separación entre cuentas, desafío
+de wallet vinculado al origen, firma incorrecta rechazada, desafío de otra cuenta
+rechazado y revocación efectiva. No se enviaron pagos ni peticiones Mainnet.
+
+La preview anterior bloqueada permanece como evidencia del fallo inicial.
+Producción no fue promovida: conserva su contrato MCP 0.5.0. Siguen pendientes
+wallet Testnet financiada, servicio de texto revisado, prueba de compra/entrega
+con autorización separada y autorización de publicación. La preview tiene la
+protección de acceso de Vercel; estas pruebas usaron el acceso del operador.
