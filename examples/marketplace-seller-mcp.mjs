@@ -8,11 +8,16 @@ import {createSellerCard,assertSellerCard,sellerHash,sellerCanonical,sellerHttps
 import {createSellerHttpAdapter} from './seller-http-adapter.mjs';
 import {createSellerIntent,validateSellerIntent,sellerUuid,sellerTool,listSellerOrders,listSellerServices,inspectSellerIntent,claimSellerIntent,executeSellerIntent,deliverSellerIntent,failSellerIntent,recoverSellerIntent,uncertainSellerIntent,watchSellerOrders,readSellerJournal} from './seller-marketplace-worker.mjs';
 
-export const SELLER_BAZAAR_ENDPOINT='https://bazaar.browns.studio/api/mcp';
+export const SELLER_BAZAAR_ORIGIN='https://bazaar.browns.studio';
+export const SELLER_BAZAAR_ENDPOINT=SELLER_BAZAAR_ORIGIN+'/api/mcp';
+export function sellerBazaarOrigin(raw){
+ try{const origin=sellerHttpsOrigin(raw);if(origin!==raw)throw Error();return origin;}
+ catch{throw Error('BAZAAR_HTTPS_ORIGIN_REQUIRED');}
+}
 /** Public Bazaar transport, one connection, bounded requests, no reconnect or redirect. */
-export async function withSellerMcp({agentAccess,fetcher=fetch,maxRequests=100},action){
+export async function withSellerMcp({agentAccess,origin=SELLER_BAZAAR_ORIGIN,fetcher=fetch,maxRequests=100},action){
  if(!/^[a-zA-Z0-9_-]{43}$/.test(agentAccess??'')||!Number.isInteger(maxRequests)||maxRequests<1||maxRequests>1000)throw Error('AGENT_ACCESS_REQUIRED');
- let requests=0,quotaError;const client=new Client({name:'bazaar-external-seller',version:'1'});const endpoint=new URL(SELLER_BAZAAR_ENDPOINT);
+ let requests=0,quotaError;const client=new Client({name:'bazaar-external-seller',version:'1'});const endpoint=new URL('/api/mcp',sellerBazaarOrigin(origin));
  const transport=new StreamableHTTPClientTransport(endpoint,{reconnectionOptions:{maxRetries:0,initialReconnectionDelay:1000,maxReconnectionDelay:1000,reconnectionDelayGrowFactor:1},requestInit:{headers:{Authorization:'Bearer '+agentAccess}},fetch:async(url,init)=>{
   if(new URL(url instanceof Request?url.url:String(url)).href!==endpoint.href)throw Error('MCP_ENDPOINT_DENIED');if(++requests>maxRequests)throw Error('MCP_REQUEST_BOUND_REACHED');
   const response=await fetcher(url,{...init,redirect:'error',signal:AbortSignal.timeout(15000)});if(response.status===429){quotaError=Object.assign(Error('MCP_QUOTA_STOP'),{httpStatus:429,retryAfter:response.headers.get('retry-after')});throw quotaError;}if(response.redirected||response.url&&response.url!==endpoint.href)throw Error('MCP_REDIRECT_DENIED');return response;
@@ -20,12 +25,30 @@ export async function withSellerMcp({agentAccess,fetcher=fetch,maxRequests=100},
  try{await client.connect(transport);return await action({callTool:async(name,args)=>{if(quotaError)throw quotaError;try{return await client.callTool({name,arguments:args},undefined,{timeout:12000});}catch(error){throw quotaError??error;}},requestCount:()=>requests});}catch(error){throw quotaError??error;}finally{await client.close().catch(()=>{});}
 }
 async function publicJson(path){const raw=await readFile(path);if(raw.length>65536)throw Error('CONFIG_TOO_LARGE');return JSON.parse(raw.toString('utf8'));}
-function validateConfig(config){
- assertSellerCard(config?.card);if(!config.ownerId||!config.agentId||config.cardHash!==sellerHash(sellerCanonical(config.card))||!Array.isArray(config.allowedOrigins)||!config.allowedOrigins.includes(config.card.url)||config.allowedOrigins.some(v=>sellerHttpsOrigin(v)!==v)||!['dns-txt','http-well-known'].includes(config.controlProof?.method)||config.controlProof.domain!==new URL(config.card.url).hostname)throw Error('INVALID_SELLER_CONFIGURATION');return config;
+export function validateSellerConfiguration(config){
+ assertSellerCard(config?.card);if(!config.ownerId||!config.agentId||config.cardHash!==sellerHash(sellerCanonical(config.card))||!Array.isArray(config.allowedOrigins)||!config.allowedOrigins.includes(config.card.url)||config.allowedOrigins.some(v=>sellerHttpsOrigin(v)!==v)||!['dns-txt','http-well-known'].includes(config.controlProof?.method)||config.controlProof.domain!==new URL(config.card.url).hostname)throw Error('INVALID_SELLER_CONFIGURATION');
+ // Older encrypted configurations continue to use the original public origin.
+ // New configurations persist the exact origin; later commands cannot replace it.
+ return {...config,bazaarOrigin:sellerBazaarOrigin(config.bazaarOrigin===undefined?SELLER_BAZAAR_ORIGIN:config.bazaarOrigin)};
+}
+export function sellerSetupConfiguration(config,origin){
+ if(origin!==undefined){
+  sellerBazaarOrigin(origin);
+  if(config?.bazaarOrigin!==undefined&&config.bazaarOrigin!==origin)throw Error('BAZAAR_ORIGIN_CONFLICT');
+ }
+ return validateSellerConfiguration({...config,...(origin!==undefined?{bazaarOrigin:origin}:{})});
+}
+export function parseSellerCliArguments(argv){
+ const args=[...argv];if(args.filter(value=>value==='--secret-stdin').length>1||args.filter(value=>value==='--origin').length>1)throw Error('INVALID_OPTION');
+ const pipe=args.includes('--secret-stdin');if(pipe)args.splice(args.indexOf('--secret-stdin'),1);
+ let origin;const at=args.indexOf('--origin');
+ if(at>=0){origin=sellerBazaarOrigin(args[at+1]);args.splice(at,2);if(args[0]!=='setup')throw Error('ORIGIN_SETUP_ONLY');}
+ if(args.some(value=>value.startsWith('--')))throw Error('INVALID_OPTION');
+ return {args,pipe,origin};
 }
 function publicSummary(value){return {operationId:value.operationId,phase:value.phase,localPhase:value.localPhase,submissionId:value.submissionId,status:value.status};}
 async function main(){
- const argv=process.argv.slice(2);const pipe=argv.includes('--secret-stdin');const args=argv.filter(v=>v!=='--secret-stdin');const [command,directory,argument,reason]=args;
+ const {args,pipe,origin}=parseSellerCliArguments(process.argv.slice(2));const [command,directory,argument,reason]=args;
  if(command==='card'){
   if(!directory||!argument)throw Error('Use: card <public-definition.json> <new-card.json>');const result=createSellerCard(await publicJson(directory));await writeFile(argument,JSON.stringify(result,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({cardHash:result.cardHash,serviceId:result.card.id}));return;
  }
@@ -37,17 +60,17 @@ async function main(){
  const store=await openPortableSecretStore({directory,password,create:command==='setup'});password.fill(0);
  try{
   if(command==='setup'){
-   const publicConfig=validateConfig(await publicJson(argument));if(['agentAccess','providerAccess','password'].some(k=>k in publicConfig))throw Error('PUBLIC_CONFIGURATION_CONTAINS_SECRET');
+   const publicConfig=sellerSetupConfiguration(await publicJson(argument),origin);if(['agentAccess','providerAccess','password'].some(k=>k in publicConfig))throw Error('PUBLIC_CONFIGURATION_CONTAINS_SECRET');
    if(!secret){const access=await readPrivateInput({prompt:'Own agent Bearer: '});const provider=await readPrivateInput({prompt:'Own runtime Bearer: '});secret={agentAccess:access.toString('utf8'),providerAccess:provider.toString('utf8')};access.fill(0);provider.fill(0);}
    if(!/^[a-zA-Z0-9_-]{43}$/.test(secret.agentAccess??'')||!/^[a-zA-Z0-9_-]{43}$/.test(secret.providerAccess??''))throw Error('SECRET_CONFIGURATION_REQUIRED');
    await store.write('seller-config',{...publicConfig,agentAccess:secret.agentAccess,providerAccess:secret.providerAccess},{createOnly:true});console.log('Saved encrypted seller configuration. No remote requests.');return;
   }
-  const config=validateConfig(await store.read('seller-config'));
+  const config=validateSellerConfiguration(await store.read('seller-config'));
   const prepare=async operationId=>{
    const intent=createSellerIntent({operationId,cardHash:config.cardHash,serviceId:config.card.id,providerOrigin:config.card.url,providerRoute:config.card.routeTemplate,ownerId:config.ownerId,agentId:config.agentId});const release=await store.acquireLock('seller.'+operationId);try{await store.journal('seller.'+operationId).initialize(intent);return intent;}finally{await release();}
   };
   if(command==='prepare'){await prepare(argument);console.log(JSON.stringify({operationId:argument,phase:'prepared'}));return;}
-  await withSellerMcp({agentAccess:config.agentAccess,maxRequests:command==='watch'?100:30},async transport=>{
+  await withSellerMcp({agentAccess:config.agentAccess,origin:config.bazaarOrigin,maxRequests:command==='watch'?100:30},async transport=>{
    if(command==='list'){const {orders,nextCursor}=await listSellerOrders(transport,{cursor:argument});console.log(JSON.stringify({orders:orders.map(v=>({operationId:v.operationId,serviceId:v.serviceId,phase:v.phase,paymentVerified:Boolean(v.paymentVerifiedAt)})),nextCursor}));return;}
    if(command==='services'){const {services,nextCursor}=await listSellerServices(transport,{cursor:argument});console.log(JSON.stringify({services:services.map(v=>({serviceId:v.card.id,cardHash:v.cardHash,status:v.status,purchase:v.purchase})),nextCursor}));return;}
    if(command==='inspect'){

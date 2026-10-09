@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-09T20:22:47Z",
+  "applicationCandidate": "094ca7e7a5a68bd6a8998c3ce7cefb6935057bf5",
+  "bazaarRepository": "https://github.com/CaBsCrypto/stellar-bazaar-x402.git",
+  "provider": {
+    "vercelName": "ai-video-scriptwriter",
+    "vercelProjectId": "prj_cHsv0UIK31fRuLBXkW5RXkz4eU9K",
+    "framework": "Express",
+    "gitLinked": false,
+    "declaredRepository": "https://github.com/CaBsCrypto/ai-video-scriptwriter",
+    "githubAuthenticatedLogin": "CaBsCrypto",
+    "declaredRepositoryResolved": false,
+    "repositoryResolutionLimit": "Could be moved, deleted or inaccessible; not proof of permanent nonexistence",
+    "recoveredSourceHasGitRepository": false,
+    "origin": "https://ai-video-scriptwriter.vercel.app",
+    "publicReadOnlyChecks": [
+      {"method":"GET","path":"/health","status":200},
+      {"method":"GET","path":"/api/service-card","status":200,"marketplaceContractPresent":false},
+      {"method":"GET","path":"/.well-known/stellar-bazaar-provider.txt","status":404},
+      {"method":"GET","path":"/v1/marketplace-text","status":404,"doesNotDeterminePostRouteAvailability":true}
+    ]
+  },
+  "architecture": {
+    "providerAgentConnection": "Bazaar /api/mcp for submission, claims and delivery",
+    "providerExecution": "External seller worker calls its own allowlisted HTTPS runtime",
+    "providerOwnMcpRequired": false,
+    "buyerCredentialOrSeedSentToProvider": false,
+    "bazaarImportsProviderGenerator": false
+  },
+  "preparedChanges": {
+    "sellerOriginFrozenInEncryptedConfiguration": true,
+    "originFlagSetupOnly": true,
+    "legacyConfigurationDefaultsToPublicOrigin": true,
+    "twoStaleMarketplaceTestAssertionsUpdated": true,
+    "applicationChanged": false,
+    "fileHashes": {
+      "examples/marketplace-seller-mcp.mjs": "d0897d5cfbf414bb17eb44453ab4f341cced1dfbb1dc49dac2b1cd11a211852c",
+      "scripts/test-external-seller-kit.mjs": "8f4ac7ac3045134ae820f519b35edcc29e94ece5e542b1208a03c93388d0c335",
+      "scripts/test-marketplace.mjs": "8f5ad935d8086248989157e5c55c384e4f752b705c5e7cd58761ff93383df425"
+    }
+  },
+  "localValidation": {
+    "status": "PASS",
+    "scope": "Synthetic stores, RPC/facilitator/provider doubles; not a hosted purchase",
+    "suites": [
+      {"script":"scripts/test-marketplace-review-wiring.mjs","status":"PASS"},
+      {"script":"scripts/test-open-market-mcp.mjs","status":"PASS"},
+      {"script":"scripts/test-marketplace.mjs","status":"PASS","historicalFixtureAssertionsCorrected":2},
+      {"script":"scripts/test-marketplace-x402.mjs","status":"PASS","checks":61},
+      {"script":"scripts/test-external-seller-kit.mjs","status":"PASS","scenarios":47},
+      {"script":"scripts/test-buyer-portable-runtime.mjs","status":"PASS"},
+      {"script":"scripts/test-marketplace-x402-buyer.mjs","status":"PASS","scenarios":51,"feePolicyScenarios":21},
+      {"script":"scripts/test-guionista-marketplace-worker.mjs","status":"PASS","scenarios":18}
+    ],
+    "externalNetworkRequests": 0,
+    "realTransactions": 0,
+    "syntaxAndDiffChecksPassed": true
+  },
+  "previewEvidence": "hackathon-preview-readonly-2026-10-09.json",
+  "remaining": [
+    "Identify the provider repository or agree on a reproducible independent source",
+    "Fresh provider control challenge and authenticated runtime availability",
+    "Seller submission, manual review and explicit activation",
+    "A real order and HTTP 402, then separately authorized Testnet payment",
+    "Hosted generation, private viewing and recovery",
+    "Approved production publication and external public-client acceptance"
+  ],
+  "actions": {
+    "gitConnectionChanges": 0,
+    "deployments": 0,
+    "newAccounts": 0,
+    "newOrders": 0,
+    "realTransactions": 0,
+    "providerExecutions": 0,
+    "environmentExports": 0
+  }
+}

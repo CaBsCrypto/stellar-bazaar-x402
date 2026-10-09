@@ -10,7 +10,7 @@ import {createSellerCard,assertSellerCard,sellerHash as hash,sellerCanonical as 
 import {createSellerIntent,executeSellerIntent,deliverSellerIntent,claimSellerIntent,recoverSellerIntent,uncertainSellerIntent,failSellerIntent,watchSellerOrders,listSellerOrders,listSellerServices} from '../examples/seller-marketplace-worker.mjs';
 import {createSellerHttpAdapter} from '../examples/seller-http-adapter.mjs';
 import {createSellerRuntime} from '../examples/seller-runtime.mjs';
-import {withSellerMcp,SELLER_BAZAAR_ENDPOINT} from '../examples/marketplace-seller-mcp.mjs';
+import {withSellerMcp,SELLER_BAZAAR_ORIGIN,SELLER_BAZAAR_ENDPOINT,sellerBazaarOrigin,validateSellerConfiguration,sellerSetupConfiguration,parseSellerCliArguments} from '../examples/marketplace-seller-mcp.mjs';
 import {openPortableSecretStore} from '../examples/buyer-portable-secret-store.mjs';
 import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts';
 import {marketCard} from '../lib/marketplace.ts';
@@ -71,6 +71,57 @@ await withSellerMcp({agentAccess,fetcher:async(url,init)=>{
  if(body.method==='tools/call')return Response.json({jsonrpc:'2.0',id:body.id,result:result({orders:[],nextCursor:null})});throw Error('UNEXPECTED_TRANSPORT');
 }},async options=>{assert.deepEqual(await listSellerOrders(options),{orders:[],nextCursor:null});assert.ok(options.requestCount()>=3);});assert.ok(requests>=3&&requests<=5);scenarios++;
 let quotaRequests=0;await assert.rejects(withSellerMcp({agentAccess,fetcher:async()=>{quotaRequests++;return new Response(null,{status:429,headers:{'retry-after':'120'}});}},async()=>{throw Error('NO_ACTION');}),error=>error.httpStatus===429&&error.retryAfter==='120');assert.equal(quotaRequests,1);scenarios++;
+
+// The Bazaar connection is independent of the provider origin and becomes part
+// of the encrypted configuration. No credentials or network are used here.
+const previewOrigin='https://stellar-bazaar-x402-synthetic.vercel.app';
+const configuration={card:publication.card,cardHash:publication.cardHash,ownerId,agentId,
+ allowedOrigins:[origin],controlProof:{method:'http-well-known',domain:new URL(origin).hostname}};
+assert.equal(validateSellerConfiguration(configuration).bazaarOrigin,SELLER_BAZAAR_ORIGIN);
+const previewConfiguration=sellerSetupConfiguration(configuration,previewOrigin);
+assert.equal(previewConfiguration.bazaarOrigin,previewOrigin);
+assert.deepEqual(validateSellerConfiguration(previewConfiguration),previewConfiguration);
+assert.equal(previewConfiguration.card.url,origin);
+assert.equal(sellerSetupConfiguration(previewConfiguration,previewOrigin).bazaarOrigin,previewOrigin);
+assert.throws(()=>sellerSetupConfiguration(previewConfiguration,SELLER_BAZAAR_ORIGIN),/BAZAAR_ORIGIN_CONFLICT/);scenarios++;
+assert.deepEqual(parseSellerCliArguments(['setup','private-store','public.json','--origin',previewOrigin,'--secret-stdin']),
+ {args:['setup','private-store','public.json'],pipe:true,origin:previewOrigin});
+assert.deepEqual(parseSellerCliArguments(['list','private-store','--secret-stdin']),{args:['list','private-store'],pipe:true,origin:undefined});
+for(const args of [
+ ['execute','private-store','saved-uuid','--origin',previewOrigin],
+ ['setup','private-store','public.json','--origin',previewOrigin,'--origin',previewOrigin],
+ ['setup','private-store','public.json','--origin'],
+ ['setup','private-store','public.json','--origin='+previewOrigin],
+ ['setup','private-store','public.json','--secret-stdin','--secret-stdin'],
+])assert.throws(()=>parseSellerCliArguments(args));scenarios++;
+for(const invalid of ['http://seller.example.com',previewOrigin+'/',previewOrigin+'/api/mcp',
+ previewOrigin+'?secret=synthetic',previewOrigin+'#synthetic','https://user:password@seller.example.com',
+ 'https://seller.example.com:443','https://seller.example.com:444']){
+ assert.throws(()=>sellerBazaarOrigin(invalid),/BAZAAR_HTTPS_ORIGIN_REQUIRED/);
+ let rejectedCalls=0;await assert.rejects(withSellerMcp({agentAccess,origin:invalid,fetcher:async()=>{rejectedCalls++;throw Error('NOT_CALLED');}},async()=>{}),/BAZAAR_HTTPS_ORIGIN_REQUIRED/);
+ assert.equal(rejectedCalls,0);
+}scenarios++;
+let previewRequests=0;
+await withSellerMcp({agentAccess,origin:previewOrigin,fetcher:async(url,init)=>{
+ previewRequests++;assert.equal(String(url),previewOrigin+'/api/mcp');assert.equal(init.redirect,'error');
+ assert.equal(new Headers(init.headers).get('authorization'),'Bearer '+agentAccess);
+ if(init.method==='GET')return new Response(null,{status:405});const body=JSON.parse(init.body);
+ assert.ok(!init.body.includes(agentAccess));
+ if(body.method==='initialize')return Response.json({jsonrpc:'2.0',id:body.id,result:{protocolVersion:body.params.protocolVersion,capabilities:{tools:{}},serverInfo:{name:'synthetic-preview',version:'1'}}});
+ if(body.method==='notifications/initialized')return new Response(null,{status:202});
+ if(body.method==='tools/call')return Response.json({jsonrpc:'2.0',id:body.id,result:result({orders:[],nextCursor:null})});
+ throw Error('UNEXPECTED_TRANSPORT');
+}},async options=>assert.deepEqual(await listSellerOrders(options),{orders:[],nextCursor:null}));
+assert.ok(previewRequests>=3&&previewRequests<=5);scenarios++;
+for(const substitution of [{url:origin+'/api/mcp',redirected:false},
+ {url:previewOrigin+'/other',redirected:false},{url:previewOrigin+'/api/mcp?replacement=true',redirected:false},
+ {url:previewOrigin+'/api/mcp',redirected:true}]){
+ let redirectedCalls=0;
+ await assert.rejects(withSellerMcp({agentAccess,origin:previewOrigin,fetcher:async()=>{
+  redirectedCalls++;return {...substitution,status:200};
+ }},async()=>{}),/MCP_REDIRECT_DENIED/);
+ assert.equal(redirectedCalls,1);
+}scenarios++;
 
 const directory=await mkdtemp(join(tmpdir(),'bazaar-seller-test-'));const password=Buffer.from('private test password');let store;
 try{

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-09T20:06:25Z",
+  "purpose": "Plan the hackathon closure using public metadata only",
+  "applicationCandidate": "094ca7e7a5a68bd6a8998c3ce7cefb6935057bf5",
+  "productionMcp": {
+    "url": "https://bazaar.browns.studio/api/mcp",
+    "status": 200,
+    "version": "0.5.0",
+    "toolCount": 8
+  },
+  "productionDiscovery": {
+    "url": "https://bazaar.browns.studio/api/discovery/resources",
+    "status": 200,
+    "count": 2,
+    "partialResults": true,
+    "dynamicRegistry": "unavailable",
+    "containsServiceId": "ai-video-scriptwriter"
+  },
+  "providerCard": {
+    "url": "https://ai-video-scriptwriter.vercel.app/api/service-card",
+    "status": 200,
+    "id": "ai-video-scriptwriter",
+    "name": "AI Video Scriptwriter & Creative Director",
+    "network": "stellar:testnet",
+    "amount": "0.02",
+    "assetLabel": "USDC",
+    "scheme": "exact",
+    "contentType": "application/json",
+    "marketplacePaymentContractPresent": false
+  },
+  "interpretation": {
+    "likelyMatchesUserRecollection": "A scriptwriting service with teleprompter output",
+    "isRenderedVideoEvidence": false,
+    "isCurrentMarketplacePurchaseEvidence": false,
+    "legacyPriceIsNotTransactionAuthorization": true,
+    "requiresFreshProviderControlAndCompatibilityReview": true
+  },
+  "actions": {
+    "publicMetadataGetOnly": true,
+    "paidEndpointInvoked": false,
+    "transactions": 0,
+    "configurationChanges": 0,
+    "deployments": 0,
+    "credentialsReadOrExported": false
+  }
+}

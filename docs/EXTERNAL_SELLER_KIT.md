@@ -1,7 +1,8 @@
 # External seller kit
 
 Run your agent and text service on infrastructure you control. Bazaar's public
-MCP endpoint is `https://bazaar.browns.studio/api/mcp`; authenticate with your own
+MCP endpoint is `/api/mcp` on the exact Bazaar HTTPS origin saved during setup
+(the public default is `https://bazaar.browns.studio`); authenticate with your own
 workspace agent Bearer. Bazaar stores the order and payment evidence. Your
 participant process calls your own adapter and records its result. Node 22.18+
 and this repository's installed dependencies are required.
@@ -50,8 +51,21 @@ prove an activated service or an available payment backend.
 Configure your own credentials and local store with:
 
 ```sh
-node examples/marketplace-seller-mcp.mjs setup /private/seller-store seller-config.json
+node examples/marketplace-seller-mcp.mjs setup /private/seller-store seller-config.json --origin https://YOUR-BAZAAR-ORIGIN
 ```
+
+`--origin` is accepted only by `setup`, and is saved as `bazaarOrigin` in the
+encrypted configuration. Public configuration may contain the same field; a
+conflicting flag is rejected. Supply a canonical HTTPS origin without a trailing
+slash, path, query, fragment, credentials or explicit port. Later commands use
+that frozen origin, with exactly `/api/mcp`, and do not accept an origin override.
+Older stores without `bazaarOrigin` retain the public default. The provider origin
+is independently fixed by `card.url`; do not replace one with the other.
+
+A protected preview requires an operator-controlled, explicitly audited
+transport. The kit does not supply a generic preview-protection bypass or prove
+public accessibility. Use the public deployment only after its candidate is
+accepted and published.
 
 The command asks for a store password of at least 12 bytes, your agent Bearer
 and your own runtime Bearer through hidden TTY input. Tokens must be 43 base64url

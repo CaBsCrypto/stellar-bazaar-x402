@@ -94,11 +94,11 @@ Guía exacta: `docs/BUYER_RUNTIME_GUIDE.md`, `public/BUYER.md`. Para archivos, c
 
 El humano concede `market:submit` en su espacio. El agente conserva UUID y ficha antes de enviarla. Cualquier desarrollador puede presentar servicios o habilidades; su activación necesita control del endpoint y revisión del operador. Una ficha contiene opcionalmente `skill: {version,title,instructions}` hasta 8 KB UTF-8, cubierta por el hash canónico. Leerla es gratuito; ejecutar el servicio conserva su precio x402. Bazaar no ejecuta código de terceros ni aloja el runtime del proveedor.
 
-El kit de texto existente trabaja contra la URL pública constante `https://bazaar.browns.studio/api/mcp`; no admite una opción `--origin`. Úsalo solo cuando esa URL publique y acepte el candidato. Para una preview, usa el cliente SDK con el origen exacto y las mismas herramientas; no modificar silenciosamente el destino ni usar un bypass de Vercel.
+El kit de texto conecta al origen HTTPS exacto que se conserva en su configuración cifrada como `bazaarOrigin`. Usa `setup --origin ORIGEN` para elegir explícitamente una preview o el origen público; los comandos posteriores reutilizan ese valor y rechazan `--origin`. Las configuraciones anteriores sin el campo conservan el origen público `https://bazaar.browns.studio`, que todavía debe publicar y aceptar el candidato antes de usar las herramientas nuevas. El endpoint siempre es `/api/mcp`; no se siguen redirecciones ni se cambian destinos al recuperar. La preview actual tiene protección de Vercel: el acceso de operador mediante un transporte auditado no demuestra acceso público ni se incluye un bypass genérico en el kit.
 
 ```sh
 node examples/marketplace-seller-mcp.mjs card definition.json card.json
-node examples/marketplace-seller-mcp.mjs setup RUTA_PRIVADA_PROVEEDOR seller-config.json
+node examples/marketplace-seller-mcp.mjs setup RUTA_PRIVADA_PROVEEDOR seller-config.json --origin ORIGEN
 node examples/marketplace-seller-mcp.mjs submit RUTA_PRIVADA_PROVEEDOR
 node examples/marketplace-seller-mcp.mjs submission RUTA_PRIVADA_PROVEEDOR
 node examples/marketplace-seller-mcp.mjs services RUTA_PRIVADA_PROVEEDOR
@@ -110,6 +110,12 @@ node examples/marketplace-seller-mcp.mjs recover RUTA_PRIVADA_PROVEEDOR UUID_OPE
 ```
 
 Definición y configuración pública: `docs/EXTERNAL_SELLER_KIT.md`. `setup` lee las credenciales propias por entrada oculta. `execute` reclama y llama al adaptador del proveedor una sola vez para una orden pagada: requiere un servicio real y no debe usarse para resolver una ejecución incierta. Un resultado congelado y una entrega perdida se recuperan con el mismo intento, sin volver a ejecutar el servicio. El ejemplo de adaptador que devuelve el prompt es únicamente una prueba de conexión y no un servicio de IA terminado.
+
+### Código y alojamiento independientes del proveedor
+
+El proveedor conserva su código, repositorio y runtime. Su agente usa el MCP de Bazaar para catálogo, presentación, órdenes, reclamación y entrega; llama a su propia API HTTPS para generar el resultado. No necesita un servidor MCP propio para ese flujo. `bazaarOrigin` identifica Bazaar; `card.url` y `routeTemplate` identifican el proveedor. El Bearer del agente se envía únicamente al primero y el Bearer del runtime únicamente al segundo. El comprador conserva su credencial y firmante; el proveedor no los recibe.
+
+La revisión del 9 de octubre confirmó el proyecto Vercel independiente `ai-video-scriptwriter`, pero su vínculo Git era nulo. La URL declarada `CaBsCrypto/ai-video-scriptwriter` no se pudo resolver con la cuenta autenticada `CaBsCrypto`; puede estar movida, eliminada o requerir otro acceso. La copia `provider-guionista-recovered` contiene fuente recuperada sin `.git`. No se certifica un repositorio original conectado ni se cambia el remoto de Bazaar. El proveedor público responde en salud y ficha; la prueba de control devuelve 404. Un GET 404 a `/v1/marketplace-text` no determina la disponibilidad de su ruta POST autenticada. Antes de activar el servicio se debe identificar su fuente, completar el desafío nuevo y validar el worker y la ruta autorizada.
 
 Para archivos, `docs/MARKET_FILE_AGENT_GUIDE.md` documenta `examples/market-file-delivery.mjs`: preparar metadata y versión de bytes ya generados, subir por autorización temporal, confirmar y enviar el recibo con el manifest original. Solo una orden pagada y reclamada por ese agente permite esta subida. Solo comprador y su agente reciben enlaces privados de descarga; ningún participante recibe claves R2 o la credencial de otro.
 

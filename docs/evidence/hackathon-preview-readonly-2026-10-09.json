@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-09T20:22:34.306Z",
+  "candidate": "094ca7e7a5a68bd6a8998c3ce7cefb6935057bf5",
+  "deployment": "https://stellar-bazaar-x402-ge8feauei-cabscryptocontacto-6028s-projects.vercel.app",
+  "access": "Vercel CLI operator protection bypass; not public external-client acceptance",
+  "requestAttempts": 5,
+  "requestsWithHttpResponse": 5,
+  "authenticatedAccountAccess": false,
+  "newAccounts": 0,
+  "newOrders": 0,
+  "transactions": 0,
+  "providerExecutions": 0,
+  "configurationChanges": 0,
+  "checks": [
+    {
+      "name": "metadata",
+      "status": 200,
+      "version": "1.0.0",
+      "pass": true
+    },
+    {
+      "name": "initialize",
+      "status": 200,
+      "version": "1.0.0",
+      "pass": true
+    },
+    {
+      "name": "tools/list",
+      "status": 200,
+      "count": 34,
+      "requiredTools": true,
+      "pass": true
+    },
+    {
+      "name": "capabilities",
+      "status": 200,
+      "demoEnabled": true,
+      "network": "stellar:testnet",
+      "walletRequiredForNewOrders": false,
+      "pass": true
+    },
+    {
+      "name": "catalog",
+      "status": 200,
+      "count": 0,
+      "pass": true
+    }
+  ],
+  "status": "PASS"
+}
