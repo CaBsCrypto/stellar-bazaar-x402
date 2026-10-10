@@ -1,0 +1,248 @@
+{
+  "status": "PASS",
+  "category": "Browser and native MCP validation of protected preview",
+  "observedAt": "2026-10-10T23:54:01.331Z",
+  "candidate": "e5cd5490f814e705ae586fb07426a4b6db01ebd5",
+  "preview": "https://stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+  "deploymentId": "dpl_4oA6agnFzqiDkTjcCDjk35veJWRd",
+  "previousPaidRuntime": {
+    "candidate": "4f250cd175832634b4abb2abb3528e4cd7786cee",
+    "preview": "https://stellar-bazaar-x402-q2cfuej1c-cabscryptocontacto-6028s-projects.vercel.app",
+    "evidence": "docs/evidence/hackathon-paid-text-preview-2026-10-10.json"
+  },
+  "configuration": {
+    "sameSyntheticNamespaces": true,
+    "namespaceFingerprints": {
+      "BAZAAR_WORKSPACE_PREFIX": "e7011dd768e2abd4b6726e1fa75f64b956de7e8e42d979d1a4ecc91d85da978e",
+      "BAZAAR_REVIEW_PREFIX": "00dcb9233e240a62d621755691410c703a7972347c3c3a40c6af3a6ee5137894",
+      "BAZAAR_MARKET_PREFIX": "20b10307df9c3abaf33ae141d136192d0b2ca85a421d9f718e372e14b015698c",
+      "BAZAAR_MARKET_FILE_PREFIX": "c6213cf0fc602e389506a2af264138068e07ff49a26b06ae36c5e9558d8c0271"
+    },
+    "originalPurchaseConfigurationPreserved": true,
+    "vercelProtectionRetained": true,
+    "noPlanOrBudgetChanges": true
+  },
+  "sourceChanges": [
+    "same-origin deployment cookies retained in catalogue and account requests",
+    "provider-selected price documented",
+    "protected preview distinguished from planned public origin"
+  ],
+  "localChecks": [
+    "TypeScript",
+    "demo route suite",
+    "marketplace MCP suite with local doubles",
+    "git diff --check"
+  ],
+  "browser": {
+    "catalogueAndFrozenCard": true,
+    "buyerIdentityAndFourOwnQueries": true,
+    "orderId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+    "amountUSDC": "0.01",
+    "network": "stellar:testnet",
+    "phase": "delivered",
+    "transactionHash": "15d976c56f86bf8b104f7dbaa9d9b803d773ec3b61811eace8436d1e521812d0",
+    "textCharacters": 484,
+    "deliverySha256": "d9c2535f4f2769c697127c58fadcc0100554c5e40a97bf25a219e66b84cf268b",
+    "fixedContentExpiry": "2026-10-17T22:58:39.021Z",
+    "localLockHidesContent": true,
+    "localLockTestedCandidate": "4f250cd175832634b4abb2abb3528e4cd7786cee",
+    "restoredSameOrder": true,
+    "restoredOrderCandidate": "e5cd5490f814e705ae586fb07426a4b6db01ebd5",
+    "publicMcpConfigurationDownloaded": {
+      "correctPreviewUrl": true,
+      "httpTransport": true,
+      "privateHeaders": false
+    },
+    "newSyntheticRegistration": {
+      "creationId": "2715ac8d-03a4-4dfa-9c04-41001dc63498",
+      "registrations": 1,
+      "recoveryDownloadedBeforeSubmission": true,
+      "agentConfigurationDownloaded": true,
+      "onlyAgentCredential": true,
+      "humanAndRecoveryCredentialsAbsentFromAgentConfiguration": true,
+      "initialOrderCount": 0,
+      "initialQueryCount": 0,
+      "ownQueryDisplayedAfterMcp": 1,
+      "historyUrlHasNoQueryOrFragment": true
+    },
+    "secretsArchive": {
+      "encryptedFiles": 2,
+      "encryption": "Windows DPAPI CurrentUser",
+      "acl": "CurrentUser and SYSTEM only",
+      "roundtripVerified": true,
+      "plaintextWorkingAndMatchingDownloadCopiesRemoved": true,
+      "temporaryBuyerReadCapsuleRemoved": true
+    },
+    "demoEntryInstructionsValidated": true
+  },
+  "protectedMcpReadAcceptance": {
+    "status": "PASS",
+    "candidate": "e5cd5490f814e705ae586fb07426a4b6db01ebd5",
+    "preview": "https://stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+    "deploymentId": "dpl_4oA6agnFzqiDkTjcCDjk35veJWRd",
+    "transport": "Vercel operator-authorized protected preview",
+    "mcpVersion": "1.0.0",
+    "tools": 34,
+    "requests": 8,
+    "newOrders": 0,
+    "payments": 0,
+    "providerExecutions": 0,
+    "queryId": "afae8c75-03ab-4a3e-ab67-bb5faf49dceb",
+    "authenticatedQueries": 4,
+    "checks": [
+      "initialize Testnet instructions",
+      "34 MCP tools",
+      "same buyer account after preview deployment",
+      "active funded service through authenticated MCP",
+      "catalogue query replay recorded once",
+      "same paid order and delivery hash recovered"
+    ],
+    "productionPublished": false,
+    "publicExternalClientValidated": false
+  },
+  "nativeSdkNewAccountAcceptance": {
+    "status": "PASS",
+    "candidate": "e5cd5490f814e705ae586fb07426a4b6db01ebd5",
+    "preview": "https://stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+    "deploymentId": "dpl_4oA6agnFzqiDkTjcCDjk35veJWRd",
+    "transport": "Native SDK Streamable HTTP with operator-authorized deployment protection",
+    "creationId": "2715ac8d-03a4-4dfa-9c04-41001dc63498",
+    "tools": 34,
+    "mcpRequests": 10,
+    "syntheticAccountsCreated": 1,
+    "initialQueryCount": 0,
+    "initialOrderCount": 0,
+    "newAuthenticatedQueryCount": 1,
+    "otherBuyerOrderReadStatus": 404,
+    "otherBuyerQueriesAbsent": true,
+    "wallet": null,
+    "newOrders": 0,
+    "payments": 0,
+    "providerExecutions": 0,
+    "productionPublished": false,
+    "publicExternalClientValidated": false,
+    "checks": [
+      "browser-created account matches exact downloaded MCP agent configuration",
+      "initialize and tools/list using native SDK",
+      "identity and empty initial history",
+      "older buyer order denied with 404",
+      "catalogue records one private query for new agent"
+    ]
+  },
+  "qr": {
+    "status": "PASS",
+    "kind": "Protected preview review QR",
+    "target": "https://stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app/demo",
+    "decodedToExpectedOrigin": true,
+    "containsCredentials": false,
+    "publicQrChanged": false,
+    "publicEventQr": "https://bazaar.browns.studio/demo",
+    "publicQrAcceptancePending": true
+  },
+  "additionalEffects": {
+    "registrations": 1,
+    "orders": 0,
+    "signatures": 0,
+    "payments": 0,
+    "providerExecutions": 0,
+    "productionDeployments": 0
+  },
+  "acceptanceLimits": {
+    "browserVisualizationValidated": true,
+    "newAccountPreviewFlowValidated": true,
+    "unprotectedExternalQrFlowValidated": false,
+    "imageOrVideoDeliveryValidated": false,
+    "paidR2DeliveryValidated": false,
+    "r2CorsForNewPreviewOriginValidated": false,
+    "productionValidated": false,
+    "continuousSellerWorkerStarted": false
+  },
+  "pending": [
+    "authorized production candidate publication and external QR acceptance",
+    "continuous seller agent for unattended new orders",
+    "paid image/video and R2 delivery acceptance",
+    "CORS for additional preview origin before file validation"
+  ],
+  "artifacts": [
+    {
+      "path": "docs/evidence/browser-2026-10-10/catalogue.jpg",
+      "bytes": 294861,
+      "sha256": "c1b89f15a9189f7f917d0c42437ba5fbdf43e02a448845a6585d4afcca4ac2b8"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/demo-entry.jpg",
+      "bytes": 176352,
+      "sha256": "8a209a29ef4cd1cfbfa9b11e6be4f36a4dc0453ea0be1cbfd95adbee801110aa"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/history-locked.jpg",
+      "bytes": 4913,
+      "sha256": "a7921af70749f104235ec43088e03c08ce0f6dc63975c3cad9b552fde69ed156"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/mcp-connection.jpg",
+      "bytes": 83793,
+      "sha256": "c169eaa5224ab97105d0fda80aabe8d98d06729f4f89ca73603920ab40d625a1"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/paid-delivery-view.jpg",
+      "bytes": 70282,
+      "sha256": "5ddbec94b8b897da80983a99643fb01ece342f7d1761c033186d34234a6b017c"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/paid-history-recovered.jpg",
+      "bytes": 243096,
+      "sha256": "85a42c43186288f3c8ce5d51e667ceacda0412379693c053af0c6861e9338d8d"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/paid-order-delivery.jpg",
+      "bytes": 213184,
+      "sha256": "4814ba4eb08b4996fc6089845f14d0ce2e159fdb2de1621310bf670ebd303462"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/preview-review-qr.png",
+      "bytes": 10272,
+      "sha256": "c910eaa8a283fa65830ccd67170c046c7c564d9452fffa953e4960d9a3e0c816"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/preview-review-qr.svg",
+      "bytes": 29468,
+      "sha256": "28e6fcead244cd6bb7dfb8c84c8ebd9da1bcdccef4b19a1b9a7ec10f032df8b1"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/synthetic-history.jpg",
+      "bytes": 143805,
+      "sha256": "7f0b805b22d3521f4443306b45778556fea5074faf0fd6ded56e7e2395dbdab8"
+    },
+    {
+      "path": "docs/evidence/browser-2026-10-10/synthetic-registration.jpg",
+      "bytes": 155863,
+      "sha256": "0ec07654996a2870bab3b3b270401df637c27589c9a04484186bfcdf3660bae4"
+    }
+  ],
+  "artifactEnvironments": {
+    "originalPaidPreview": [
+      "paid-order-delivery.jpg",
+      "history-locked.jpg"
+    ],
+    "correctedPreview": [
+      "catalogue.jpg",
+      "demo-entry.jpg",
+      "mcp-connection.jpg",
+      "paid-delivery-view.jpg",
+      "paid-history-recovered.jpg",
+      "synthetic-history.jpg",
+      "synthetic-registration.jpg"
+    ],
+    "generatedLocallyForCorrectedPreview": [
+      "preview-review-qr.png",
+      "preview-review-qr.svg"
+    ]
+  },
+  "privacyOfEvidence": {
+    "containsPrivateKeys": false,
+    "containsAccessCredentials": false,
+    "containsSignedPaymentPayload": false,
+    "screenshotsContainSyntheticDeliveryText": true
+  }
+}
