@@ -32,18 +32,21 @@ function publicIpv4(address: string): boolean {
     || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && (b === 168 || b === 0 || (b === 88 && c === 99)))
     || (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) || (a === 203 && b === 0 && c === 113));
 }
-type HttpTarget = { hostname: string; address: string; path: string; timeoutMs: number; maxBytes: number; onBytes?:(bytes:number)=>void };
+type HttpTarget = { hostname: string; address: string; path: string; timeoutMs: number; maxBytes: number; headers?:Record<string,string>; onBytes?:(bytes:number)=>void };
 function proofHeaders(hostname:string):Record<string,string>|undefined {
   const target=process.env.BAZAAR_PROVIDER_PREVIEW_HOST,secret=process.env.BAZAAR_PROVIDER_PREVIEW_BYPASS;
-  if(!target||hostname!==target)return undefined;
-  if(!/^[a-z0-9-]+\.vercel\.app$/.test(target)||!secret||!/^[A-Za-z0-9_-]{16,256}$/.test(secret))fail('PROVIDER_PREVIEW_AUTH_UNAVAILABLE');
+  if(!target&&!secret)return undefined;
+  // Protected control proof is preview acceptance only. Production must keep
+  // both settings absent and verify a fresh public HTTP or DNS challenge.
+  if(process.env.VERCEL_ENV!=='preview'||!target||!secret||!/^[a-z0-9-]+\.vercel\.app$/.test(target)||!/^[A-Za-z0-9_-]{16,256}$/.test(secret))fail('PROVIDER_PREVIEW_AUTH_UNAVAILABLE');
+  if(hostname!==target)return undefined;
   return {'x-vercel-protection-bypass':secret};
 }
 async function pinnedHttps(target: HttpTarget): Promise<{ status: number; body: string }> {
   return new Promise((resolve, reject) => {
     const request = httpsRequest({ hostname: target.hostname, servername: target.hostname, port: 443,
       path: target.path, method: "GET", agent: false, family: 4,
-      headers:proofHeaders(target.hostname),
+      headers:target.headers,
       lookup: (_hostname, _options, callback) => callback(null, target.address, 4),
     }, (response) => {
       if (response.statusCode !== 200) { response.destroy(); reject(new Error("HTTP_PROOF_STATUS")); return; }
@@ -77,6 +80,7 @@ export async function verifySubmissionHttp(id: string, options: {
   const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
   if (url.protocol !== "https:" || (url.port && url.port !== "443") || url.username || url.password || url.search || url.hash
     || hostname !== submission.control.domain || submission.control.verificationPath !== "/.well-known/stellar-bazaar-provider.txt") fail("UNSAFE_PROOF_URL");
+  const headers=proofHeaders(hostname);
   const timeoutMs = options.timeoutMs ?? 5000;
   if (!Number.isFinite(timeoutMs) || timeoutMs < 1 || timeoutMs > 5000) fail("INVALID_TIMEOUT");
   const deadline=Date.now()+timeoutMs;
@@ -91,7 +95,7 @@ export async function verifySubmissionHttp(id: string, options: {
   const remaining=deadline-Date.now();if(remaining<=0)fail('HTTP_PROOF_TIMEOUT');
   // The real transport settles on its own remaining deadline before the meter logs.
   let proofBytes=0;
-  const target:HttpTarget={hostname,address:addresses[0].address,path:'/.well-known/stellar-bazaar-provider.txt',timeoutMs:remaining,maxBytes:4096,onBytes:bytes=>{proofBytes=bytes;}};
+  const target:HttpTarget={hostname,address:addresses[0].address,path:'/.well-known/stellar-bazaar-provider.txt',timeoutMs:remaining,maxBytes:4096,headers,onBytes:bytes=>{proofBytes=bytes;}};
   const response = await meteredExternal('proof-http',async()=>{
     const value=await(options.transport?bounded(()=>options.transport!(target)):pinnedHttps(target));
     proofBytes=Buffer.byteLength(value.body);return value;

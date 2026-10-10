@@ -13,6 +13,9 @@ const savedEnv = { ...process.env };
 process.env.BAZAAR_PROVIDER_REVIEW_DIR = directory;
 process.env.BAZAAR_ENABLE_SELF_LISTING_INTAKE = "true";
 delete process.env.VERCEL;
+delete process.env.VERCEL_ENV;
+delete process.env.BAZAAR_PROVIDER_PREVIEW_HOST;
+delete process.env.BAZAAR_PROVIDER_PREVIEW_BYPASS;
 const card = (id) => ({
   version: "bazaar.service-card/v0", id, name: "Synthetic operator test", description: "Offline operator fixture.",
   kind: "http", url: "https://api.provider.example.com", routeTemplate: "/v1/quote/{pair}",
@@ -32,8 +35,9 @@ const registry = {
   },
   async read(id) { return entries.get(id); },
 };
-async function submit(id, method = "dns-txt") {
-  const result = await review.submitProviderDraft(card(id), { method, domain: "api.provider.example.com" }, { submissionId: randomUUID(), submissionToken: randomBytes(32).toString("hex") });
+async function submit(id, method = "dns-txt", domain = "api.provider.example.com") {
+  const draft = { ...card(id), url: `https://${domain}` };
+  const result = await review.submitProviderDraft(draft, { method, domain }, { submissionId: randomUUID(), submissionToken: randomBytes(32).toString("hex") });
   assert.equal(result.ok, true, JSON.stringify(result));
   return result.value;
 }
@@ -120,7 +124,68 @@ try {
   await assert.rejects(verifySubmissionHttp(http.submissionId, { ...httpOptions, timeoutMs: 5, transport: () => new Promise(() => {}) }), /HTTP_PROOF_TIMEOUT/);
   assert.equal((await verifySubmissionHttp(http.submissionId, httpOptions)).status, "pending-manual-review");
   await assert.rejects(activateSubmission(http.submissionId, { ...registry, configured: () => false }), /SERVICE_NOT_CONFIGURED/);
-  console.log(JSON.stringify({ ok: true, externalCalls: 0, creates, dnsMismatch: true, dnsTimeout: true, explicitReview: true, concurrentActivation: true, lostResponseRecoveredWithoutReingest: true }));
+
+  const previewHost = 'provider-preview.vercel.app', previewSecret = 'synthetic-preview-bypass'.padEnd(43, 'x');
+  const protectedProof = await submit('operator-protected-preview', 'http-well-known', previewHost);
+  let previewDns = 0, previewRequests = 0;
+  const protectedOptions = {
+    lookup: async host => { previewDns++; assert.equal(host, previewHost); return [{address: '8.8.8.8', family: 4}]; },
+    transport: async target => {
+      previewRequests++;
+      assert.equal(target.hostname, previewHost); assert.equal(target.address, '8.8.8.8');
+      assert.equal(target.path, '/.well-known/stellar-bazaar-provider.txt'); assert.equal(target.maxBytes, 4096);
+      assert.deepEqual(target.headers, {'x-vercel-protection-bypass': previewSecret});
+      return {status: 200, body: protectedProof.control.expectedRecord};
+    },
+  };
+  process.env.BAZAAR_PROVIDER_PREVIEW_HOST = previewHost;
+  process.env.BAZAAR_PROVIDER_PREVIEW_BYPASS = previewSecret;
+  for (const environment of ['production', 'development', undefined]) {
+    if (environment) process.env.VERCEL_ENV = environment; else delete process.env.VERCEL_ENV;
+    await assert.rejects(verifySubmissionHttp(protectedProof.submissionId, protectedOptions), /PROVIDER_PREVIEW_AUTH_UNAVAILABLE/);
+  }
+  process.env.VERCEL_ENV = 'preview';
+  for (const [host, secret] of [[previewHost, ''], ['', previewSecret], [previewHost, 'invalid secret'], ['provider-preview.vercel.app.evil.example', previewSecret]]) {
+    process.env.BAZAAR_PROVIDER_PREVIEW_HOST = host; process.env.BAZAAR_PROVIDER_PREVIEW_BYPASS = secret;
+    await assert.rejects(verifySubmissionHttp(protectedProof.submissionId, protectedOptions), /PROVIDER_PREVIEW_AUTH_UNAVAILABLE/);
+  }
+  assert.equal(previewDns, 0); assert.equal(previewRequests, 0);
+  assert.equal((await review.getSubmissionForOperator(protectedProof.submissionId)).value.status, 'awaiting-control-proof');
+  process.env.BAZAAR_PROVIDER_PREVIEW_HOST = previewHost;
+  process.env.BAZAAR_PROVIDER_PREVIEW_BYPASS = previewSecret;
+  const publicProof = await submit('operator-preview-other-host', 'http-well-known');
+  assert.equal((await verifySubmissionHttp(publicProof.submissionId, {
+    lookup: async host => { assert.equal(host, publicProof.control.domain); return [{address: '8.8.8.8', family: 4}]; },
+    transport: async target => {
+      assert.equal(target.hostname, publicProof.control.domain); assert.equal(target.headers, undefined);
+      return {status: 200, body: publicProof.control.expectedRecord};
+    },
+  })).status, 'pending-manual-review');
+  await assert.rejects(verifySubmissionHttp(protectedProof.submissionId, {
+    ...protectedOptions, lookup: async () => [{address: '127.0.0.1', family: 4}],
+  }), /UNSAFE_PROOF_ADDRESS/);
+  assert.equal(previewRequests, 0);
+  assert.equal((await verifySubmissionHttp(protectedProof.submissionId, {
+    ...protectedOptions,
+    lookup: async host => {
+      const addresses = await protectedOptions.lookup(host);
+      // The accepted request configuration is captured before awaiting DNS.
+      process.env.BAZAAR_PROVIDER_PREVIEW_BYPASS = 'different-synthetic-secret'.padEnd(43, 'x');
+      return addresses;
+    },
+  })).status, 'pending-manual-review');
+  assert.equal(previewDns, 1); assert.equal(previewRequests, 1);
+  delete process.env.BAZAAR_PROVIDER_PREVIEW_HOST; delete process.env.BAZAAR_PROVIDER_PREVIEW_BYPASS;
+  process.env.VERCEL_ENV = 'production';
+  const productionPublic = await submit('operator-production-public', 'http-well-known');
+  assert.equal((await verifySubmissionHttp(productionPublic.submissionId, {
+    lookup: async () => [{address: '8.8.8.8', family: 4}],
+    transport: async target => {
+      assert.equal(target.headers, undefined);
+      return {status: 200, body: productionPublic.control.expectedRecord};
+    },
+  })).status, 'pending-manual-review');
+  console.log(JSON.stringify({ ok: true, externalCalls: 0, creates, dnsMismatch: true, dnsTimeout: true, explicitReview: true, concurrentActivation: true, lostResponseRecoveredWithoutReingest: true, previewBypassGuard: {productionRejectedBeforeDns: true, partialConfigurationRejected: true, exactHostOnly: true, pinnedAddressAndPath: true, headersCapturedBeforeDns: true, publicProductionUnchanged: true} }));
 } finally {
   for (const key of Object.keys(process.env)) if (!(key in savedEnv)) delete process.env[key];
   Object.assign(process.env, savedEnv);
