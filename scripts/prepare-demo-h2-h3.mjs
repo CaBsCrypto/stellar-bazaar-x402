@@ -68,7 +68,8 @@ async function tool(context,name,args,token){
  must(response.status===200&&response.value.result&&!response.value.error,'MCP_RESPONSE_INVALID');
  const result=response.value.result;let value;
  try{value=result.structuredContent??JSON.parse(result.content.find(item=>item.type==='text').text);}catch{must(false,'MCP_TOOL_CONTRACT_INVALID');}
- return {status:value.httpStatus??value.http?.status??200,isError:result.isError===true,value};
+ must(value&&typeof value==='object'&&!Array.isArray(value)&&Number.isInteger(value.httpStatus)&&value.httpStatus>=100&&value.httpStatus<=599&&typeof result.isError==='boolean'&&result.isError===(value.httpStatus<200||value.httpStatus>=300),'MCP_TOOL_CONTRACT_INVALID');
+ return {status:value.httpStatus,isError:result.isError,value};
 }
 async function success(context,name,args,token){const result=await tool(context,name,args,token);must(!result.isError&&result.status>=200&&result.status<300,'MCP_ACTION_REJECTED');return result.value;}
 function binding(context){return {version:1,purpose:'bazaar-h2-h3-nonpayment-preview',origin:context.origin,candidate:context.bazaar.candidate,deploymentId:context.bazaar.deploymentId,
