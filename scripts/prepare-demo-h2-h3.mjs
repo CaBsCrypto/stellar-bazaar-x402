@@ -12,13 +12,22 @@ import {createMarketplaceBuyerIntent} from '../examples/marketplace-x402-buyer.m
 import {marketAmountAtomic} from '../examples/market-price.mjs';
 
 const execute=promisify(execFile),uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
-const steps=['grant','submit','submission','verify-control','approve','activate','order','order-read','inspect402','reject-unpaid','status'];
-const readSteps=new Set(['submission','order-read','status']);
+const steps=['grant','submit','submission','verify-control','approve','activate','order','order-read','inspect402','reject-unpaid','catalog-check','status','withdraw'];
+const readSteps=new Set(['submission','order-read','catalog-check','status']);
 const toolNames=new Set(['get_market_submission','submit_market_service','list_market_services','create_market_order','get_market_order','claim_market_order','prepare_market_delivery']);
 const safeCodes=new Set(['PRIVATE_PATH_REQUIRED','SYMLINK_FORBIDDEN','PRIVATE_ARTIFACT_TOO_LARGE','PRIVATE_JSON_INVALID','PREVIEW_ORIGIN_REQUIRED','REQUEST_SCOPE_FORBIDDEN','UNSIGNED_402_ONLY','TOOL_SCOPE_FORBIDDEN','PRIVATE_ACCESS_INVALID','HTTP_STATUS_INVALID','HTTP_JSON_REQUIRED','HTTP_OUTCOME_UNCONFIRMED','MCP_RESPONSE_INVALID','MCP_TOOL_CONTRACT_INVALID','MCP_ACTION_REJECTED','DEPLOYED_MCP_MISMATCH','DEPLOYED_NAMESPACE_MISMATCH','ACCOUNT_IDENTITY_MISMATCH','ORDER_BINDING_MISMATCH','SUBMISSION_BINDING_MISMATCH','PERMISSION_READ_FAILED','PERMISSION_GRANT_UNCONFIRMED','EXPLICIT_REVIEW_REASON_REQUIRED','VERIFIED_CONTROL_REQUIRED','OPERATOR_REVIEW_UNCONFIRMED','ACTIVE_REVIEWED_SERVICE_REQUIRED','UNPAID_ORDER_REQUIRED','HTTP_402_REQUIRED','PAYMENT_REQUIRED_INVALID','PAYMENT_TERMS_MISMATCH','UNPAID_CLAIM_NOT_REJECTED','UNPAID_FILES_NOT_REJECTED','UNPAID_ORDER_WAS_MUTATED','LOCAL_EXECUTION_REQUIRED','LOCAL_PRIVATE_ARTIFACT_UNAVAILABLE','EXPLICIT_MODE_AND_CONFIG_REQUIRED','EXPLICIT_STEP_REQUIRED','PLAN_CONFIGURATION_INVALID','PRIVATE_ARTIFACT_COLLISION','BAZAAR_PREVIEW_CONFIG_INVALID','BASELINE_NAMESPACE_MISMATCH','BASELINE_CREDENTIALS_MISMATCH','EXISTING_ACCOUNT_REQUIRED','SEPARATE_BUYER_SELLER_REQUIRED','FROZEN_CARD_HASH_REQUIRED','BUYER_PUBLIC_INTENT_REQUIRED','SUBMISSION_ID_INVALID','STEP_NOT_AUTHORIZED','FROZEN_STATE_CHANGED','STATE_IDENTIFIERS_INVALID','BASELINE_CREDENTIALS_CHANGED','EVIDENCE_BINDING_MISMATCH','LOCAL_OUTPUT_PATH_REQUIRED','ARGUMENT_NOT_ALLOWED']);
 const temporary=new Set(),checks=[];let privateRoot,requests=0,stage='configuration',networkUsed=false;
+for(const code of ['QUERY_CONTEXT_INVALID','CONFIGURATION_SNAPSHOT_INVALID','QUERY_HISTORY_INVALID','CATALOG_BINDING_MISMATCH','CATALOG_QUERY_NOT_RECORDED','CATALOG_QUERY_REPLAY_CHANGED','QUERY_HISTORY_ISOLATION_FAILED','SERVICE_WITHDRAWAL_UNCONFIRMED'])safeCodes.add(code);
+const configurationCheckNames=['publicDemo','workspacesEnabled','marketplaceEnabled','publicAdmission','newAdmissionsOpen','workspaceRedisBackend','workspaceRedisUrl','workspaceRedisToken','workspaceNamespace','marketNamespace','reviewRedisBackend','reviewRedisUrl','reviewRedisToken','reviewNamespace','namespacesIndependent','namespaceFamilyMatches','namespaceStageMatches','publicOrigin','providerIntakeEnabled','reviewSecret','manualOperator','guardianCronCredential','guardianCronMatchesOperator','purchasesEnabled','x402Enabled','testnetFacilitator','facilitatorCredential','testnetRpc','noServerPayer','r2Bucket','r2Region','r2Endpoint','r2AccessKey','r2SecretKey','fileNamespace','privateFilesEnabled','fileLifecycleBackstop'];
+const featureNames=['registration','catalogue','serviceSubmission','moderation','guardianAutomation','purchases','privateFiles'];
+const featureReasons=new Set(['WORKSPACE_CONFIGURATION_INCOMPLETE','PUBLIC_DEMO_DISABLED','REGISTRATION_NOT_PUBLIC','ADMISSIONS_PAUSED','MARKET_CONFIGURATION_INCOMPLETE','PROVIDER_INTAKE_DISABLED','PROVIDER_REVIEW_CONFIGURATION_INCOMPLETE','OPERATOR_CONFIGURATION_INCOMPLETE','GUARDIAN_CRON_CONFIGURATION_INCOMPLETE','GUARDIAN_SCHEDULER_PRODUCTION_ONLY','PURCHASES_DISABLED','SERVER_PAYER_FORBIDDEN','X402_CONFIGURATION_INCOMPLETE','FILE_STORAGE_DISABLED','FILE_NAMESPACE_REQUIRED','FILE_LIFECYCLE_BACKSTOP_REQUIRED','PRIVATE_FILES_NOT_CONFIGURED']);
 const digest=value=>createHash('sha256').update(value).digest('hex');
 function must(value,code){if(!value)throw Object.assign(Error('H2/H3 validation stopped'),{safeCode:code});}
+function effectiveConfiguration(value){
+ const cronNames=['credentialConfigured','operatorHashMatches','productionDeployment','scheduledExecutionValidated'];
+ must(value&&configurationCheckNames.every(name=>typeof value.checks?.[name]==='boolean')&&featureNames.every(name=>typeof value.features?.[name]?.enabled==='boolean')&&typeof value.r2Configured==='boolean'&&cronNames.every(name=>typeof value.guardianCron?.[name]==='boolean'),'CONFIGURATION_SNAPSHOT_INVALID');
+ return {checks:Object.fromEntries(configurationCheckNames.map(name=>[name,value.checks[name]])),features:Object.fromEntries(featureNames.map(name=>{const f=value.features[name];return [name,{enabled:f.enabled,reason:f.reason===null?null:featureReasons.has(f.reason)?f.reason:'UNRECOGNIZED_CONFIGURATION_REASON'}];})),r2Configured:value.r2Configured,guardianCron:Object.fromEntries(cronNames.map(name=>[name,value.guardianCron[name]]))};
+}
 async function privatePath(name,{existing=false}={}){
  const path=resolve(name??''),local=relative(privateRoot,path);
  must(local&&!isAbsolute(local)&&local!=='..'&&!local.startsWith('..'+sep),'PRIVATE_PATH_REQUIRED');
@@ -36,17 +45,18 @@ function previewOrigin(raw){
  let url;try{url=new URL(raw);}catch{must(false,'PREVIEW_ORIGIN_REQUIRED');}
  must(url.protocol==='https:'&&url.origin===raw&&!url.username&&!url.password&&!url.search&&!url.hash&&/^stellar-bazaar-x402-[a-z0-9-]+\.vercel\.app$/.test(url.hostname),'PREVIEW_ORIGIN_REQUIRED');return raw;
 }
-async function request(context,path,{token,body}={}){
+async function request(context,path,{token,body,queryId}={}){
  const orderPath='/api/market/orders/'+context.state.operationId;
- const validGet=['/api/mcp','/api/account/identity','/api/market/guardian','/api/market/catalog','/api/market/agent-permissions',orderPath].includes(path);
- const validPost=['/api/mcp','/api/market/agent-permissions','/api/market/review',orderPath+'/x402'].includes(path);
+ const validGet=['/api/mcp','/api/account/identity','/api/account/queries','/api/market/guardian','/api/market/catalog','/api/market/agent-permissions',orderPath].includes(path);
+ const validPost=['/api/mcp','/api/market/agent-permissions','/api/market/review',orderPath+'/x402','/api/market/services/'+context.state.submissionId].includes(path);
  must(body===undefined?validGet:validPost,'REQUEST_SCOPE_FORBIDDEN');
  if(path===orderPath+'/x402')must(sellerCanonical(body)==='{}'&&token===context.accounts.a.tokens.agent,'UNSIGNED_402_ONLY');
  if(path==='/api/mcp'&&body!==undefined)must(body.method==='tools/call'&&toolNames.has(body.params?.name),'TOOL_SCOPE_FORBIDDEN');
+ if(queryId!==undefined)must(path==='/api/mcp'&&body?.params?.name==='list_market_services'&&token===context.accounts.a.tokens.agent&&uuid.test(queryId),'QUERY_CONTEXT_INVALID');
  must(token===undefined||/^[A-Za-z0-9_-]{43}$/.test(token),'PRIVATE_ACCESS_INVALID');
  const name=randomUUID(),headers=await privatePath('.vercel/h2-h3-'+name+'.headers'),payload=await privatePath('.vercel/h2-h3-'+name+'.json'),responseHeaders=await privatePath('.vercel/h2-h3-'+name+'.response-headers');
  temporary.add(headers);temporary.add(responseHeaders);
- await writeFile(headers,['Accept: application/json, text/event-stream',...(token?['Authorization: Bearer '+token]:[]),...(body===undefined?[]:['Content-Type: application/json'])].join('\n'),{flag:'wx',mode:0o600});
+ await writeFile(headers,['Accept: application/json, text/event-stream',...(token?['Authorization: Bearer '+token]:[]),...(queryId?['X-Bazaar-Query-Id: '+queryId]:[]),...(body===undefined?[]:['Content-Type: application/json'])].join('\n'),{flag:'wx',mode:0o600});
  await writeFile(responseHeaders,'',{flag:'wx',mode:0o600});
  const args=[context.cli,'curl',path,'--deployment',context.origin,'--','--silent','--show-error','--max-time','25','--proto','=https','--header','@'+headers,'--dump-header',responseHeaders,'--write-out','\n%{http_code}'];
  if(body!==undefined){temporary.add(payload);await writeFile(payload,JSON.stringify(body),{flag:'wx',mode:0o600});args.push('--data-binary','@'+payload);}
@@ -62,8 +72,8 @@ async function request(context,path,{token,body}={}){
  finally{for(const path of [headers,payload,responseHeaders])try{await unlink(path);temporary.delete(path);}catch(error){if(error.code==='ENOENT')temporary.delete(path);}}
 }
 let rpc=0;
-async function tool(context,name,args,token){
- const response=await request(context,'/api/mcp',{token,body:{jsonrpc:'2.0',id:++rpc,method:'tools/call',params:{name,arguments:args}}});
+async function tool(context,name,args,token,queryId){
+ const response=await request(context,'/api/mcp',{token,queryId,body:{jsonrpc:'2.0',id:++rpc,method:'tools/call',params:{name,arguments:args}}});
  if([401,403].includes(response.status))return {status:response.status,isError:true,value:response.value};
  must(response.status===200&&response.value.result&&!response.value.error,'MCP_RESPONSE_INVALID');
  const result=response.value.result;let value;
@@ -71,7 +81,7 @@ async function tool(context,name,args,token){
  must(value&&typeof value==='object'&&!Array.isArray(value)&&Number.isInteger(value.httpStatus)&&value.httpStatus>=100&&value.httpStatus<=599&&typeof result.isError==='boolean'&&result.isError===(value.httpStatus<200||value.httpStatus>=300),'MCP_TOOL_CONTRACT_INVALID');
  return {status:value.httpStatus,isError:result.isError,value};
 }
-async function success(context,name,args,token){const result=await tool(context,name,args,token);must(!result.isError&&result.status>=200&&result.status<300,'MCP_ACTION_REJECTED');return result.value;}
+async function success(context,name,args,token,queryId){const result=await tool(context,name,args,token,queryId);must(!result.isError&&result.status>=200&&result.status<300,'MCP_ACTION_REJECTED');return result.value;}
 function binding(context){return {version:1,purpose:'bazaar-h2-h3-nonpayment-preview',origin:context.origin,candidate:context.bazaar.candidate,deploymentId:context.bazaar.deploymentId,
  namespaceFingerprints:context.bazaar.namespaceFingerprints,credentialsDigest:context.credentialsDigest,
  sellerOwnerId:context.accounts.b.record.ownerId,sellerAgentId:context.accounts.b.record.agentId,buyerOwnerId:context.accounts.a.record.ownerId,
@@ -80,10 +90,44 @@ async function guard(context){
  const metadata=await request(context,'/api/mcp');must(metadata.status===200&&metadata.value.version==='1.0.0','DEPLOYED_MCP_MISMATCH');
  const guardian=await request(context,'/api/market/guardian',{token:context.bazaar.operatorToken});
  must(guardian.status===200&&Object.entries(context.bazaar.namespaceFingerprints).every(([key,value])=>guardian.value.namespaceFingerprints?.[key]===value),'DEPLOYED_NAMESPACE_MISMATCH');
+ context.state.effectiveConfiguration=effectiveConfiguration(guardian.value.configuration);
  for(const [account,role]of [[context.accounts.a,'agent'],[context.accounts.b,'agent'],[context.accounts.b,'human']]){
   const identity=await request(context,'/api/account/identity',{token:account.tokens[role]});must(identity.status===200&&identity.value.ownerId===account.record.ownerId&&identity.value.agentId===account.record.agentId,'ACCOUNT_IDENTITY_MISMATCH');
  }
  checks.push('MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES');
+ checks.push('SANITIZED_RUNTIME_CONFIGURATION');
+}
+async function queryHistory(context,account){
+ const response=await request(context,'/api/account/queries',{token:account.tokens.agent});
+ must(response.status===200&&Array.isArray(response.value.queries)&&response.value.queries.length<=100,'QUERY_HISTORY_INVALID');
+ must(response.value.queries.every(query=>query.agentId===account.record.agentId),'QUERY_HISTORY_ISOLATION_FAILED');return response.value.queries;
+}
+function activeCard(context,catalog){
+ must(Array.isArray(catalog?.services),'CATALOG_BINDING_MISMATCH');
+ const matches=catalog.services.filter(service=>service.card?.id===context.card.id);
+ must(matches.length===1&&matches[0].status==='activated'&&matches[0].cardHash===context.cardHash&&sellerHash(sellerCanonical(matches[0].card))===context.cardHash&&matches[0].card.payment.amount===context.card.payment.amount,'CATALOG_BINDING_MISMATCH');return matches[0];
+}
+function observedQuery(context,queries){
+ const matches=queries.filter(query=>query.requestId===context.state.catalogQueryId);
+ must(matches.length===1&&matches[0].tool==='list_market_services'&&matches[0].agentId===context.accounts.a.record.agentId&&matches[0].outcome==='ok'&&matches[0].evidence==='bazaar-observed'&&matches[0].inputHash===digest(JSON.stringify({name:'list_market_services',arguments:{}}))&&Number.isFinite(Date.parse(matches[0].recordedAt)),'CATALOG_QUERY_NOT_RECORDED');return matches[0];
+}
+async function catalogCheck(context){
+ const state=context.state,a=context.accounts.a,b=context.accounts.b;
+ if(!state.catalogQueryId){state.catalogQueryId=randomUUID();await save(context.stateFile,state);}must(uuid.test(state.catalogQueryId),'QUERY_CONTEXT_INVALID');
+ const beforeA=await queryHistory(context,a),beforeB=await queryHistory(context,b),beforeMatches=beforeA.filter(query=>query.requestId===state.catalogQueryId);
+ must(beforeMatches.length<=1&&!beforeB.some(query=>query.requestId===state.catalogQueryId),'QUERY_HISTORY_ISOLATION_FAILED');
+ const publicResponse=await request(context,'/api/market/catalog');must(publicResponse.status===200,'CATALOG_BINDING_MISMATCH');activeCard(context,publicResponse.value);
+ const authenticated=await success(context,'list_market_services',{},a.tokens.agent,state.catalogQueryId);activeCard(context,authenticated);
+ const afterA=await queryHistory(context,a),afterB=await queryHistory(context,b),query=observedQuery(context,afterA);
+ must(afterA.length===Math.min(100,beforeA.length+(beforeMatches.length?0:1))&&sellerCanonical(afterB)===sellerCanonical(beforeB)&&!afterB.some(q=>q.requestId===state.catalogQueryId),'QUERY_HISTORY_ISOLATION_FAILED');
+ if(beforeMatches.length)must(sellerCanonical(beforeMatches[0])===sellerCanonical(query),'CATALOG_QUERY_REPLAY_CHANGED');
+ state.catalogQueryWitness={recordedAt:query.recordedAt,inputHash:query.inputHash,resultHash:query.resultHash};await save(context.stateFile,state);
+ const replay=await success(context,'list_market_services',{},a.tokens.agent,state.catalogQueryId);activeCard(context,replay);
+ const replayA=await queryHistory(context,a),replayB=await queryHistory(context,b);
+ must(sellerCanonical(observedQuery(context,replayA))===sellerCanonical(query)&&sellerCanonical(replayA)===sellerCanonical(afterA),'CATALOG_QUERY_REPLAY_CHANGED');
+ must(sellerCanonical(replayB)===sellerCanonical(beforeB)&&!replayB.some(q=>q.requestId===state.catalogQueryId),'QUERY_HISTORY_ISOLATION_FAILED');
+ context.catalogEvidence={anonymousAndAuthenticatedCardMatch:true,authenticatedQueryRegisteredOnce:true,replayPreservedOriginalQuery:true,sellerHistoryIsolated:true,buyerHistoryBefore:beforeA.length,buyerHistoryAfter:afterA.length,buyerHistoryAfterReplay:replayA.length,sellerHistoryBefore:beforeB.length,sellerHistoryAfter:replayB.length};
+ checks.push('ANONYMOUS_HTTP_AND_AUTHENTICATED_MCP_CATALOG_MATCH','AUTHENTICATED_CATALOG_QUERY_RECORDED_ONCE','QUERY_REPLAY_PRESERVES_ORIGINAL_TIMESTAMP','BUYER_AND_SELLER_QUERY_HISTORY_ISOLATED');
 }
 function boundOrder(context,order){
  must(order&&order.operationId===context.state.operationId&&order.buyerOwnerId===context.accounts.a.record.ownerId&&order.sellerOwnerId===context.accounts.b.record.ownerId&&order.serviceId===context.card.id&&order.cardHash===context.cardHash&&sellerHash(sellerCanonical(order.card))===context.cardHash&&order.payer===context.cfg.payer&&order.destination===context.card.payment.destination&&order.amount===context.card.payment.amount&&sellerCanonical(order.settlement)===sellerCanonical(context.card.payment.identity)&&order.paymentProtocol==='x402-stellar-exact-v2'&&sellerCanonical(order.input)===sellerCanonical(context.cfg.input)&&order.inputHash===digest(sellerCanonical(context.cfg.input)),'ORDER_BINDING_MISMATCH');
@@ -105,6 +149,11 @@ async function action(context,step){
   const body=await success(context,'submit_market_service',{submissionId:state.submissionId,card:context.card,controlProof:{method:'http-well-known',domain:new URL(context.card.url).hostname}},b.tokens.agent);
   must(body.submission?.submissionId===state.submissionId&&sellerHash(sellerCanonical(body.submission.card))===context.cardHash,'SUBMISSION_BINDING_MISMATCH');state.submission=body.submission;checks.push('FROZEN_PROVIDER_SUBMISSION');
  }else if(step==='submission'){await submission(context);checks.push('EXISTING_SUBMISSION_RECOVERED');
+ }else if(step==='withdraw'){
+  await submission(context);
+  const response=await request(context,'/api/market/services/'+state.submissionId,{token:b.tokens.human,body:{action:'withdraw'}});
+  must(response.status===200&&response.value.withdrawn===true,'SERVICE_WITHDRAWAL_UNCONFIRMED');
+  const withdrawn=await submission(context);must(withdrawn.status==='withdrawn','SERVICE_WITHDRAWAL_UNCONFIRMED');checks.push('OWN_SYNTHETIC_SERVICE_WITHDRAWN_ORDERS_PRESERVED');
  }else if(['verify-control','approve','activate'].includes(step)){
   const current=await submission(context);
   const body={submissionId:state.submissionId,action:{'verify-control':'verify-http',approve:'approve',activate:'activate'}[step]};
@@ -140,6 +189,7 @@ async function action(context,step){
     must(order.phase==='awaiting-payment'&&!order.attemptId&&!order.fileDelivery&&!order.delivery,'UNPAID_ORDER_WAS_MUTATED');state.order=order;checks.push('UNPAID_CLAIM_AND_FILE_PREPARATION_REJECTED');
    }
   }
+ }else if(step==='catalog-check'){await catalogCheck(context);
  }else if(step==='status'){checks.push('READ_ONLY_STATUS');}
  state.completedSteps??=[];if(!state.completedSteps.includes(step))state.completedSteps.push(step);await save(context.stateFile,state);
 }
@@ -184,7 +234,7 @@ async function main(){
   must(digest(await readFile(accountsFile))===context.credentialsDigest,'BASELINE_CREDENTIALS_CHANGED');
   const evidence={status:'PASS',category:'Hosted synthetic Preview H2/H3 through operator protection bypass',step,candidate:bazaar.candidate,deploymentId:bazaar.deploymentId,
    requests,checks,networkUsed,accountsReused:2,newAccounts:0,serviceId:service.card.id,cardHash:service.cardHash,amount:service.card.payment.amount,asset:'USDC',network:'stellar:testnet',
-   operationId:context.state.operationId,realPayments:0,providerExecutions:0,filesUploaded:0,productionPublished:false,publicExternalClientValidated:false,temporaryFilesRemoved:temporary.size===0};
+   operationId:context.state.operationId,effectiveConfiguration:context.state.effectiveConfiguration,...(context.catalogEvidence?{catalogHistory:context.catalogEvidence}:{}),realPayments:0,providerExecutions:0,filesUploaded:0,productionPublished:false,publicExternalClientValidated:false,temporaryFilesRemoved:temporary.size===0};
   await save(evidenceFile,{version:1,purpose:'bazaar-h2-h3-nonpayment-evidence',candidate:bazaar.candidate,deploymentId:bazaar.deploymentId,cardHash:service.cardHash,operationId:context.state.operationId,steps:[...(priorEvidence?.steps??[]),evidence]});return evidence;
  }catch(error){return {status:'FAIL',stage:steps.includes(stage)||['configuration','local-prepare'].includes(stage)?stage:'configuration',code:safeCodes.has(error.safeCode)?error.safeCode:'H2_H3_PREPARATION_UNCONFIRMED',networkUsed,realPayments:0,providerExecutions:0,productionPublished:false};}
  finally{for(const path of temporary)try{await unlink(path);temporary.delete(path);}catch{}}

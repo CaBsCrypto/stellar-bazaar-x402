@@ -1,0 +1,645 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-10T23:03:20.074Z",
+  "applicationCandidate": "4f250cd175832634b4abb2abb3528e4cd7786cee",
+  "deploymentId": "dpl_HtP5qLv2yHbFJxVgukQqBqAN95YC",
+  "access": "Protected synthetic preview through operator transport; not public external-client acceptance",
+  "bazaarOrigin": "https://stellar-bazaar-x402-q2cfuej1c-cabscryptocontacto-6028s-projects.vercel.app",
+  "namespaceIsolation": "Same synthetic family as the original two-account baseline; production not used",
+  "provider": {
+    "origin": "https://guionista-bazaar-pilot-b170175663f4.vercel.app",
+    "currentDeploymentId": "dpl_AqwnXsrZK2c7AfHRYjHiDo4nQ4J7",
+    "sourceManifestSha256": "a24d30ba3c90e9844ee387e0b0280dc11277df90d27448d0e1ee2ef694f51b5d",
+    "sourceFiles": 12,
+    "sourceBytes": 116891,
+    "separateInfrastructure": true,
+    "gitRepositoryRequired": false,
+    "delivery": "deterministic algorithmic text; no generated video",
+    "controlProof": "fresh HTTP well-known challenge verified by preview operator"
+  },
+  "initialService": {
+    "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+    "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+    "steps": [
+      {
+        "status": "PASS",
+        "step": "grant",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "HUMAN_SUBMISSION_GRANT"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "submit",
+        "requests": 6,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "FROZEN_PROVIDER_SUBMISSION"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "verify-control",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "HTTPS_CONTROL_VERIFIED"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "approve",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "EXPLICIT_MANUAL_APPROVAL"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "activate",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SERVICE_ACTIVATED"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "order",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "BOUND_UNPAID_ORDER"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "inspect402",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "UNSIGNED_HTTP_402_AND_FROZEN_TERMS"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "reject-unpaid",
+        "requests": 9,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "UNPAID_CLAIM_AND_FILE_PREPARATION_REJECTED"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "catalog-check",
+        "requests": 14,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "ANONYMOUS_HTTP_AND_AUTHENTICATED_MCP_CATALOG_MATCH",
+          "AUTHENTICATED_CATALOG_QUERY_RECORDED_ONCE",
+          "QUERY_REPLAY_PRESERVES_ORIGINAL_TIMESTAMP",
+          "BUYER_AND_SELLER_QUERY_HISTORY_ISOLATED"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true,
+        "catalogHistory": {
+          "anonymousAndAuthenticatedCardMatch": true,
+          "authenticatedQueryRegisteredOnce": true,
+          "replayPreservedOriginalQuery": true,
+          "sellerHistoryIsolated": true,
+          "buyerHistoryBefore": 1,
+          "buyerHistoryAfter": 2,
+          "buyerHistoryAfterReplay": 2,
+          "sellerHistoryBefore": 0,
+          "sellerHistoryAfter": 0
+        }
+      },
+      {
+        "status": "PASS",
+        "step": "withdraw",
+        "requests": 8,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "OWN_SYNTHETIC_SERVICE_WITHDRAWN_ORDERS_PRESERVED"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "order-read",
+        "requests": 6,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "EXISTING_ORDER_READ"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-v1",
+        "cardHash": "5d4a56aef2578d718501a45d1782008a688eb8b49f650b441193256d4a008b02",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "fed23024-6787-4736-bd7d-cb294a816eb1",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      }
+    ],
+    "withdrawn": true,
+    "existingOrderReadAfterWithdrawal": true
+  },
+  "preparedPurchase": {
+    "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+    "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+    "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+    "payer": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+    "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+    "amount": "0.01",
+    "assetIdentity": {
+      "kind": "stellar-classic-credit",
+      "network": "stellar:testnet",
+      "code": "USDC",
+      "issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      "sacContract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+    },
+    "feeBps": 0,
+    "approval": "PENDING_SEPARATE_HUMAN_AUTHORIZATION",
+    "steps": [
+      {
+        "status": "PASS",
+        "step": "submit",
+        "requests": 6,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "FROZEN_PROVIDER_SUBMISSION"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+        "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "verify-control",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "HTTPS_CONTROL_VERIFIED"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+        "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "approve",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "EXPLICIT_MANUAL_APPROVAL"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+        "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "activate",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "SERVICE_ACTIVATED"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+        "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "order",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "BOUND_UNPAID_ORDER"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+        "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "inspect402",
+        "requests": 7,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "UNSIGNED_HTTP_402_AND_FROZEN_TERMS"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+        "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true
+      },
+      {
+        "status": "PASS",
+        "step": "catalog-check",
+        "requests": 14,
+        "checks": [
+          "MCP_NAMESPACE_AND_TWO_ACCOUNT_IDENTITIES",
+          "SANITIZED_RUNTIME_CONFIGURATION",
+          "ANONYMOUS_HTTP_AND_AUTHENTICATED_MCP_CATALOG_MATCH",
+          "AUTHENTICATED_CATALOG_QUERY_RECORDED_ONCE",
+          "QUERY_REPLAY_PRESERVES_ORIGINAL_TIMESTAMP",
+          "BUYER_AND_SELLER_QUERY_HISTORY_ISOLATED"
+        ],
+        "accountsReused": 2,
+        "newAccounts": 0,
+        "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+        "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+        "amount": "0.01",
+        "asset": "USDC",
+        "network": "stellar:testnet",
+        "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+        "realPayments": 0,
+        "providerExecutions": 0,
+        "filesUploaded": 0,
+        "productionPublished": false,
+        "publicExternalClientValidated": false,
+        "temporaryFilesRemoved": true,
+        "catalogHistory": {
+          "anonymousAndAuthenticatedCardMatch": true,
+          "authenticatedQueryRegisteredOnce": true,
+          "replayPreservedOriginalQuery": true,
+          "sellerHistoryIsolated": true,
+          "buyerHistoryBefore": 2,
+          "buyerHistoryAfter": 3,
+          "buyerHistoryAfterReplay": 3,
+          "sellerHistoryBefore": 0,
+          "sellerHistoryAfter": 0
+        }
+      }
+    ]
+  },
+  "effectiveConfiguration": {
+    "checks": {
+      "publicDemo": true,
+      "workspacesEnabled": true,
+      "marketplaceEnabled": true,
+      "publicAdmission": true,
+      "newAdmissionsOpen": true,
+      "workspaceRedisBackend": true,
+      "workspaceRedisUrl": true,
+      "workspaceRedisToken": true,
+      "workspaceNamespace": true,
+      "marketNamespace": true,
+      "reviewRedisBackend": true,
+      "reviewRedisUrl": true,
+      "reviewRedisToken": true,
+      "reviewNamespace": true,
+      "namespacesIndependent": true,
+      "namespaceFamilyMatches": true,
+      "namespaceStageMatches": true,
+      "publicOrigin": true,
+      "providerIntakeEnabled": true,
+      "reviewSecret": true,
+      "manualOperator": true,
+      "guardianCronCredential": true,
+      "guardianCronMatchesOperator": true,
+      "purchasesEnabled": true,
+      "x402Enabled": true,
+      "testnetFacilitator": true,
+      "facilitatorCredential": true,
+      "testnetRpc": true,
+      "noServerPayer": true,
+      "r2Bucket": true,
+      "r2Region": true,
+      "r2Endpoint": true,
+      "r2AccessKey": true,
+      "r2SecretKey": true,
+      "fileNamespace": true,
+      "privateFilesEnabled": true,
+      "fileLifecycleBackstop": true
+    },
+    "features": {
+      "registration": {
+        "enabled": true,
+        "reason": null
+      },
+      "catalogue": {
+        "enabled": true,
+        "reason": null
+      },
+      "serviceSubmission": {
+        "enabled": true,
+        "reason": null
+      },
+      "moderation": {
+        "enabled": true,
+        "reason": null
+      },
+      "guardianAutomation": {
+        "enabled": false,
+        "reason": "GUARDIAN_SCHEDULER_PRODUCTION_ONLY"
+      },
+      "purchases": {
+        "enabled": true,
+        "reason": null
+      },
+      "privateFiles": {
+        "enabled": true,
+        "reason": null
+      }
+    },
+    "r2Configured": true,
+    "guardianCron": {
+      "credentialConfigured": true,
+      "operatorHashMatches": true,
+      "productionDeployment": false,
+      "scheduledExecutionValidated": false
+    }
+  },
+  "workerProbe": {
+    "status": "PASS",
+    "access": "native MCP SDK with pinned private preview transport",
+    "polls": 1,
+    "executed": 0,
+    "stopped": "bound",
+    "mcpRequests": 4,
+    "observedOrders": 1,
+    "providerExecutions": 0,
+    "realPayments": 0,
+    "productionPublished": false
+  },
+  "localValidation": {
+    "supervisorScenarios": 31,
+    "onePurchaseScenarios": 20,
+    "externalRequests": 0,
+    "actualPayments": 0,
+    "realWalletKeysRead": false,
+    "helperHashes": {
+      "examples/seller-marketplace-supervisor.mjs": "c92d0ff1f93ff6a07bf9450ec4cdf8862ec722147641b9ae687d80745b26ea4d",
+      "scripts/run-hackathon-one-purchase.mjs": "0e156e03c40a9170a07cdb0b4b3355927ce40ece888e31268819b81543336acb",
+      "scripts/prepare-demo-h2-h3.mjs": "4432a379c8069ae1ff76a31506e4f5eb2bc10de76f7fb42921c72f3d242c9115"
+    }
+  },
+  "walletObservation": {
+    "at": "2026-10-10T22:48:11Z",
+    "network": "stellar:testnet",
+    "seller": {
+      "wallet": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "officialUsdcBalance": "0.0400000",
+      "trustlineAuthorized": true
+    },
+    "buyer": {
+      "wallet": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "officialUsdcBalance": "99.9600000",
+      "trustlineAuthorized": true
+    },
+    "legacyDestinationOfficialTrustline": false,
+    "signerAvailability": "encrypted packet exists; keys not opened or checked yet",
+    "newFaucetRequests": 0
+  },
+  "browser": {
+    "catalogueRefresh": "ERROR_VISIBLE",
+    "anonymousCatalogHttpStatus": 302,
+    "redirectOrigin": "https://vercel.com",
+    "anonymousProbeAt": "2026-10-10T23:02:25.639Z",
+    "interpretation": "Vercel protection requires access; browser catalogue acceptance remains pending",
+    "publicExternalClientValidated": false
+  },
+  "scopeTotals": {
+    "h2h3RequestAttempts": 140,
+    "workerMcpRequests": 4,
+    "newAccounts": 0,
+    "newOrders": 2,
+    "actualPayments": 0,
+    "providerExecutions": 0,
+    "filesUploaded": 0,
+    "productionPublished": false
+  },
+  "remaining": [
+    "Explicit authorization of one 0.01 USDC Testnet purchase",
+    "Local signer public identity check",
+    "Hosted confirmed payment and one delivery",
+    "Private paid-result viewing, cross-account denial and recovery",
+    "Preview/public browser acceptance",
+    "Production configuration and separate publication authorization",
+    "Paid image/video flow outside this text acceptance"
+  ]
+}

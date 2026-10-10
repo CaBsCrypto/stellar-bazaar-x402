@@ -1,0 +1,62 @@
+# Wallets y comisiones de la demo
+
+Estado del candidato nativo de Bazaar `4f250cd`, documentado el **2026-10-10 UTC**. Este archivo es documentación interna excluida del despliegue; no habilita funciones, publica una versión ni autoriza transacciones.
+
+## Qué paga cada persona ahora
+
+El marketplace nativo anuncia **`feeBps: 0`**. La compra mediante `/api/market/orders/{id}/x402` transfiere el importe completo de USDC Testnet directamente a la wallet del vendedor declarada en la ficha. **La wallet administradora no recibe una comisión en este flujo.**
+
+La ficha revisada fija el destino público del vendedor, el precio y el activo. Cada orden conserva esa ficha y su `cardHash`, además de la wallet pública pagadora elegida por el comprador. El comprador firma en su propio entorno; Bazaar comprueba que la autorización y la transacción coinciden con esa orden. Bazaar no necesita ni almacena las seeds o claves privadas de compradores o vendedores y no recibe primero los fondos para repartirlos después.
+
+La vinculación previa de wallet con una cuenta es **opcional**. El pagador sigue siendo obligatorio e inmutable en cada orden. Las cuentas de comprador y vendedor deben ser distintas para comprar, pero el código actual no exige unicidad global de wallets pagadoras ni impone `payer != destination`. Para demostrar participantes separados usaremos wallets distintas cuando se autorice la prueba; no debemos presentar esa elección de prueba como una restricción ya implementada.
+
+Una dirección pública en la ficha acredita el destino declarado, **no el control de esa wallet**. La prueba HTTP/DNS de control del endpoint acredita control del dominio del servicio. Una no sustituye la otra. El vendedor conserva el control de su propia wallet; demostrarlo requiere una prueba de firma correspondiente, sin entregar la clave privada.
+
+Fuentes del candidato: `lib/mcp-onboarding-server.ts:114` (`feeBps: 0`); `lib/marketplace.ts:38,54,111,118,120` (pagador, ficha, vinculación opcional y separación de cuentas); `lib/marketplace-x402.ts:70,80–83` (un único destino y una transferencia exacta).
+
+## Comisión de Bazaar y comisión de red son diferentes
+
+`areFeesSponsored: true` en el desafío x402 anuncia patrocinio de la **comisión de red** de la operación. No representa una comisión comercial de Bazaar, no reparte USDC con la administradora y no cubre el consumo de Vercel, Redis/Upstash o R2.
+
+El reparto **99% al vendedor / 1% a Bazaar** permanece como diseño separado en `lib/fee-split-design.ts` y `contracts/fee-split-router`. La política declara `status: "design-only"`. La dirección pública propuesta de tesorería es:
+
+```text
+GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ
+```
+
+No se confirmó aquí su control ni se habilitó como receptor del marketplace. **No existe una variable de entorno que active ese reparto en el protocolo nativo actual.** El servidor y el cliente admiten una llamada directa `transfer`; una invocación del router con dos transferencias requiere un mecanismo compatible, verificación del facilitador, firma y conciliación de ambos destinos.
+
+Activarlo exige publicar y revisar la política, integrar el protocolo y sus recibos, y probar el reparto antes de otra autorización de compra. La nueva política debe estar incluida en una ficha/versionado revisados y su nuevo `cardHash`; no se cambian condiciones de órdenes existentes. El precio bruto podría mantenerse si el vendedor acepta el neto correspondiente. El diseño del 1% rechaza importes cuyo reparto necesite redondeo. No se ejecutó este reparto en la preparación de la demo.
+
+## Activo y preparación de una wallet
+
+La identidad admitida es exactamente:
+
+| Campo | Valor |
+|---|---|
+| Red | `stellar:testnet` |
+| Activo | `USDC` |
+| Emisor oficial Testnet | `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5` |
+| Contrato SAC | `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA` |
+
+El vendedor debe tener la **trustline autorizada de ese emisor** y capacidad para recibir el importe. Una trustline a otro emisor, aunque también se llame USDC, no sirve. El comprador necesita ese USDC Testnet y acceso local a su firmante. Una consulta pública de saldo o trustline no demuestra que el firmante esté disponible.
+
+La [guía oficial Stellar para x402](https://developers.stellar.org/docs/build/agentic-payments/x402/quickstart-guide) explica la preparación de la wallet Testnet y la trustline. [Stellar Lab](https://lab.stellar.org/) permite preparar las operaciones de Testnet. Las seeds se generan y conservan en el entorno del participante: no se envían a Bazaar, al operador, al historial ni a URLs o logs.
+
+Para wallets nuevas, el [faucet de Circle](https://faucet.circle.com/) declara **20 USDC Stellar Testnet por solicitud cada dos horas**. Es una opción de preparación, no una prueba de que una solicitud se haya completado.
+
+[Sozu Faucet](https://faucet.sozu.capital/) respondió HTTP 200 en su raíz aproximadamente a las **22:47 UTC del 2026-10-10**. Se identificó `@sozu/faucet` versión **0.2.0** en el registro npm, sin instalarlo. Esa disponibilidad no garantiza un claim ni acredita una entrega de fondos. No se solicitó financiación nueva como parte de esta documentación.
+
+## Wallets históricas comprobadas
+
+Las siguientes observaciones públicas de Horizon Testnet fueron comunicadas por el operador. No se leyeron claves privadas ni se ejecutaron pagos en esta preparación.
+
+| Wallet pública | Observación del 2026-10-10 UTC | USDC del emisor oficial | Trustline autorizada |
+|---|---|---:|---|
+| A: `GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C` | `22:48:11.422Z`, HTTP 200 | `0.0400000` | Sí |
+| B: `GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU` | `22:48:11.567Z`, HTTP 200 | `99.9600000` | Sí |
+| Destino del catálogo legado: `GBYXQUSY7WA3DUXZSANGQ3HMER2EBMOK5IYPUJV4YY2UH7QS736J62LB` | `22:48:11.711Z`, HTTP 200 | No se encontró trustline oficial | No disponible para este activo |
+
+Los saldos observados en A y B permiten preparar la prueba sin necesitar un nuevo faucet, **si se confirma el acceso y control local de los firmantes correspondientes**. Los balances pueden cambiar; la validación previa a una transacción comprueba sus condiciones exactas. La dirección del catálogo legado no debe reutilizarse suponiendo que ya puede recibir el USDC oficial.
+
+Las autorizaciones de las compras históricas ya se consumieron. Estos datos no autorizan otra compra, cambio de destinatario, activación del reparto ni publicación de producción. La siguiente transacción necesita servicio, cantidad, importe y participantes definidos y autorizados.

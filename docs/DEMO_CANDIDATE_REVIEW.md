@@ -1,6 +1,22 @@
-# Candidato revisable de la demo — 8 de octubre de 2026
+# Candidato revisable de la demo — 10 de octubre de 2026
 
-## Fuente y despliegues
+## Corte actual del candidato
+
+Código alojado: `4f250cd175832634b4abb2abb3528e4cd7786cee`, preview `dpl_HtP5qLv2yHbFJxVgukQqBqAN95YC`, MCP 1.0.0 con 34 herramientas. La URL es `https://stellar-bazaar-x402-q2cfuej1c-cabscryptocontacto-6028s-projects.vercel.app`. Está protegida por Vercel y las comprobaciones usan transporte privado del operador; no acreditan acceso público desde el QR. Producción conserva la versión anterior.
+
+La publicación sintética de un servicio externo de texto pasó presentación por MCP, desafío HTTPS, revisión manual, activación, orden y HTTP 402. El propietario no pudo reclamar ni preparar archivos para la orden impagada. El catálogo HTTP anónimo y MCP autenticado mostraron la misma ficha; una consulta quedó registrada una sola vez en el comprador, un replay conservó su fecha y la cuenta vendedora no obtuvo ese historial. Redis y R2 están configurados en el runtime; el cron de preview está explícitamente deshabilitado.
+
+El proveedor se desplegó desde una carpeta aislada y un manifiesto de fuente, sin importar su generador en Bazaar ni exigir un repositorio Git para registrarlo. Entrega texto algorítmico determinista; no genera un video. El supervisor local preparado pasó 31 escenarios con dobles y persistencia cifrada, pero todavía no está en ejecución. El endpoint de Vercel por sí solo no consulta las órdenes.
+
+El marketplace nativo cobra `feeBps: 0`: el importe va directamente a la wallet del proveedor. El reparto del 1 % de Bazaar sigue como diseño separado. [Wallets y comisiones](DEMO_WALLET_AND_FEES.md) registra los saldos públicos y el activo oficial de Testnet. Las wallets históricas A/B siguen con trustline autorizada y fondos; la del anuncio anterior GBYX…J62LB no tiene esa trustline. Se prepara una ficha nueva para usar la receptora A, sin cambiar condiciones de la orden anterior ni usar autorizaciones ya consumidas.
+
+La ficha nueva `guionista-bazaar-pilot-text-funded-v1` está activada, su HTTP 402 coincide con las condiciones congeladas y el agente vendedor vio su única orden impagada con el SDK MCP. La ficha anterior se retiró, y su orden siguió siendo legible por el comprador. El catálogo y la deduplicación del historial también pasaron con la ficha nueva. Evidencia saneada: [validación de texto en preview](evidence/hackathon-text-preview-2026-10-10.json).
+
+La compra sigue pendiente de autorización específica y firma local; no hubo un pago nuevo. La [propuesta de compra](HACKATHON_NEXT_PURCHASE.md) fija una compra de `0.01 USDC Testnet`, wallets, ficha y orden. El adaptador local pasó 20 escenarios, incluida recuperación después de pérdida de respuesta y aislamiento de objetos mutados durante un callback. No se cargó el firmante real. La revisión independiente del adaptador quedó incompleta al terminar la capacidad del revisor; root revisó el código y reparó ese aislamiento, sin presentarlo como una aprobación independiente completa.
+
+El navegador interno aún muestra error de catálogo. Una consulta anónima confirmó HTTP 302 hacia Vercel: la preview está protegida. Las consultas de operador pasan, pero no se declara aceptación del navegador ni de un cliente público. Después faltan entrega alojada, visualización, recuperación, aislamiento de la orden pagada y aprobación de publicación. Las pruebas de R2 anteriores no sustituyen una entrega de imagen/video pagada. Las secciones siguientes conservan el contexto y evidencia históricos del 8 y 9 de octubre.
+
+## Fuente y despliegues — corte histórico del 8 de octubre
 
 - Commit de código final: `094ca7e7a5a68bd6a8998c3ce7cefb6935057bf5`, rama local `codex/bazaar-open-release`. La implementación completa se fijó en `520ea2a835c96bece3317ae96a40a1c4e343d4ea`; el único cambio de aplicación posterior es la negociación GET de MCP y su protección de cuotas.
 - Repositorio de origen: `https://github.com/CaBsCrypto/stellar-bazaar-x402.git`. El commit se conservó localmente; no se hizo push ni merge.
