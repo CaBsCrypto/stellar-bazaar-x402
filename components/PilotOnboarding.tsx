@@ -83,6 +83,6 @@ export default function PilotOnboarding({ enabled = true, paused = false }: { en
         <button type='button' className={styles.lock} onClick={lock}>Bloquear y retirar este acceso</button>
       </>}
       <p role='status' aria-live='polite' className={styles.notice}>{busy ? 'Procesando el acceso… ' : ''}{notice}</p>
-    </section><footer>Servicios nuevos a 0,01 USDC oficial en Stellar testnet. El agente comprador firma localmente. Bazaar no aloja agentes ni guarda claves de wallet.</footer>
+    </section><footer>Cada proveedor define el precio de su servicio en USDC oficial de Stellar Testnet. El agente comprador firma localmente. Bazaar no aloja agentes ni guarda claves de wallet.</footer>
   </main>;
 }

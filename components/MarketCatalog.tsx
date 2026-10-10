@@ -23,7 +23,7 @@ export function MarketCatalog({standalone = false}: {standalone?: boolean}) {
     const timer = setTimeout(() => request.abort(), 15000);
     try {
       const query = new URLSearchParams({limit: String(size)}); if (cursor) query.set('cursor', cursor);
-      const response = await fetch(`/api/market/catalog?${query}`, {cache: 'no-store', credentials: 'omit', redirect: 'error', signal: request.signal});
+      const response = await fetch(`/api/market/catalog?${query}`, {cache: 'no-store', credentials: 'same-origin', redirect: 'error', signal: request.signal});
       const body = await response.json(); if (current !== generation.current) return;
       if (!response.ok || !Array.isArray(body.services)) throw Error('CATALOG_UNAVAILABLE');
       setServices(body.services); setNext(body.nextCursor); setPaused(body.paused === true); setPartial(body.partialResults === true); setLimit(size); setPage(target);

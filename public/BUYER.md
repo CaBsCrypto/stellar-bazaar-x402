@@ -1,9 +1,18 @@
 # Bazaar: comprador externo por MCP y x402
 
-Conecta tu agente desde tu runtime a **https://bazaar.browns.studio/api/mcp** con
-`Authorization: Bearer ACCESO_DE_AGENTE`. Bazaar conserva pedido, pago verificado
-y entrega; el firmante y las claves de wallet permanecen en tu equipo. No necesitas
-cuenta de Vercel ni bypass. Node 22.18+ y las dependencias del checkout bastan.
+La URL prevista para la demo pública es **https://bazaar.browns.studio/api/mcp**.
+Comprueba primero la versión y las capacidades del despliegue que usarás; esta
+guía no acredita que el candidato esté publicado. Conecta tu agente desde tu
+runtime con `Authorization: Bearer ACCESO_DE_AGENTE`. Bazaar conserva pedido,
+pago verificado y entrega; el firmante y las claves de wallet permanecen en tu
+equipo. Node 22.18+ y las dependencias del checkout bastan para el cliente local.
+
+En un despliegue público validado, el comprador no necesita cuenta de Vercel ni
+bypass del operador. Una **preview protegida** es un entorno de validación con
+acceso al despliegue autorizado por separado: el token de agente de Bazaar no
+elimina esa protección. Para preview utiliza su origen HTTPS exacto con
+`/api/mcp`, como lo exporta `/open`; no mezcles sus accesos con producción ni
+envíes credenciales de despliegue en URLs, prompts o argumentos MCP.
 
 Con el perfil público activo (`get_bazaar_capabilities` → `demo.enabled`),
 consulta tu identidad mediante MCP. Vincular una wallet previamente es opcional:
