@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "status": "PASS_PROTECTED_PREVIEW_TEXT",
+  "recordedAt": "2026-10-10T23:20:51.157Z",
+  "environment": {
+    "applicationCommit": "4f250cd175832634b4abb2abb3528e4cd7786cee",
+    "deploymentId": "dpl_HtP5qLv2yHbFJxVgukQqBqAN95YC",
+    "origin": "https://stellar-bazaar-x402-q2cfuej1c-cabscryptocontacto-6028s-projects.vercel.app",
+    "network": "stellar:testnet",
+    "protection": "Vercel preview operator transport",
+    "productionPublished": false
+  },
+  "service": {
+    "id": "guionista-bazaar-pilot-text-funded-v1",
+    "name": "Guion breve algorítmico",
+    "modality": "text",
+    "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+    "providerOrigin": "https://guionista-bazaar-pilot-b170175663f4.vercel.app",
+    "execution": "external seller agent using native MCP SDK and separately hosted HTTP runtime",
+    "bazaarFeeBps": 0
+  },
+  "authorization": {
+    "singlePurchaseApproved": true,
+    "unsentContinuationAndLocalCapApproved": true,
+    "maximumAtomic": "100000",
+    "localSponsoredFeeSimulationCapStroops": 1000000,
+    "capMeaning": "Local proposed transaction and simulation guard; does not configure a Bazaar budget or enforce the managed facilitator settlement fee."
+  },
+  "payment": {
+    "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+    "status": "CONFIRMED",
+    "amountUSDC": "0.01",
+    "transactionHash": "15d976c56f86bf8b104f7dbaa9d9b803d773ec3b61811eace8436d1e521812d0",
+    "paymentVerifiedAt": "2026-10-10T23:16:45.875Z",
+    "marketRequests": 1,
+    "rpcRequests": 3,
+    "initialConsumedGatePreserved": true,
+    "continuationGateConsumed": true,
+    "reservations": 1,
+    "signerStarts": 1,
+    "paymentStarts": 1,
+    "additionalPayments": 0,
+    "preflightEvidence": "hackathon-payment-preflight-2026-10-10.json"
+  },
+  "execution": {
+    "phase": "delivered",
+    "attemptId": "33c8eda7-ad69-411d-a7b5-1c5462efbf50",
+    "providerExecutions": 1,
+    "mcpRequests": 10,
+    "outputCharacters": 484
+  },
+  "delivery": {
+    "status": "PASS",
+    "sourceSha": "4f250cd175832634b4abb2abb3528e4cd7786cee",
+    "origin": "https://stellar-bazaar-x402-q2cfuej1c-cabscryptocontacto-6028s-projects.vercel.app",
+    "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+    "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+    "phase": "delivered",
+    "transactionHash": "15d976c56f86bf8b104f7dbaa9d9b803d773ec3b61811eace8436d1e521812d0",
+    "paymentVerifiedAt": "2026-10-10T23:16:45.875Z",
+    "payer": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+    "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+    "amount": "0.01",
+    "deliveryReference": "bazaar-order:7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+    "deliverySha256": "d9c2535f4f2769c697127c58fadcc0100554c5e40a97bf25a219e66b84cf268b",
+    "textCharacters": 484,
+    "expiresAt": "2026-10-17T22:58:39.021Z",
+    "buyerListPerspective": "purchase",
+    "queryHistoryCount": 3,
+    "mcpRequests": 7,
+    "additionalSignatures": 0,
+    "additionalPayments": 0,
+    "providerExecutions": 0,
+    "productionPublished": false
+  },
+  "publicChainVerification": {
+    "status": "PASS",
+    "observedAt": "2026-10-10T23:18:17.383Z",
+    "network": "stellar:testnet",
+    "transactionHash": "15d976c56f86bf8b104f7dbaa9d9b803d773ec3b61811eace8436d1e521812d0",
+    "innerTransactionHash": "82d3e5270627dabba15f76579b09bfe4dbf490a53a3f63afd6ed582f00faced2",
+    "ledger": 5130123,
+    "feeBump": true,
+    "payer": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+    "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+    "assetContract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+    "amountAtomic": "100000",
+    "amountUSDC": "0.01",
+    "signatureVerified": true,
+    "feePayer": "GA6THKUY2XJZOBRFMEQMMEADSCQLCZ2QMQWAWMMDXBTE7SARKAXVH7TL",
+    "declaredFeeStroops": "33370",
+    "reportedFeeChargedStroops": "23169",
+    "balances": [
+      {
+        "address": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+        "usdc": "99.9500000",
+        "xlm": "9999.9999700"
+      },
+      {
+        "address": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+        "usdc": "0.0500000",
+        "xlm": "9999.9999900"
+      }
+    ],
+    "submissions": 0,
+    "walletPrivateKeysRead": 0
+  },
+  "privacy": {
+    "status": "PASS",
+    "observedAt": "2026-10-10T23:19:18.666Z",
+    "origin": "https://stellar-bazaar-x402-q2cfuej1c-cabscryptocontacto-6028s-projects.vercel.app",
+    "applicationCommit": "4f250cd175832634b4abb2abb3528e4cd7786cee",
+    "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+    "transactionHash": "15d976c56f86bf8b104f7dbaa9d9b803d773ec3b61811eace8436d1e521812d0",
+    "buyerQueryCount": 3,
+    "sellerQueryCount": 0,
+    "buyerQueriesAbsentFromSellerHistory": true,
+    "sellerPerspective": "sale",
+    "outsider": {
+      "orderReadStatus": 404,
+      "orderAbsentFromList": true,
+      "buyerQueriesAbsent": true,
+      "queryCount": 0,
+      "mcpRequests": 6
+    },
+    "mcpRequests": 16,
+    "syntheticAccountsCreated": 1,
+    "additionalPayments": 0,
+    "providerExecutions": 0,
+    "productionPublished": false
+  },
+  "recovery": {
+    "buyer": {
+      "newProcess": true,
+      "phase": "paid",
+      "orderPhase": "delivered",
+      "sameTransaction": true,
+      "marketRequests": 1,
+      "rpcRequests": 0,
+      "signatures": 0,
+      "paymentSubmissions": 0
+    },
+    "seller": {
+      "newProcess": true,
+      "phase": "delivered",
+      "sameAttemptAndDeliveryHash": true,
+      "mcpRequests": 6,
+      "providerExecutions": 0,
+      "paymentSubmissions": 0
+    },
+    "sealedBuyerJournal": {
+      "snapshots": 16,
+      "signerStarts": 1,
+      "paymentStarts": 1,
+      "reservations": 1
+    }
+  },
+  "limits": {
+    "contentExpiresAt": "2026-10-17T22:58:39.021Z",
+    "retentionDays": 7,
+    "readsDoNotExtendExpiration": true,
+    "r2UsedForThisDelivery": false
+  },
+  "acceptanceLimits": {
+    "browserVisualizationValidated": false,
+    "unprotectedExternalQrFlowValidated": false,
+    "imageOrVideoDeliveryValidated": false,
+    "productionValidated": false,
+    "continuousSellerWorkerStarted": false
+  },
+  "privacyOfEvidence": {
+    "containsPrivateKeys": false,
+    "containsAccessCredentials": false,
+    "containsSignedPaymentPayload": false,
+    "containsPrivatePromptOrResult": false
+  }
+}

@@ -8,7 +8,7 @@ El marketplace nativo anuncia **`feeBps: 0`**. La compra mediante `/api/market/o
 
 La ficha revisada fija el destino público del vendedor, el precio y el activo. Cada orden conserva esa ficha y su `cardHash`, además de la wallet pública pagadora elegida por el comprador. El comprador firma en su propio entorno; Bazaar comprueba que la autorización y la transacción coinciden con esa orden. Bazaar no necesita ni almacena las seeds o claves privadas de compradores o vendedores y no recibe primero los fondos para repartirlos después.
 
-La vinculación previa de wallet con una cuenta es **opcional**. El pagador sigue siendo obligatorio e inmutable en cada orden. Las cuentas de comprador y vendedor deben ser distintas para comprar, pero el código actual no exige unicidad global de wallets pagadoras ni impone `payer != destination`. Para demostrar participantes separados usaremos wallets distintas cuando se autorice la prueba; no debemos presentar esa elección de prueba como una restricción ya implementada.
+La vinculación previa de wallet con una cuenta es **opcional**. El pagador sigue siendo obligatorio e inmutable en cada orden. Las cuentas de comprador y vendedor deben ser distintas para comprar, pero el código actual no exige unicidad global de wallets pagadoras ni impone `payer != destination`. La compra autorizada de esta demo utilizó wallets distintas para demostrar participantes separados; esa elección de prueba no es una restricción ya implementada.
 
 Una dirección pública en la ficha acredita el destino declarado, **no el control de esa wallet**. La prueba HTTP/DNS de control del endpoint acredita control del dominio del servicio. Una no sustituye la otra. El vendedor conserva el control de su propia wallet; demostrarlo requiere una prueba de firma correspondiente, sin entregar la clave privada.
 
@@ -30,7 +30,9 @@ La firma de una auth entry autoriza la invocación concreta —en esta compra, `
 
 El parámetro **`maxSponsoredFeeStroops` es un control del cliente local**: rechaza una simulación o transacción propuesta cuyo fee exceda el valor permitido antes de firmar. No configura un presupuesto de Bazaar, no reserva fondos de su tesorería y no impone un tope a la comisión efectiva de la transacción que el facilitador reconstruya. La comisión real sólo se comprueba en el resultado de liquidación; no debe confundirse con la estimación local.
 
-La preparación de la compra de `0.01 USDC` se detuvo por este control local: la simulación dio `735723 + 100 = 735823` stroops (`0.0735823 XLM` Testnet), frente al límite de `50000`. No hubo firma ni pago. El usuario autorizó esa compra; sigue **pendiente** su autorización adicional para continuar la misma orden con un límite local de `1000000` stroops. Véanse [la orden y su estado](HACKATHON_NEXT_PURCHASE.md) y [la evidencia de preparación](evidence/hackathon-payment-preflight-2026-10-10.json).
+La primera preparación de la compra de `0.01 USDC` se detuvo por este control local: la simulación dio `735723 + 100 = 735823` stroops (`0.0735823 XLM` Testnet), frente al límite de `50000`. Ese intento no firmó ni envió el pago. El usuario autorizó después continuar la misma orden con un límite local de `1000000` stroops (`0.1 XLM` Testnet), y la compra se confirmó y entregó. La [evidencia de preparación](evidence/hackathon-payment-preflight-2026-10-10.json) conserva el fallo anterior; el estado actual se documenta en [la compra confirmada](HACKATHON_NEXT_PURCHASE.md). No queda pendiente esa autorización adicional.
+
+En la liquidación real de la transacción `15d976c56f86bf8b104f7dbaa9d9b803d773ec3b61811eace8436d1e521812d0`, ledger `5130123`, el fee bump declaró `33370` stroops y cobró **`23169` stroops (`0.0023169 XLM` Testnet)**. Lo pagó `GA6THKUY2XJZOBRFMEQMMEADSCQLCZ2QMQWAWMMDXBTE7SARKAXVH7TL`. Los saldos XLM del comprador y vendedor no cambiaron. El precio `0.01 USDC` fue al vendedor y el ingreso comercial de Bazaar fue `0`. La estimación local previa y el fee cobrado son mediciones diferentes. El [informe consolidado](evidence/hackathon-paid-text-preview-2026-10-10.json) conserva la comprobación pública de cadena y los balances posteriores.
 
 El reparto **99% al vendedor / 1% a Bazaar** permanece como diseño separado en `lib/fee-split-design.ts` y `contracts/fee-split-router`. La política declara `status: "design-only"`. La dirección pública propuesta de tesorería es:
 
@@ -63,7 +65,7 @@ Para wallets nuevas, el [faucet de Circle](https://faucet.circle.com/) declara *
 
 ## Wallets históricas comprobadas
 
-Las siguientes observaciones públicas de Horizon Testnet fueron comunicadas por el operador. No se leyeron claves privadas ni se ejecutaron pagos en esta preparación.
+Las siguientes observaciones públicas de Horizon Testnet se tomaron antes de la compra autorizada. Estas consultas no necesitaron claves privadas.
 
 | Wallet pública | Observación del 2026-10-10 UTC | USDC del emisor oficial | Trustline autorizada |
 |---|---|---:|---|
@@ -71,6 +73,6 @@ Las siguientes observaciones públicas de Horizon Testnet fueron comunicadas por
 | B: `GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU` | `22:48:11.567Z`, HTTP 200 | `99.9600000` | Sí |
 | Destino del catálogo legado: `GBYXQUSY7WA3DUXZSANGQ3HMER2EBMOK5IYPUJV4YY2UH7QS736J62LB` | `22:48:11.711Z`, HTTP 200 | No se encontró trustline oficial | No disponible para este activo |
 
-Los saldos observados en A y B permiten preparar la prueba sin necesitar un nuevo faucet, **si se confirma el acceso y control local de los firmantes correspondientes**. Los balances pueden cambiar; la validación previa a una transacción comprueba sus condiciones exactas. La dirección del catálogo legado no debe reutilizarse suponiendo que ya puede recibir el USDC oficial.
+Después de la compra autorizada, A tenía `0.05 USDC` y B `99.95 USDC`. Sus saldos XLM se mantuvieron en `9999.9999900` y `9999.9999700`, respectivamente. El firmante existente de B se utilizó únicamente en el entorno local cifrado; no fue necesario un nuevo faucet. Los balances pueden cambiar; una transacción nueva requiere comprobar sus condiciones exactas. La dirección del catálogo legado no debe reutilizarse suponiendo que ya puede recibir el USDC oficial.
 
-Las autorizaciones de las compras históricas ya se consumieron. Estos datos no autorizan otra compra, cambio de destinatario, activación del reparto ni publicación de producción. La compra nueva definida en [HACKATHON_NEXT_PURCHASE.md](HACKATHON_NEXT_PURCHASE.md) sí cuenta con autorización para `0.01 USDC`; su continuación permanece detenida a la espera de la autorización adicional allí descrita.
+Las autorizaciones históricas y las de la [compra confirmada](HACKATHON_NEXT_PURCHASE.md) ya se consumieron. La compra, entrega de texto, historial privado, recuperación e aislamiento se comprobaron en una preview protegida mediante MCP/HTTP. Estos resultados no acreditan visualización pública en el navegador, imagen/video, entrega R2 ni aceptación de producción. No autorizan otra compra, cambio de destinatario, activación del reparto o publicación de producción.
