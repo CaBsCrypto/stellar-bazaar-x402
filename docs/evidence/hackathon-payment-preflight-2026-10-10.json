@@ -1,0 +1,104 @@
+{
+  "schemaVersion": 1,
+  "recordedDate": "2026-10-10",
+  "purpose": "Document the authorized Testnet purchase preflight and read-only recovery; no payment or delivery acceptance is claimed.",
+  "candidate": {
+    "applicationCommit": "4f250cd175832634b4abb2abb3528e4cd7786cee",
+    "environment": "protected-preview",
+    "origin": "https://stellar-bazaar-x402-q2cfuej1c-cabscryptocontacto-6028s-projects.vercel.app",
+    "deploymentId": "dpl_HtP5qLv2yHbFJxVgukQqBqAN95YC",
+    "productionPublished": false
+  },
+  "purchase": {
+    "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+    "serviceName": "Guion breve algorítmico",
+    "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+    "operationId": "7d646868-a5c1-4b54-8df7-cd8ef21b34ff",
+    "network": "stellar:testnet",
+    "amount": "0.01",
+    "amountAtomic": "100000",
+    "decimals": 7,
+    "assetCode": "USDC",
+    "assetIssuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+    "assetContract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+    "payer": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+    "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+    "bazaarFeeBps": 0,
+    "authorizedPurchases": 1,
+    "authorizedExecutions": 1
+  },
+  "authorization": {
+    "originalPurchaseApprovedByUser": true,
+    "originalSponsoredFeeCapStroops": "50000",
+    "singleUseExecutionGateConsumed": true,
+    "feeCapMeaning": "Local pre-sign simulation guard only; not a Bazaar treasury budget or an enforced cap on the managed facilitator settlement fee.",
+    "additionalApprovalRequested": {
+      "status": "pending",
+      "sameOperationOnly": true,
+      "samePriceAndDestination": true,
+      "requestedSponsoredFeeCapStroops": "1000000",
+      "requestedSponsoredFeeCapXlm": "0.1"
+    }
+  },
+  "boundedAttempt": {
+    "action": "funded-buy",
+    "attemptCount": 1,
+    "localPhase": "authorization-uncertain",
+    "marketRequests": 0,
+    "rpcRequests": 2,
+    "paymentSubmitted": false,
+    "sealedHistoryInspection": {
+      "snapshots": 7,
+      "phases": ["prepared", "challenge-received", "authorization-started", "authorization-uncertain"],
+      "anyHistoricalSigningMaterial": false
+    },
+    "journalArtifactsPresent": {
+      "unsignedTransaction": false,
+      "signedAuthorization": false,
+      "paymentPayload": false,
+      "signature": false
+    }
+  },
+  "readOnlySimulation": {
+    "minResourceFeeStroops": "735723",
+    "baseFeeStroops": "100",
+    "estimatedTotalSponsoredFeeStroops": "735823",
+    "estimatedTotalSponsoredFeeXlm": "0.0735823",
+    "exceedsOriginalLocalCap": true,
+    "feeCharged": false,
+    "paymentSubmitted": false
+  },
+  "readOnlyRecovery": {
+    "action": "funded-recover",
+    "sameOperationId": true,
+    "method": "GET",
+    "marketRequests": 1,
+    "rpcRequests": 0,
+    "orderStatus": "awaiting-payment",
+    "paymentSubmitted": false,
+    "resigned": false
+  },
+  "acceptance": {
+    "paymentVerified": false,
+    "providerExecuted": false,
+    "deliveryVerified": false,
+    "paidHistoryVerified": false,
+    "productionValidated": false,
+    "nextGate": "Additional user approval for the sponsored fee cap on the same order, followed by a controlled continuation preserving the consumed gate and journal."
+  },
+  "localChecks": {
+    "boundedPurchaseScenarios": 31,
+    "nativeBuyerScenarios": 51,
+    "feePolicyScenarios": 21,
+    "externalRequests": 0,
+    "realPayments": 0,
+    "realWalletsRead": 0,
+    "continuationExecuted": false
+  },
+  "privacy": {
+    "containsPrivateKeys": false,
+    "containsAccessCredentials": false,
+    "containsPaymentSignatureOrPayload": false,
+    "containsPrivatePromptOrResult": false
+  }
+}

@@ -18,6 +18,20 @@ Fuentes del candidato: `lib/mcp-onboarding-server.ts:114` (`feeBps: 0`); `lib/ma
 
 `areFeesSponsored: true` en el desafío x402 anuncia patrocinio de la **comisión de red** de la operación. No representa una comisión comercial de Bazaar, no reparte USDC con la administradora y no cubre el consumo de Vercel, Redis/Upstash o R2.
 
+| Concepto en el candidato actual | Quién lo autoriza o cubre |
+|---|---|
+| Precio del servicio en USDC Testnet | El comprador firma con su propia wallet; el importe va al vendedor |
+| Comisión de red en XLM Testnet | El facilitador externo patrocina la liquidación anunciada por x402 |
+| Ingreso comercial de Bazaar | `0`: el reparto con una tesorería no está habilitado |
+
+El runtime fija el facilitador `https://channels.openzeppelin.com/x402/testnet` en `lib/marketplace-x402.ts`. **No hay una wallet de Bazaar configurada para financiar gas en este flujo.** El comprador conserva su firmante y autoriza su transferencia de USDC; el patrocinio de red no permite al operador firmar por las wallets de otras personas. La [guía oficial de pagos x402 de Stellar](https://developers.stellar.org/docs/tools/cli/agent-cli/guides/pay-for-apis-x402) describe la liquidación patrocinada por el facilitador y cómo comprobar sus eventos y comisiones después del pago.
+
+La firma de una auth entry autoriza la invocación concreta —en esta compra, `transfer(from, to, amount)`— y su nonce y vencimiento por ledger. El facilitador puede reconstruir y firmar la transacción que paga la comisión. **La auth entry del comprador no firma un límite de comisión patrocinada.** Esta separación entre autorización y envío está documentada en [Signing Soroban contract invocations](https://developers.stellar.org/docs/build/guides/transactions/signing-soroban-invocations).
+
+El parámetro **`maxSponsoredFeeStroops` es un control del cliente local**: rechaza una simulación o transacción propuesta cuyo fee exceda el valor permitido antes de firmar. No configura un presupuesto de Bazaar, no reserva fondos de su tesorería y no impone un tope a la comisión efectiva de la transacción que el facilitador reconstruya. La comisión real sólo se comprueba en el resultado de liquidación; no debe confundirse con la estimación local.
+
+La preparación de la compra de `0.01 USDC` se detuvo por este control local: la simulación dio `735723 + 100 = 735823` stroops (`0.0735823 XLM` Testnet), frente al límite de `50000`. No hubo firma ni pago. El usuario autorizó esa compra; sigue **pendiente** su autorización adicional para continuar la misma orden con un límite local de `1000000` stroops. Véanse [la orden y su estado](HACKATHON_NEXT_PURCHASE.md) y [la evidencia de preparación](evidence/hackathon-payment-preflight-2026-10-10.json).
+
 El reparto **99% al vendedor / 1% a Bazaar** permanece como diseño separado en `lib/fee-split-design.ts` y `contracts/fee-split-router`. La política declara `status: "design-only"`. La dirección pública propuesta de tesorería es:
 
 ```text
@@ -59,4 +73,4 @@ Las siguientes observaciones públicas de Horizon Testnet fueron comunicadas por
 
 Los saldos observados en A y B permiten preparar la prueba sin necesitar un nuevo faucet, **si se confirma el acceso y control local de los firmantes correspondientes**. Los balances pueden cambiar; la validación previa a una transacción comprueba sus condiciones exactas. La dirección del catálogo legado no debe reutilizarse suponiendo que ya puede recibir el USDC oficial.
 
-Las autorizaciones de las compras históricas ya se consumieron. Estos datos no autorizan otra compra, cambio de destinatario, activación del reparto ni publicación de producción. La siguiente transacción necesita servicio, cantidad, importe y participantes definidos y autorizados.
+Las autorizaciones de las compras históricas ya se consumieron. Estos datos no autorizan otra compra, cambio de destinatario, activación del reparto ni publicación de producción. La compra nueva definida en [HACKATHON_NEXT_PURCHASE.md](HACKATHON_NEXT_PURCHASE.md) sí cuenta con autorización para `0.01 USDC`; su continuación permanece detenida a la espera de la autorización adicional allí descrita.

@@ -61,6 +61,39 @@ export async function runHackathonOnePurchase(input){
  }finally{active.delete(key);}
 }
 
+/** A separately approved continuation is possible only when the first
+ * simulation stopped before any signing material existed. The original gate
+ * and spend reservation remain consumed. The broker must seal a second gate
+ * before this function can move the same operation back to preparation.
+ */
+export async function continueHackathonUnsentPurchase(input){
+ const journal=input.journal,sourceSha=input.sourceSha,continueOnce=input.continueOnce,marketFetch=input.marketFetch,rpcFetch=input.rpcFetch,now=input.now,agentAccess=input.agentAccess;
+ const signer={address:input.signer?.address,signAuthEntry:input.signer?.signAuthEntry?.bind(input.signer)};
+ const intent=structuredClone(input.intent),approval=Object.freeze(structuredClone(input.approval)),priorApproval=Object.freeze(structuredClone(input.priorApproval));
+ const approvalHash=assertApproval(intent,approval,sourceSha),priorApprovalHash=assertApproval(intent,priorApproval,sourceSha);
+ const control=intent.purchaseControl,reservations=control?.reservations;
+ const unsigned=value=>['unsignedTransaction','signedAuthorizationTransaction','signedPayload','paymentSignature','payloadHash','expirationLedger','receipt','transactionHash'].every(key=>!(key in value))&&!value.order?.transactionHash&&!value.order?.paymentVerifiedAt;
+ const noSigningMaterial=unsigned(intent);
+ const unchangedApproval=buyerCanonical({...approval,maxSponsoredFeeStroops:priorApproval.maxSponsoredFeeStroops})===buyerCanonical(priorApproval);
+ const expectedReservation={operationId:intent.operationId,payer:intent.payer,asset:buyerIdentity.sacContract,amount:marketAmountAtomic(intent.card.payment.amount)};
+ if(intent.phase!=='authorization-uncertain'||intent.order?.phase!=='awaiting-payment'||!noSigningMaterial||!unchangedApproval||approval.maxSponsoredFeeStroops<=priorApproval.maxSponsoredFeeStroops||control?.consumed!==true||control.approvalHash!==priorApprovalHash||control.operationId!==intent.operationId||control.sourceSha!==sourceSha||control.continuation||!Array.isArray(reservations)||reservations.length!==1||buyerCanonical(reservations[0])!==buyerCanonical(expectedReservation)||typeof continueOnce!=='function'||typeof journal?.readHistory!=='function'||signer.address!==intent.payer||typeof signer.signAuthEntry!=='function')throw Error('UNSENT_CONTINUATION_DENIED');
+ if(buyerCanonical(await journal.read())!==buyerCanonical(intent))throw Error('SEALED_INTENT_CHANGED');
+ const history=await journal.readHistory();
+ if(!Array.isArray(history)||history.length<2||buyerCanonical(history.at(-1))!==buyerCanonical(intent)||history.some(value=>!unsigned(value)||!['prepared','challenge-received','authorization-started','authorization-uncertain'].includes(value.phase)||value.operationId!==intent.operationId||value.cardHash!==intent.cardHash||value.inputHash!==intent.inputHash||value.payer!==intent.payer||value.origin!==intent.origin||value.purchaseControl?.continuation))throw Error('SIGNING_HISTORY_REQUIRES_RECOVERY');
+ const binding={approvalHash,priorApprovalHash,operationId:intent.operationId,sourceSha,maximumAtomic:approval.maximumAtomic,maxSponsoredFeeStroops:approval.maxSponsoredFeeStroops};
+ const gate=await continueOnce(structuredClone(binding)),returned=structuredClone(gate);delete returned?.consumed;
+ if(gate?.consumed!==true||buyerCanonical(returned)!==buyerCanonical(binding))throw Error('DURABLE_CONTINUATION_GATE_REQUIRED');
+ const sealed=await journal.read(),prior=structuredClone(sealed);delete prior.purchaseControl?.continuation;
+ if(buyerCanonical(prior)!==buyerCanonical(intent)||buyerCanonical(sealed.purchaseControl?.continuation)!==buyerCanonical(gate))throw Error('DURABLE_CONTINUATION_GATE_REQUIRED');
+ sealed.phase='challenge-received';await journal.append(sealed);
+ return await runHackathonOnePurchase({sourceSha,journal,agentAccess,signer,marketFetch,rpcFetch,now,intent:sealed,approval,consumeOnce:async checked=>{
+  if(checked.approvalHash!==approvalHash||checked.operationId!==intent.operationId)throw Error('DURABLE_CONTINUATION_GATE_REQUIRED');return {...checked,consumed:true};
+ },persistSpend:async proposed=>{
+  const current=await journal.read();
+  if(buyerCanonical(proposed)!==buyerCanonical(reservations)||buyerCanonical(current.purchaseControl?.continuation)!==buyerCanonical(gate)||buyerCanonical(current.purchaseControl?.reservations)!==buyerCanonical(reservations))throw Error('EXISTING_SPEND_RESERVATION_CHANGED');
+ }});
+}
+
 /** Explicit same-order GET only; never signs, POSTs, or reopens the once gate. */
 export async function recoverHackathonOnePurchase(input){
  const {sourceSha,journal,agentAccess}=input;const intent=structuredClone(input.intent),approval=Object.freeze(structuredClone(input.approval));assertApproval(intent,approval,sourceSha);

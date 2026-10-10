@@ -6,7 +6,7 @@ import {Address,Keypair,Networks,SorobanDataBuilder,Transaction,xdr} from '@stel
 import {basicNodeSigner} from '@stellar/stellar-sdk/contract';
 import {encodePaymentResponseHeader,decodePaymentSignatureHeader} from '@x402/core/http';
 import {buyerIdentity,buyerProtocol,buyerCanonical,createMarketplaceBuyerIntent,createSealedBuyerJournal,assertBuyerTransfer} from '../examples/marketplace-x402-buyer.mjs';
-import {runHackathonOnePurchase,recoverHackathonOnePurchase} from './run-hackathon-one-purchase.mjs';
+import {runHackathonOnePurchase,recoverHackathonOnePurchase,continueHackathonUnsentPurchase} from './run-hackathon-one-purchase.mjs';
 
 const digest=value=>createHash('sha256').update(buyerCanonical(value)).digest('hex');
 const origin='https://isolated-bazaar-offline.vercel.app',sourceSha='a'.repeat(40),payer=Keypair.fromRawEd25519Seed(Buffer.alloc(32,17)),seller=Keypair.fromRawEd25519Seed(Buffer.alloc(32,18));
@@ -21,7 +21,7 @@ function fixture(){
  const options={intent,approval,sourceSha,journal,agentAccess:'g'.repeat(43),now:()=>clock,consumeOnce:async binding=>{events.push('gate');if(consumed)throw Error('ONCE_GATE_ALREADY_CONSUMED');consumed=true;return {...binding,consumed:true};},persistSpend:async reservations=>{events.push('spend');if(failSpend)throw Error('Synthetic durable write failed');spends.push(structuredClone(reservations));},signer:{address:payer.publicKey(),signAuthEntry:async(...args)=>{events.push('sign');signatures++;assert.equal(spends.length,1);assert.equal(snapshots.at(-1).phase,'signer-started');return basicNodeSigner(payer,Networks.TESTNET).signAuthEntry(...args);}},marketFetch:async(url,init)=>{
   assert.equal(new URL(url).origin,origin);assert.equal(init.redirect,'error');assert.equal(new Headers(init.headers).get('authorization'),'Bearer '+'g'.repeat(43));
   if(init.method==='GET'){reads++;events.push('read');return Response.json({order});}
-  assert.equal(new URL(url).pathname,route);assert.equal(init.body,'{}');payments++;events.push('pay');assert.equal(snapshots.at(-1).phase,'payment-started');const payload=decodePaymentSignatureHeader(new Headers(init.headers).get('payment-signature'));assertBuyerTransfer(payload.payload.transaction,requirements,payer.publicKey());
+  assert.equal(new URL(url).pathname,route);assert.equal(init.body,'{}');payments++;events.push('pay');assert.equal(snapshots.at(-1).phase,'payment-started');const payload=decodePaymentSignatureHeader(new Headers(init.headers).get('payment-signature'));assertBuyerTransfer(payload.payload.transaction,requirements,payer.publicKey(),{maxSponsoredFeeStroops:options.approval.maxSponsoredFeeStroops});
   order={...order,phase:'paid',transactionHash:'b'.repeat(64),paymentVerifiedAt:new Date().toISOString()};if(lost)throw Error('Synthetic private response loss');return Response.json({order,statusUrl:origin+'/api/market/orders/'+intent.operationId},{status:202,headers:{'payment-response':encodePaymentResponseHeader({success:true,payer:intent.payer,transaction:order.transactionHash,network:'stellar:testnet'})}});
  },rpcFetch:async(url,init)=>{
   assert.equal(String(url),'https://soroban-testnet.stellar.org/');assert.equal(init.redirect,'error');assert.ok(consumed);rpcs++;events.push('rpc');const body=JSON.parse(init.body);if(body.method==='getLatestLedger')return Response.json({jsonrpc:'2.0',id:1,result:{sequence:1000}});
@@ -44,6 +44,25 @@ const oversize=fixture();oversize.options.rpcFetch=async()=>new Response('x'.rep
 const mutation=fixture(),originalGate=mutation.options.consumeOnce;
 mutation.options.consumeOnce=async binding=>{mutation.approval.maximumAtomic='99999999';mutation.intent.card.payment.destination=payer.publicKey();mutation.intent.input.topic='Changed after validation';mutation.options.signer.address=seller.publicKey();mutation.options.signer.signAuthEntry=async()=>{throw Error('Mutated signer must not be used');};return originalGate(binding);};
 assert.equal((await runHackathonOnePurchase(mutation.options)).status,'CONFIRMED');assert.equal(mutation.payments,1);assert.equal(mutation.signatures,1);assert.equal((await mutation.journal.read()).card.payment.destination,seller.publicKey());assert.equal(mutation.spends[0][0].amount,'100000');scenarios++;
+
+async function stoppedBeforeSigning(){
+ const f=fixture(),baseAppend=f.journal.append,baseGate=f.options.consumeOnce,baseSpend=f.options.persistSpend,baseRpc=f.options.rpcFetch;let control;
+ f.journal.append=async value=>baseAppend({...structuredClone(value),...(control?{purchaseControl:structuredClone(control)}:{})});
+ f.journal.readHistory=async()=>structuredClone(f.snapshots);
+ f.options.consumeOnce=async binding=>{const gate=await baseGate(binding);control={...gate,reservations:[]};await f.journal.append(await f.journal.read());return gate;};
+ f.options.persistSpend=async reservations=>{await baseSpend(reservations);control.reservations=structuredClone(reservations);await f.journal.append(await f.journal.read());};
+ f.options.rpcFetch=async(url,init)=>{const response=await baseRpc(url,init),body=await response.json();if(JSON.parse(init.body).method==='simulateTransaction'){body.result.minResourceFee='735723';body.result.transactionData=new SorobanDataBuilder().setResourceFee('735723').build().toXDR('base64');}return Response.json(body);};
+ assert.equal((await runHackathonOnePurchase(f.options)).status,'REQUIRES_READ_RECOVERY');assert.equal(f.signatures,0);assert.equal(f.payments,0);assert.equal(f.rpcs,2);
+ const priorApproval=structuredClone(f.approval),approval={...priorApproval,maxSponsoredFeeStroops:1000000};f.options.approval=approval;
+ const options={...f.options,intent:await f.journal.read(),priorApproval,approval,continueOnce:async binding=>{if(control.continuation)throw Error('Consumed continuation');control.continuation={...binding,consumed:true};await f.journal.append(await f.journal.read());return structuredClone(control.continuation);}};
+ return {f,options};
+}
+const resumed=await stoppedBeforeSigning();assert.equal((await continueHackathonUnsentPurchase(resumed.options)).status,'CONFIRMED');assert.equal(resumed.f.signatures,1);assert.equal(resumed.f.payments,1);assert.equal(resumed.f.spends.length,1);assert.equal((await resumed.f.journal.read()).purchaseControl.reservations.length,1);await assert.rejects(continueHackathonUnsentPurchase({...resumed.options,intent:await resumed.f.journal.read()}),/UNSENT_CONTINUATION_DENIED/);scenarios++;
+for(const marker of ['unsignedTransaction','signedAuthorizationTransaction','signedPayload','paymentSignature','expirationLedger','receipt']){const {f,options}=await stoppedBeforeSigning();options.intent[marker]=marker;await assert.rejects(continueHackathonUnsentPurchase(options),/UNSENT_CONTINUATION_DENIED/);assert.equal(f.signatures,0);assert.equal(f.payments,0);scenarios++;}
+const oldSigned=await stoppedBeforeSigning(),originalHistory=oldSigned.f.journal.readHistory;oldSigned.f.journal.readHistory=async()=>{const history=await originalHistory();history[0].phase='signer-started';return history;};await assert.rejects(continueHackathonUnsentPurchase(oldSigned.options),/SIGNING_HISTORY_REQUIRES_RECOVERY/);assert.equal(oldSigned.f.signatures,0);scenarios++;
+const lostGate=await stoppedBeforeSigning();lostGate.options.continueOnce=async binding=>({...binding,consumed:true});await assert.rejects(continueHackathonUnsentPurchase(lostGate.options),/DURABLE_CONTINUATION_GATE_REQUIRED/);assert.equal(lostGate.f.signatures,0);scenarios++;
+const changedReservation=await stoppedBeforeSigning();changedReservation.options.intent.purchaseControl.reservations[0].amount='200000';await assert.rejects(continueHackathonUnsentPurchase(changedReservation.options),/UNSENT_CONTINUATION_DENIED/);assert.equal(changedReservation.f.signatures,0);scenarios++;
+const changedContinuation=await stoppedBeforeSigning();changedContinuation.options.approval.destination=payer.publicKey();await assert.rejects(continueHackathonUnsentPurchase(changedContinuation.options),/EXACT_PURCHASE_APPROVAL/);assert.equal(changedContinuation.f.signatures,0);scenarios++;
 
 // Real local sealed/fsynced journal, synthetic AES key, no DPAPI profile or wallet.
 const directory=await mkdtemp(join(process.cwd(),'.purchase-offline-')),key=randomBytes(32);

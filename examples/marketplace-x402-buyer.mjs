@@ -229,7 +229,10 @@ export function createSealedBuyerJournal({path,seal,unseal}){
  const journal={
   async initialize(intent){if(intent.phase!=='prepared'||intent.signedPayload)throw Error('INITIAL_INTENT_REQUIRED');await writeSnapshot(intent,'wx');journalOperationId=intent.operationId;},
   async append(intent){if(!journalOperationId)await journal.read();if(intent.operationId!==journalOperationId)throw Error('JOURNAL_OPERATION_CONFLICT');await writeSnapshot(intent,'a');},
-  async read(){const raw=await readFile(path,'utf8');if(Buffer.byteLength(raw)>2097152)throw Error('JOURNAL_TOO_LARGE');const line=raw.trim().split('\n').at(-1);if(!line||!/^[A-Za-z0-9+/]+=*$/.test(line))throw Error('JOURNAL_UNCONFIRMED');const intent=JSON.parse(Buffer.from(await unseal(Buffer.from(line,'base64'))).toString('utf8'));validateIntent(intent);journalOperationId=intent.operationId;return intent;}
+  async read(){const raw=await readFile(path,'utf8');if(Buffer.byteLength(raw)>2097152)throw Error('JOURNAL_TOO_LARGE');const line=raw.trim().split('\n').at(-1);if(!line||!/^[A-Za-z0-9+/]+=*$/.test(line))throw Error('JOURNAL_UNCONFIRMED');const intent=JSON.parse(Buffer.from(await unseal(Buffer.from(line,'base64'))).toString('utf8'));validateIntent(intent);journalOperationId=intent.operationId;return intent;},
+  async readHistory(){const raw=await readFile(path,'utf8');if(Buffer.byteLength(raw)>2097152||!raw.endsWith('\n'))throw Error('JOURNAL_UNCONFIRMED');const values=[];
+   for(const line of raw.slice(0,-1).split('\n')){if(!line||!/^[A-Za-z0-9+/]+=*$/.test(line))throw Error('JOURNAL_UNCONFIRMED');const value=JSON.parse(Buffer.from(await unseal(Buffer.from(line,'base64'))).toString('utf8'));validateIntent(value);if(values.length&&value.operationId!==values[0].operationId)throw Error('JOURNAL_OPERATION_CONFLICT');values.push(value);}return values;
+  }
  };return journal;
 }
 
