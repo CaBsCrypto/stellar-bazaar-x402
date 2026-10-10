@@ -7,6 +7,11 @@ workspace agent Bearer. Bazaar stores the order and payment evidence. Your
 participant process calls your own adapter and records its result. Node 22.18+
 and this repository's installed dependencies are required.
 
+Your service source may remain private or use no Git repository at all. Bazaar
+registration does not require a repository URL, source-code access, or access to
+your hosting account. It requires the service's compatible HTTPS endpoint,
+account consent, a control challenge and manual review.
+
 This text kit publishes a new native marketplace service: **a positive provider
 price in USDC, Stellar Testnet, exact x402 v2, text/plain, 1..2000 characters**.
 Set `amount` in `createSellerCard`; the default remains 0.01. Seven decimal places

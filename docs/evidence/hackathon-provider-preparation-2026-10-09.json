@@ -59,13 +59,19 @@
   },
   "previewEvidence": "hackathon-preview-readonly-2026-10-09.json",
   "remaining": [
-    "Identify the provider repository or agree on a reproducible independent source",
     "Fresh provider control challenge and authenticated runtime availability",
     "Seller submission, manual review and explicit activation",
     "A real order and HTTP 402, then separately authorized Testnet payment",
     "Hosted generation, private viewing and recovery",
     "Approved production publication and external public-client acceptance"
   ],
+  "registrationClarification": {
+    "date": "2026-10-10",
+    "gitRepositoryRequired": false,
+    "sourceCodeOrHostingAccountAccessRequired": false,
+    "repositoryLookupPurpose": "Maintenance of the operator-owned guionista; not marketplace admission",
+    "repositoryLookupBlocksRegistration": false
+  },
   "actions": {
     "gitConnectionChanges": 0,
     "deployments": 0,
