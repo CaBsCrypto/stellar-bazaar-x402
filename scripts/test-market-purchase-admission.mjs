@@ -12,6 +12,7 @@ import {syncDeliveryContract} from '../lib/delivery-contract.ts';
 import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts';
 import {capacityRedis} from './fixtures/market-capacity-redis.mjs';
 import {orderMemo} from '../lib/marketplace-identity.ts';
+import {reportCapacityInState,reserveSellerCapacity} from '../lib/market-seller-capacity.ts';
 
 const prior={...process.env},id=randomBytes(16).toString('hex'),origin='https://stellar-bazaar-x402-synthetic.vercel.app';
 const environment={VERCEL:'1',VERCEL_ENV:'preview',VERCEL_URL:new URL(origin).hostname,
@@ -39,7 +40,11 @@ try{
  assert.equal(demoConfiguration().features.purchases.enabled,true);assertMarketPurchaseAdmission();
  for(const name of ['BAZAAR_WORKSPACE_PREFIX','BAZAAR_MARKET_PREFIX','BAZAAR_REVIEW_PREFIX','BAZAAR_MARKET_FILE_PREFIX']){configure({[name]:environment[name].replace(id,'e'.repeat(32))});assert.equal(demoConfiguration().checks.namespaceFamilyMatches,false);await assert.rejects(createMarketOrder(buyer,intent(order())),e=>e.code==='X402_CONFIGURATION_INCOMPLETE'&&e.status===503);}configure();
  const pending=order();await market.transact(s=>s.orders.push(pending));
- const challenged=order();await market.transact(s=>s.orders.push(challenged));
+ const challenged=order();await market.transact(s=>{
+  s.services.push({submissionId:randomUUID(),ownerId:seller,cardHash:challenged.cardHash,card,withdrawn:false,createdAt:challenged.createdAt});
+  reportCapacityInState(s,{role:'agent',ownerId:seller,agentId:'seller-fixture',workspaceId:randomUUID(),generation:1},{serviceId:card.id,cardHash:challenged.cardHash,reportId:randomUUID(),ready:true,day:challenged.createdAt.slice(0,10),usedToday:0,observedAt:challenged.createdAt});
+  reserveSellerCapacity(s,challenged);s.orders.push(challenged);
+ });
  const challenge=createMarketX402Challenge(challenged,origin);
  await settlements.transact(s=>s.records.push({operationId:challenged.operationId,buyerOwnerId:buyer.ownerId,orderBinding:marketX402OrderBinding(challenged),challenge,phase:'challenged',createdAt:challenged.createdAt,updatedAt:challenged.updatedAt}));
  const tx=await transaction(challenged),signature=encodePaymentSignatureHeader({x402Version:2,resource:challenge.resource,accepted:challenge.accepts[0],payload:{transaction:tx.toXDR()}});

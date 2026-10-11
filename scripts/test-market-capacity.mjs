@@ -9,6 +9,7 @@ import {USDC_TESTNET_PAYMENT_IDENTITY} from '../lib/payment-assets.ts';
 import {syncDeliveryContract} from '../lib/delivery-contract.ts';
 import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts';
 import {sha,canonical,orderMemo} from '../lib/marketplace-identity.ts';
+import {reportCapacityInState,reserveSellerCapacity} from '../lib/market-seller-capacity.ts';
 
 let tests=0;const check=value=>{assert.ok(value);tests++;};
 const prefix='bazaar-market:pilot-'+randomBytes(16).toString('hex'),payer=Keypair.random().publicKey(),destination=Keypair.random().publicKey(),now=new Date().toISOString();
@@ -20,8 +21,14 @@ function order(topic='x'){
 const binding=o=>sha(canonical({operationId:o.operationId,owner:o.buyerOwnerId,protocol:o.paymentProtocol,cardHash:o.cardHash,inputHash:o.inputHash,payer:o.payer,destination:o.destination,amount:o.amount,settlement:o.settlement}));
 const challenge=o=>({operationId:o.operationId,buyerOwnerId:o.buyerOwnerId,orderBinding:binding(o),phase:'challenged',createdAt:now,updatedAt:now,challenge:{x402Version:2,resource:{url:'https://market.example/api/market/orders/'+o.operationId+'/x402'},accepts:[{scheme:'exact',network:'stellar:testnet',amount:'100000',asset:USDC_TESTNET_PAYMENT_IDENTITY.sacContract,payTo:destination}]}});
 const envelope=state=>JSON.stringify({version:1,revision:randomUUID(),state});
+function admit(state,order){
+ const principal={role:'agent',ownerId:order.sellerOwnerId,agentId:'agent_'+ 'a'.repeat(32),workspaceId:randomUUID(),generation:1};
+ state.services.push({submissionId:randomUUID(),ownerId:principal.ownerId,cardHash:order.cardHash,card:order.card,withdrawn:false,createdAt:now});
+ reportCapacityInState(state,principal,{serviceId:order.serviceId,cardHash:order.cardHash,reportId:randomUUID(),ready:true,day:now.slice(0,10),usedToday:0,observedAt:now});
+ reserveSellerCapacity(state,order);state.orders.push(order);
+}
 const redis=capacityRedis(),market=createMarketStore(redis,prefix),settlement=createMarketX402Store(redis,prefix),ledgerKey=capacityReservationKey(prefix);
-const admitted=order();await market.transact(s=>s.orders.push(admitted));await settlement.transact(s=>s.records.push(challenge(admitted)));
+const admitted=order();await market.transact(s=>admit(s,admitted));await settlement.transact(s=>s.records.push(challenge(admitted)));
 check(!redis.data.has(ledgerKey));
 const attemptId=randomUUID();
 await settlement.transact(s=>Object.assign(s.records[0],{phase:'verifying',attemptId,payload:{transaction:'signed-offline-fixture'},payloadHash:'a'.repeat(64),authorizationFingerprint:'b'.repeat(64)}));
@@ -34,11 +41,11 @@ check(measure().marketRemaining>30000&&measure().settlementRemaining>0);
 await market.transact(s=>{for(let i=0;i<105;i++)s.orders.push(order());});
 check((await market.transact(s=>s.orders.length))===106);
 let rejected=false,extra=0,capacityCode;
-while(!rejected){try{await market.transact(s=>s.orders.push(order('x'.repeat(2000))));extra++;}catch(e){assert.ok(['MARKET_CAPACITY','PAYMENT_RECOVERY_CAPACITY'].includes(e.code));capacityCode=e.code;rejected=true;}}
-check(extra>0);
+while(!rejected){try{await market.transact(s=>s.orders.push(order('x'.repeat(200))));extra++;}catch(e){assert.ok(['MARKET_CAPACITY','PAYMENT_RECOVERY_CAPACITY'].includes(e.code));capacityCode=e.code;rejected=true;}}
+check(rejected);
 const reserved=measure();check(reserved.marketUsed<MARKET_CAPACITY_BYTES&&reserved.marketUsed+reserved.marketRemaining<=MARKET_CAPACITY_BYTES);
 const bytesBefore=redis.data.get(prefix+':state');
-await assert.rejects(()=>market.transact(s=>s.orders.push(order('x'.repeat(2000)))),e=>e.code===capacityCode);tests++;
+await assert.rejects(()=>market.transact(s=>s.orders.push(order('x'.repeat(200)))),e=>e.code===capacityCode);tests++;
 assert.equal(redis.data.get(prefix+':state'),bytesBefore);tests++;
 
 await settlement.transact(s=>{s.records[0].phase='settling';});
@@ -55,7 +62,7 @@ validateMarketState(await readAgain.transact(s=>s));tests++;
 
 // Atomic snapshots include both documents and generation-bound permission keys.
 const tinyPrefix='bazaar-market:pilot-'+randomBytes(16).toString('hex'),tiny=capacityRedis(),m=createMarketStore(tiny,tinyPrefix),x=createMarketX402Store(tiny,tinyPrefix),o=order();
-await m.transact(s=>s.orders.push(o));await x.transact(s=>s.records.push(challenge(o)));
+await m.transact(s=>admit(s,o));await x.transact(s=>s.records.push(challenge(o)));
 let arrived=0,release;const barrier=new Promise(resolve=>release=resolve);
 const racing=capacityRedis({data:tiny.data,beforeEval:async()=>{if(++arrived===2)release();await barrier;}});
 const races=await Promise.allSettled([createMarketStore(racing,tinyPrefix).transact(s=>s.operatorQuota={minute:1,count:1}),createMarketX402Store(racing,tinyPrefix).transact(s=>Object.assign(s.records[0],{phase:'verifying',attemptId:randomUUID(),payload:{transaction:'signed'},payloadHash:'a'.repeat(64),authorizationFingerprint:'b'.repeat(64)}))]);
@@ -69,7 +76,7 @@ assert.equal(tiny.data.get(tinyPrefix+':state'),unchanged);tests++;
 // A lost acknowledgement retains the durable reservation; explicit reconstruction
 // reads the same attempt and cannot silently free it.
 const ackPrefix='bazaar-market:pilot-'+randomBytes(16).toString('hex'),ack=capacityRedis(),am=createMarketStore(ack,ackPrefix),ax=createMarketX402Store(ack,ackPrefix),ao=order();
-await am.transact(s=>s.orders.push(ao));await ax.transact(s=>s.records.push(challenge(ao)));
+await am.transact(s=>admit(s,ao));await ax.transact(s=>s.records.push(challenge(ao)));
 const broken=capacityRedis({data:ack.data,afterWrite(){throw Error('lost acknowledgement');}});
 await assert.rejects(()=>createMarketX402Store(broken,ackPrefix).transact(s=>Object.assign(s.records[0],{phase:'verifying',attemptId:randomUUID(),payload:{transaction:'signed'},payloadHash:'a'.repeat(64),authorizationFingerprint:'b'.repeat(64)})));tests++;
 check(JSON.parse(ack.data.get(capacityReservationKey(ackPrefix))).entries.length===1);

@@ -34,13 +34,14 @@ export function createHostedSellerHandler(environment=process.env,{runTick=runHo
    if(!environment.BAZAAR_HOSTED_SELLER_PREFIX?.startsWith('bazaar-seller:'+stage+'-'))throw Error();
    const command=createWorkerRedisCommands({url:environment.BAZAAR_HOSTED_SELLER_REDIS_REST_URL,token:environment.BAZAAR_HOSTED_SELLER_REDIS_REST_TOKEN,fetcher,signal:controller.signal});
    store=createSellerRedisSecretStore({command:values=>{if(++redisCommands>180)throw Error('WORKER_STORAGE_BOUND');return command(values);},prefix:environment.BAZAAR_HOSTED_SELLER_PREFIX,key:environment.BAZAAR_HOSTED_SELLER_KEY,bindingHash:binding(config)});
-   const pinned=(expectedUrl,privateProtection)=>async(url,init)=>{
-    if(new URL(url instanceof Request?url.url:String(url)).href!==expectedUrl)throw Error('WORKER_ENDPOINT_DENIED');
+   const pinned=(expectedUrl,privateProtection,availabilityUrl)=>async(url,init)=>{
+    const href=new URL(url instanceof Request?url.url:String(url)).href;
+    if(href!==expectedUrl&&!(availabilityUrl&&href===availabilityUrl&&init?.method==='GET'))throw Error('WORKER_ENDPOINT_DENIED');
     const ownHeaders=new Headers(init?.headers);
     if(privateProtection)ownHeaders.set('x-vercel-protection-bypass',privateProtection);
     return await fetcher(url,{...init,headers:ownHeaders,redirect:'error',signal:AbortSignal.any([controller.signal,...(init?.signal?[init.signal]:[])])});
    };
-   const result=await runTick({enabled:true,config,store,signal:controller.signal,fetcher:pinned(config.bazaarOrigin+'/api/mcp',environment.BAZAAR_HOSTED_SELLER_MCP_PROTECTION),providerFetcher:pinned(new URL(config.card.routeTemplate,config.card.url).href,environment.BAZAAR_HOSTED_SELLER_PROVIDER_PROTECTION)});
+   const result=await runTick({enabled:true,config,store,signal:controller.signal,fetcher:pinned(config.bazaarOrigin+'/api/mcp',environment.BAZAAR_HOSTED_SELLER_MCP_PROTECTION),providerFetcher:pinned(new URL(config.card.routeTemplate,config.card.url).href,environment.BAZAAR_HOSTED_SELLER_PROVIDER_PROTECTION,new URL(config.card.routeTemplate+'/availability',config.card.url).href)});
    const body={...result,redisCommands,productionScheduler:stage==='production',paymentSubmissions:0};
    if(['unconfirmed','clock','time-bound'].includes(result.reason))return response(503,body,{'retry-after':'120'});
    if(['quota','backoff','tick-bound','provider-bound','request-bound'].includes(result.reason))return response(429,body,{'retry-after':String(result.retryAfterSeconds??120)});

@@ -8,6 +8,7 @@ import {validateMarketX402State,type MarketX402State,type MarketX402Settlement} 
 import {deliveryStorage} from './delivery-contract.ts';
 import {MARKET_FILE_METADATA_BYTES,maximumMarketFileCleanupBytes,MARKET_FILE_CLEANUP_CAPACITY_BYTES} from './market-file-delivery-schema.ts';
 import {maximumMarketRecoveryBytes,MARKET_RECOVERY_CAPACITY_BYTES} from './market-retention-schema.ts';
+import {assertSellerReservation,commitSellerReservation} from './market-seller-capacity.ts';
 
 export const MARKET_CAPACITY_BYTES=524288;
 export const SETTLEMENT_CAPACITY_BYTES=131072;
@@ -82,7 +83,7 @@ export function projectCapacity(marketRaw:string|null,settlementRaw:string|null,
   if(old&&(old.binding!==wanted.binding||old.marketMaximumBytes<wanted.marketMaximumBytes||(!fileUpgrade&&old.settlementMaximumBytes<wanted.settlementMaximumBytes)))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
   if(!old||fileUpgrade)entries.set(r.operationId,wanted);
  }
- let marketRemaining=cleanupReserved,settlementRemaining=0;
+ let marketRemaining=cleanupReserved+(market.sellerCapacities?.length??0)*32,settlementRemaining=0;
  for(const e of entries.values()){
   const o=orders.get(e.operationId),r=records.get(e.operationId);
   if(!o||(!r&&e.settlementMaximumBytes!==0)||e.binding!==binding(o))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
@@ -130,14 +131,24 @@ export async function commitCapacityStore(redis:MarketRedis,prefix:string,kind:'
  const other=await redis.get(kind==='market'?settlementKey:marketKey),storedLedger=await redis.get(ledgerKey);
  if((other!==null&&typeof other!=='string')||(storedLedger!==null&&typeof storedLedger!=='string'))throw new WorkspaceError('CAPACITY_STATE_UNAVAILABLE');
  const oldMarket=kind==='market'?expectedRaw:other as string|null,oldSettlement=kind==='settlement'?expectedRaw:other as string|null;
- const newMarket=kind==='market'?(nextRaw??oldMarket):oldMarket,newSettlement=kind==='settlement'?(nextRaw??oldSettlement):oldSettlement;
+ let newMarket=kind==='market'?(nextRaw??oldMarket):oldMarket;const newSettlement=kind==='settlement'?(nextRaw??oldSettlement):oldSettlement;
+ const before=snapshot(oldMarket,oldSettlement),after=snapshot(newMarket,newSettlement);
+ if(kind==='settlement'){
+  let changed=false;
+  for(const record of after.settlements.records){
+   const old=before.settlements.records.find(r=>r.operationId===record.operationId);
+   if(old?.phase===record.phase||!['challenged','verifying','settling'].includes(record.phase))continue;
+   if(before.market.paused)throw new WorkspaceError('PURCHASES_PAUSED',503);
+   const order=after.market.orders.find(o=>o.operationId===record.operationId);if(!order)throw new WorkspaceError('SELLER_UNAVAILABLE',503);
+   if(record.phase==='verifying'){commitSellerReservation(after.market,order);changed=true;}else assertSellerReservation(after.market,order);
+  }
+  if(changed){validateMarketState(after.market);newMarket=JSON.stringify({version:1,revision:randomUUID(),state:after.market});}
+ }
  const projected=projectCapacity(newMarket,newSettlement,storedLedger as string|null);
  recordOperationalStorageBounds({market:{committedBytes:projected.marketUsed,reservedBytes:projected.marketRemaining},settlement:{committedBytes:projected.settlementUsed,reservedBytes:projected.settlementRemaining}});
- const before=snapshot(oldMarket,oldSettlement),after=snapshot(newMarket,newSettlement);
- if(kind==='settlement'&&before.market.paused&&after.settlements.records.some(r=>['verifying','settling'].includes(r.phase)&&before.settlements.records.find(old=>old.operationId===r.operationId)?.phase!==r.phase))throw new WorkspaceError('PURCHASES_PAUSED',503);
  const expected=(raw:string|null)=>[raw===null?'missing':'present',raw??''];
  const keys=[marketKey,settlementKey,ledgerKey,...(guard?.keys??[])];
- const args=[...expected(oldMarket),...expected(oldSettlement),...expected(storedLedger as string|null),kind==='market'?(nextRaw??''):'',kind==='settlement'?(nextRaw??''):'',projected.ledgerRaw!==storedLedger?(projected.ledgerRaw??''):''];
+ const args=[...expected(oldMarket),...expected(oldSettlement),...expected(storedLedger as string|null),newMarket!==oldMarket?(newMarket??''):'',kind==='settlement'?(nextRaw??''):'',projected.ledgerRaw!==storedLedger?(projected.ledgerRaw??''):''];
  for(let i=0;i<2;i++)args.push(...(guard&&i<guard.keys.length?expected(guard.values[i]):['unchecked','']));
  if(await redis.eval(MARKET_CAPACITY_CAS,keys,args)!==1)throw new WorkspaceError('CAPACITY_WRITE_UNCONFIRMED',409);
  return projected;

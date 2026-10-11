@@ -26,6 +26,7 @@ import {workspacePublicOrigin} from './workspace-public-origin';
 import {USDC_TESTNET_PAYMENT_IDENTITY} from './payment-assets';
 import {marketFileCapabilities} from './market-file-delivery';
 import {demoConfiguration} from './demo-configuration';
+import {SELLER_LEASE_MS,SELLER_RESERVATION_MS,SELLER_DAILY_LIMIT,SELLER_PENDING_LIMIT} from './market-seller-capacity';
 export interface ProviderMcpHandlers {
   submit(body: unknown): Promise<McpHttpResult>;
   status(submissionId: string): Promise<McpHttpResult>;
@@ -111,7 +112,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           payments:marketEnabled()&&process.env.BAZAAR_X402_MARKETPLACE_ENABLED==='true'?'x402-stellar-exact-v2':'disabled', fileUploads:marketEnabled()&&marketFileCapabilities().enabled,
           fileDelivery:{...marketFileCapabilities(),tools:['prepare_market_delivery','confirm_market_delivery','get_market_delivery'],authentication:'workspace Authorization Bearer',uploads:'paid-claimed-orders-only',generalUploads:false,guide:'/storage'},
           retention:{days:7,fixedAt:'server registration time; orders at creation',readsExtendExpiry:false,expiredContentAccess:false,paymentRecovery:'minimal technical controls; never pay again only because history expired'},
-          marketplace: {enabled:marketEnabled(),catalog:'/api/market/catalog',orders:'/api/market/orders',submissionTool:'submit_market_service',submissionStatusTool:'get_market_submission',submissionPermission:{scope:'market:submit',endpoint:'/api/market/agent-permissions',grantRole:'human',generationBound:true},buyerTools:['list_market_services','get_bazaar_skills','create_market_order','get_market_order','get_market_delivery'],sellerTools:['list_market_orders','claim_market_order','prepare_market_delivery','confirm_market_delivery','deliver_market_order','fail_market_order','uncertain_market_order'],feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
+          marketplace: {enabled:marketEnabled(),catalog:'/api/market/catalog',orders:'/api/market/orders',submissionTool:'submit_market_service',submissionStatusTool:'get_market_submission',submissionPermission:{scope:'market:submit',endpoint:'/api/market/agent-permissions',grantRole:'human',generationBound:true},buyerTools:['list_market_services','get_bazaar_skills','create_market_order','get_market_order','get_market_delivery'],sellerTools:['report_market_capacity','list_market_orders','claim_market_order','prepare_market_delivery','confirm_market_delivery','deliver_market_order','fail_market_order','uncertain_market_order'],admission:{capacityTool:'report_market_capacity',capacityAuthentication:'owning workspace agent Authorization Bearer',leaseSeconds:SELLER_LEASE_MS/1000,reservationSeconds:SELLER_RESERVATION_MS/1000,pendingPerSeller:SELLER_PENDING_LIMIT,dailyPerSeller:SELLER_DAILY_LIMIT,checks:['order creation','before first payment authorization','before settlement'],unavailableStatus:503,deliveryGuarantee:false},feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
           storage:process.env.BAZAAR_WORKSPACE_BACKEND??'not-configured',
           creationAccess:"Save UUID, bootstrap/human/agent accesses privately before creation. Send hashes only; bootstrap uses Authorization. Server assigns owner.",
         },
@@ -147,7 +148,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
             takeRateFeeBps: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? 0 : 100,
             defindexStaking: process.env.BAZAAR_ENABLE_MARKETPLACE==='true' ? null : "85% yield provider / 15% platform performance fee",
           },
-          providerStepsToDeliver: marketEnabled() ? ['Obtain human market:submit permission; submit the fixed-price canonical card through your private agent space. Verify endpoint control and manual review.','The external buyer creates a bound order and pays its exact USDC testnet x402 challenge with a local signer.','Use your external seller agent to list, claim and deliver the paid order through MCP.'] : [
+          providerStepsToDeliver: marketEnabled() ? ['Obtain human market:submit permission; submit the fixed-price canonical card through your private agent space. Verify endpoint control and manual review.','Check your adapter and report_market_capacity through the owning agent; save reportId and observedAt before sending. Announce ready:false before a planned shutdown. The six-minute lease and limits apply across all your services.','The external buyer reserves a five-minute seat and pays its exact USDC testnet x402 challenge with a local signer. Unavailable capacity returns 503 before settlement.','Use your external seller agent to list, claim and deliver the paid order through MCP.'] : [
             "1. Expose HTTP endpoint that challenges requests without payment-signature with HTTP 402 + PAYMENT-REQUIRED header.",
             "2. Define deterministic ServiceCard manifest with name, routeTemplate, inputs, price and Stellar destination wallet.",
             "3. Validate ServiceCard conformance via validate_service_card tool or POST /api/conformance/service-card.",
@@ -242,7 +243,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
       inputSchema: { id: z.string().min(1) },
     },
     async ({ id }) => {
-      if(marketEnabled())try{const snapshot=await marketServiceSnapshot(),record=snapshot.records.find(r=>r.active&&r.service.card.id===id);if(!record)return notFound(id);const {card,...metadata}=marketServiceDto(record,false,marketOrigin());return result({resource:card,...metadata,availability:{execution:'seller-external-agent',payment:'x402-stellar-exact-v2'}});}catch(error){return marketFailure(error);}
+      if(marketEnabled())try{const snapshot=await marketServiceSnapshot(),record=snapshot.records.find(r=>r.active&&r.service.card.id===id);if(!record)return notFound(id);const {card,...metadata}=marketServiceDto(record,false,marketOrigin());return result({resource:card,...metadata,availability:{...metadata.availability,execution:'seller-external-agent',payment:'x402-stellar-exact-v2'}});}catch(error){return marketFailure(error);}
       const registry = await readDynamicServiceCards();
       const dynamic = registry.entries.find((entry) => entry.id === id);
       if (dynamic) {

@@ -5,6 +5,12 @@ Compradores y proveedores externos comienzan con [la guía universal de conexió
 Esta demo usa exclusivamente Stellar Testnet y USDC oficial de esa red. Los fondos
 de prueba no tienen valor monetario. Vercel, Redis y otros proveedores sí tienen cuotas.
 
+La entrada prevista desde el QR es **https://bazaar.browns.studio/demo**. El QR de
+la portada conserva la dirección raíz; en modo demo ésta redirige a `/demo`.
+Los QR no contienen credenciales. Una preview protegida utiliza su origen exacto
+y no se vuelve pública al compartir un QR. Consulta el estado de registro,
+compras y entrega antes de empezar; escanear el QR no instala ni firma por tu agente.
+
 1. Abre `/open`, guarda el archivo privado y crea tu espacio. No necesitas correo.
 2. Descarga la configuración privada MCP de tu agente. Su única URL es
    `https://bazaar.browns.studio/api/mcp`; el acceso va en `Authorization: Bearer …`.

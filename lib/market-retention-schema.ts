@@ -16,6 +16,7 @@ export const marketRecoverySchema=z.object({
  paymentPhase:z.enum(['unpaid','rejected','uncertain','confirmed']),
  authorizationFingerprint:digest.optional(),transactionHash:digest.optional(),
  paymentVerifiedAt:z.string().datetime().optional(),archivedAt:z.string().datetime(),
+ sellerReservationPending:z.boolean().optional(),
 }).strict();
 export type MarketRecovery=z.infer<typeof marketRecoverySchema>;
 export function marketIntentHash(input:{operationId:string;serviceId:string;cardHash:string;payer:string;input:unknown;paymentProtocol?:string}){
@@ -30,8 +31,8 @@ export function marketRecoveryRecord(order:MarketOrder,record:MarketX402Settleme
   paymentPhase:order.paymentVerifiedAt?'confirmed':record?.phase==='rejected'?'rejected':record&&record.phase!=='challenged'?'uncertain':'unpaid',
   ...(record?.authorizationFingerprint?{authorizationFingerprint:record.authorizationFingerprint}:{}),
   ...(order.transactionHash??record?.transactionHash??record?.outcome?.transaction?{transactionHash:order.transactionHash??record?.transactionHash??record?.outcome?.transaction}:{}),
-  ...(order.paymentVerifiedAt?{paymentVerifiedAt:order.paymentVerifiedAt}:{}),archivedAt:new Date(now).toISOString()};
+  ...(order.paymentVerifiedAt?{paymentVerifiedAt:order.paymentVerifiedAt}:{}),...(order.sellerReservation?.committed&&!['delivered','delivery-failed'].includes(order.phase)?{sellerReservationPending:true}:{}),archivedAt:new Date(now).toISOString()};
 }
 export function maximumMarketRecoveryBytes(order:MarketOrder){
- return Buffer.byteLength(JSON.stringify({...marketRecoveryRecord(order,undefined),paymentPhase:'confirmed',authorizationFingerprint:'f'.repeat(64),transactionHash:'f'.repeat(64),paymentVerifiedAt:'9999-12-31T23:59:59.999Z',archivedAt:'9999-12-31T23:59:59.999Z'}),'utf8')+1;
+ return Buffer.byteLength(JSON.stringify({...marketRecoveryRecord(order,undefined),sellerReservationPending:true,paymentPhase:'confirmed',authorizationFingerprint:'f'.repeat(64),transactionHash:'f'.repeat(64),paymentVerifiedAt:'9999-12-31T23:59:59.999Z',archivedAt:'9999-12-31T23:59:59.999Z'}),'utf8')+1;
 }

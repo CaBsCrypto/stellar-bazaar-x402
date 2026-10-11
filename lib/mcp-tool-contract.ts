@@ -1,5 +1,5 @@
 // Public contract; safe to import from docs, tests and server code.
-export const MCP_VERSION = "1.0.0";
+export const MCP_VERSION = "1.1.0";
 export const MCP_TOOLS = [
   "get_bazaar_capabilities", "list_services", "search_services", "get_service",
   "list_workflow_bundles", "get_workflow_bundle", "validate_service_card",
@@ -11,6 +11,7 @@ export const MCP_TOOLS = [
   "list_market_services", "submit_market_service", "get_market_submission", "create_market_order", "get_market_order",
   "list_market_orders", "claim_market_order", "prepare_market_delivery", "confirm_market_delivery", "get_market_delivery",
   "deliver_market_order", "fail_market_order", "uncertain_market_order",
+  "report_market_capacity",
 ] as const;
 export const MCP_WRITES = [
   "request_wallet_binding", "complete_wallet_binding",
@@ -18,5 +19,6 @@ export const MCP_WRITES = [
   "respond_bazaar_agent_task", "record_bazaar_activity", "record_bazaar_operation",
   "submit_market_service", "create_market_order", "claim_market_order", "deliver_market_order", "fail_market_order", "uncertain_market_order",
   "prepare_market_delivery", "confirm_market_delivery",
+  "report_market_capacity",
 ] as const;
 export const MCP_MODE = "discovery-and-private-marketplace";

@@ -8,6 +8,8 @@
     "node": "24.x"
   },
   "scripts": {
+    "test:market:seller-capacity": "node --experimental-strip-types scripts/test-market-seller-capacity.mjs",
+    "test:demo:qr-boundary": "node --experimental-strip-types scripts/test-demo-qr-boundary.mjs",
     "test:seller:hosted": "node scripts/test-seller-hosted-tick.mjs",
     "test:seller:handler": "node scripts/test-seller-hosted-handler.mjs",
     "test:seller:redis": "node scripts/test-seller-redis-secret-store.mjs",

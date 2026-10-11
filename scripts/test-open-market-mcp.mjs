@@ -17,6 +17,7 @@ import { syncDeliveryContract } from '../lib/delivery-contract.ts';
 import { USDC_TESTNET_PAYMENT_IDENTITY } from '../lib/payment-assets.ts';
 import { marketPage, MARKET_DTO_BYTES } from '../lib/market-pagination.ts';
 import { MCP_TOOLS, MCP_WRITES } from '../lib/mcp-tool-contract.ts';
+import { orderMemo } from '../lib/marketplace-identity.ts';
 
 // Next handles extensionless TypeScript imports; this local harness provides the same resolution.
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) { if (specifier.startsWith('.') && !extname(specifier)) return next(specifier + '.ts', context); throw error; } } });
@@ -102,13 +103,20 @@ try {
   for(const amount of ['0.02','1','0.010','0.0000001','922337203685.4775807'])assert.equal(marketCard({...first.card,payment:{...first.card.payment,amount}}).payment.amount,amount);
   for(const amount of ['0','-1','NaN','Infinity','1.00000001','922337203685.4775808','01','1e3'])assert.throws(()=>marketCard({...first.card,payment:{...first.card.payment,amount}}),e=>e.code==='INVALID_SERVICE');
   const purchase={operationId:randomUUID(),serviceId:first.card.id,cardHash:computeCanonicalServiceCardHash(first.card),payer:Keypair.random().publicKey(),input:{topic:'Synthetic'},paymentProtocol:'x402-stellar-exact-v2'};
+  assert.equal((await marketHandlers.create(request('/api/market/orders',buyer.agent,purchase))).status,503,'Visible service without a current owner report cannot admit an order');
+  const capacityReport={serviceId:purchase.serviceId,cardHash:purchase.cardHash,reportId:randomUUID(),ready:true,day:new Date().toISOString().slice(0,10),usedToday:0,observedAt:new Date().toISOString()};
+  assert.equal((await marketHandlers.capacity(request('/api/market/capacity',rotatedHumanToken,capacityReport))).status,403);
+  assert.equal((await marketHandlers.capacity(request('/api/market/capacity',seller.agent,capacityReport))).status,200);
   const created=await marketHandlers.create(request('/api/market/orders',buyer.agent,purchase));assert.equal(created.status,201);assert.equal((await created.json()).order.amount,'0.01');
   assert.equal((await marketHandlers.create(request('/api/market/orders',buyer.agent,purchase))).status,201);
   assert.equal((await marketHandlers.read(request('/api/market/orders/'+purchase.operationId,stranger.agent),purchase.operationId)).status,404);
   assert.equal((await marketHandlers.action(request('/api/market/orders/'+purchase.operationId,buyer.agent,{action:'prepare'}),purchase.operationId)).status,409);
   assert.equal((await marketHandlers.create(request('/api/market/orders',buyer.agent,{...purchase,operationId:randomUUID(),paymentProtocol:undefined}))).status,400);
-  // Keep order history above the former 100-record cap, with stable same-timestamp cursors.
-  for(let i=0;i<104;i++)await createMarketOrder(buyerAgent,{...purchase,operationId:randomUUID()});
+  await assert.rejects(()=>createMarketOrder(buyerAgent,{...purchase,operationId:randomUUID()}),e=>e.code==='SELLER_CAPACITY_EXHAUSTED','A second live seat is rejected');
+  // Seed prior synthetic records for the pagination contract. They do not go
+  // through new admission and do not bypass the single live seat in production.
+  const historical=structuredClone(state.orders[0]);delete historical.sellerReservation;
+  await market.transact(s=>{for(let i=0;i<104;i++){const operationId=randomUUID();s.orders.push({...structuredClone(historical),operationId,memoHash:orderMemo(historical.buyerOwnerId,operationId,historical.cardHash,historical.input)});}});
   const history=await (await marketHandlers.orders(request('/api/market/orders',buyer.agent))).json();assert.equal(history.orders.length,10);assert.ok(history.nextCursor);
   const next=await (await marketHandlers.orders(request('/api/market/orders?cursor='+history.nextCursor,buyer.agent))).json();assert.equal(new Set([...history.orders,...next.orders].map(o=>o.operationId)).size,20);
   assert.equal((await marketHandlers.orders(request('/api/market/orders?cursor='+history.nextCursor,stranger.agent))).status,400,'A cursor is bound to its owner scope');
@@ -117,7 +125,7 @@ try {
   assert.deepEqual((await client.listTools()).tools.map(t=>t.name),MCP_TOOLS);assert.ok(MCP_WRITES.includes('uncertain_market_order'));
   const tool=async(name,args={})=>JSON.parse((await client.callTool({name,arguments:args})).content[0].text);
   assert.equal((await tool('list_market_services')).services.length,10);assert.equal((await tool('list_market_orders')).orders.length,10);assert.equal((await tool('get_market_order',{operationId:purchase.operationId})).order.operationId,purchase.operationId);
-  const listed=await tool('list_services',{includePilots:true});assert.equal(listed.services.length,10);assert.deepEqual(listed.pilots,[]);assert.ok(listed.services.every(s=>s.payment.amount==='0.01'&&s.payment.marketplace.protocol==='x402-stellar-exact-v2'&&!('availability' in s)));
+  const listed=await tool('list_services',{includePilots:true});assert.equal(listed.services.length,10);assert.deepEqual(listed.pilots,[]);assert.ok(listed.services.every(s=>s.payment.amount==='0.01'&&s.payment.marketplace.protocol==='x402-stellar-exact-v2'&&typeof s.availability.ready==='boolean'));
   const inspected=await tool('get_service',{id:first.card.id});assert.deepEqual(inspected.resource,first.card);assert.equal(inspected.cardHash,purchase.cardHash);assert.equal(inspected.purchase.protocol,'x402-stellar-exact-v2');
   let skills=await tool('get_bazaar_skills');const providerSkills=[...skills.providerSkills];while(skills.nextCursor){skills=await tool('get_bazaar_skills',{cursor:skills.nextCursor});providerSkills.push(...skills.providerSkills);}assert.equal(providerSkills.length,1);assert.equal(providerSkills[0].serviceId,first.card.id);assert.equal(providerSkills[0].cardHash,purchase.cardHash);assert.equal(providerSkills[0].version,'1.0.0');assert.equal(providerSkills[0].readPrice,'free');assert.equal(providerSkills[0].instructionsTrusted,false);
   const found=await tool('search_services',{query:'text',limit:5});assert.equal(found.results.length,5);assert.ok(found.nextCursor);assert.ok(found.results.every(r=>r.status==='activated'&&r.cardHash===computeCanonicalServiceCardHash(r.resource)));
@@ -126,6 +134,8 @@ try {
   assert.equal(capabilities.workspace.humanView,'/history','An external marketplace agent must send its human to private orders and publication consent');
   assert.equal(capabilities.providerOnboarding.guide,'/SELLER_AGENT_KIT.md');
   assert.equal(capabilities.demo.walletRequiredForNewOrders,false);
+  assert.equal(capabilities.workspace.marketplace.admission.pendingPerSeller,1);assert.equal(capabilities.workspace.marketplace.admission.dailyPerSeller,50);assert.ok(capabilities.workspace.marketplace.sellerTools.includes('report_market_capacity'));
+  assert.equal(inspected.availability.ready,false,'get_service preserves capacity metadata while the seat is held');
   process.env.BAZAAR_PUBLIC_DEMO='true';
   const identity=await tool(capabilities.demo.identityTool);assert.equal(identity.ownerId,buyerAgent.ownerId);assert.equal(identity.agentId,buyerAgent.agentId);assert.equal(identity.wallet,null,'A new account can discover its identity before linking a wallet');
   delete process.env.BAZAAR_PUBLIC_DEMO;
@@ -141,9 +151,14 @@ try {
   const observedId=randomUUID();for(let i=0;i<2;i++){const r=request('/api/market/catalog',buyer.agent);r.headers.set('x-bazaar-query-id',observedId);assert.equal((await marketHandlers.catalog(r)).status,200);}
   assert.equal((await store.forPrincipal(buyerAgent).queries(buyerAgent.ownerId)).length,1);
   await marketHandlers.catalog(request('/api/market/catalog'));assert.equal((await store.forPrincipal(buyerAgent).queries(buyerAgent.ownerId)).length,1);
+  // Controlled expiry of only these unpaid synthetic reservations exercises
+  // distinct payer binding cases; no paid or uncertain record is cleared.
+  const expireUnpaidFixture=async()=>market.transact(s=>{for(const o of s.orders)if(o.phase==='awaiting-payment'&&o.sellerReservation&&!o.sellerReservation.committed)o.sellerReservation.expiresAt=new Date(Date.now()-1).toISOString();});
+  await expireUnpaidFixture();
   assert.equal((await createMarketOrder(buyerAgent,{...purchase,operationId:randomUUID()})).payer,purchase.payer,'x402 payer is admitted without prior wallet binding');
   const demoKey=Keypair.random(),dc=await store.walletChallenge(buyerAgent,demoKey.publicKey(),'https://market.example');await store.bindWallet(buyerAgent,dc.challengeId,'https://market.example',demoKey.sign(Buffer.from(dc.message)).toString('base64'));
-  const demoPurchase={...purchase,operationId:randomUUID(),payer:demoKey.publicKey()};assert.equal((await createMarketOrder(buyerAgent,demoPurchase)).payer,demoKey.publicKey());
+  await expireUnpaidFixture();const demoPurchase={...purchase,operationId:randomUUID(),payer:demoKey.publicKey()};assert.equal((await createMarketOrder(buyerAgent,demoPurchase)).payer,demoKey.publicKey());
+  await expireUnpaidFixture();
   assert.equal((await createMarketOrder(buyerAgent,{...purchase,operationId:randomUUID()})).payer,purchase.payer,'Optional binding does not constrain subsequent signed x402 payers');
   const root=await requireWorkspacePrincipal('Bearer '+buyer.bootstrap,'bootstrap'),nextKey=Keypair.random(),rc=await store.walletChallenge(root,nextKey.publicKey(),'https://market.example');await store.bindWallet(root,rc.challengeId,'https://market.example',nextKey.sign(Buffer.from(rc.message)).toString('base64'));
   assert.equal((await createMarketOrder(buyerAgent,demoPurchase)).payer,demoKey.publicKey(),'Recovery preserves the original payer after wallet rotation');

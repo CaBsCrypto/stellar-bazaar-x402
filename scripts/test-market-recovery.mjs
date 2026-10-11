@@ -16,6 +16,7 @@ import {USDC_TESTNET_PAYMENT_IDENTITY} from '../lib/payment-assets.ts';
 import {syncDeliveryContract} from '../lib/delivery-contract.ts';
 import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts';
 import {sha,canonical,orderMemo} from '../lib/marketplace-identity.ts';
+import {reportCapacityInState,reserveSellerCapacity} from '../lib/market-seller-capacity.ts';
 
 const previous={...process.env};
 for(const key of Object.keys(process.env))if(/BAZAAR|UPSTASH|KV_REST|VERCEL/.test(key))delete process.env[key];
@@ -25,6 +26,14 @@ const payer=Keypair.random(),destination=Keypair.random(),sponsor=Keypair.random
 const card={version:'bazaar.service-card/v0',id:'recovery-text-fixture',name:'Recovery fixture',description:'Synthetic private recovery contract fixture.',kind:'http',url:'https://provider.example',routeTemplate:'/text',input:[{name:'prompt',type:'string',required:true}],network:'stellar:testnet',payment:{scheme:'exact',asset:'USDC',amount:'0.0234567',destination:destination.publicKey(),identity:USDC_TESTNET_PAYMENT_IDENTITY,marketplace:{protocol:'x402-stellar-exact-v2',resourceTemplate:'/api/market/orders/{operationId}/x402'}},provider:{name:'Fixture'},tags:['testnet'],delivery:{...syncDeliveryContract(),result:{...syncDeliveryContract().result,contentType:'text/plain'}}};
 const cardHash=computeCanonicalServiceCardHash(card);
 function order(){const operationId=randomUUID(),input={prompt:'PRIVATE_PROMPT_MUST_BE_ERASED_'+operationId};return {operationId,buyerOwnerId:buyer.ownerId,sellerOwnerId:seller.ownerId,serviceId:card.id,cardHash,card,input,payer:payer.publicKey(),destination:destination.publicKey(),amount:card.payment.amount,settlement:USDC_TESTNET_PAYMENT_IDENTITY,paymentProtocol:'x402-stellar-exact-v2',inputHash:sha(canonical(input)),memoHash:orderMemo(buyer.ownerId,operationId,cardHash,input),phase:'payment-uncertain',settlementAttemptId:randomUUID(),createdAt,updatedAt:createdAt};}
+// Fresh payment admissions use distinct synthetic sellers. Conserved uncertain
+// archives remain untouched and continue occupying their original owner's seat.
+async function admitFreshOrder(o){
+ const p={...seller,ownerId:'ow_'+randomBytes(16).toString('hex'),workspaceId:randomUUID(),agentId:'agent-'+randomUUID()},freshCard={...structuredClone(o.card),id:'recovery-'+randomUUID()},freshHash=computeCanonicalServiceCardHash(freshCard),time=Date.now();
+ Object.assign(o,{sellerOwnerId:p.ownerId,serviceId:freshCard.id,card:freshCard,cardHash:freshHash,memoHash:orderMemo(o.buyerOwnerId,o.operationId,freshHash,o.input)});
+ await store.transact(state=>{state.services.push({submissionId:randomUUID(),ownerId:p.ownerId,card:freshCard,cardHash:freshHash,withdrawn:false,createdAt:new Date(time).toISOString()});reportCapacityInState(state,p,{serviceId:freshCard.id,cardHash:freshHash,reportId:randomUUID(),ready:true,day:new Date(time).toISOString().slice(0,10),usedToday:0,observedAt:new Date(time).toISOString()},time);reserveSellerCapacity(state,o,time);state.orders.push(o);});
+ return p;
+}
 const intent=o=>({operationId:o.operationId,serviceId:o.serviceId,cardHash:o.cardHash,payer:o.payer,input:o.input,paymentProtocol:o.paymentProtocol});
 async function chain(o,nonce=42n,amount='234567'){
  const invoke=new xdr.InvokeContractArgs({contractAddress:new Address(o.settlement.sacContract).toScAddress(),functionName:'transfer',args:[nativeToScVal(o.payer,{type:'address'}),nativeToScVal(o.destination,{type:'address'}),nativeToScVal(amount,{type:'i128'})]});
@@ -61,7 +70,8 @@ try{
  chainXdr=(await chain(expired,42n,'234568')).toXDR();await assert.rejects(reconcileArchivedMarketPayment(expired.operationId,deps),error=>error.code==='X402_AUTHORIZATION_MISMATCH');
  chainXdr=tx.toXDR();const confirmed=await reconcileMarketX402Payment(buyer,expired.operationId,deps);assert.equal(confirmed.paymentPhase,'confirmed');assert.ok(confirmed.paymentVerifiedAt);assert.ok(!JSON.stringify(confirmed).includes(expired.input.prompt));
  const afterFirst=rpcCalls;await reconcileMarketGuardianOrder(expired.operationId,deps);assert.equal(rpcCalls,afterFirst);assert.equal(externalEffects,0,'Recovery never submits to facilitator');
- const buyerToken=randomBytes(32).toString('base64url'),otherToken=randomBytes(32).toString('base64url');setWorkspaceStoreForTests({resolveHash:async digest=>digest===sha(buyerToken)?buyer:digest===sha(otherToken)?stranger:Promise.reject(Error('UNAUTHORIZED')),consumeRequest:async()=>{}});setMarketX402DependenciesForTests(deps);
+ assert.equal((await store.transact(state=>state.sellerCapacities??[])).length,0,'Legacy confirmed recovery requires no fresh seller admission');
+ const buyerToken=randomBytes(32).toString('base64url'),otherToken=randomBytes(32).toString('base64url');setWorkspaceStoreForTests({resolveHash:async digest=>digest===sha(buyerToken)?buyer:digest===sha(otherToken)?stranger:Promise.reject(Error('UNAUTHORIZED')),consumeRequest:async()=>{},walletIdentity:async p=>({identity:{...p,wallet:null,network:'stellar:testnet'},guard:{keys:[],values:[]}})});setMarketX402DependenciesForTests(deps);
  const reconcileRequest=token=>new Request(origin+'/api/market/orders/'+expired.operationId,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({action:'reconcile'})});
  const reconciledResponse=await marketHandlers.action(reconcileRequest(buyerToken),expired.operationId);assert.equal(reconciledResponse.status,200);const reconciledBody=await reconciledResponse.text();assert.ok(reconciledBody.includes(proof.transactionHash));assert.ok(!reconciledBody.includes(expired.input.prompt));assert.ok(!reconciledBody.includes(tx.toXDR()));assert.equal((await marketHandlers.action(reconcileRequest(otherToken),expired.operationId)).status,404);
  const unknown=order(),unknownTx=await chain(unknown,99n),unknownProof=marketX402Authorization(unknownTx.toXDR(),unknown,true);
@@ -70,7 +80,7 @@ try{
  await pruneExpiredMarketContent({redis,prefix,now,limit:10});const unknownControl=await readMarketRecovery(buyer,unknown.operationId);assert.equal(unknownControl.paymentPhase,'uncertain');assert.equal(unknownControl.authorizationFingerprint,unknownProof.fingerprint);assert.equal(unknownControl.transactionHash,undefined);
  const beforeUnknown=rpcCalls;await assert.rejects(reconcileArchivedMarketPayment(unknown.operationId,deps),error=>error.code==='X402_PAYMENT_OUTCOME_UNCERTAIN');assert.equal(rpcCalls,beforeUnknown);assert.equal(externalEffects,0);
  const next=order();next.createdAt=new Date().toISOString();next.updatedAt=next.createdAt;next.phase='awaiting-payment';delete next.settlementAttemptId;
- await store.transact(state=>state.orders.push(next));
+ await admitFreshOrder(next);
  await settlements.transact(state=>state.records.push({operationId:next.operationId,buyerOwnerId:buyer.ownerId,orderBinding:marketX402OrderBinding(next),challenge:createMarketX402Challenge(next,origin),phase:'challenged',createdAt:next.createdAt,updatedAt:next.createdAt}));
  await assert.rejects(settlements.transact(state=>Object.assign(state.records[0],{phase:'verifying',attemptId:randomUUID(),payload:{transaction:tx.toXDR()},payloadHash:sha(tx.toXDR()),authorizationFingerprint:proof.fingerprint})),error=>error.code==='X402_AUTHORIZATION_REUSE');
  const operatorToken=randomBytes(32).toString('base64url');process.env.BAZAAR_MARKET_OPERATOR_HASH=sha(operatorToken);
@@ -86,9 +96,9 @@ try{
   const started=originalNow(),race=order();race.createdAt=new Date(started-7*86400000+2000).toISOString();race.updatedAt=race.createdAt;race.phase='awaiting-payment';delete race.settlementAttemptId;
   Date.now=()=>started;
   try{
+   await admitFreshOrder(race);
    const raceTx=await chain(race,nonce),raceProof=marketX402Authorization(raceTx.toXDR(),race,true),challenge=createMarketX402Challenge(race,origin);
    const payload={x402Version:2,resource:challenge.resource,accepted:challenge.accepts[0],payload:{transaction:raceTx.toXDR()}};
-   await store.transact(state=>state.orders.push(race));
    let verifies=0,settles=0,reads=0;
    const raceDeps={store:settlements,rpc:{async transaction(){reads++;return {status:'SUCCESS',envelopeXdr:raceTx.toXDR()};}},facilitator:{
     async verify(){verifies++;return {isValid:true,payer:race.payer};},
@@ -119,9 +129,11 @@ try{
  // Crash between storing a valid hash and changing settling -> settled is
  // recoverable by ledger reads without another verify/settle invocation.
  const settling=order();settling.createdAt=new Date().toISOString();settling.updatedAt=settling.createdAt;
+ await admitFreshOrder(settling);
  const settlingTx=await chain(settling,1006n),settlingProof=marketX402Authorization(settlingTx.toXDR(),settling,true);settling.transactionHash=settlingProof.transactionHash;
- await store.transact(state=>state.orders.push(settling));
+ await store.transact(state=>Object.assign(state.orders.find(o=>o.operationId===settling.operationId),{transactionHash:settlingProof.transactionHash}));
  await settlements.transact(state=>state.records.push({operationId:settling.operationId,buyerOwnerId:buyer.ownerId,orderBinding:marketX402OrderBinding(settling),challenge:createMarketX402Challenge(settling,origin),phase:'settling',createdAt:settling.createdAt,updatedAt:settling.updatedAt,attemptId:settling.settlementAttemptId,payload:{transaction:settlingTx.toXDR()},payloadHash:sha(settlingTx.toXDR()),authorizationFingerprint:settlingProof.fingerprint,transactionHash:settlingProof.transactionHash}));
+ await store.transact(state=>state.sellerCapacities=state.sellerCapacities.filter(c=>c.ownerId!==settling.sellerOwnerId));
  assert.ok((await marketGuardianSnapshot(1000)).incidents.some(i=>i.operationId===settling.operationId&&i.canReconcile),'Guardian exposes known-hash settling as ledger-recoverable');
  let settlingReads=0;
  const settlingDeps={...deps,rpc:{async transaction(){settlingReads++;return {status:'SUCCESS',envelopeXdr:settlingTx.toXDR()};}}};

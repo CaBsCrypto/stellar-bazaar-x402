@@ -1,10 +1,11 @@
 import {withSellerMcp,validateSellerConfiguration} from './seller-mcp-transport.mjs';
+import {randomUUID} from 'node:crypto';
 import {createSellerHttpAdapter} from './seller-http-adapter.mjs';
 import {sellerCanonical,sellerHash} from './seller-service-card.mjs';
 import {sellerUuid,createSellerIntent,validateSellerIntent,bindSellerOrder,readSellerJournal,sellerTool,listSellerOrders,inspectSellerIntent,executeSellerIntent,recoverSellerIntent,deliverSellerIntent,uncertainSellerIntent} from './seller-marketplace-worker.mjs';
 
 const stateName='seller.hosted.tick',maximumTicks=1440,maximumExecutions=50,maximumMcpRequests=20,maximumDailyMcpRequests=5000;
-const permittedTools=new Set(['get_bazaar_identity','list_market_orders','get_market_order','claim_market_order','deliver_market_order','uncertain_market_order']);
+const permittedTools=new Set(['get_bazaar_identity','report_market_capacity','list_market_orders','get_market_order','claim_market_order','deliver_market_order','uncertain_market_order']);
 const reasons=new Set(['disabled','idle','delivered','uncertainty','quota','backoff','tick-bound','provider-bound','request-bound','time-bound','owner-stop','clock','locked','unconfirmed']);
 const diagnosticCodes=new Set(['HOSTED_STORAGE_READ_FAILED','HOSTED_CHECKPOINT_FAILED','MCP_LEASE_UNCONFIRMED','MCP_FETCH_FAILED','MCP_FETCH_TIMEOUT','MCP_REDIRECT_DENIED','MCP_RESPONSE_UNCONFIRMED','MCP_HTTP_REJECTED','MCP_INITIALIZE_FAILED','MCP_ACTION_FAILED']);
 const integer=(value,min,max)=>Number.isSafeInteger(value)&&value>=min&&value<=max;
@@ -12,7 +13,8 @@ const day=value=>new Date(value).toISOString().slice(0,10);
 function binding(config){return sellerHash(sellerCanonical({bazaarOrigin:config.bazaarOrigin,ownerId:config.ownerId,agentId:config.agentId,cardHash:config.cardHash,allowedOrigins:config.allowedOrigins,agentAccessHash:sellerHash(config.agentAccess),providerAccessHash:sellerHash(config.providerAccess)}));}
 function validateState(state,bindingHash){
  const keys=['version','bindingHash','day','ticks','providerRequests','executed','mcpRequests','lastObservedAt','cursor','pending','retryAt'].sort().join(',');
- if(!state||Object.keys(state).sort().join(',')!==keys||state.version!==1||state.bindingHash!==bindingHash||!integer(state.lastObservedAt,0,8640000000000000)||state.day!==day(state.lastObservedAt)||!integer(state.ticks,0,maximumTicks)||!integer(state.providerRequests,0,maximumExecutions)||!integer(state.executed,0,state.providerRequests)||!integer(state.mcpRequests,0,maximumDailyMcpRequests)||state.cursor!==null&&(typeof state.cursor!=='string'||!/^[a-zA-Z0-9_-]{1,512}$/.test(state.cursor))||!Array.isArray(state.pending)||state.pending.length>20||state.pending.some(id=>!sellerUuid.test(id))||new Set(state.pending).size!==state.pending.length||!integer(state.retryAt,0,8640000000000000))throw Error('HOSTED_STATE_REQUIRES_REVIEW');
+ if(!state||Object.keys(state).filter(k=>k!=='capacityReport').sort().join(',')!==keys||state.version!==1||state.bindingHash!==bindingHash||!integer(state.lastObservedAt,0,8640000000000000)||state.day!==day(state.lastObservedAt)||!integer(state.ticks,0,maximumTicks)||!integer(state.providerRequests,0,maximumExecutions)||!integer(state.executed,0,state.providerRequests)||!integer(state.mcpRequests,0,maximumDailyMcpRequests)||state.cursor!==null&&(typeof state.cursor!=='string'||!/^[a-zA-Z0-9_-]{1,512}$/.test(state.cursor))||!Array.isArray(state.pending)||state.pending.length>20||state.pending.some(id=>!sellerUuid.test(id))||new Set(state.pending).size!==state.pending.length||!integer(state.retryAt,0,8640000000000000))throw Error('HOSTED_STATE_REQUIRES_REVIEW');
+ if(state.capacityReport!==undefined&&state.capacityReport!==null&&(!sellerUuid.test(state.capacityReport.reportId??'')||typeof state.capacityReport.ready!=='boolean'||!integer(state.capacityReport.usedToday,0,maximumExecutions)||!Number.isFinite(Date.parse(state.capacityReport.observedAt))||Buffer.byteLength(JSON.stringify(state.capacityReport))>2048))throw Error('HOSTED_CAPACITY_REQUIRES_REVIEW');
 }
 function retrySeconds(value){return typeof value==='string'&&/^\d{1,5}$/.test(value)&&integer(Number(value),1,86400)?Number(value):60;}
 function orderContentExpiresAt(order){
@@ -105,6 +107,20 @@ export async function runHostedSellerTick(input){
    const tools={callTool:async(name,args)=>{await assertEffects();if(!permittedTools.has(name)||counts.tools>=maximumMcpRequests)throw stop('request-bound');counts.tools++;const result=await bounded(()=>native.callTool(name,args));check();return result;}};
    const identity=await sellerTool(tools,'get_bazaar_identity',{});
    if(identity.ownerId!==config.ownerId||identity.agentId!==config.agentId||identity.network!=='stellar:testnet'||!integer(identity.generation,1,Number.MAX_SAFE_INTEGER))throw stop('unconfirmed');
+   // Exact authenticated health GET; it does not consume a provider execution.
+   let providerReady=false;
+   try{
+    const healthUrl=new URL(config.card.routeTemplate+'/availability',config.card.url).href;
+    await assertEffects();const health=await bounded(()=>providerFetcher(healthUrl,{method:'GET',headers:{authorization:'Bearer '+config.providerAccess,accept:'application/json'},redirect:'error',credentials:'omit',cache:'no-store',signal:combined}));
+    const incoming=await buffered(health,healthUrl,1024);if(incoming.status===200){const body=await incoming.json();providerReady=body?.ready===true&&body.network==='stellar:testnet';}
+   }catch{providerReady=false;}
+   const reportTime=check(),ready=providerReady&&state.providerRequests<maximumExecutions&&state.mcpRequests+12<maximumDailyMcpRequests;
+   // Recover the saved intention while it still describes this observation.
+   // A fresh health result, changed budget or old clock needs a new report;
+   // never replay a prior ready:true after detecting an unavailable adapter.
+   const saved=state.capacityReport;
+   if(!saved||saved.day!==day(reportTime)||saved.ready!==ready||saved.usedToday!==state.providerRequests||Math.abs(reportTime-Date.parse(saved.observedAt))>30000){state.capacityReport={serviceId:config.card.id,cardHash:config.cardHash,reportId:randomUUID(),ready,day:day(reportTime),usedToday:state.providerRequests,observedAt:new Date(reportTime).toISOString()};await persist();}
+   await sellerTool(tools,'report_market_capacity',state.capacityReport);state.capacityReport=null;await persist();
    if(!state.pending.length){
     const page=await listSellerOrders(tools,{limit:20,...(state.cursor?{cursor:state.cursor}:{})});
     if(page.orders.length>20)throw stop('unconfirmed');
@@ -149,6 +165,7 @@ export async function runHostedSellerTick(input){
      }
      if(['generated','delivery-started','delivery-uncertain'].includes(intent.phase))await deliverSellerIntent(intent,options);
      else if(['prepared','claimed'].includes(intent.phase)){
+      if(!providerReady)throw stop('unconfirmed');
       if(state.providerRequests>=maximumExecutions)throw stop('provider-bound');
       const adapter=createSellerHttpAdapter({providerOrigin:config.card.url,route:config.card.routeTemplate,allowedOrigins:config.allowedOrigins,providerAccess:config.providerAccess,fetcher:providerTransport,timeoutMs:10000});
       await executeSellerIntent(intent,{...options,adapter});counts.executed++;state.executed++;await persist();

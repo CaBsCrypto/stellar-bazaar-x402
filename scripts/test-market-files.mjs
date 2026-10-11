@@ -20,6 +20,7 @@ import {syncDeliveryContract} from '../lib/delivery-contract.ts';
 import {USDC_TESTNET_PAYMENT_IDENTITY} from '../lib/payment-assets.ts';
 import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts';
 import {sha,canonical,orderMemo} from '../lib/marketplace-identity.ts';
+import {reportCapacityInState,reserveSellerCapacity} from '../lib/market-seller-capacity.ts';
 
 Object.assign(process.env,{BAZAAR_PUBLIC_DEMO:'true',BAZAAR_ENABLE_OPEN_WORKSPACES:'true',BAZAAR_ENABLE_MARKETPLACE:'true',BAZAAR_ENABLE_MARKET_PURCHASES:'true',BAZAAR_X402_MARKETPLACE_ENABLED:'true',BAZAAR_ENABLE_SELF_LISTING_INTAKE:'true',BAZAAR_MARKET_REVIEW_SECRET:randomBytes(32).toString('hex'),BAZAAR_WORKSPACE_ADMISSION:'open',BAZAAR_WORKSPACE_BACKEND:'redis',BAZAAR_WORKSPACE_PUBLIC_ORIGIN:'https://files-fixture.example',BAZAAR_MARKET_FILES_ENABLED:'true',BAZAAR_MARKET_FILE_PREFIX:'market-deliveries/v1/local/'+randomBytes(16).toString('hex'),BAZAAR_S3_BUCKET:'offline-fixture',BAZAAR_S3_REGION:'auto',BAZAAR_S3_ENDPOINT:'https://r2-fixture.example',BAZAAR_S3_ACCESS_KEY_ID:'offline-fixture',BAZAAR_S3_SECRET_ACCESS_KEY:'offline-fixture'});
 delete process.env.VERCEL;delete process.env.VERCEL_ENV;delete process.env.BAZAAR_ACCEPTANCE_METER;
@@ -32,7 +33,7 @@ const redis={async get(k){return data.get(k)??null;},async eval(script,keys,args
 const workspacePrefix='bazaar-workspace:pilot-'+randomBytes(16).toString('hex'),marketPrefix='bazaar-market:pilot-'+randomBytes(16).toString('hex');
 const workspace=createRedisWorkspaceStore(redis,workspacePrefix,()=>({ownerIds:[],hashes:[]}));setWorkspaceStoreForTests(workspace);
 async function account(){const tokens=Object.fromEntries(['human','agent','bootstrap'].map(k=>[k,randomBytes(32).toString('base64url')]));await workspace.createWorkspace({creationId:randomUUID(),humanAccessHash:sha(tokens.human),agentAccessHash:sha(tokens.agent)},sha(tokens.bootstrap),'test-ip');return {tokens,agent:await workspace.resolveHash(sha(tokens.agent)),human:await workspace.resolveHash(sha(tokens.human)),root:await workspace.resolveHash(sha(tokens.bootstrap))};}
-const seller=await account(),buyer=await account(),other=await account(),market=createMarketStore(redis,marketPrefix),objects=new Map();
+const seller=await account(),buyer=await account(),other=await account(),capacitySeller=await account(),market=createMarketStore(redis,marketPrefix),objects=new Map();
 setMarketStoreForTests(market);
 const key=(owner,version,file)=>owner+'/'+version+'/'+file.id;let uploads=0,downloads=0;
 const storage={async upload(owner,version,file,deadline){uploads++;return {url:'https://private-fixture.example/'+key(owner,version,file),headers:{'content-type':file.mediaType},expiresAt:new Date(Math.min(deadline,Date.now()+600000)).toISOString()};},async verify(owner,version,file){if(revokeOnVerify){revokeOnVerify=false;await workspace.changeAccess(seller.root.workspaceId,sha(seller.tokens.bootstrap),{action:'revoke',expectedGeneration:1});}const saved=objects.get(key(owner,version,file));if(!saved||saved.size!==file.size||saved.sha256!==file.sha256||saved.mediaType!==file.mediaType)throw new DeliverableError('FILE_INTEGRITY_MISMATCH',409);},async access(owner,version,file,download,deadline){downloads++;return {url:'https://private-fixture.example/'+key(owner,version,file)+'?signed=synthetic',expiresAt:new Date(Math.min(deadline,Date.now()+300000)).toISOString()};},async remove(owner,version,file){objects.delete(key(owner,version,file));}};
@@ -43,22 +44,27 @@ function order(card=baseCard,owner=buyer.agent.ownerId){const operationId=random
 // Exercise the same reviewed-provider path as a real new purchase, with every
 // external proof/registry effect confined to explicit dependency doubles.
 await resetSelfListingStateForTests();
-const submissionId=randomUUID(),submission=await submitMarketService(seller.human,{submissionId,card:baseCard,controlProof:{method:'http-well-known',domain:'provider.example'}});
-await verifySubmissionHttp(submissionId,{lookup:async()=>[{address:'8.8.8.8',family:4}],transport:async()=>({status:200,body:submission.control.expectedRecord})});
-check((await recordManualReview(submissionId,{decision:'approve',reviewerId:'offline-fixture',reasons:['Synthetic storage contract']})).ok);
-check((await stageApprovedSubmission(submissionId)).ok);
-await activateSubmission(submissionId,{configured:()=>true,create:async card=>({ok:true,entry:{id:card.id,card,hash:computeCanonicalServiceCardHash(card)}}),read:async()=>undefined});
-const newIntent=()=>{const value=order();return {operationId:value.operationId,serviceId:value.serviceId,cardHash:value.cardHash,payer:value.payer,input:value.input,paymentProtocol:value.paymentProtocol};};
+async function activeFileService(actor,card){const submissionId=randomUUID(),submission=await submitMarketService(actor.human,{submissionId,card,controlProof:{method:'http-well-known',domain:'provider.example'}});
+ await verifySubmissionHttp(submissionId,{lookup:async()=>[{address:'8.8.8.8',family:4}],transport:async()=>({status:200,body:submission.control.expectedRecord})});
+ check((await recordManualReview(submissionId,{decision:'approve',reviewerId:'offline-fixture',reasons:['Synthetic storage contract']})).ok);check((await stageApprovedSubmission(submissionId)).ok);
+ await activateSubmission(submissionId,{configured:()=>true,create:async card=>({ok:true,entry:{id:card.id,card,hash:computeCanonicalServiceCardHash(card)}}),read:async()=>undefined});
+ const time=Date.now();await market.transact(s=>reportCapacityInState(s,actor.agent,{serviceId:card.id,cardHash:computeCanonicalServiceCardHash(card),reportId:randomUUID(),ready:true,day:new Date(time).toISOString().slice(0,10),usedToday:0,observedAt:new Date(time).toISOString()},time));
+}
+await activeFileService(seller,baseCard);
+const capacityCard={...structuredClone(baseCard),id:'synthetic-capacity-video'};await activeFileService(capacitySeller,capacityCard);
+const newIntent=(card=baseCard)=>{const value=order(card);return {operationId:value.operationId,serviceId:value.serviceId,cardHash:value.cardHash,payer:value.payer,input:value.input,paymentProtocol:value.paymentProtocol};};
 let probeCalls=0;setMarketStorageProbeForTests(async()=>{probeCalls++;return {configured:true,reachable:false,code:'STORAGE_UNREACHABLE'};});
 const admissionBefore=data.get(marketPrefix+':state'),ledgerBefore=data.get(capacityReservationKey(marketPrefix));
 const unavailable=await marketHandlers.create(new Request('https://files-fixture.example/api/market/orders',{method:'POST',headers:{authorization:'Bearer '+buyer.tokens.agent,'content-type':'application/json'},body:JSON.stringify(newIntent())}));
 check(unavailable.status===503);check((await unavailable.json()).error.code==='STORAGE_UNREACHABLE');check(probeCalls===1);
 check(data.get(marketPrefix+':state')===admissionBefore);check(data.get(capacityReservationKey(marketPrefix))===ledgerBefore);check(uploads===0);
 setMarketStorageProbeForTests(async()=>({configured:true,reachable:true,code:'STORAGE_REACHABLE'}));
-const o=order();await market.transact(s=>{reserveMarketFilesInState(o,s);s.orders.push(o);});
+const o=order();await market.transact(s=>{reserveSellerCapacity(s,o);reserveMarketFilesInState(o,s);s.orders.push(o);});
 check((await market.transact(s=>s.orders[0])).fileReservation.maxBytes===60000000);
 check(JSON.parse(data.get(capacityReservationKey(marketPrefix))).entries.length===1);
-await assert.rejects(()=>market.transact(s=>{const second=order();reserveMarketFilesInState(second,s);s.orders.push(second);}),e=>e.code==='ACCOUNT_FILE_CAPACITY');tests++;
+const beforeAccountLimit=data.get(marketPrefix+':state'),beforeAccountLedger=data.get(capacityReservationKey(marketPrefix));
+await assert.rejects(()=>createMarketOrder(buyer.agent,newIntent(capacityCard)),e=>e.code==='ACCOUNT_FILE_CAPACITY');tests++;
+check(data.get(marketPrefix+':state')===beforeAccountLimit);check(data.get(capacityReservationKey(marketPrefix))===beforeAccountLedger);
 // Old expired bytes remain charged until physically cleaned.
 const globalState={version:1,services:[],orders:Array.from({length:50},(_,i)=>({...order(baseCard,'owner'+i),fileReservation:{maxBytes:100000000,expiresAt:'2020-01-01T00:00:00.000Z'}}))};
 assert.throws(()=>reserveMarketFilesInState(order(baseCard,'new-owner'),globalState),e=>e.code==='GLOBAL_FILE_CAPACITY');tests++;
@@ -67,7 +73,7 @@ check((await handlers.prepare(request(o.operationId,seller.tokens.agent,manifest
 await market.transact(s=>Object.assign(s.orders[0],{phase:'paid',settlementAttemptId:randomUUID(),transactionHash:'a'.repeat(64),paymentVerifiedAt:new Date().toISOString()}));
 process.env.BAZAAR_MARKET_FILES_ENABLED='false';check(marketFileCapabilities().enabled===false);
 const closedBefore=data.get(marketPrefix+':state'),closedLedger=data.get(capacityReservationKey(marketPrefix));
-await assert.rejects(()=>createMarketOrder(buyer.agent,newIntent()),e=>e.code==='FILE_STORAGE_DISABLED'&&e.status===503);tests++;
+await assert.rejects(()=>createMarketOrder(buyer.agent,newIntent(capacityCard)),e=>e.code==='FILE_STORAGE_DISABLED'&&e.status===503);tests++;
 check(data.get(marketPrefix+':state')===closedBefore);check(data.get(capacityReservationKey(marketPrefix))===closedLedger);
 // Explicit replay and paid seller recovery survive closure of new admission.
 check((await createMarketOrder(buyer.agent,{operationId:o.operationId,serviceId:o.serviceId,cardHash:o.cardHash,payer:o.payer,input:o.input,paymentProtocol:o.paymentProtocol})).phase==='paid');

@@ -5,7 +5,7 @@ import type {PaymentPayload,PaymentRequired,SettleResponse} from '@x402/core/typ
 import {meteredRedis} from './acceptance-meter.ts';
 import {marketPrefix,type MarketRedis} from './marketplace-store.ts';
 import {WorkspaceError} from './workspace-types.ts';
-import {commitCapacityStore,SETTLEMENT_CAPACITY_BYTES} from './marketplace-capacity.ts';
+import {commitCapacityStore,SETTLEMENT_CAPACITY_BYTES,type MarketCommitGuard} from './marketplace-capacity.ts';
 
 /** Signed authorizations never enter the public order or the seller's MCP DTO. */
 export interface MarketX402Settlement {
@@ -16,7 +16,7 @@ export interface MarketX402Settlement {
   transactionHash?:string;responseHash?:string;
 }
 export type MarketX402State={version:1;records:MarketX402Settlement[]};
-export interface MarketX402Store{transact<T>(op:(state:MarketX402State)=>T):Promise<T>}
+export interface MarketX402Store{transact<T>(op:(state:MarketX402State)=>T,guard?:MarketCommitGuard):Promise<T>}
 const hash=z.string().regex(/^[a-f0-9]{64}$/);
 const recordSchema=z.object({operationId:z.string().uuid(),buyerOwnerId:z.string().min(1),orderBinding:hash,
  challenge:z.unknown(),phase:z.enum(['challenged','verifying','rejected','settling','uncertain','settled','confirmed']),
@@ -46,7 +46,7 @@ export function marketX402SettlementKey(prefix=marketPrefix()){return prefix+':x
 export function createMarketX402Store(redis:MarketRedis,prefix:string):MarketX402Store{
  if(!/^bazaar-market:pilot-[a-f0-9]{32}$/.test(prefix))throw new WorkspaceError('MARKET_UNAVAILABLE');
  const key=marketX402SettlementKey(prefix);
- return {async transact(op){
+ return {async transact(op,guard){
   const raw=await redis.get(key);let state:MarketX402State;
   if(raw===null)state={version:1,records:[]};else{
    if(typeof raw!=='string'||Buffer.byteLength(raw)>SETTLEMENT_CAPACITY_BYTES)throw new WorkspaceError('X402_SETTLEMENT_UNAVAILABLE');
@@ -58,7 +58,7 @@ export function createMarketX402Store(redis:MarketRedis,prefix:string):MarketX40
   if(before!==JSON.stringify(state)){
    const next=JSON.stringify({version:1,revision:randomUUID(),state});
    if(Buffer.byteLength(next)>SETTLEMENT_CAPACITY_BYTES)throw new WorkspaceError('X402_SETTLEMENT_CAPACITY',409);
-   await commitCapacityStore(redis,prefix,'settlement',raw as string|null,next);
+   await commitCapacityStore(redis,prefix,'settlement',raw as string|null,next,guard);
   }
   return structuredClone(result);
  }};

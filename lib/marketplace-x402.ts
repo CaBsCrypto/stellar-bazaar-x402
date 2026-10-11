@@ -5,7 +5,8 @@ import type {PaymentPayload,PaymentRequired,PaymentRequirements,SettleResponse,V
 import {z} from 'zod';
 import {canonical,sha} from './marketplace-identity.ts';
 import {configuredMarketStore,type MarketOrder} from './marketplace-store.ts';
-import {readMarketOrder,readMarketRecovery,assertMarketEnabled,assertMarketPurchaseAdmission} from './marketplace.ts';
+import {readMarketOrder,readMarketRecovery,assertMarketEnabled,assertMarketPurchaseAdmission,sellerPaymentGuard} from './marketplace.ts';
+import type {MarketCommitGuard} from './marketplace-capacity.ts';
 import {isCanonicalUsdcTestnet} from './payment-assets.ts';
 import {decimalToAtomic} from './operation-history-client.ts';
 import {WorkspaceError,type WorkspacePrincipal} from './workspace-types.ts';
@@ -102,7 +103,8 @@ function assertRecordBinding(record:MarketX402Settlement,o:MarketOrder){
  try{if(record.buyerOwnerId!==o.buyerOwnerId||record.orderBinding!==marketX402OrderBinding(o)||canonical(record.challenge)!==canonical(createMarketX402Challenge(o,new URL(record.challenge.resource.url).origin)))throw Error();}catch{throw new WorkspaceError('X402_SETTLEMENT_BINDING_MISMATCH',409);}
 }
 async function boundRecord(store:MarketX402Store,o:MarketOrder){const record=await store.transact(s=>s.records.find(r=>r.operationId===o.operationId));if(!record)throw new WorkspaceError('X402_SETTLEMENT_BINDING_MISMATCH',409);assertRecordBinding(record,o);return record;}
-async function updateRecord(store:MarketX402Store,o:MarketOrder,attemptId:string,change:(r:MarketX402Settlement)=>void){return store.transact(s=>{const r=s.records.find(v=>v.operationId===o.operationId);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.attemptId!==attemptId)throw new WorkspaceError('OPERATION_CONFLICT',409);change(r);r.updatedAt=new Date().toISOString();return r;});}
+async function updateRecord(store:MarketX402Store,o:MarketOrder,attemptId:string,change:(r:MarketX402Settlement)=>void,guard?:MarketCommitGuard){return store.transact(s=>{const r=s.records.find(v=>v.operationId===o.operationId);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.attemptId!==attemptId)throw new WorkspaceError('OPERATION_CONFLICT',409);change(r);r.updatedAt=new Date().toISOString();return r;},guard);}
+async function releaseRejectedSeat(o:MarketOrder,attemptId:string){await configuredMarketStore().transact(s=>{const current=s.orders.find(v=>v.operationId===o.operationId);if(!current||current.settlementAttemptId&&current.settlementAttemptId!==attemptId||current.paymentVerifiedAt||current.transactionHash)throw new WorkspaceError('OPERATION_CONFLICT',409);if(current.sellerReservation){current.sellerReservation.committed=false;current.sellerReservation.expiresAt=new Date().toISOString();}if(current.phase==='payment-submitting')current.phase='awaiting-payment';});}
 /** A settling call can finish after seven-day maintenance erased its content.
  * Preserve only its matching transaction identifier, never the signed payload,
  * provider response, prompt or result. Confirmation still requires a ledger read. */
@@ -170,21 +172,24 @@ export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,or
  if(!record){
   if(o.phase!=='awaiting-payment')throw new WorkspaceError('X402_SETTLEMENT_UNAVAILABLE',409);
   assertMarketPurchaseAdmission();if(await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
+  const challengeGuard=await sellerPaymentGuard(o,p);
   await operationalRequestGate({profile:'authenticated',newOperation:true});
-  const challenge=createMarketX402Challenge(o,origin);record=await deps.store.transact(s=>{assertMarketPurchaseAdmission();if(s.records.some(r=>r.operationId===id))throw new WorkspaceError('OPERATION_CONFLICT',409);const time=new Date().toISOString(),r:MarketX402Settlement={operationId:id,buyerOwnerId:p.ownerId,orderBinding:marketX402OrderBinding(o),challenge,phase:'challenged',createdAt:time,updatedAt:time};s.records.push(r);return r;});
+  const challenge=createMarketX402Challenge(o,origin);record=await deps.store.transact(s=>{assertMarketPurchaseAdmission();if(s.records.some(r=>r.operationId===id))throw new WorkspaceError('OPERATION_CONFLICT',409);const time=new Date().toISOString(),r:MarketX402Settlement={operationId:id,buyerOwnerId:p.ownerId,orderBinding:marketX402OrderBinding(o),challenge,phase:'challenged',createdAt:time,updatedAt:time};s.records.push(r);return r;},challengeGuard);
  }
  assertRecordBinding(record,o);
  if(!signature){if(record.phase==='confirmed')return paidResponse(await finalizePaid(deps,o,record),record,origin);if(record.phase!=='challenged')throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);return Response.json(record.challenge,{status:402,headers:{...workspaceHeaders,'PAYMENT-REQUIRED':encodePaymentRequiredHeader(record.challenge)}});}
  const proof=parseProof(signature,record,o);
  if(record.payloadHash){if(record.payloadHash!==proof.payloadHash||record.authorizationFingerprint!==proof.authorizationFingerprint)throw new WorkspaceError('OPERATION_CONFLICT',409);if(record.phase==='confirmed')return paidResponse(await finalizePaid(deps,o,record),record,origin);throw new WorkspaceError(record.phase==='rejected'?'X402_PAYMENT_REJECTED':'X402_PAYMENT_OUTCOME_UNCERTAIN',record.phase==='rejected'?402:409);}
  assertMarketPurchaseAdmission();if(await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
+ const paymentGuard=await sellerPaymentGuard(o,p);
  await operationalRequestGate({profile:'authenticated',newOperation:true});
- const attemptId=randomUUID();record=await deps.store.transact(s=>{assertMarketPurchaseAdmission();const r=s.records.find(v=>v.operationId===id);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.phase!=='challenged')throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.records.some(v=>v.authorizationFingerprint===proof.authorizationFingerprint))throw new WorkspaceError('X402_AUTHORIZATION_REUSE',409);Object.assign(r,proof,{attemptId,phase:'verifying',updatedAt:new Date().toISOString()});return r;});
+ const attemptId=randomUUID();record=await deps.store.transact(s=>{assertMarketPurchaseAdmission();const r=s.records.find(v=>v.operationId===id);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.phase!=='challenged')throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.records.some(v=>v.authorizationFingerprint===proof.authorizationFingerprint))throw new WorkspaceError('X402_AUTHORIZATION_REUSE',409);Object.assign(r,proof,{attemptId,phase:'verifying',updatedAt:new Date().toISOString()});return r;},paymentGuard);
  try{
   const verified=await deps.facilitator.verify(proof.payload,record.challenge.accepts[0]);
-  if(verified.isValid!==true||verified.payer!==o.payer){await updateRecord(deps.store,o,attemptId,r=>{r.phase='rejected';});throw new WorkspaceError('X402_PAYMENT_REJECTED',402);}
+  if(verified.isValid!==true||verified.payer!==o.payer){await updateRecord(deps.store,o,attemptId,r=>{r.phase='rejected';});await releaseRejectedSeat(o,attemptId);throw new WorkspaceError('X402_PAYMENT_REJECTED',402);}
+  const settleGuard=await sellerPaymentGuard(o,p);
   await markOrder(o,attemptId);
-  record=await updateRecord(deps.store,o,attemptId,r=>{if(r.phase!=='verifying')throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='settling';});
+  record=await updateRecord(deps.store,o,attemptId,r=>{if(r.phase!=='verifying')throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='settling';},settleGuard);
   const outcome=await deps.facilitator.settle(proof.payload,record.challenge.accepts[0]);
   try{record=await updateRecord(deps.store,o,attemptId,r=>{r.responseHash=sha(canonical(outcome));if(outcome.network==='stellar:testnet'&&outcome.payer===o.payer&&/^[a-f0-9]{64}$/.test(outcome.transaction))r.transactionHash=outcome.transaction;});}
   catch(e){if(await retainArchivedOutcome(o,record,outcome))throw new WorkspaceError('ORDER_CONTENT_EXPIRED',410);throw e;}
@@ -192,7 +197,14 @@ export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,or
   const receipt:SettleResponse={success:true,network:'stellar:testnet',transaction:outcome.transaction,payer:outcome.payer};
   record=await updateRecord(deps.store,o,attemptId,r=>{r.outcome=receipt;r.phase='settled';});
   const paid=await finalizePaid(deps,o,record);return paidResponse(paid,record,origin);
- }catch(e){if(!(e instanceof WorkspaceError&&e.code==='X402_PAYMENT_REJECTED'))await markUncertain(deps,o,record);throw e instanceof WorkspaceError?e:new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);}
+ }catch(e){
+  // A known availability rejection before settling is a definitive no-send.
+  // Unknown acknowledgements still enter the existing reconciliation path.
+  if(e instanceof WorkspaceError&&['SELLER_UNAVAILABLE','SELLER_RESERVATION_EXPIRED','SELLER_CAPACITY_EXHAUSTED'].includes(e.code)&&record.phase==='verifying'){
+   await updateRecord(deps.store,o,attemptId,r=>{if(r.phase!=='verifying')throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='rejected';});await releaseRejectedSeat(o,attemptId);throw e;
+  }
+  if(!(e instanceof WorkspaceError&&e.code==='X402_PAYMENT_REJECTED'))await markUncertain(deps,o,record);throw e instanceof WorkspaceError?e:new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+ }
 }
 export async function marketX402Handler(request:Request,id:string){
  try{const p=await authenticateWorkspaceRequest(request);await parseWorkspaceBody(request,z.object({}).strict(),1024);return await executeMarketX402Payment(p,id,workspaceRequestOrigin(request),request.headers.get('payment-signature')??undefined);}catch(e){return workspaceFailure(e);}

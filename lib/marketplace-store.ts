@@ -11,6 +11,7 @@ import {isCanonicalUsdcTestnet,sameCreditIdentity} from './payment-assets.ts';
 import {commitCapacityStore,MARKET_CAPACITY_BYTES,type MarketCommitGuard} from './marketplace-capacity.ts';
 import {marketFileDeliverySchema,marketFileReservationSchema,validateMarketFiles,marketFileCleanupSchema,MARKET_FILE_CLEANUP_CAPACITY_BYTES,type MarketFileCleanup} from './market-file-delivery-schema.ts';
 import {marketRecoverySchema,type MarketRecovery,MARKET_RECOVERY_CAPACITY_BYTES} from './market-retention-schema.ts';
+import {sellerCapacitySchema,sellerReservationSchema,type SellerCapacity} from './market-seller-capacity.ts';
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const account = z.string().regex(/^G[A-Z2-7]{55}$/);
@@ -22,6 +23,7 @@ export const marketOrderSchema = z.object({
   settlement:stellarCreditIdentitySchema.optional(),
   paymentProtocol:z.literal('x402-stellar-exact-v2').optional(), inputHash:hash.optional(),
   settlementAttemptId:z.string().uuid().optional(),
+  sellerReservation:sellerReservationSchema.optional(),
   phase: z.enum(['awaiting-payment','payment-submitting','payment-uncertain','paid','executing','execution-uncertain','delivered','delivery-failed']),
   createdAt: z.string().datetime(), updatedAt: z.string().datetime(),
   transactionHash: hash.optional(), paymentVerifiedAt: z.string().datetime().optional(),
@@ -36,16 +38,18 @@ export type MarketOrder = Omit<z.infer<typeof marketOrderSchema>, 'card'> & {car
 export type MarketService = {submissionId:string;ownerId:string;cardHash:string;card:ServiceCard;withdrawn:boolean;createdAt:string};
 const serviceSchema = z.object({submissionId:z.string().uuid(),ownerId:z.string(),cardHash:hash,card:z.unknown(),withdrawn:z.boolean(),createdAt:z.string().datetime()}).strict();
 const stateSchema = z.object({version:z.literal(1),services:z.array(serviceSchema),orders:z.array(marketOrderSchema),
+  sellerCapacities:z.array(sellerCapacitySchema).optional(),
   archived:z.array(marketRecoverySchema).optional(),
   fileCleanup:z.array(marketFileCleanupSchema).optional(),
   maintenance:z.object({workspaceCursor:z.string().max(64).optional(),reconciliationCursor:z.string().uuid().optional(),cleanupCursor:z.string().uuid().optional(),lastRunAt:z.string().datetime().optional()}).strict().optional(),
   paused:z.boolean().optional(),
   operatorQuota:z.object({minute:z.number().int(),count:z.number().int().nonnegative()}).strict().optional()}).strict();
-export type MarketState = {version:1;services:MarketService[];orders:MarketOrder[];archived?:MarketRecovery[];fileCleanup?:MarketFileCleanup[];maintenance?:{workspaceCursor?:string;reconciliationCursor?:string;cleanupCursor?:string;lastRunAt?:string};paused?:boolean;operatorQuota?:{minute:number;count:number}};
+export type MarketState = {version:1;services:MarketService[];orders:MarketOrder[];sellerCapacities?:SellerCapacity[];archived?:MarketRecovery[];fileCleanup?:MarketFileCleanup[];maintenance?:{workspaceCursor?:string;reconciliationCursor?:string;cleanupCursor?:string;lastRunAt?:string};paused?:boolean;operatorQuota?:{minute:number;count:number}};
 export interface MarketStore { transact<T>(op:(state:MarketState)=>T,guard?:MarketCommitGuard):Promise<T> }
 export interface MarketRedis {get(key:string):Promise<unknown>;eval(script:string,keys:string[],args:string[]):Promise<unknown>}
 export function validateMarketState(raw:unknown):asserts raw is MarketState {
   const s=stateSchema.parse(raw);
+  if(new Set((s.sellerCapacities??[]).map(c=>c.serviceId)).size!==(s.sellerCapacities??[]).length||(s.sellerCapacities??[]).some(c=>!s.services.some(v=>v.cardHash===c.cardHash&&v.ownerId===c.ownerId&&(v.card as ServiceCard).id===c.serviceId)||Date.parse(c.leaseExpiresAt)!==Date.parse(c.receivedAt)+360000))throw Error('INVALID_SELLER_CAPACITY');
   const ids=[...s.orders.map(o=>o.operationId),...(s.archived??[]).map(o=>o.operationId)];
   if(new Set(ids).size!==ids.length||Buffer.byteLength(JSON.stringify(s.archived??[]))>MARKET_RECOVERY_CAPACITY_BYTES)throw Error('INVALID_RECOVERY_STATE');
   if(new Set((s.fileCleanup??[]).map(c=>c.operationId)).size!==(s.fileCleanup??[]).length||Buffer.byteLength(JSON.stringify(s.fileCleanup??[]))>MARKET_FILE_CLEANUP_CAPACITY_BYTES||(s.fileCleanup??[]).some(c=>!s.archived?.some(a=>a.operationId===c.operationId&&a.buyerOwnerId===c.buyerOwnerId)))throw Error('INVALID_FILE_CLEANUP_STATE');

@@ -11,8 +11,8 @@ assert.equal(pilotRoutePolicy('/pilot', 'POST'), 'deny');
 const prior=process.env.BAZAAR_ENABLE_MARKETPLACE;
 process.env.BAZAAR_ENABLE_MARKETPLACE='true';
 try {
-  for(const path of ['/api/discovery/resources','/api/discovery/search']) assert.equal(pilotRoutePolicy(path,'GET'),'allow');
-  assert.equal(pilotRoutePolicy('/api/discovery/search','OPTIONS'),'allow');
+  for(const path of ['/api/discovery/resources','/api/discovery/search']) assert.equal(pilotRoutePolicy(path,'GET'),'deny');
+  assert.equal(pilotRoutePolicy('/api/discovery/search','OPTIONS'),'deny');
   assert.equal(pilotRoutePolicy('/api/discovery/search','POST'),'deny');
   assert.equal(pilotRoutePolicy('/api/discovery/private','GET'),'deny');
   assert.equal(pilotRoutePolicy('/resources/guionista-text','GET'),'allow');

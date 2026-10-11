@@ -3,7 +3,8 @@ import {demoEnabled} from './demo-wallet.ts';
 import {randomUUID} from 'node:crypto';
 import {z} from 'zod';
 import {authenticateWorkspaceRequest,assertWorkspaceRequest,parseWorkspaceBody,workspaceFailure,workspaceHeaders,workspaceRequestOrigin} from './workspace-http.ts';
-import {assertMarketEnabled,newServiceSchema,newOrderSchema,orderActionSchema,submitMarketService,marketCatalogPage,marketServiceSnapshot,pageMarketServices,readMarketSubmission,withdrawService,createMarketOrder,listMarketOrdersPage,readMarketOrder,readMarketRecovery,sellerOrderAction,marketOperator} from './marketplace.ts';
+import {assertMarketEnabled,newServiceSchema,newOrderSchema,orderActionSchema,submitMarketService,marketCatalogPage,marketServiceSnapshot,pageMarketServices,readMarketSubmission,withdrawService,createMarketOrder,listMarketOrdersPage,readMarketOrder,readMarketRecovery,sellerOrderAction,marketOperator,reportMarketCapacity} from './marketplace.ts';
+import {sellerCapacityReportSchema} from './market-seller-capacity.ts';
 import {verifyMarketPayment} from './marketplace-payment.ts';
 import {configuredMarketStore} from './marketplace-store.ts';
 import {marketPrefix} from './marketplace-store.ts';
@@ -19,6 +20,7 @@ import {reconcileMarketX402Payment} from './marketplace-x402.ts';
 
 const response=(value:unknown,status=200)=>Response.json(assertMarketDto(value),{status,headers:workspaceHeaders});
 export const marketHandlers={
+ async capacity(request:Request){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request,'agent'),input=await parseWorkspaceBody(request,sellerCapacityReportSchema,2048);return response({capacity:await reportMarketCapacity(p,input)});}catch(e){return workspaceFailure(e);}},
  async catalog(request:Request){try{
  await demoIngress(request);assertMarketEnabled();assertWorkspaceRequest(request,true);
  const observed=demoEnabled()&&request.headers.has('authorization')&&!isNestedMcpRequest(request);

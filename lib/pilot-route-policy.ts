@@ -2,14 +2,18 @@
 export function routeBoundaryEnabled() {
   return process.env.BAZAAR_ROUTE_BOUNDARY === 'true' || process.env.BAZAAR_WORKSPACE_ADMISSION === 'invite-only';
 }
+export function pilotRedirectPath() {
+  return process.env.BAZAAR_PUBLIC_DEMO === 'true' ? '/demo' : '/pilot';
+}
 export function publicBazaarApi(path: string, method: string) {
   return method === 'GET' && ['/api/discovery/resources', '/api/discovery/search', '/api/market/catalog'].includes(path) ||
     method === 'OPTIONS' && path === '/api/discovery/search' || path === '/api/mcp' && method === 'GET';
 }
 export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redirect' | 'deny' {
   if (process.env.BAZAAR_PUBLIC_DEMO === 'true') {
+    if (['GET','HEAD'].includes(method) && path === '/') return 'redirect';
     if (['GET','HEAD'].includes(method) && ['/DEMO_TESTNET.md','/AGENT_CONNECTION.md'].includes(path)) return 'allow';
-    if (['GET','HEAD'].includes(method) && ['/demo','/storage','/demo-qr.svg'].includes(path)) return 'allow';
+    if (['GET','HEAD'].includes(method) && ['/demo','/storage','/demo-qr.svg','/bazaar-qr.svg'].includes(path)) return 'allow';
     if (method === 'GET' && ['/api/account/identity','/api/account/queries'].includes(path)) return 'allow';
     if (method === 'POST' && ['/api/account/wallet/challenge','/api/account/wallet/complete'].includes(path)) return 'allow';
   }
@@ -23,6 +27,7 @@ export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redir
     if (method === 'GET' && ['/api/discovery/resources','/api/discovery/search','/api/market/catalog'].includes(path)) return 'allow';
     if (method === 'OPTIONS' && path === '/api/discovery/search') return 'allow';
     if (['GET','POST'].includes(method) && ['/api/market/services','/api/market/orders','/api/market/agent-permissions','/api/market/operations-budget'].includes(path)) return 'allow';
+    if (method === 'POST' && path === '/api/market/capacity') return 'allow';
     if (method === 'POST' && /^\/api\/market\/orders\/[a-f0-9-]{36}\/x402$/i.test(path)) return 'allow';
     if (['GET','POST'].includes(method) && /^\/api\/market\/orders\/[a-f0-9-]{36}\/deliveries$/i.test(path)) return 'allow';
     if (method === 'POST' && /^\/api\/market\/orders\/[a-f0-9-]{36}\/deliveries\/confirm$/i.test(path)) return 'allow';

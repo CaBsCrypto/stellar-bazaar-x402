@@ -25,6 +25,7 @@ import {configuredWorkspaceStore} from './workspace-store.ts';
 import {marketSubmissionGuard} from './market-permissions.ts';
 import {marketPage,type MarketPageInput} from './market-pagination.ts';
 import {marketplacePurchaseDescriptor} from './marketplace-discovery.ts';
+import {sellerCapacityReportSchema,reportCapacityInState,reserveSellerCapacity,assertSellerReservation,sellerCapacityDto} from './market-seller-capacity.ts';
 export {sha,canonical} from './marketplace-identity.ts';
 export const marketEnabled=()=>process.env.BAZAAR_ENABLE_MARKETPLACE==='true';
 export function assertMarketEnabled(){if(!marketEnabled())throw new WorkspaceError('MARKET_DISABLED',503);if(process.env.VERCEL==='1'&&!demoConfiguration().features.catalogue.enabled)throw new WorkspaceError('MARKET_CONFIGURATION_INCOMPLETE',503);}
@@ -65,17 +66,17 @@ export async function submitMarketService(p:WorkspacePrincipal,input:z.infer<typ
  return result.value;
 }
 async function reviewed(service:MarketService){const r=await getSubmissionForOperator(service.submissionId,false);if(!r.ok){if(r.error.code==='SUBMISSION_NOT_FOUND')return undefined;throw new WorkspaceError('REVIEW_UNAVAILABLE');}if(computeCanonicalServiceCardHash(r.value.card)!==service.cardHash)throw new WorkspaceError('REVIEW_MISMATCH');return r.value;}
-type ServiceSnapshot = { service: MarketService; review?: ProviderSubmission; active: boolean };
+type ServiceSnapshot = { service: MarketService; review?: ProviderSubmission; active: boolean;availability?:ReturnType<typeof sellerCapacityDto> };
 export async function marketServiceSnapshot() {
- const snapshot=await configuredMarketStore().transact(s=>({services:s.services,paused:s.paused??false}));
+ const snapshot=await configuredMarketStore().transact(s=>({services:s.services,paused:s.paused??false,availability:Object.fromEntries(s.services.map(v=>[v.submissionId,sellerCapacityDto(s,v.card.id,v.cardHash)]))}));
  if(!snapshot.services.length)return {records:[] as ServiceSnapshot[],paused:snapshot.paused};
  const [reviews,owners]=await Promise.all([getMarketReviewSnapshot(snapshot.services.map(s=>s.submissionId)),configuredWorkspaceStore().activeOwnerIds(snapshot.services.map(s=>s.ownerId))]);
  if(!reviews.ok)throw new WorkspaceError('REVIEW_UNAVAILABLE');
  const byId=new Map(reviews.value.map(r=>[r.submissionId,r]));
- const records=snapshot.services.map(service=>{const review=byId.get(service.submissionId);if(review&&computeCanonicalServiceCardHash(review.card)!==service.cardHash)throw new WorkspaceError('REVIEW_MISMATCH');let purchasable=false;try{marketCard(service.card);purchasable=true;}catch{}return {service,review,active:purchasable&&!service.withdrawn&&review?.status==='activated'&&owners.has(service.ownerId)};});
+ const records=snapshot.services.map(service=>{const review=byId.get(service.submissionId);if(review&&computeCanonicalServiceCardHash(review.card)!==service.cardHash)throw new WorkspaceError('REVIEW_MISMATCH');let purchasable=false;try{marketCard(service.card);purchasable=true;}catch{}return {service,review,active:purchasable&&!service.withdrawn&&review?.status==='activated'&&owners.has(service.ownerId),availability:snapshot.availability[service.submissionId]};});
  return {records,paused:snapshot.paused};
 }
-export function marketServiceDto({service,review}:ServiceSnapshot,owner=false,origin?:string){return {submissionId:service.submissionId,card:service.card,cardHash:service.cardHash,execution:'seller-mcp-task' as const,status:service.withdrawn?'withdrawn':review?.status??'submission-unconfirmed',...(owner&&review?{control:review.control,...(review.review?{review:{decision:review.review.decision,reasons:review.review.reasons,reviewedAt:review.review.reviewedAt}}:{})}:{}),...(origin&&service.card.payment.marketplace?{purchase:marketplacePurchaseDescriptor(service.card,origin)}:{})};}
+export function marketServiceDto({service,review,availability}:ServiceSnapshot,owner=false,origin?:string){return {submissionId:service.submissionId,card:service.card,cardHash:service.cardHash,execution:'seller-mcp-task' as const,status:service.withdrawn?'withdrawn':review?.status??'submission-unconfirmed',...(availability?{availability}:{}),...(owner&&review?{control:review.control,...(review.review?{review:{decision:review.review.decision,reasons:review.review.reasons,reviewedAt:review.review.reviewedAt}}:{})}:{}),...(origin&&service.card.payment.marketplace?{purchase:marketplacePurchaseDescriptor(service.card,origin)}:{})};}
 const serviceAnchor=({service}:ServiceSnapshot)=>({createdAt:service.createdAt,id:service.submissionId});
 export function pageMarketServices(snapshot:Awaited<ReturnType<typeof marketServiceSnapshot>>,options:MarketPageInput,origin:string,ownerId?:string,maxBytes?:number){
  const page=marketPage(snapshot.records.filter(r=>ownerId?r.service.ownerId===ownerId:r.active),options,ownerId?`mine:${ownerId}`:'catalog',serviceAnchor,r=>marketServiceDto(r,!!ownerId,origin),maxBytes);
@@ -90,6 +91,21 @@ export async function readMarketSubmission(p:WorkspacePrincipal,id:string,origin
  return marketServiceDto({service,review:await reviewed(service),active:false},true,origin);
 }
 export async function withdrawService(p:WorkspacePrincipal,id:string){human(p);const cardId=await configuredMarketStore().transact(s=>{const r=s.services.find(v=>v.submissionId===id&&v.ownerId===p.ownerId);if(!r)throw new WorkspaceError('NOT_FOUND',404);r.withdrawn=true;return r.card.id;});await withdrawDynamicServiceCard(cardId);return {withdrawn:true};}
+export async function reportMarketCapacity(p:WorkspacePrincipal,input:z.infer<typeof sellerCapacityReportSchema>){
+ sellerCapacityReportSchema.parse(input);if(p.role!=='agent')throw new WorkspaceError('FORBIDDEN',403);
+ const snapshot=await configuredWorkspaceStore().walletIdentity(p),service=await configuredMarketStore().transact(s=>s.services.find(v=>v.card.id===input.serviceId&&v.ownerId===p.ownerId&&v.cardHash===input.cardHash&&!v.withdrawn));
+ if(!service||(await reviewed(service))?.status!=='activated')throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);
+ return configuredMarketStore().transact(s=>{const c=reportCapacityInState(s,p,input);return {reportId:c.reportId,receivedAt:c.receivedAt,leaseExpiresAt:c.leaseExpiresAt,...sellerCapacityDto(s,input.serviceId,input.cardHash)};},snapshot.guard);
+}
+/** Revalidate the current seller generation and protect it in the payment CAS. */
+export async function sellerPaymentGuard(order:MarketOrder,p?:WorkspacePrincipal){
+ const c=await configuredMarketStore().transact(s=>assertSellerReservation(s,s.orders.find(o=>o.operationId===order.operationId)??order));
+ try{const store=configuredWorkspaceStore(),seller=(await store.walletIdentity({role:'agent',ownerId:c.ownerId,workspaceId:c.workspaceId,agentId:c.agentId,generation:c.generation})).guard;
+  if(!seller)throw new WorkspaceError('SELLER_AUTHORIZATION_UNAVAILABLE',503);
+  if(p){const buyer=(await store.walletIdentity(p)).guard;if(!buyer||seller.keys.length!==buyer.keys.length||seller.keys.some((key,i)=>key!==buyer.keys[i]||seller.values[i]!==buyer.values[i]))throw new WorkspaceError('AUTHORIZATION_SNAPSHOT_CHANGED',503);}
+  return seller;}
+ catch(error){if(error instanceof WorkspaceError&&['UNAUTHORIZED','FORBIDDEN'].includes(error.code))throw new WorkspaceError('SELLER_UNAVAILABLE',503,60);throw error;}
+}
 function validateInput(c:ServiceCard,input:Record<string,unknown>){if(Object.keys(input).some(k=>!c.input.some(v=>v.name===k))||c.input.some(v=>v.required&&!(v.name in input)||v.name in input&&typeof input[v.name]!==v.type))throw new WorkspaceError('INVALID_SERVICE_INPUT',400);}
 export function authorizeOrder(o:MarketOrder,p:WorkspacePrincipal){if(o.buyerOwnerId!==p.ownerId&&o.sellerOwnerId!==p.ownerId)throw new WorkspaceError('NOT_FOUND',404);}
 export function assertMarketContentLive(o:MarketOrder){if(Date.parse(marketContentExpiresAt(o))<=Date.now())throw new WorkspaceError('ORDER_CONTENT_EXPIRED',410);}
@@ -118,7 +134,7 @@ export async function createMarketOrder(p:WorkspacePrincipal,input:z.infer<typeo
  if(service.ownerId===p.ownerId)throw new WorkspaceError('SELF_PURCHASE_DISABLED',409);validateInput(service.card,input.input);
  if(deliveryStorage(service.card.delivery).mode==='bazaar'){const probe=await probeMarketStorage();if(!probe.reachable)throw new WorkspaceError(probe.code,503);}
  const now=new Date().toISOString(),order:MarketOrder={...input,...(input.paymentProtocol?{inputHash:sha(canonical(input.input))}:{}),buyerOwnerId:p.ownerId,sellerOwnerId:service.ownerId,card:service.card,destination:service.card.payment.destination,amount:service.card.payment.amount,settlement:{...service.card.payment.identity!},memoHash:orderMemo(p.ownerId,input.operationId,input.cardHash,input.input),phase:'awaiting-payment',createdAt:now,updatedAt:now};
- return configuredMarketStore().transact(s=>{assertMarketPurchaseAdmission();if(s.paused)throw new WorkspaceError('MARKET_PAUSED',503);if(s.orders.some(v=>v.operationId===input.operationId)||s.archived?.some(v=>v.operationId===input.operationId))throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.services.find(v=>v.submissionId===service.submissionId)?.withdrawn)throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);reserveMarketFilesInState(order,s);s.orders.push(order);return order;},walletSnapshot?.guard);
+ return configuredMarketStore().transact(s=>{assertMarketPurchaseAdmission();if(s.paused)throw new WorkspaceError('MARKET_PAUSED',503);if(s.orders.some(v=>v.operationId===input.operationId)||s.archived?.some(v=>v.operationId===input.operationId))throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.services.find(v=>v.submissionId===service.submissionId)?.withdrawn)throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);reserveSellerCapacity(s,order);reserveMarketFilesInState(order,s);s.orders.push(order);return order;},walletSnapshot?.guard);
 }
 export async function readMarketOrder(p:WorkspacePrincipal,id:string){return configuredMarketStore().transact(s=>{const o=s.orders.find(v=>v.operationId===id);if(!o){const r=s.archived?.find(r=>r.operationId===id);if(r&&(r.buyerOwnerId===p.ownerId||r.sellerOwnerId===p.ownerId))throw new WorkspaceError('ORDER_CONTENT_EXPIRED',410);throw new WorkspaceError('NOT_FOUND',404);}authorizeOrder(o,p);assertMarketContentLive(o);return o;});}
 export async function listMarketOrders(p:WorkspacePrincipal){return configuredMarketStore().transact(s=>s.orders.filter(o=>(o.buyerOwnerId===p.ownerId||o.sellerOwnerId===p.ownerId)&&Date.parse(marketContentExpiresAt(o))>Date.now()).map(o=>({...o,expiresAt:marketContentExpiresAt(o),perspective:o.buyerOwnerId===p.ownerId?'purchase':'sale'})));}
