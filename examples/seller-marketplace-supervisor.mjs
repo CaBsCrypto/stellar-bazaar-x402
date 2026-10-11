@@ -36,8 +36,8 @@ function wait(ms,signal){
  * require owner recovery, never a fresh budget or another provider execution.
  */
 export async function runSellerSupervisor(input){
- const configuration=settings(input),{store,fetcher=fetch,now=Date.now,sleep=wait,onStatus=()=>{},signal}=input;
- if(!store?.read||!store?.journal||!store?.acquireLock||typeof fetcher!=='function'||typeof now!=='function'||typeof sleep!=='function'||typeof onStatus!=='function'||signal!==undefined&&!(signal instanceof AbortSignal))throw Error('SUPERVISOR_CONFIGURATION_REQUIRED');
+ const configuration=settings(input),{store,fetcher=fetch,now=Date.now,sleep=wait,onStatus=()=>{},onHeartbeat=()=>{},signal}=input;
+ if(!store?.read||!store?.journal||!store?.acquireLock||typeof fetcher!=='function'||typeof now!=='function'||typeof sleep!=='function'||typeof onStatus!=='function'||typeof onHeartbeat!=='function'||signal!==undefined&&!(signal instanceof AbortSignal))throw Error('SUPERVISOR_CONFIGURATION_REQUIRED');
  const release=await store.acquireLock('seller.watch');
  let state,stopReason,stateTrusted=false,budgetTail=Promise.resolve();
  const journal=store.journal('seller.supervisor');
@@ -64,6 +64,7 @@ export async function runSellerSupervisor(input){
   let left=duration;
   while(left>0){const remaining=state.deadlineAt-clock(),part=Math.min(left,remaining,60000);await sleep(part,signal);left-=part;clock();}
  };
+ const heartbeat=async()=>{clock();await onHeartbeat({version:1,status:'running',observedAt:state.lastObservedAt,deadlineAt:state.deadlineAt,sessionsStarted:state.sessionsStarted,mcpRequests:state.mcpRequests,providerRequests:state.providerRequests,executed:state.executed,machineMustRemainAwake:true});};
  try{
   const config=validateSellerConfiguration(await store.read('seller-config'));
   if(!/^[a-zA-Z0-9_-]{43}$/.test(config.agentAccess??'')||!/^[a-zA-Z0-9_-]{43}$/.test(config.providerAccess??''))throw Error('SUPERVISOR_CONFIGURATION_REQUIRED');
@@ -78,7 +79,10 @@ export async function runSellerSupervisor(input){
   if(!input.providerFetcher&&config.providerFetchModule){const own=await import(pathToFileURL(resolve(config.providerFetchModule)).href);providerFetcher=await own.createFetch({configuration:config.providerProtection});}
   if(typeof providerFetcher!=='function')throw Error('SUPERVISOR_CONFIGURATION_REQUIRED');
   const guardedFetch=async(kind,transport,url,init)=>{
-   await charge(kind);const response=await transport(url,{...init,...(signal?{signal:AbortSignal.any([init.signal,signal].filter(Boolean))}: {})});
+   await charge(kind);
+   const deadlineSignal=AbortSignal.timeout(state.deadlineAt-clock());let response;
+   try{response=await transport(url,{...init,signal:AbortSignal.any([init.signal,signal,deadlineSignal].filter(Boolean))});}
+   catch(error){if(signal?.aborted)stopReason='owner-stop';else if(deadlineSignal.aborted)stopReason='time-bound';throw error;}
    if(response.status===429){stopReason='quota';const retry=retrySeconds(response.headers.get('retry-after'));if(retry)state.retryAfterSeconds=retry;}
    return response;
   };
@@ -89,12 +93,13 @@ export async function runSellerSupervisor(input){
    if(state.mcpRequests>=configuration.maxMcpRequests){stopReason='request-bound';break;}
    if(state.providerRequests>=configuration.maxProviderRequests){stopReason='provider-bound';break;}
    state.phase='running';state.sessionsStarted++;await persist();
+   await heartbeat();
    const sessionRequestLimit=Math.min(1000,configuration.maxMcpRequests-state.mcpRequests);
    const result=await withSellerMcp({agentAccess:config.agentAccess,origin:config.bazaarOrigin,maxRequests:sessionRequestLimit,fetcher:(url,init)=>guardedFetch('mcp',fetcher,url,init)},async transport=>{
     const scanJournal=store.journal('seller.scan');let scan=await readSellerJournal(scanJournal),nextCursor;
     if(scan&&(scan.version!==1||scan.cursor!==null&&typeof scan.cursor!=='string'))throw Error('INVALID_SCAN_STATE');
     if(!scan){scan={version:1,cursor:null};await scanJournal.initialize(scan);}
-    return watchSellerOrders({polls:configuration.pollsPerSession,intervalMs:configuration.intervalMs,sleep:pause,poll:async()=>{clock();const page=await listSellerOrders(transport,{cursor:scan.cursor??undefined});nextCursor=page.nextCursor;return page.orders.filter(order=>order.serviceId===config.card.id);},afterPage:async()=>{scan={version:1,cursor:nextCursor};await scanJournal.append(scan);},processOrder:async order=>{
+    return watchSellerOrders({polls:configuration.pollsPerSession,intervalMs:configuration.intervalMs,sleep:pause,poll:async()=>{clock();const page=await listSellerOrders(transport,{cursor:scan.cursor??undefined});nextCursor=page.nextCursor;return page.orders.filter(order=>order.serviceId===config.card.id);},afterPage:async()=>{scan={version:1,cursor:nextCursor};await scanJournal.append(scan);await heartbeat();},processOrder:async order=>{
      clock();if(state.providerRequests>=configuration.maxProviderRequests){stopReason='provider-bound';throw Error('SUPERVISOR_STOP');}
      // Reserve headroom for the five execution tools and transport overhead
      // before creating or claiming an intent, rather than cutting a paid order
@@ -147,7 +152,7 @@ async function main(){
  if(options.pipe){const raw=await readPrivateInput({allowPipe:true});try{const packet=JSON.parse(raw.toString('utf8'));if(Object.keys(packet).join(',')!=='password'||typeof packet.password!=='string')throw Error('PRIVATE_PASSWORD_REQUIRED');password=Buffer.from(packet.password);}finally{raw.fill(0);}}
  else password=await readPrivateInput({prompt:'Seller store password: '});
  let store;const controller=new AbortController(),stop=()=>controller.abort();
- try{store=await openPortableSecretStore({directory:options.directory,password});password.fill(0);process.once('SIGINT',stop);process.once('SIGTERM',stop);const result=await runSellerSupervisor({...options,store,signal:controller.signal,onStatus:value=>console.error(JSON.stringify({alert:'seller-supervisor-stopped',...value}))});console.log(JSON.stringify(result));if(!['session-bound','time-bound','request-bound','provider-bound'].includes(result.reason))process.exitCode=1;}
+ try{store=await openPortableSecretStore({directory:options.directory,password});password.fill(0);process.once('SIGINT',stop);process.once('SIGTERM',stop);const result=await runSellerSupervisor({...options,store,signal:controller.signal,onHeartbeat:value=>console.error(JSON.stringify({alert:'seller-supervisor-heartbeat',...value})),onStatus:value=>console.error(JSON.stringify({alert:'seller-supervisor-stopped',...value}))});console.log(JSON.stringify(result));if(!['session-bound','time-bound','request-bound','provider-bound'].includes(result.reason))process.exitCode=1;}
  finally{password?.fill(0);store?.dispose();process.removeListener('SIGINT',stop);process.removeListener('SIGTERM',stop);}
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href)main().catch(()=>{console.error(JSON.stringify({alert:'seller-supervisor-unconfirmed',needsOwner:true,message:'Preserve encrypted state. Do not restart an uncertain execution or reset counters.'}));process.exitCode=1;});

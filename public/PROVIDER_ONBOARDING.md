@@ -1,6 +1,14 @@
 # Prepara tu servicio para Bazaar
 
-Este recorrido no requiere crear una cuenta. Prepara un servicio para Stellar Testnet y un paquete para revisión; no garantiza publicación, ventas ni cobros. Puedes seguirlo sin una copia del repositorio.
+Para presentar servicios en el marketplace actual, sigue [la conexión universal](/AGENT_CONNECTION.md) y [el kit de vendedor](/SELLER_AGENT_KIT.md). Crea tu cuenta gratuita en `/open`, conserva la recuperación y conecta tu propio agente a `/api/mcp` del mismo origen. El humano concede `market:submit` desde **Mis servicios** de `/history`. Vincular una wallet a la cuenta es opcional; la ficha declara el destinatario público de cobro del vendedor.
+
+Conserva `submissionId`, ficha y `controlProof` antes de `submit_market_service`; recupera ese mismo intento con `get_market_submission`. La prueba de control del endpoint y la revisión manual siguen siendo obligatorias. Sólo una ficha activada aparece en el catálogo. Tu agente externo consulta `list_market_orders`, reclama con `claim_market_order` después del pago verificado y conserva el intento y resultado para entregar una sola vez. Bazaar no aloja el código del proveedor ni firma sus pagos.
+
+Consulta primero `get_bazaar_capabilities` y `tools/list`: funciones deshabilitadas no autorizan sustituir este flujo por otro endpoint. La URL pública prevista no acredita que el candidato esté publicado; en una preview protegida usa su origen exacto y un acceso al despliegue autorizado por separado.
+
+## Compatibilidad: recorrido anterior de solicitudes
+
+Los apartados siguientes conservan el contrato anterior de `submit_provider_request` y `get_provider_request_status`. Ese recorrido no requiere crear una cuenta y usa un token por solicitud; **no es el alta del marketplace actual ni sustituye el permiso de su cuenta**. Úsalo únicamente si las capacidades del entorno anuncian ese contrato. Prepara un servicio para Stellar Testnet y un paquete para revisión; no garantiza publicación, ventas ni cobros. Puedes seguirlo sin una copia del repositorio.
 
 Resuelve las rutas relativas contra el mismo origen donde consultaste esta guía y las capacidades MCP. Las URLs públicas de los ejemplos son referencias: en localhost o Preview sustitúyelas por el origen exacto de ese entorno antes de ejecutar comandos. No envíes pruebas locales al servidor público.
 
@@ -18,7 +26,7 @@ Conecta el MCP Streamable HTTP en /api/mcp del mismo origen y usa `initialize`, 
 
 Las herramientas de descubrimiento e historial son `get_bazaar_capabilities`, `list_services`, `search_services`, `get_service`, `list_workflow_bundles`, `get_workflow_bundle`, `validate_service_card` y `get_operation_history`. El historial tiene autenticación propia y no es necesario para preparar un proveedor. Para validar, llama a `validate_service_card` con `{"card": TU_MANIFEST_JSON}`. Revisa `valid` y cada regla en `outcomes`; corrige los fallos antes de continuar.
 
-Consulta get_bazaar_skills con {"role":"seller"} o /skills/seller/SKILL.md para el recorrido canónico. El MCP valida y permite enviar y consultar solicitudes mediante submit_provider_request y get_provider_request_status; no crea la API, comprueba control, aprueba, publica ni firma pagos. WebMCP es otra interfaz del navegador. Como alternativa HTTP, envía el manifest JSON directamente con `Content-Type: application/json` a `POST /api/conformance/service-card` del mismo origen; comprueba `valid`, no solo que haya respuesta.
+Consulta get_bazaar_skills con {"role":"seller"} o /skills/seller/SKILL.md para el marketplace actual descrito al principio. En este contrato anterior, el MCP valida y permite enviar y consultar solicitudes mediante submit_provider_request y get_provider_request_status; no crea la API, comprueba control, aprueba, publica ni firma pagos. WebMCP es otra interfaz del navegador. Como alternativa HTTP, envía el manifest JSON directamente con `Content-Type: application/json` a `POST /api/conformance/service-card` del mismo origen; comprueba `valid`, no solo que haya respuesta.
 
 La validación comprueba formato y reglas; no prueba disponibilidad, control del dominio, seguridad, liquidación ni entrega. Para x402, documenta el desafío 402, la autorización, la verificación y liquidación, la conservación del resultado y la recuperación sin repetir un pago incierto. Preparar este paquete no necesita compra ni fondos. Una prueba de pago requiere autorización y configuración independientes.
 

@@ -1,0 +1,30 @@
+{
+  "status": "HOSTED_CONNECTION_NOT_ACCEPTED",
+  "providerDeployment": "dpl_ECtowsHKXvhCJNd8LBjqbkdC8Am2",
+  "providerPreview": "https://ai-video-scriptwriter-9881bpz2v.vercel.app",
+  "sourceDigest": "b56cd8f01951968b0da6333e907392d695310f4f49305d0a648eab4debcca6e3",
+  "hostedAttempt": {
+    "httpStatus": 503,
+    "reason": "unconfirmed",
+    "mcpRequests": 1,
+    "redisCommands": 10,
+    "providerRequests": 0,
+    "executed": 0,
+    "dayTicks": 2
+  },
+  "localRealIntegration": {
+    "httpStatus": 200,
+    "reason": "idle",
+    "mcpRequests": 5,
+    "mcpHttpStatuses": [200, 202, 405, 200, 200],
+    "redisCommands": 31,
+    "providerRequests": 0,
+    "executed": 0,
+    "storage": "Existing isolated seller prefix with scoped ACL and encrypted checkpoint",
+    "transport": "Native MCP SDK against protected Bazaar preview"
+  },
+  "conclusion": "Local real integration passed; hosted connection requires diagnosis and a separate acceptance report.",
+  "payments": 0,
+  "previousDeliveryReexecuted": false,
+  "productionPublished": false
+}

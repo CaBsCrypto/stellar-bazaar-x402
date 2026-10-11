@@ -1,0 +1,11 @@
+{
+  "status": "PREVIEW_DEPLOYED",
+  "url": "https://ai-video-scriptwriter-h1arn4i5o.vercel.app",
+  "deploymentId": "dpl_9rwY1MU7WY8CzA5J2T8rVrVZqHuk",
+  "sourceDigest": "04ce8e8aeba348761a86e84a0123f1c490cd1ac96bb2f11f54b586a0a166de9b",
+  "readyState": "READY",
+  "existingAliasChanged": false,
+  "automaticPreviewCron": false,
+  "productionPublished": false,
+  "payments": 0
+}

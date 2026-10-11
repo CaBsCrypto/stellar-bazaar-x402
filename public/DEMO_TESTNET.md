@@ -79,7 +79,7 @@ sus accesos; una firma antigua no restaura la cuenta.
 ## Límites de apertura
 
 200 registros/día globales, 200/IP/hora, 60 operaciones autenticadas/cuenta/minuto,
-120 solicitudes de ingreso/minuto globales y 30/IP/minuto. Puede haber límites
+120 solicitudes de ingreso/minuto globales y 120/IP/minuto. Puede haber límites
 adicionales de almacenamiento y consumo diario. `429` incluye `Retry-After`;
 `503` requiere recuperar el estado antes de repetir una operación con efectos.
 El perfil de demo se habilita sólo con almacenamiento Redis durable revisado.

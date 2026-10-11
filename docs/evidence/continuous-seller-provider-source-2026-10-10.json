@@ -1,0 +1,125 @@
+{
+  "status": "PREPARED_AND_COMPILED_LOCAL",
+  "runtimeFiles": 9,
+  "files": [
+    {
+      "path": "seller/seller-hosted-handler.mjs",
+      "sha256": "7694d8f73887965bd0c79a0be1077484d8e49a98b9cd4ea624934820f1d19ad1",
+      "bytes": 5221
+    },
+    {
+      "path": "seller/seller-hosted-tick.mjs",
+      "sha256": "c35a74c454cd03ab73d8e66f147263671f53ac3ba806387b3e15cf6450119419",
+      "bytes": 17715
+    },
+    {
+      "path": "seller/seller-redis-secret-store.mjs",
+      "sha256": "a46bcbd4e1e10d17a5f4a7523808895a7f568132b538a75f44ebf03ad2f55bf1",
+      "bytes": 8416
+    },
+    {
+      "path": "seller/seller-mcp-transport.mjs",
+      "sha256": "e9f3abdbcf848e6d94ca8aea4a08627fa51ad6d28079aecb5a8031cf4f072ac3",
+      "bytes": 3410
+    },
+    {
+      "path": "seller/seller-http-adapter.mjs",
+      "sha256": "fa46e748fbfae30bedba3d861c7a8f7c1574bbd5e9f62e2d4a3382dc62109553",
+      "bytes": 2008
+    },
+    {
+      "path": "seller/seller-service-card.mjs",
+      "sha256": "a9c9078f653fc9f0c666e5b6682690752dcf580c4e95e05d8be2fd8070698000",
+      "bytes": 4332
+    },
+    {
+      "path": "seller/seller-marketplace-worker.mjs",
+      "sha256": "5605f6359287089c2769e479faade4b6e29af965afd8f5648a588eb41c453926",
+      "bytes": 13200
+    },
+    {
+      "path": "seller/private-mcp-client.mjs",
+      "sha256": "5b60dc9a8c3cba64e389f0de0143a9e70eba18fd5a405a42b8c63011411620bd",
+      "bytes": 1549
+    },
+    {
+      "path": "seller/market-price.mjs",
+      "sha256": "5bee11f95d5268c81cd3765e56243ad6d07be94073c57f3dfcb0e0b74499ee2e",
+      "bytes": 783
+    },
+    {
+      "path": "src/types.ts",
+      "sha256": "6aec009f2f8bb66d21aea7c803efd3258552285f67d1b9144df7532d05dec2cd",
+      "bytes": 1754
+    },
+    {
+      "path": "src/preview-app.ts",
+      "sha256": "35970c3f5ac87c8a05c84ab59007dde94d79ff41b2db4decfabef2e7499dc0dd",
+      "bytes": 1394
+    },
+    {
+      "path": "src/marketplace-text.ts",
+      "sha256": "94297841d6de2eb8654774e088252859b384e30674c71c3a633239f59c036ba9",
+      "bytes": 1269
+    },
+    {
+      "path": "src/marketplace-routes.ts",
+      "sha256": "2dfa606e25edcbd267f606524bae75f6e6e5269f22a21384e8d3c732e4dff964",
+      "bytes": 2404
+    },
+    {
+      "path": "src/engine/wpm-calculator.ts",
+      "sha256": "e475becd845bcf38e04dd2a617e0c1058060d0204ffc7e8871636456eece2d4d",
+      "bytes": 6081
+    },
+    {
+      "path": "src/engine/algorithmic-script-generator.ts",
+      "sha256": "f0611e1ee52a1bd49d3bb5bfc578bbb2e7aca4abde7bf9715fc25cedb1c0a021",
+      "bytes": 20354
+    },
+    {
+      "path": "server.ts",
+      "sha256": "5172a5bdc28bcef4486d1d770e89980dbd6550120cb4452f12ee0b82ee4b3ead",
+      "bytes": 1015
+    },
+    {
+      "path": "seller/seller-hosted-handler.d.mts",
+      "sha256": "992686fee3d86239d9afcecb5867740c52a05c7bd88d0c2659cfae6f43f4efed",
+      "bytes": 137
+    },
+    {
+      "path": "package.json",
+      "sha256": "0d2d24462ec508e748d26e8b8b220305a35fb680d700599bf5d7ad9d8a86c7d4",
+      "bytes": 681
+    },
+    {
+      "path": "package-lock.json",
+      "sha256": "5a06a81ad646308ca292b80094a6c09501dd7afff2b2da17da19d74c1f8bab05",
+      "bytes": 108045
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "eca1849b27f216faa98080ef645c33e4b25cfc4a0f5f781886b89154cd288619",
+      "bytes": 464
+    },
+    {
+      "path": "vercel.json",
+      "sha256": "38a962135c516356eba8b4390ae6bbab59a1778214ce67b123c985dedf38a6e4",
+      "bytes": 224
+    },
+    {
+      "path": ".vercelignore",
+      "sha256": "bba1c4f9cdc33211b3004fecb11b764505fecde459124ddf3c88c4c913c94c8a",
+      "bytes": 324
+    }
+  ],
+  "sourceDigest": "04ce8e8aeba348761a86e84a0123f1c490cd1ac96bb2f11f54b586a0a166de9b",
+  "cron": {
+    "path": "/api/bazaar/seller/tick",
+    "schedule": "*/5 * * * *",
+    "previewAutomatic": false
+  },
+  "credentialsCopied": false,
+  "payments": 0,
+  "productionPublished": false
+}

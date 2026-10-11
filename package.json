@@ -8,6 +8,11 @@
     "node": "24.x"
   },
   "scripts": {
+    "test:seller:hosted": "node scripts/test-seller-hosted-tick.mjs",
+    "test:seller:handler": "node scripts/test-seller-hosted-handler.mjs",
+    "test:seller:redis": "node scripts/test-seller-redis-secret-store.mjs",
+    "test:seller:supervisor": "node scripts/test-seller-supervisor.mjs",
+    "test:seller:package": "node --experimental-strip-types scripts/test-hosted-seller-provider-package.mjs",
     "test:workspace:retention": "node --experimental-strip-types scripts/test-workspace-retention.mjs",
     "test:demo:configuration": "node --experimental-strip-types scripts/test-demo-configuration.mjs",
     "test:market:contract": "node --experimental-strip-types scripts/test-market-card-contract.mjs",

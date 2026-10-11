@@ -106,7 +106,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
         effectiveFeatures:demoConfiguration().features,
         workspace: {
           creationTool: "create_bazaar_workspace", enabled:process.env.BAZAAR_ENABLE_OPEN_WORKSPACES==='true',
-          humanView:"/agent-chat", guide:"/WORKSPACE_AGENT.md", agentRunsExternally:true,
+          humanView:marketEnabled()?"/history":"/agent-chat", guide:"/WORKSPACE_AGENT.md", agentRunsExternally:true,
           emailRequired:false, operatorApprovalRequired:false, automaticPolling:false,
           payments:marketEnabled()&&process.env.BAZAAR_X402_MARKETPLACE_ENABLED==='true'?'x402-stellar-exact-v2':'disabled', fileUploads:marketEnabled()&&marketFileCapabilities().enabled,
           fileDelivery:{...marketFileCapabilities(),tools:['prepare_market_delivery','confirm_market_delivery','get_market_delivery'],authentication:'workspace Authorization Bearer',uploads:'paid-claimed-orders-only',generalUploads:false,guide:'/storage'},
@@ -121,7 +121,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           providerMetadataTrusted: false,
         },
         providerOnboarding: {
-          guide: "/PROVIDER_ONBOARDING.md",
+          guide: marketEnabled()?"/SELLER_AGENT_KIT.md":"/PROVIDER_ONBOARDING.md",
           validationTool: "validate_service_card",
           submissionEndpoint: marketEnabled()?'/api/market/services':"/api/provider-self-listing",
           submissionTool: marketEnabled()?'submit_market_service':"submit_provider_request",

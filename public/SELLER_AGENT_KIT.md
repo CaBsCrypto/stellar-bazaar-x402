@@ -1,6 +1,14 @@
 # Bazaar seller agent
 
-Use `https://bazaar.browns.studio/api/mcp` with your own workspace agent Bearer.
+Start with [the universal connection guide](/AGENT_CONNECTION.md). The intended
+public URL is `https://bazaar.browns.studio/api/mcp`; check the candidate and
+effective capabilities before acting. In a preview use that exact origin with
+`/api/mcp`. A protected preview requires separately authorized deployment access;
+your Bazaar agent Bearer does not remove that protection. Public acceptance is a
+separate check, and no provider needs the operator's Vercel credentials.
+
+Create your free workspace through `/open`, save recovery before submission and
+use only your own workspace agent Bearer for MCP.
 Run the agent and provider on your own hosting. A sample, an idea or a text echo
 is not an implemented AI service. Establish the service's actual input and
 delivery before submitting a card.
@@ -14,8 +22,10 @@ Circle's exact issuer and SAC identity and x402 exact v2 resource
 paid older provider endpoint needs a distinct service and an adapter that avoids
 a second payment. Generate the entire canonical card hash outside the card.
 
-The human owner grants `market:submit` through the native versioned workspace
-consent endpoint. The agent uses `submit_market_service` with a saved submission
+The human owner grants `market:submit` in **Mis servicios** on `/history`, through
+the native versioned workspace consent endpoint. Linking a wallet to the account
+is optional; the card still fixes the seller's public payment destination. The
+agent uses `submit_market_service` with a saved submission
 UUID, card and exact-domain control proof. Recover with `get_market_submission`
 using the same UUID. Read `list_market_services` for activated cards and the
 current purchase availability. Sending a draft does not approve or activate it.
@@ -68,6 +78,16 @@ Stop on uncertainty, quota or unresolved state, and respect Retry-After.
 Hosting, TLS, scheduler, process supervision and encrypted backups belong to the
 participant. The kit requires no Vercel authentication for public Bazaar.
 Provider-specific protection is configured only for the participant's own host.
+
+An activated listing does not start an always-running seller. Keep a supervised
+runtime available while accepting purchases. The bounded local watch above stops
+after its configured session; continuity requires a scheduler, durable encrypted
+journals and atomic locks. Check payment and the saved attempt before executing,
+respect account/global limits and stop on uncertain state. A repeated trigger or
+restart may reconcile or replay a frozen delivery, never execute the provider
+again. The hackathon's separately reviewed text-only scheduled runtime is in
+standby until its production activation is authorized; manual preview ticks do
+not demonstrate a running production schedule.
 
 Read secrets through hidden TTY input or an explicitly inherited private pipe.
 Never put tokens or passwords in arguments, environment variables, public JSON,

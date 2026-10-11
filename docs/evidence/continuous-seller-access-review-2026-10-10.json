@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "status": "DEPLOYED_CONNECTION_NOT_ACCEPTED",
+  "purpose": "bazaar-hosted-seller-preview",
+  "providerProject": "ai-video-scriptwriter",
+  "stage": "preview only",
+  "bazaarOrigin": "https://stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+  "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+  "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+  "providerOrigin": "https://guionista-bazaar-pilot-b170175663f4.vercel.app",
+  "redisAccess": {
+    "user": "bazaar_worker_preview_2dea99ac5bc7c7b0896f57f97d94adaa",
+    "keyPattern": "bazaar-seller:preview-2dea99ac5bc7c7b0896f57f97d94adaa:*",
+    "commands": [
+      "GET",
+      "SET",
+      "DEL",
+      "EXISTS",
+      "EVAL",
+      "PTTL",
+      "TIME",
+      "PING"
+    ],
+    "otherBazaarKeysDenialValidation": "PASS"
+  },
+  "cron": {
+    "schedule": "*/5 * * * *",
+    "previewAutomatic": false,
+    "productionEnabled": false
+  },
+  "sensitiveVariables": [
+    "CRON_SECRET",
+    "BAZAAR_HOSTED_SELLER_CONFIG",
+    "BAZAAR_HOSTED_SELLER_KEY",
+    "BAZAAR_HOSTED_SELLER_REDIS_REST_URL",
+    "BAZAAR_HOSTED_SELLER_REDIS_REST_TOKEN",
+    "BAZAAR_HOSTED_SELLER_MCP_PROTECTION",
+    "BAZAAR_HOSTED_SELLER_PROVIDER_PROTECTION"
+  ],
+  "payments": 0,
+  "productionPublished": false
+}

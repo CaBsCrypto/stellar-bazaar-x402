@@ -1,0 +1,44 @@
+{
+  "status": "PASS",
+  "completedAt": "2026-10-11T00:34:02.146Z",
+  "contractChecks": 17,
+  "denialChecks": 4,
+  "contract": {
+    "status": "PASS",
+    "checks": 17,
+    "prefixFingerprint": "3c9c8e20ae29492499c8e01a5e671161107c531d7b2e9c4be36ad17c18116582",
+    "encryptedPayload": true,
+    "fixedContentExpiry": true,
+    "minimalGuardSurvivesExpiry": true,
+    "leaseFencing": true,
+    "payments": 0,
+    "bazaarOrders": 0
+  },
+  "denials": [
+    {
+      "command": "GET",
+      "dynamicKey": false,
+      "denied": true
+    },
+    {
+      "command": "EVAL",
+      "dynamicKey": false,
+      "denied": true
+    },
+    {
+      "command": "EVAL",
+      "dynamicKey": true,
+      "denied": true
+    },
+    {
+      "command": "DBSIZE",
+      "dynamicKey": false,
+      "denied": true
+    }
+  ],
+  "redisRequests": 40,
+  "rootTokenTransferred": false,
+  "otherBazaarKeysRead": false,
+  "payments": 0,
+  "productionPublished": false
+}
