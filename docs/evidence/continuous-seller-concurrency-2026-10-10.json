@@ -1,0 +1,33 @@
+{
+  "status": "PASS",
+  "completedAt": "2026-10-11T00:59:19.830Z",
+  "providerPreview": "https://ai-video-scriptwriter-ejl18kzo8.vercel.app",
+  "bazaarPreview": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app",
+  "observations": [
+    {
+      "invocation": 1,
+      "status": 200,
+      "reason": "idle",
+      "mcpRequests": 5,
+      "redisCommands": 31,
+      "providerRequests": 0,
+      "executed": 0,
+      "dayTicks": 3,
+      "paymentSubmissions": 0
+    },
+    {
+      "invocation": 2,
+      "status": 200,
+      "reason": "locked",
+      "mcpRequests": 0,
+      "redisCommands": 1,
+      "providerRequests": 0,
+      "executed": 0,
+      "paymentSubmissions": 0
+    }
+  ],
+  "automaticPreviewCron": false,
+  "providerExecutions": 0,
+  "payments": 0,
+  "productionPublished": false
+}

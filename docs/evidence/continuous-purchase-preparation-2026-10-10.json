@@ -1,0 +1,43 @@
+{
+  "status": "READONLY_PREPARATION_PASS",
+  "observedAt": "2026-10-11T01:03:24.990Z",
+  "sourceSha": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "origin": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app",
+  "providerPreview": "https://ai-video-scriptwriter-ejl18kzo8.vercel.app",
+  "serviceId": "guionista-bazaar-pilot-text-funded-v1",
+  "serviceName": "Guion breve algorítmico",
+  "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
+  "operationId": "56e650a6-cd50-4f80-a7ad-323c2b8ee461",
+  "amount": "0.01",
+  "asset": "USDC",
+  "network": "stellar:testnet",
+  "maximumAtomic": "100000",
+  "maximumSponsoredFeeStroops": 1000000,
+  "payer": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+  "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+  "balances": [
+    {
+      "address": "GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU",
+      "usdcBalance": "99.9500000",
+      "usdcAuthorized": true,
+      "xlmBalance": "9999.9999700"
+    },
+    {
+      "address": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+      "usdcBalance": "0.0500000",
+      "usdcAuthorized": true,
+      "xlmBalance": "9999.9999900"
+    }
+  ],
+  "mcpRequests": 6,
+  "buyerAlreadyRegistered": true,
+  "buyerExistingOrders": 0,
+  "signed": false,
+  "submitted": false,
+  "approved": false,
+  "newAccounts": 0,
+  "newOrders": 0,
+  "payments": 0,
+  "providerExecutions": 0,
+  "productionPublished": false
+}

@@ -1,0 +1,77 @@
+{
+  "status": "PASS",
+  "completedAt": "2026-10-11T00:52:21.817Z",
+  "providerPreview": "https://ai-video-scriptwriter-h1arn4i5o.vercel.app",
+  "bazaarPreview": "https://stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+  "observations": [
+    {
+      "name": "unauthenticated",
+      "status": 401,
+      "expected": 401,
+      "pass": true
+    },
+    {
+      "name": "wrong-token",
+      "status": 401,
+      "expected": 401,
+      "pass": true
+    },
+    {
+      "name": "query-rejected",
+      "status": 400,
+      "expected": 400,
+      "pass": true
+    },
+    {
+      "name": "origin-rejected",
+      "status": 400,
+      "expected": 400,
+      "pass": true
+    },
+    {
+      "name": "idle-first",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "reason": "idle",
+      "mcpRequests": 5,
+      "redisCommands": 31,
+      "providerRequests": 0,
+      "executed": 0,
+      "dayTicks": 5,
+      "paymentSubmissions": 0,
+      "mcpHttpStatuses": [
+        200,
+        202,
+        405,
+        200,
+        200
+      ]
+    },
+    {
+      "name": "idle-restart",
+      "status": 200,
+      "expected": 200,
+      "pass": true,
+      "reason": "idle",
+      "mcpRequests": 5,
+      "redisCommands": 31,
+      "providerRequests": 0,
+      "executed": 0,
+      "dayTicks": 6,
+      "paymentSubmissions": 0,
+      "mcpHttpStatuses": [
+        200,
+        202,
+        405,
+        200,
+        200
+      ]
+    }
+  ],
+  "automaticPreviewCron": false,
+  "previousDeliveryReexecuted": false,
+  "providerExecutions": 0,
+  "payments": 0,
+  "productionPublished": false
+}

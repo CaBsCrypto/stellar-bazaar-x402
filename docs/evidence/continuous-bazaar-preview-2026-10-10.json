@@ -1,0 +1,20 @@
+{
+  "candidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "url": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app",
+  "deploymentId": "dpl_BFgPRuzqKh3Qv4xQxMmdvs7Y7juM",
+  "readyState": "READY",
+  "previousRuntimeCandidate": "4f250cd175832634b4abb2abb3528e4cd7786cee",
+  "previousPreview": "https://stellar-bazaar-x402-q2cfuej1c-cabscryptocontacto-6028s-projects.vercel.app",
+  "namespaceFingerprints": {
+    "BAZAAR_WORKSPACE_PREFIX": "e7011dd768e2abd4b6726e1fa75f64b956de7e8e42d979d1a4ecc91d85da978e",
+    "BAZAAR_REVIEW_PREFIX": "00dcb9233e240a62d621755691410c703a7972347c3c3a40c6af3a6ee5137894",
+    "BAZAAR_MARKET_PREFIX": "20b10307df9c3abaf33ae141d136192d0b2ca85a421d9f718e372e14b015698c",
+    "BAZAAR_MARKET_FILE_PREFIX": "c6213cf0fc602e389506a2af264138068e07ff49a26b06ae36c5e9558d8c0271"
+  },
+  "sameSyntheticNamespaces": true,
+  "freshOperatorCredential": true,
+  "textOnly": true,
+  "originalPurchaseConfigurationPreserved": true,
+  "productionPublished": false,
+  "payments": 0
+}

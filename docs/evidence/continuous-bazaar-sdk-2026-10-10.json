@@ -1,0 +1,115 @@
+{
+  "status": "PASS",
+  "observedAt": "2026-10-11T00:54:54.235Z",
+  "candidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "preview": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app",
+  "deploymentId": "dpl_BFgPRuzqKh3Qv4xQxMmdvs7Y7juM",
+  "transport": "Native SDK Streamable HTTP with explicitly authorized protected-preview access",
+  "tools": 34,
+  "mcpRequests": 16,
+  "buyer": {
+    "queries": 4,
+    "orderRecovered": true,
+    "textHashVerified": true
+  },
+  "outsider": {
+    "wallet": null,
+    "existingQueries": 1,
+    "queryCount": 2,
+    "ownOrderCount": 0,
+    "otherBuyerOrderReadStatus": 404,
+    "buyerQueriesAbsent": true,
+    "oneNewAuthenticatedQuery": true
+  },
+  "runtimeConfiguration": {
+    "checks": {
+      "publicDemo": true,
+      "workspacesEnabled": true,
+      "marketplaceEnabled": true,
+      "publicAdmission": true,
+      "newAdmissionsOpen": true,
+      "workspaceRedisBackend": true,
+      "workspaceRedisUrl": true,
+      "workspaceRedisToken": true,
+      "workspaceNamespace": true,
+      "marketNamespace": true,
+      "reviewRedisBackend": true,
+      "reviewRedisUrl": true,
+      "reviewRedisToken": true,
+      "reviewNamespace": true,
+      "namespacesIndependent": true,
+      "namespaceFamilyMatches": true,
+      "namespaceStageMatches": true,
+      "publicOrigin": true,
+      "providerIntakeEnabled": true,
+      "reviewSecret": true,
+      "manualOperator": true,
+      "guardianCronCredential": true,
+      "guardianCronMatchesOperator": true,
+      "purchasesEnabled": true,
+      "x402Enabled": true,
+      "testnetFacilitator": true,
+      "facilitatorCredential": true,
+      "testnetRpc": true,
+      "noServerPayer": true,
+      "r2Bucket": true,
+      "r2Region": true,
+      "r2Endpoint": true,
+      "r2AccessKey": true,
+      "r2SecretKey": true,
+      "fileNamespace": true,
+      "privateFilesEnabled": false,
+      "fileLifecycleBackstop": true
+    },
+    "features": {
+      "registration": {
+        "enabled": true,
+        "reason": null
+      },
+      "catalogue": {
+        "enabled": true,
+        "reason": null
+      },
+      "serviceSubmission": {
+        "enabled": true,
+        "reason": null
+      },
+      "moderation": {
+        "enabled": true,
+        "reason": null
+      },
+      "guardianAutomation": {
+        "enabled": false,
+        "reason": "GUARDIAN_SCHEDULER_PRODUCTION_ONLY"
+      },
+      "purchases": {
+        "enabled": true,
+        "reason": null
+      },
+      "privateFiles": {
+        "enabled": false,
+        "reason": "FILE_STORAGE_DISABLED"
+      }
+    },
+    "r2Configured": true,
+    "ready": false,
+    "reasons": [
+      "CONFIG_PRIVATE_FILES_ENABLED"
+    ],
+    "storageProbeRequired": true,
+    "pairedNamespaceEvidenceRequired": true,
+    "guardianCron": {
+      "credentialConfigured": true,
+      "operatorHashMatches": true,
+      "productionDeployment": false,
+      "scheduledExecutionValidated": false
+    },
+    "scheduledRunEvidenceRequired": true
+  },
+  "newAccounts": 0,
+  "newOrders": 0,
+  "payments": 0,
+  "providerExecutions": 0,
+  "productionPublished": false,
+  "publicExternalClientValidated": false
+}

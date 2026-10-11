@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "status": "DEPLOYED_CONNECTION_NOT_ACCEPTED",
+  "status": "HOSTED_IDLE_VALIDATED",
   "purpose": "bazaar-hosted-seller-preview",
   "providerProject": "ai-video-scriptwriter",
   "stage": "preview only",
-  "bazaarOrigin": "https://stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+  "bazaarOrigin": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app",
   "serviceId": "guionista-bazaar-pilot-text-funded-v1",
   "cardHash": "c1714ebdf43c10b14016906919f00db4fcedb784a72df0de6e9579edf0195bbf",
   "providerOrigin": "https://guionista-bazaar-pilot-b170175663f4.vercel.app",

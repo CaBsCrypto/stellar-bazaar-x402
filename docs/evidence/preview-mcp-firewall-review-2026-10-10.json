@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "status": "APPLIED_AND_READ_BACK",
+  "ruleId": "rule_bazaar_acceptance_egress_only_iPEa7V",
+  "previewHosts": [
+    "stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+    "stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app"
+  ],
+  "onlyPath": "/api/mcp",
+  "deploymentProtectionRetained": true,
+  "applicationAuthenticationRetained": true,
+  "productionRuleUnchanged": true,
+  "payments": 0,
+  "productionPublished": false,
+  "appliedAt": "2026-10-11T00:51:56.437Z"
+}

@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "kind": "Protected preview review QR",
+  "target": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app/demo",
+  "decodedToExpectedOrigin": true,
+  "containsCredentials": false,
+  "publicQrChanged": false,
+  "publicEventQr": "https://bazaar.browns.studio/demo",
+  "publicQrAcceptancePending": true
+}
