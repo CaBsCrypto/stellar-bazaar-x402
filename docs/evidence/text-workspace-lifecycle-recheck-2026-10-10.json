@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "status": "LOCAL_WORKSPACE_RECHECK_PASS",
+  "observedAt": "2026-10-11T02:00:41.823Z",
+  "sourceCandidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "runtimeSourceChanged": false,
+  "component": {
+    "path": "components/MarketplaceWorkspace.tsx",
+    "sha256": "15084717b4e43e3d85d74188c6d47a4c80104aa5cb70951109a1c6b04e4d6d93",
+    "comparedToSourceCandidate": true
+  },
+  "changedFiles": [
+    "scripts/test-marketplace-workspace-lifecycle.mjs"
+  ],
+  "harness": {
+    "path": "scripts/test-marketplace-workspace-lifecycle.mjs",
+    "sha256": "279021949e655362889784436228f797f9c1691f576e8159906e737ae2168275",
+    "changes": [
+      "Address synthetic responses by URL pathname, HTTP method and owning credential instead of legacy numeric request order.",
+      "Use the current sequential orders, own services and publication permission requests, with their actual response containers.",
+      "Test current history, immutable conditions, receipt, recovery and publication permission UI; remove assertions for withdrawn inline Freighter signing controls.",
+      "Reject unexpected request routes or imports; no wallet SDK, payment endpoint or signing implementation is provided.",
+      "Require saved confirmation before permission writes; retain the same intent on an uncertain response and use a distinct identifier for a new manual change.",
+      "Preserve meaningful isolation, lock, rotation, revocation, stale HTTP and file response rejection, and cursor reset checks."
+    ],
+    "command": "node --experimental-strip-types scripts/test-marketplace-workspace-lifecycle.mjs",
+    "exitCode": 0,
+    "result": {
+      "status": "PASS",
+      "scenarios": 17,
+      "checks": [
+        "sequential empty private reads and current UI",
+        "immutable order details, verified receipt and uncertain execution",
+        "history view does not eagerly read service permissions",
+        "late old owner response cannot start another private read",
+        "switching owner immediately clears loaded private content",
+        "locking cancels a refresh and discards its late error",
+        "forbidden publication permission becomes read only",
+        "human grant and revoke require saved explicit intention",
+        "uncertain permission response preserves exact explicit recovery",
+        "late permission file is ignored after lock",
+        "late file error cannot leak across owner switch",
+        "restored intention rejects wrong generation or origin before POST",
+        "credential rotation clears old intent and ignores late POST outcome",
+        "revoked private read reports denial without automatic retry",
+        "existing uncertain payment reconciles without a payment route",
+        "withdrawal refreshes own services while retaining existing orders",
+        "pagination uses opaque cursor and owner change clears it"
+      ],
+      "component": "components/MarketplaceWorkspace.tsx",
+      "pathAddressedMocks": true,
+      "realPrivateReadQueue": true,
+      "externalRequests": 0,
+      "realPayments": 0,
+      "walletOrSigningCalls": 0,
+      "redisCalls": 0,
+      "browserUsed": false
+    },
+    "validationType": "Actual transpiled component hooks and private read queue with synthetic transport replies; no browser or backend authorization acceptance claim"
+  },
+  "loopbackCoreRecheck": {
+    "evidence": "docs/evidence/text-workspace-core-recheck-2026-10-10.json",
+    "status": "PASS",
+    "command": "node --experimental-strip-types scripts/test-open-workspace-core.mjs",
+    "exitCode": 0,
+    "observedAt": "2026-10-11T01:59:52.045Z",
+    "performedBy": "Operator in local Windows environment permitting loopback TCP; referenced existing evidence read by this reviewer",
+    "fileHttpProcesses": 3,
+    "fileReboot": true,
+    "concurrentCreates": 8,
+    "redisConcurrentCreates": 8,
+    "atomicGeneration": true,
+    "rotationTombstones": true,
+    "lostAcknowledgementRecovery": true,
+    "corruptionFailsClosed": true,
+    "realRedisVerifiedByThisHarness": false,
+    "externalHttpRequests": 0,
+    "payments": 0,
+    "interpretation": "Original core failure was environment-specific EACCES, resolved by a separate loopback-capable rerun without changing runtime source."
+  },
+  "separateRealRedisChecks": [
+    {
+      "evidence": "docs/evidence/text-workspace-real-capacity-final-2026-10-10.json",
+      "status": "REAL_REDIS_CAPACITY_ACCEPTED",
+      "checksPassed": 9,
+      "restCommands": 60,
+      "cleanupConfirmed": true,
+      "interpretation": "Fresh isolated synthetic namespace and seeded boundaries; not a 200-user load or an induced Upstash outage."
+    },
+    {
+      "evidence": "docs/evidence/text-market-real-capacity-2026-10-10.json",
+      "status": "PASS",
+      "checksPassed": 9,
+      "restRequests": 59,
+      "exactOwnedKeysDeleted": 3,
+      "isolatedSyntheticKeysRemoved": true,
+      "interpretation": "Real Redis atomic CAS and durable reservations; capacity projection evaluated by application code from real isolated snapshots."
+    }
+  ],
+  "originalFailureEvidence": "docs/evidence/text-capacity-local-review-2026-10-10.json",
+  "originalFailureEvidencePreserved": true,
+  "findingsResolvedByTheseRechecks": [
+    "LOCAL_LOOPBACK_EACCES_ENVIRONMENT",
+    "OBSOLETE_MARKETPLACE_COMPONENT_HARNESS"
+  ],
+  "unresolvedReleaseFindings": [
+    "SELLER_CAPACITY_NOT_LINKED_TO_PAYMENT_ADMISSION",
+    "PREPAYMENT_AVAILABILITY_NOT_DISPLAYED"
+  ],
+  "thisRecheck": {
+    "externalRequests": 0,
+    "realPayments": 0,
+    "providerExecutions": 0,
+    "runtimeSourceEdits": 0,
+    "productionPublished": false,
+    "cronActivated": false,
+    "publicAccessAccepted": false
+  },
+  "releaseDecision": "The local workspace rechecks pass. Production preparation can continue with purchases closed and cron disabled; public purchase admission still requires effective seller capacity control."
+}

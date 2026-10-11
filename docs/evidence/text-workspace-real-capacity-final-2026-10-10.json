@@ -1,0 +1,91 @@
+{
+  "version": 1,
+  "status": "REAL_REDIS_CAPACITY_ACCEPTED",
+  "startedAt": "2026-10-11T01:51:29.363Z",
+  "completedAt": "2026-10-11T01:51:42.448Z",
+  "sourceCandidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "environment": "local-client-real-upstash-fresh-synthetic-namespace",
+  "namespaceSha256": "d976210bc2bd394344a5a92f4d94fefe462423a79ad9833ca1a31e554679fd8b",
+  "commandBudget": 150,
+  "restCommands": 60,
+  "cleanupConfirmed": true,
+  "checks": [
+    {
+      "name": "closed-admission-recovers-existing-creation",
+      "status": "PASS",
+      "newAdmissionStatus": 503,
+      "recoveryCreated": false
+    },
+    {
+      "name": "shared-120-per-minute-real-lua-race",
+      "status": "PASS",
+      "concurrentRequests": 2,
+      "admitted": 1,
+      "rejectedStatus": 429,
+      "finalCount": 120,
+      "thresholdFixtureSeeded": true
+    },
+    {
+      "name": "account-60-per-minute-and-retry-after",
+      "status": "PASS",
+      "rejectedStatus": 429,
+      "retryAfterSeconds": 60,
+      "thresholdFixtureSeeded": true
+    },
+    {
+      "name": "anonymous-ingress-120-real-lua-race",
+      "status": "PASS",
+      "admitted": 1,
+      "rejectedStatus": 429,
+      "thresholdFixtureSeeded": true
+    },
+    {
+      "name": "200-registrations-day-boundary",
+      "status": "PASS",
+      "actualAccountsCreated": 2,
+      "thresholdFixtureSeeded": true,
+      "rejectedStatus": 429
+    },
+    {
+      "name": "200-shared-ip-registrations-hour",
+      "status": "PASS",
+      "thresholdFixtureSeeded": true,
+      "rejectedStatus": 429
+    },
+    {
+      "name": "real-commit-local-ack-loss-no-write-retry",
+      "status": "PASS",
+      "localFailureInjected": true,
+      "commits": 1,
+      "recoveryIndependentStore": true
+    },
+    {
+      "name": "local-transport-failure-before-real-redis-call",
+      "status": "PASS",
+      "localFailureInjected": true,
+      "statusCode": 503,
+      "realRedisOutageInduced": false
+    },
+    {
+      "name": "corrupt-isolated-registry-fails-503",
+      "status": "PASS",
+      "realIsolatedFixtureModified": true
+    }
+  ],
+  "scope": {
+    "liveNamespacesTouched": false,
+    "realAccountsCreated": false,
+    "syntheticAccountsCreated": 2,
+    "paymentCalls": 0,
+    "signatures": 0,
+    "providerExecutions": 0,
+    "deploymentChanges": 0,
+    "cronTriggers": 0,
+    "r2Requests": 0
+  },
+  "limitations": [
+    "Thresholds were seeded in a fresh isolated fixture; this is not a 200-user load test.",
+    "Transport failure and acknowledgement loss were injected locally; Upstash service was not interrupted.",
+    "Application deployment, external public access and seller throughput are separate acceptance gates."
+  ]
+}

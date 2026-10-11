@@ -1,0 +1,549 @@
+{
+  "version": 1,
+  "status": "READ_ONLY_METADATA",
+  "observedAt": "2026-10-11T01:48:43.097Z",
+  "projects": [
+    {
+      "role": "bazaar",
+      "id": "prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3",
+      "projectReadConfirmed": true,
+      "environmentReadConfirmed": true,
+      "name": "stellar-bazaar-x402",
+      "framework": "nextjs",
+      "nodeVersion": "24.x",
+      "git": {
+        "type": "github",
+        "organization": "CaBsCrypto",
+        "repository": "stellar-bazaar-x402",
+        "productionBranch": "main"
+      },
+      "deploymentProtectionPresent": true,
+      "productionTarget": {
+        "id": "dpl_5rbJydG46d3EaTdWFaCkspPrqems",
+        "url": "stellar-bazaar-x402-q8oxsipdo-cabscryptocontacto-6028s-projects.vercel.app",
+        "state": "READY",
+        "target": "production",
+        "createdAt": 1790741965217
+      },
+      "productionDeployment": {
+        "id": "dpl_5rbJydG46d3EaTdWFaCkspPrqems",
+        "url": "stellar-bazaar-x402-q8oxsipdo-cabscryptocontacto-6028s-projects.vercel.app",
+        "state": "READY",
+        "target": "production",
+        "createdAt": 1790741965217,
+        "cronSchedules": []
+      },
+      "environment": [
+        {
+          "key": "CRON_SECRET",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_S3_SECRET_ACCESS_KEY",
+          "targets": [
+            "production",
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_S3_ACCESS_KEY_ID",
+          "targets": [
+            "production",
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_S3_ENDPOINT",
+          "targets": [
+            "production",
+            "preview"
+          ],
+          "type": "encrypted",
+          "configured": true,
+          "plaintextReadable": true,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_S3_REGION",
+          "targets": [
+            "production",
+            "preview"
+          ],
+          "type": "encrypted",
+          "configured": true,
+          "plaintextReadable": true,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_S3_BUCKET",
+          "targets": [
+            "production",
+            "preview"
+          ],
+          "type": "encrypted",
+          "configured": true,
+          "plaintextReadable": true,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_ENABLE_OPEN_WORKSPACES",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "true",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_ENABLE_MARKETPLACE",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "true",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_ENABLE_MARKET_PURCHASES",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "false",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_X402_MARKETPLACE_ENABLED",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "false",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_CREATION_PAUSED",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "true",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_ADMISSION",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "open",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_PUBLIC_ORIGIN",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "https://bazaar.browns.studio",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_BACKEND",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "redis",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_PREFIX",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "namespaceSha256": "802d18bdd1e5e7b13c6b9d83f403ad659388387347ba8537d7157069d93e1184",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_MARKET_PREFIX",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "namespaceSha256": "0d95748fa0f01cc974e6f4baed73df7b5b16e92c7a5a4cbf7afac15298dc7177",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_DYNAMIC_PREFIX",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "customGitBranch": false
+        },
+        {
+          "key": "STELLAR_X402_RPC_URL",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "https://soroban-testnet.stellar.org",
+          "customGitBranch": false
+        },
+        {
+          "key": "NEXT_PUBLIC_BAZAAR_MARKETPLACE",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "true",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_MARKET_REVIEW_SECRET",
+          "targets": [
+            "preview",
+            "production"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_REDIS_REST_URL",
+          "targets": [
+            "preview",
+            "production"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_REDIS_REST_TOKEN",
+          "targets": [
+            "preview",
+            "production"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "X402_ENABLE_LOCAL_PAYER",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "false",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_ENABLE_PROVIDER_ACTIVATION",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "false",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_ENABLE_SELF_LISTING_INTAKE",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "false",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_REVIEW_PREFIX",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "namespaceSha256": "97b21ad39169e56c8114e16cd8beadc708705f22733cdf67c6b2b3d0a5c25d11",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_PROVIDER_REVIEW_BACKEND",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "redis",
+          "customGitBranch": false
+        },
+        {
+          "key": "STELLAR_X402_FACILITATOR_API_KEY",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "STELLAR_X402_FACILITATOR_API_KEY",
+          "targets": [
+            "production"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "STELLAR_X402_FACILITATOR_URL",
+          "targets": [
+            "production"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "https://channels.openzeppelin.com/x402/testnet",
+          "customGitBranch": false
+        },
+        {
+          "key": "STELLAR_X402_FACILITATOR_URL",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        }
+      ]
+    },
+    {
+      "role": "seller",
+      "id": "prj_cHsv0UIK31fRuLBXkW5RXkz4eU9K",
+      "projectReadConfirmed": true,
+      "environmentReadConfirmed": true,
+      "name": "ai-video-scriptwriter",
+      "framework": "express",
+      "nodeVersion": "24.x",
+      "git": {},
+      "deploymentProtectionPresent": true,
+      "productionTarget": {
+        "id": "dpl_8Pv5kWHWzkYVCiV7ouBUM9NQsWVC",
+        "url": "ai-video-scriptwriter-30tv878h2.vercel.app",
+        "state": "READY",
+        "target": "production",
+        "createdAt": 1790143488197
+      },
+      "productionDeployment": {
+        "id": "dpl_8Pv5kWHWzkYVCiV7ouBUM9NQsWVC",
+        "url": "ai-video-scriptwriter-30tv878h2.vercel.app",
+        "state": "READY",
+        "target": "production",
+        "createdAt": 1790143488197,
+        "cronSchedules": []
+      },
+      "environment": [
+        {
+          "key": "BAZAAR_HOSTED_SELLER_PREFIX",
+          "targets": [
+            "preview"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "namespaceSha256": "4b7502a90041ff1e7b87f1d9234a05c6f0053700cff17568bf815541874d4e93",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_HOSTED_SELLER_ENABLED",
+          "targets": [
+            "preview"
+          ],
+          "type": "plain",
+          "configured": true,
+          "plaintextReadable": true,
+          "nonSecretValue": "true",
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_HOSTED_SELLER_PROVIDER_PROTECTION",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_HOSTED_SELLER_MCP_PROTECTION",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_HOSTED_SELLER_REDIS_REST_TOKEN",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_HOSTED_SELLER_REDIS_REST_URL",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_HOSTED_SELLER_KEY",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "BAZAAR_HOSTED_SELLER_CONFIG",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        },
+        {
+          "key": "CRON_SECRET",
+          "targets": [
+            "preview"
+          ],
+          "type": "sensitive",
+          "configured": true,
+          "plaintextReadable": false,
+          "customGitBranch": false
+        }
+      ]
+    }
+  ],
+  "firewall": {
+    "readConfirmed": true,
+    "enabled": true,
+    "ruleCount": 1,
+    "activeConfigurationSha256": "45080024129ef4d529fd4120022db778f4721970e68892a22af3c0f6c7cb5a8a",
+    "acceptanceRule": {
+      "id": "rule_bazaar_acceptance_egress_only_iPEa7V",
+      "active": true,
+      "action": "deny",
+      "conditionGroup": [
+        {
+          "conditions": [
+            {
+              "type": "ip_address",
+              "op": "eq",
+              "neg": true,
+              "value": "PRIVATE_LOCAL_IP"
+            },
+            {
+              "type": "host",
+              "op": "inc",
+              "neg": true,
+              "value": [
+                "stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+                "stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app"
+              ]
+            }
+          ]
+        },
+        {
+          "conditions": [
+            {
+              "type": "ip_address",
+              "op": "eq",
+              "neg": true,
+              "value": "PRIVATE_LOCAL_IP"
+            },
+            {
+              "type": "path",
+              "op": "eq",
+              "neg": true,
+              "value": "/api/mcp"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "requests": 7,
+  "productionPublished": false,
+  "cronActivated": false,
+  "environmentMutations": 0,
+  "payments": 0
+}

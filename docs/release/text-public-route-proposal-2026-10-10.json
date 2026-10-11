@@ -1,0 +1,100 @@
+{
+  "version": 1,
+  "status": "LOGICAL_RULE_PREPARED_NOT_APPLIED",
+  "project": "stellar-bazaar-x402",
+  "productionHost": "bazaar.browns.studio",
+  "reviewedSource": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "currentRestriction": {
+    "ruleId": "rule_bazaar_acceptance_egress_only_iPEa7V",
+    "outsideOperatorIp": "deny unless exact protected preview host AND path /api/mcp",
+    "productionHostExcepted": false,
+    "liveReadback": "docs/evidence/text-production-metadata-final-2026-10-10.json"
+  },
+  "proposedDecision": {
+    "allowToApplication": "existing operator IP OR existing exact preview MCP exception OR (exact production host AND one allowed method/path below)",
+    "denyOtherwise": true,
+    "preserveOtherRulesAndDeploymentProtection": true,
+    "preserveApplicationAuthentication": true,
+    "platformPayloadGenerated": false,
+    "platformSchemaAndRuleSizeValidationRequiredBeforeApply": true
+  },
+  "routeClasses": [
+    {
+      "methods": ["GET", "HEAD"],
+      "paths": ["/", "/demo", "/open", "/hub", "/catalogo", "/publish", "/history", "/storage", "/demo-qr.svg", "/favicon.ico"],
+      "authentication": "page shell is public; private data requires own human/agent credential"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "pathPrefixes": ["/_next/static/", "/images/", "/icons/", "/fonts/"],
+      "authentication": "static build assets only; verify actual asset inventory before apply"
+    },
+    {
+      "methods": ["GET", "HEAD"],
+      "paths": ["/DEMO_TESTNET.md", "/AGENT_CONNECTION.md", "/MARKETPLACE_PILOT.md", "/WORKSPACE_AGENT.md", "/PROVIDER_ONBOARDING.md", "/HISTORY_CONNECTION.md", "/BUYER.md", "/BUYER_AGENT_KIT.md", "/SELLER_AGENT_KIT.md", "/llms.txt", "/mcp.json", "/skills/buyer/SKILL.md", "/skills/seller/SKILL.md", "/skills/recovery/SKILL.md"],
+      "authentication": "public instructions without secrets"
+    },
+    {
+      "methods": ["GET"],
+      "paths": ["/api/market/catalog"],
+      "authentication": "anonymous catalogue; bounded pagination and atomic ingress limits"
+    },
+    {
+      "methods": ["GET", "POST"],
+      "paths": ["/api/mcp"],
+      "authentication": "initialize/list and public tools are public; private tools require own agent bearer"
+    },
+    {
+      "methods": ["POST"],
+      "paths": ["/api/workspaces"],
+      "authentication": "client-generated recovery bearer, stable creation id, access hashes, admission limits"
+    },
+    {
+      "methods": ["POST"],
+      "pathPattern": "^/api/workspaces/[a-f0-9-]{36}/access$",
+      "authentication": "own recovery credential and expected generation"
+    },
+    {
+      "methods": ["GET"],
+      "paths": ["/api/account/identity", "/api/account/queries", "/api/market/orders", "/api/market/services", "/api/market/agent-permissions"],
+      "authentication": "own human or agent bearer; no cross-account data"
+    },
+    {
+      "methods": ["POST"],
+      "paths": ["/api/market/agent-permissions"],
+      "authentication": "own human bearer and expected permission revision"
+    },
+    {
+      "methods": ["GET", "POST"],
+      "pathPattern": "^/api/market/(orders|services)/[a-f0-9-]{36}$",
+      "authentication": "native ownership/role rules; no payment shortcut"
+    },
+    {
+      "methods": ["POST"],
+      "pathPattern": "^/api/market/orders/[a-f0-9-]{36}/x402$",
+      "authentication": "own buyer agent bearer; immutable order and valid locally signed Testnet authorization"
+    }
+  ],
+  "excluded": {
+    "administration": ["/api/market/guardian", "/api/market/guardian/tick", "/api/market/review", "/api/market/control", "/api/market/operations-budget", "/market-operations"],
+    "privateFiles": "delivery upload/download routes remain outside this text-only perimeter",
+    "legacyPaymentRoutes": true,
+    "wildcardDomains": true,
+    "unboundedApiPrefix": true,
+    "previewBypassCredentials": true
+  },
+  "verificationRequired": [
+    "Compare exact current rule and all other protections immediately before applying any approved change.",
+    "Verify CSS/JS hydration and instruction links against the frozen build.",
+    "Test from a genuinely different network without deployment cookies or bypass.",
+    "Check own-account access and cross-account 404 after opening the perimeter.",
+    "Retain deny/authentication for administrative routes and disabled capabilities."
+  ],
+  "knownLimitations": [
+    "Production currently serves the older runtime; opening this rule would not itself publish the candidate.",
+    "The current source boundary omits /bazaar-qr.svg; use /demo-qr.svg for this candidate until fixed.",
+    "Web tool could not retrieve production and supplied no definitive HTTP status; external acceptance is pending.",
+    "This is a complete logical route proposal, not a submitted Vercel API request."
+  ],
+  "performedEffects": {"firewallMutations": 0, "productionPublications": 0, "cronActivations": 0, "newPayments": 0}
+}

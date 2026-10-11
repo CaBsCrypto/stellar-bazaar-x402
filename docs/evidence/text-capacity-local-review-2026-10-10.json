@@ -1,0 +1,478 @@
+{
+  "version": 1,
+  "status": "LOCAL_REVIEW_WITH_OPEN_FINDINGS",
+  "observedAt": "2026-10-11T01:49:58.419Z",
+  "source": {
+    "runtimeBasis": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+    "trackedRuntimeComparedToBasis": true,
+    "comparison": "git diff --stat <basis> -- lib app components returned no differences",
+    "workerSource": "Current local hosted tick module; tested synthetically"
+  },
+  "scope": {
+    "environment": "Offline, synthetic data and Redis protocol doubles",
+    "realRedisLuaVerified": false,
+    "publicAccessValidatedByThisReview": false,
+    "productionPublished": false,
+    "cronActivated": false,
+    "externalRequests": 0,
+    "realAccounts": 0,
+    "realOrders": 0,
+    "realPayments": 0,
+    "providerExecutions": 0,
+    "runtimeSourceEdits": 0
+  },
+  "testTotals": {
+    "existingScriptsPassed": 9,
+    "existingScriptsFailed": 2,
+    "additionalActualHandlerProbePassed": 1
+  },
+  "tests": [
+    {
+      "entrypoint": "scripts/test-workspace-global-quota.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-workspace-global-quota.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "sanitizedReport": {
+        "ok": true,
+        "redis": "Protocol double only",
+        "sharedAcrossOwnersAndStoreInstances": true,
+        "atomicConcurrentQuota": true,
+        "creationBlockedWithoutWrite": true,
+        "minuteAndDayRollover": true,
+        "retryAfterMatchesReset": true,
+        "clockRegressionFailsClosed": true,
+        "uncertainAcknowledgementNoRetry": true,
+        "acceptanceQuotaCasSingleAttempt": true,
+        "ordinaryCounterConflictRetriesPreserved": true,
+        "externalRequests": 0
+      }
+    },
+    {
+      "entrypoint": "scripts/test-mcp-stateless-transport.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-mcp-stateless-transport.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "sanitizedReport": {
+        "status": "PASS",
+        "acceptNegotiation": 18,
+        "nativeSdkInitialize": true,
+        "nativeSdkTools": 34,
+        "nativeSdkCapabilities": true,
+        "nativeSdkUnsupportedStream": true,
+        "metadataIngressLimit": 120,
+        "persistedQuota": true,
+        "sanitizedStorageFailure": true,
+        "externalRequests": 0,
+        "realPayments": 0
+      }
+    },
+    {
+      "entrypoint": "scripts/test-market-capacity.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-market-capacity.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "sanitizedReport": {
+        "status": "PASS",
+        "tests": 24,
+        "ordersAboveOldCap": 109,
+        "networkRequests": 0,
+        "realRedisLuaVerified": false,
+        "checks": [
+          "byte pressure preserves paid completion",
+          "two-store concurrency CAS",
+          "permission revocation race",
+          "lost acknowledgement durable recovery",
+          "uncertainty retains reservation",
+          "terminal release without historical deletion",
+          "companion corruption rejected"
+        ]
+      }
+    },
+    {
+      "entrypoint": "scripts/test-market-purchase-admission.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-market-purchase-admission.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "sanitizedReport": {
+        "status": "PASS",
+        "externalRequests": 0,
+        "payments": 0,
+        "checks": [
+          "effective hosted purchase config guards fresh order/challenge/proof",
+          "missing or malformed facilitator and non-Testnet RPC rejected",
+          "first authorization not consumed on unavailable configuration",
+          "existing order and immutable challenge remain recoverable",
+          "confirmed proof replay and reconciliation work with closed flags",
+          "no facilitator or ledger call"
+        ]
+      }
+    },
+    {
+      "entrypoint": "scripts/test-market-recovery.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-market-recovery.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "sanitizedReport": {
+        "status": "PASS",
+        "externalRequests": 0,
+        "payments": 0,
+        "simulatedSettleCalls": 6,
+        "redisLua": "protocol-double",
+        "checks": [
+          "seven-day content denial and content-free atomic archive",
+          "private archive identity and immutable intent replay",
+          "uncertain payment remains durable",
+          "read-ledger-only cryptographic reconciliation",
+          "wrong nonce and amount rejected",
+          "archived authorization blocks reuse",
+          "paused admission preserves recovery",
+          "operator-only private guardian snapshot",
+          "settle/archive interleaving retains only matching transaction identifier",
+          "late wrong network/payer/hash/binding/fingerprint rejected",
+          "known-hash settling recovers without resubmission"
+        ]
+      }
+    },
+    {
+      "entrypoint": "scripts/test-open-market-mcp.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-open-market-mcp.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "sanitizedReport": {
+        "status": "PASS",
+        "remoteRequests": 0,
+        "payments": 0,
+        "checks": [
+          "human-owned generation-bound grant CAS/replay",
+          "agent HTTP permission enforcement",
+          "atomic grant race rejection",
+          "grant lost acknowledgement explicit replay across store instances",
+          "public canonical catalog privacy",
+          "one owner snapshot and one review snapshot per public page",
+          "opaque stable pagination and bounded DTO",
+          "MCP tools/discovery canonical parity",
+          "native human history route and authenticated identity without wallet; legacy route fallback",
+          "demo HTTP query dedup and anonymous privacy",
+          "optional wallet binding and immutable original payer recovery",
+          "private submission and order isolation",
+          "positive integer-precision USDC prices and exact protocol",
+          "revoked catalog owner filtering",
+          "106 retained owners and 105 live request windows",
+          "105 retained reviews with 1MiB byte guard"
+        ]
+      }
+    },
+    {
+      "entrypoint": "scripts/test-demo-wallet.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-demo-wallet.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "sanitizedReport": {
+        "status": "PASS",
+        "walletProof": true,
+        "singleUse": true,
+        "expiry": true,
+        "crossAccountIsolation": true,
+        "walletUniqueness": true,
+        "recoveryReplacement": true,
+        "lostAckReadRecovery": true,
+        "CASConflictNoEffect": true,
+        "queryDedup": true,
+        "globalIngressLimit": true,
+        "recoveryCredentialRejectedByMcp": true,
+        "mcpInitialize": true,
+        "mcpQueryObservation": true,
+        "anonymousQueryPrivacy": true,
+        "developerExampleMcpProof": true,
+        "httpWalletProof": true,
+        "invalidProofSkipsNetwork": true,
+        "perIpRegistrationLimit": true,
+        "accountRequestLimit": true,
+        "externalRequests": 0,
+        "realPayments": 0
+      }
+    },
+    {
+      "entrypoint": "scripts/test-open-workspace-core.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-open-workspace-core.mjs",
+      "status": "FAIL",
+      "exitCode": 1,
+      "failure": {
+        "code": "CONCURRENT_CREATION_EXPECTATION",
+        "expectedSuccessfulCreations": 1,
+        "actualSuccessfulCreations": 0,
+        "source": "scripts/test-open-workspace-core.mjs:126",
+        "classification": "Environment-blocked local TCP diagnostic; suite remains FAIL",
+        "diagnostic": {
+          "code": "EACCES",
+          "errorType": "TypeError",
+          "localLoopbackRequestsReceived": 0,
+          "externalRequests": 0,
+          "realRedisLuaVerified": false
+        }
+      }
+    },
+    {
+      "entrypoint": "scripts/test-workspace-retention.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-workspace-retention.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "sanitizedReport": {
+        "status": "PASS",
+        "retentionDays": 7,
+        "clockControlled": true,
+        "serverOwnedQueryTimestamp": true,
+        "expiredReplayCannotRevive": true,
+        "privateContentPruned": true,
+        "atomicByteAccounting": true,
+        "accountIdentityPreserved": true,
+        "generationGuard": true,
+        "scopedMaintenance": true,
+        "uncertainAckRecovery": true,
+        "replayCapacityBounded": true,
+        "eventWifiRegistrations": 200,
+        "sharedIngressCap": 120,
+        "concurrentQuotaAtomic": true,
+        "externalRequests": 0,
+        "realPayments": 0
+      }
+    },
+    {
+      "entrypoint": "scripts/test-seller-hosted-tick.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-seller-hosted-tick.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "sanitizedReport": {
+        "status": "PASS",
+        "scenarios": 61,
+        "externalRequests": 0,
+        "payments": 0,
+        "cloudWrites": 0,
+        "coverage": [
+          "native SDK with synthetic transport",
+          "one execution per tick",
+          "durable queue and pagination",
+          "account and immutable paid binding",
+          "daily quotas and backoff",
+          "durable before-effect counters and locks",
+          "claim recovery and frozen delivery only",
+          "uncertain attempts never reexecuted",
+          "fixed content expiration",
+          "deadline and cancellation",
+          "redacted summaries",
+          "bounded HTTP statuses and fixed failure-stage codes"
+        ]
+      }
+    },
+    {
+      "entrypoint": "scripts/test-marketplace-workspace-lifecycle.mjs",
+      "reproductionCommand": "node --experimental-strip-types scripts/test-marketplace-workspace-lifecycle.mjs",
+      "status": "FAIL",
+      "exitCode": 1,
+      "failure": {
+        "code": "ORDERS_MAP_UNDEFINED",
+        "classification": "Obsolete component harness; suite remains FAIL",
+        "fixtureSource": "scripts/test-marketplace-workspace-lifecycle.mjs:54",
+        "actualSource": "components/MarketplaceWorkspace.tsx:109",
+        "reason": "First fixture response supplies services instead of orders while current component initially loads orders; later assertions also require removed inline signing controls."
+      }
+    }
+  ],
+  "actualHandlerProbe": {
+    "status": "PASS",
+    "checks": 12,
+    "method": "Ephemeral offline Node program invoking actual workspace HTTP handlers against a synthetic Redis protocol double",
+    "sanitizedReport": {
+      "status": "PASS",
+      "checks": 12,
+      "kind": "Actual HTTP handlers and Redis protocol double",
+      "newRegistrationBlocked503": true,
+      "creationReplayPreserved": true,
+      "closedAdmissionIdentityAndHistoryReadable": true,
+      "recoveryRotationWithClosedAdmission": true,
+      "revokedAgent401": true,
+      "walletOptionalIdentity": true,
+      "oversizedBody413": true,
+      "trustedDeploymentIpOnly": true,
+      "accountQuota429WithRetry": true,
+      "unavailableStorage503Sanitized": true,
+      "externalRequests": 0,
+      "realAccounts": 0,
+      "realOrders": 0,
+      "realPayments": 0,
+      "realRedisLuaVerified": false,
+      "marketPauseBlocksNewRegistrationButPreservesReplay": true
+    }
+  },
+  "limits": {
+    "registrations": {
+      "globalPerDay": 200,
+      "perIpPerHour": 200,
+      "source": "lib/workspace-types.ts"
+    },
+    "requests": {
+      "perAccountPerMinute": 60,
+      "publicIngressPerMinute": 120,
+      "globalAuthenticatedPerMinute": 120,
+      "globalAuthenticatedPerDay": 10000,
+      "sources": [
+        "lib/workspace-types.ts",
+        "lib/workspace-admission.ts"
+      ]
+    },
+    "retention": {
+      "visibleContentDays": 7,
+      "expiryFixedAtCreation": true,
+      "pendingPaymentsNotIndiscriminatelyExpired": true
+    },
+    "metadata": {
+      "ownerBytes": 131072,
+      "workspaceRegistryBytes": 1048576,
+      "workspaceGlobalBytes": 12582912,
+      "marketBytes": 524288,
+      "settlementBytes": 131072,
+      "capacityLedgerBytes": 65536,
+      "sources": [
+        "lib/workspace-types.ts",
+        "lib/marketplace-capacity.ts"
+      ]
+    },
+    "worker": {
+      "providerExecutionsPerTick": 1,
+      "providerRequestsPerDay": 50,
+      "mcpRequestsPerTick": 20,
+      "mcpRequestsPerDay": 5000,
+      "deadlineSeconds": 45,
+      "durablePendingPageSize": 20,
+      "plannedTickEveryMinutes": 5,
+      "providerCapacityCheckOccursAfterPayment": true,
+      "source": "examples/seller-hosted-tick.mjs"
+    },
+    "redisIdleMeasurementReference": {
+      "warmRestCommands": 31,
+      "firstRestCommands": 32,
+      "mcpHttpRequests": 5,
+      "measurement": "Previously measured idle tick only; this review did not repeat hosted traffic"
+    }
+  },
+  "admission": {
+    "buyerWalletBindingOptional": true,
+    "eachOrderFreezesPayerSellerPriceCardAndNetwork": true,
+    "newOrderAndFirstPaymentBlockedWhenPurchasesDisabled": true,
+    "existingImmutableIntentAndConfirmedPaymentRecoveryPreserved": true,
+    "broadDurableMarketPauseAvailable": true,
+    "storageGrowthReservedBeforeFacilitatorVerificationAndSettlement": true,
+    "sellerAvailabilityAndDailyExecutionQuotaNotCheckedBeforePayment": true,
+    "sources": [
+      "lib/marketplace.ts:31",
+      "lib/marketplace.ts:101",
+      "lib/marketplace-capacity.ts:127",
+      "lib/marketplace-x402.ts"
+    ]
+  },
+  "findings": [
+    {
+      "severity": "BLOCKING_PUBLIC_PURCHASES",
+      "code": "SELLER_CAPACITY_NOT_LINKED_TO_PAYMENT_ADMISSION",
+      "description": "A reviewed active service can accept a payment while its worker is disabled, unavailable, backlogged, or at its 50-provider-request daily limit. The worker stops after payment and preserves the order; it does not prevent that charge.",
+      "sources": [
+        "lib/marketplace.ts:101",
+        "examples/seller-hosted-tick.mjs"
+      ]
+    },
+    {
+      "severity": "MEDIUM",
+      "code": "PREPAYMENT_AVAILABILITY_NOT_DISPLAYED",
+      "description": "Catalog status distinguishes active review and global pause but does not expose seller heartbeat, pending queue, remaining execution capacity or execution availability. The demo page reports the purchase feature flag; the catalog descriptor does not reflect that flag directly.",
+      "sources": [
+        "components/MarketCatalog.tsx",
+        "lib/marketplace-discovery.ts",
+        "app/demo/page.tsx"
+      ]
+    },
+    {
+      "severity": "VALIDATION_LIMIT",
+      "code": "REAL_REDIS_LUA_NOT_VERIFIED",
+      "description": "Quota and capacity tests use protocol doubles. The local HTTP Redis harness failed before any loopback request reached its server because the sandbox returned EACCES; it remains FAIL."
+    },
+    {
+      "severity": "TEST_MAINTENANCE",
+      "code": "STALE_MARKETPLACE_COMPONENT_HARNESS",
+      "description": "The component lifecycle test supplies a legacy first response and requires removed wallet signing UI. It remains FAIL and requires a harness update, without evidence that current runtime behavior caused the failure."
+    }
+  ],
+  "recommendations": [
+    "Prepare production with BAZAAR_ENABLE_MARKET_PURCHASES=false and seller cron disabled until seller admission is implemented and verified.",
+    "Introduce explicit seller availability with a short-lived durable heartbeat and a bounded queue before permitting a first payment authorization.",
+    "Reserve a provider slot atomically by immutable order identifier, seller, card and generation; count reservations plus executed work against the daily provider budget.",
+    "Define daily rollover and unpaid reservation expiry explicitly. Preserve reservations for uncertain payments or uncertain provider execution and recover existing operations without another charge.",
+    "Reject unavailable seller or storage capacity with 503; use 429 and a documented Retry-After for request or time-based quotas.",
+    "Expose effective purchase availability, queue and remaining capacity to MCP and the catalog before payment, separately from manual review status.",
+    "Verify concurrent last-slot admission, stale heartbeat, quota rollover, closed admission after challenge, lost acknowledgements and continued recovery using synthetic isolated Redis keys before public release."
+  ],
+  "isolatedRedisReuse": {
+    "workspaceImports": {
+      "module": "lib/workspace-store.ts",
+      "exports": [
+        "createRedisWorkspaceStore",
+        "READ_WORKSPACE_LUA",
+        "COMMIT_WORKSPACE_LUA",
+        "READ_MARKET_PERMISSION_LUA",
+        "COMMIT_MARKET_PERMISSION_LUA"
+      ]
+    },
+    "marketImports": {
+      "module": "lib/marketplace-store.ts",
+      "exports": [
+        "createMarketStore"
+      ]
+    },
+    "settlementImports": {
+      "module": "lib/marketplace-x402-store.ts",
+      "exports": [
+        "createMarketX402Store"
+      ]
+    },
+    "capacityImports": {
+      "module": "lib/marketplace-capacity.ts",
+      "exports": [
+        "MARKET_CAPACITY_CAS",
+        "capacityReservationKey",
+        "projectCapacity"
+      ]
+    },
+    "redisOptions": {
+      "automaticDeserialization": false,
+      "retry": {
+        "retries": 0
+      },
+      "enableAutoPipelining": false
+    },
+    "workspaceAdapter": "{eval:(script,keys,args)=>redis.eval(script,keys,args)}",
+    "marketAdapter": "{get:key=>redis.get(key),eval:(script,keys,args)=>redis.eval(script,keys,args)}",
+    "workspaceConstructor": "createRedisWorkspaceStore(adapter,freshWorkspacePrefix,()=>({ownerIds:[],hashes:[]}))",
+    "marketConstructors": [
+      "createMarketStore(adapter,freshMarketPrefix)",
+      "createMarketX402Store(adapter,freshMarketPrefix)"
+    ],
+    "workspaceFunctions": [
+      "createWorkspace",
+      "consumeIngress",
+      "consumeRequest",
+      "resolveHash",
+      "changeAccess"
+    ],
+    "prefixes": [
+      "bazaar-workspace:pilot-<fresh32hex>",
+      "bazaar-market:pilot-<fresh32hex>"
+    ],
+    "marketKeySuffixes": [
+      ":state",
+      ":x402-settlements:state",
+      ":capacity-reservations:v1"
+    ],
+    "safety": "Scope every GET and Lua KEYS to the fresh synthetic families. Market CAS may include up to two workspace generation guard keys. Use synchronous transact callbacks and never retry an uncertain mutation acknowledgement. Clean up only exact recorded keys; do not use SCAN, DBSIZE or FLUSH. Credentials stay outside command arguments and reports.",
+    "noCloudCallsPerformed": true
+  },
+  "releaseDecision": "Preparation may continue with purchases closed. This report does not accept public production purchases, a scheduler, image/video or R2 file delivery."
+}

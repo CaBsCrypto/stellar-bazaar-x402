@@ -1,0 +1,407 @@
+{
+  "version": 1,
+  "status": "PREPARATION_VALIDATED_RELEASE_BLOCKED",
+  "observedAt": "2026-10-11T02:05:40.463Z",
+  "sourceCandidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "manifestSha256": "06699ddcbd1a7ae0b0dc8ee0aabb3ecb451c9a194f06c4dc5ce4f00653b50c13",
+  "checksPassed": 91,
+  "checks": [
+    {
+      "name": "draft_not_applied_or_approved",
+      "pass": true
+    },
+    {
+      "name": "approval_gates_closed",
+      "pass": true
+    },
+    {
+      "name": "no_scheduled_crons",
+      "pass": true
+    },
+    {
+      "name": "purchases_and_registration_closed",
+      "pass": true
+    },
+    {
+      "name": "seller_and_text_execution_closed",
+      "pass": true
+    },
+    {
+      "name": "files_closed",
+      "pass": true
+    },
+    {
+      "name": "no_mainnet",
+      "pass": true
+    },
+    {
+      "name": "public_access_not_accepted",
+      "pass": true
+    },
+    {
+      "name": "seller_capacity_and_cron_budget_unresolved",
+      "pass": true
+    },
+    {
+      "name": "frozen_bazaar_no_cron_exact",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/seller-hosted-handler.mjs",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/seller-hosted-tick.mjs",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/seller-redis-secret-store.mjs",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/seller-mcp-transport.mjs",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/seller-http-adapter.mjs",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/seller-service-card.mjs",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/seller-marketplace-worker.mjs",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/private-mcp-client.mjs",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/market-price.mjs",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:src/types.ts",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:src/preview-app.ts",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:src/marketplace-text.ts",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:src/marketplace-routes.ts",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:src/engine/wpm-calculator.ts",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:src/engine/algorithmic-script-generator.ts",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:server.ts",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:seller/seller-hosted-handler.d.mts",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:package.json",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:package-lock.json",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:tsconfig.json",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:vercel.json",
+      "pass": true
+    },
+    {
+      "name": "provider_hash:.vercelignore",
+      "pass": true
+    },
+    {
+      "name": "provider_effective_digest",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/continuous-purchase-acceptance-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-workspace-real-capacity-final-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-market-real-capacity-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-workspace-core-recheck-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-capacity-local-review-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-workspace-lifecycle-recheck-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-production-metadata-final-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-workspace-real-capacity-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-public-access-preproduction-network-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:release/text-public-route-proposal-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-upstash-quota-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-vercel-usage-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-cron-capacity-estimate-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:release/text-production-manifest-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:release/vercel-text-no-cron.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_RESULTS.md:evidence/text-production-source-export-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-production-metadata-final-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-public-access-preproduction-network-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-workspace-real-capacity-final-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-upstash-quota-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:release/text-production-manifest-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:release/vercel-text-no-cron.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/continuous-bazaar-preview-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/continuous-seller-provider-source-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/continuous-purchase-acceptance-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/continuous-purchase-worker-checkpoint-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/demo-configuration.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/workspace-admission.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/workspace-types.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/marketplace-capacity.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/provider-review-runtime.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/preview-mcp-firewall-review-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/pilot-route-policy.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/operational-route-gate.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/workspace-http.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/marketplace-http.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../public/AGENT_CONNECTION.md",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/continuous-seller-access-review-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../examples/seller-hosted-handler.mjs",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../examples/seller-hosted-tick.mjs",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/provider-review-operator.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../lib/market-guardian.ts",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:../vercel.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-upstash-quota-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-vercel-usage-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:HACKATHON_CONTINUOUS_SELLER.md",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-cron-capacity-estimate-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-workspace-real-capacity-final-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-market-real-capacity-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-capacity-local-review-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-workspace-core-recheck-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:evidence/text-workspace-lifecycle-recheck-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:HACKATHON_CONTINUOUS_PURCHASE.md",
+      "pass": true
+    },
+    {
+      "name": "link:docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md:HACKATHON_QR_ACCEPTANCE.md",
+      "pass": true
+    },
+    {
+      "name": "runtime_unchanged",
+      "pass": true
+    },
+    {
+      "name": "rerun:docs/evidence/text-workspace-core-recheck-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "rerun:docs/evidence/text-workspace-lifecycle-recheck-2026-10-10.json",
+      "pass": true
+    },
+    {
+      "name": "redacted_current_secret_scan",
+      "pass": true
+    }
+  ],
+  "secretScan": {
+    "ok": true,
+    "redacted": true,
+    "current": {
+      "stellarSeedMatchCount": 0,
+      "files": [],
+      "trackedExactSecretLabels": []
+    },
+    "build": {
+      "exactSecretLabels": []
+    },
+    "history": {
+      "affectedCommitCount": 1,
+      "affectedCommits": [
+        "e16ccd8af0428f6f3d8bab1ad83bb9475adf71c2"
+      ],
+      "note": "Known history is reported but not rewritten by this branch."
+    },
+    "scope": "Stellar seed pattern in tracked/unignored files and exact known local env secret values in source/build; no claim of exhaustive credential audit"
+  },
+  "releaseBlockers": [
+    "PUBLIC_CURRENT_PRODUCTION_NOT_CANDIDATE",
+    "PRODUCTION_FIREWALL_NOT_PUBLIC",
+    "PRODUCTION_PROVIDER_CONFIGURATION_UNRESOLVED",
+    "SELLER_CAPACITY_NOT_LINKED_TO_PAYMENT_ADMISSION",
+    "CRON_CAPACITY_BUDGET_UNRESOLVED"
+  ],
+  "newPackagesBuilt": false,
+  "productionPublished": false,
+  "productionEnvironmentApplied": false,
+  "cronActivated": false,
+  "newPayments": 0,
+  "newProviderExecutions": 0
+}

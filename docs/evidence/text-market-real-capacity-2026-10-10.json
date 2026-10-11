@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "status": "PASS",
+  "category": "Real Redis isolated market capacity and CAS validation",
+  "sourceSha": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "moduleSha256": {
+    "lib/marketplace-store.ts": "19b14523c620965adbffc4942dcfd313b1de20463c9db289e8efd6396c33ce0e",
+    "lib/marketplace-x402-store.ts": "811d99e5a07486acffd451570af09f0c6f1362fbc15064ef0c5717dad83e9b24",
+    "lib/marketplace-capacity.ts": "eeab01238224063c4e293f87790903ca0e25e991ca3569b7cbb90267b6f51119"
+  },
+  "scriptSha256": "213cab81f5af101f8f508dbe1ad4552a1e9d4a9df16a0ffa30723c8913e6bb92",
+  "observedAt": "2026-10-11T01:55:16.826Z",
+  "limits": {
+    "restRequests": 60,
+    "syntheticStateBytes": 65536,
+    "fixtureExpiryHours": 24
+  },
+  "realPayments": 0,
+  "providerExecutions": 0,
+  "realAccountsCreated": 0,
+  "realOrdersCreated": 0,
+  "syntheticOrderMetadata": 15,
+  "facilitatorCalls": 0,
+  "productionSettingsChanged": false,
+  "cronActivated": false,
+  "publicRelease": false,
+  "checks": {
+    "exactSyntheticNamespaceFresh": true,
+    "unpaidChallengeHasNoPaymentReservation": true,
+    "crossInstanceAtomicCasOneWinner": true,
+    "lostAcknowledgementExplicitReadRecovery": true,
+    "paymentAndCompletionSpaceReservedDurably": true,
+    "uncertainWriteNeverAutomaticallyRetried": true,
+    "capacity503BeforeAtomicWrite": true,
+    "refusedReservationPreservesAllThreeDocuments": true,
+    "corruptOwnCompanionFailsClosed": true
+  },
+  "maximumObservedSyntheticStateBytes": 46699,
+  "stage": "COMPLETE",
+  "restRequests": 59,
+  "redisCommandAttempts": 59,
+  "atomicCasAttempts": 5,
+  "networkUsed": true,
+  "exactOwnedKeysDeleted": 3,
+  "isolatedSyntheticKeysRemoved": true,
+  "fixtureExpiryAt": "2026-10-12T01:55:16.000Z",
+  "elapsedMs": 14540,
+  "realRedisLuaVerified": true,
+  "capacityEnforcement": "Client projection from real isolated Redis snapshots; atomic commit enforced by unchanged MARKET_CAPACITY_CAS"
+}

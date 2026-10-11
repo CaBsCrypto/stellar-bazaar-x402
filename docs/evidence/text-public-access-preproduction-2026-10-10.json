@@ -1,0 +1,163 @@
+{
+  "version": 1,
+  "status": "PUBLIC_ACCESS_OBSERVATIONS_ONLY",
+  "startedAt": "2026-10-11T01:47:34.563Z",
+  "completedAt": "2026-10-11T01:47:34.641Z",
+  "sourceCandidateUnderReview": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "productionCandidatePublishedByProbe": false,
+  "requestPolicy": {
+    "exactOriginsOnly": true,
+    "allowedMethods": [
+      "GET",
+      "POST initialize",
+      "POST tools/list"
+    ],
+    "credentials": "omit",
+    "authorizationHeaders": false,
+    "protectionBypass": false,
+    "redirectsFollowed": false,
+    "retries": 0,
+    "maxRequests": 14,
+    "requestsAttempted": 12,
+    "requestTimeoutMs": 4000,
+    "overallTimeoutMs": 45000,
+    "maxResponseBytes": 262144,
+    "rawHeadersPersisted": false,
+    "rawBodiesPersisted": false,
+    "absentOrderId": "00000000-0000-4000-8000-000000000000"
+  },
+  "requestedEffects": {
+    "newAccounts": 0,
+    "newOrders": 0,
+    "listingSubmissions": 0,
+    "paymentSubmissions": 0,
+    "signatures": 0,
+    "providerExecutions": 0,
+    "manualTicks": 0,
+    "contentStorageWrites": 0
+  },
+  "technicalCounterCaveat": "Anonymous HTTP reads and MCP enumeration may increment server ingress/rate-limit counters. No business writes were requested.",
+  "environments": [
+    {
+      "environment": "production",
+      "origin": "https://bazaar.browns.studio",
+      "protectedPreviewExpected": false,
+      "results": [
+        {
+          "kind": "demo-page",
+          "method": "GET",
+          "url": "https://bazaar.browns.studio/demo",
+          "access": "transport-error",
+          "elapsedMs": 44
+        },
+        {
+          "kind": "agent-guide",
+          "method": "GET",
+          "url": "https://bazaar.browns.studio/AGENT_CONNECTION.md",
+          "access": "transport-error",
+          "elapsedMs": 2
+        },
+        {
+          "kind": "anonymous-catalogue",
+          "method": "GET",
+          "url": "https://bazaar.browns.studio/api/market/catalog?limit=1",
+          "access": "transport-error",
+          "elapsedMs": 4
+        },
+        {
+          "kind": "mcp-health",
+          "method": "GET",
+          "url": "https://bazaar.browns.studio/api/mcp",
+          "access": "transport-error",
+          "elapsedMs": 3
+        },
+        {
+          "kind": "mcp-initialize",
+          "method": "POST",
+          "url": "https://bazaar.browns.studio/api/mcp",
+          "access": "transport-error",
+          "elapsedMs": 5
+        },
+        {
+          "kind": "mcp-tools-list",
+          "method": "POST",
+          "url": "https://bazaar.browns.studio/api/mcp",
+          "skipped": "initialize-not-confirmed"
+        },
+        {
+          "kind": "absent-order-get-only",
+          "method": "GET",
+          "url": "https://bazaar.browns.studio/api/market/orders/00000000-0000-4000-8000-000000000000/x402",
+          "access": "transport-error",
+          "elapsedMs": 3
+        }
+      ]
+    },
+    {
+      "environment": "protected-preview",
+      "origin": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app",
+      "protectedPreviewExpected": true,
+      "results": [
+        {
+          "kind": "demo-page",
+          "method": "GET",
+          "url": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app/demo",
+          "access": "transport-error",
+          "elapsedMs": 2
+        },
+        {
+          "kind": "agent-guide",
+          "method": "GET",
+          "url": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app/AGENT_CONNECTION.md",
+          "access": "transport-error",
+          "elapsedMs": 3
+        },
+        {
+          "kind": "anonymous-catalogue",
+          "method": "GET",
+          "url": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app/api/market/catalog?limit=1",
+          "access": "transport-error",
+          "elapsedMs": 3
+        },
+        {
+          "kind": "mcp-health",
+          "method": "GET",
+          "url": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app/api/mcp",
+          "access": "transport-error",
+          "elapsedMs": 2
+        },
+        {
+          "kind": "mcp-initialize",
+          "method": "POST",
+          "url": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app/api/mcp",
+          "access": "transport-error",
+          "elapsedMs": 3
+        },
+        {
+          "kind": "mcp-tools-list",
+          "method": "POST",
+          "url": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app/api/mcp",
+          "skipped": "initialize-not-confirmed"
+        },
+        {
+          "kind": "absent-order-get-only",
+          "method": "GET",
+          "url": "https://stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app/api/market/orders/00000000-0000-4000-8000-000000000000/x402",
+          "access": "transport-error",
+          "elapsedMs": 2
+        }
+      ]
+    }
+  ],
+  "acceptanceNotEstablished": [
+    "public QR and mobile journey",
+    "new account registration",
+    "private MCP authentication",
+    "third-party buyer wallet and signer",
+    "service submission, review and activation",
+    "purchase and paid delivery",
+    "private history isolation",
+    "automatic seller scheduling",
+    "production source/configuration equivalence"
+  ]
+}

@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "status": "CURRENT_TEAM_USAGE_OBSERVED_ONLY",
+  "observedAt": "2026-10-11T01:58:07.063Z",
+  "source": "Existing authenticated Vercel team Usage page",
+  "plan": "Pro",
+  "billingCycleDisplay": "Sep 21 - Oct 21, 0:00",
+  "scope": "All Projects; all products; current billing cycle",
+  "includedCreditDisplay": "USD 20.00 / USD 20.00",
+  "onDemandChargesDisplayUsd": 3.06,
+  "usageRows": {
+    "fluidProvisionedMemory": {
+      "usage": "210.2 GB Hrs",
+      "chargeUsd": 2.23
+    },
+    "fluidActiveCpu": {
+      "usage": "2 hours",
+      "chargeUsd": 0.37
+    },
+    "functionInvocations": {
+      "usage": "77.65K",
+      "chargeUsd": 0.05
+    },
+    "buildCpuMinutes": {
+      "usage": "88 hours",
+      "chargeUsd": 18.34
+    },
+    "functionStorage": {
+      "usage": "7 GB-months",
+      "chargeUsd": 0.73
+    }
+  },
+  "screenshot": "docs/evidence/browser-2026-10-10/vercel-text-capacity.png",
+  "screenshotSha256": "0a817c39b9044266db8fb7432999c0f69930605656e4897084ccc3753013d508",
+  "changes": {
+    "plan": false,
+    "budget": false,
+    "pause": false,
+    "cron": false,
+    "production": false
+  },
+  "limitations": [
+    "Team totals include projects outside Bazaar and cannot be attributed to this demo.",
+    "Observed on-demand charges are not an incremental estimate for publication or a new cron.",
+    "No hard deployment or account suspension limit was established by this screen.",
+    "Usage figures may update after the observation."
+  ]
+}

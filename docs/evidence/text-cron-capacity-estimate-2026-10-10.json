@@ -1,0 +1,276 @@
+{
+  "version": 1,
+  "status": "OFFLINE_IDLE_COMMAND_LOWER_BOUND_ESTIMATED",
+  "observedAt": "2026-10-11T01:56:17.584Z",
+  "sourceCandidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+  "scope": "One idle seller, */5 cadence for 30 days; no jobs, payments or cloud requests executed in this estimate",
+  "publicDocumentationReference": {
+    "url": "https://upstash.com/docs/redis/sdks/ratelimit-ts/costs",
+    "basis": "Root verified official Upstash documentation in this review: EVAL and commands executed inside Lua are counted separately.",
+    "remotelyVerifiedDuringThisTask": true
+  },
+  "method": {
+    "worker": "Existing native SDK fixture with zero orders + actual AES/CAS store; in-memory interpreter for the 3 known Lua scripts records executed command branches",
+    "bazaar": "Static successful-path lower bound from pinned source for demo ingress and 2 authenticated read tools",
+    "realLuaExecuted": false,
+    "actualBillingObserved": false,
+    "sourceFiles": {
+      "examples/seller-redis-secret-store.mjs": {
+        "candidateSha256": "a46bcbd4e1e10d17a5f4a7523808895a7f568132b538a75f44ebf03ad2f55bf1",
+        "workingTreeMatchesCandidate": true
+      },
+      "examples/seller-hosted-tick.mjs": {
+        "candidateSha256": "c35a74c454cd03ab73d8e66f147263671f53ac3ba806387b3e15cf6450119419",
+        "workingTreeMatchesCandidate": true
+      },
+      "examples/seller-mcp-transport.mjs": {
+        "candidateSha256": "e9f3abdbcf848e6d94ca8aea4a08627fa51ad6d28079aecb5a8031cf4f072ac3",
+        "workingTreeMatchesCandidate": true
+      },
+      "scripts/test-seller-hosted-tick.mjs": {
+        "candidateSha256": "48b327529961064c06fd1743baf23d6c2ac21cdd485cab69aacf33b660819a8f",
+        "workingTreeMatchesCandidate": true
+      },
+      "lib/demo-http.ts": {
+        "candidateSha256": "62897fbb05492ab9a5fc0f64391d2e1b0fb21a160c6c8ed61715e20e74a962af",
+        "workingTreeMatchesCandidate": true
+      },
+      "lib/workspace-store.ts": {
+        "candidateSha256": "a62d4a370d025e1e2145d34d346b74410b4aa60cc9d02450df27eaadc6e2906b",
+        "workingTreeMatchesCandidate": true
+      },
+      "lib/workspace-http.ts": {
+        "candidateSha256": "c584680609cd5ff37a27a82faacc7b69623c4c3b1e1fcda160125abf8396a019",
+        "workingTreeMatchesCandidate": true
+      },
+      "lib/workspace-auth.ts": {
+        "candidateSha256": "d2c31dc5817693045c642e6679fc084adeeaca4b32953a57853806ae90ee66b9",
+        "workingTreeMatchesCandidate": true
+      },
+      "lib/marketplace-mcp.ts": {
+        "candidateSha256": "cd1042484a5bdeb603a7048aa885eb406de0e6f746aef045d5166cad880b78ae",
+        "workingTreeMatchesCandidate": true
+      },
+      "lib/marketplace-http.ts": {
+        "candidateSha256": "bf7ffff67b42d6635daa63ab77f000947ff6242f955b8168f4abf17fa18e7a83",
+        "workingTreeMatchesCandidate": true
+      },
+      "lib/marketplace.ts": {
+        "candidateSha256": "708de803bfdd3d2fb80e1064c221d64d8e255b017b97637d7e767ca843e9f266",
+        "workingTreeMatchesCandidate": true
+      },
+      "lib/marketplace-store.ts": {
+        "candidateSha256": "bd32ef307194721accf39fb0a776d567535da16ae4aeabc519a5e4e23ca12df2",
+        "workingTreeMatchesCandidate": true
+      },
+      "app/api/mcp/route.ts": {
+        "candidateSha256": "9b2563f4896e3e8f851bab93eee550675599bcaeef3bef7ee263310dd04885d0",
+        "workingTreeMatchesCandidate": true
+      }
+    }
+  },
+  "assumptions": {
+    "schedule": "*/5 * * * *",
+    "ticksPerDay": 288,
+    "days": 30,
+    "ticksIn30Days": 8640,
+    "publicDemoEnabled": true,
+    "redisPersistentBackend": true,
+    "successfulUncontendedIdleTicks": true,
+    "stateAlreadyInitialized": true,
+    "oneGlobalWorkerLease": true,
+    "orderListEmpty": true,
+    "perTickMcpHttpRequests": 5,
+    "perTickMcpToolCalls": 2,
+    "everyRequestCallsDemoIngressOnce": true,
+    "nestedIngressDeduplicated": true,
+    "quotaCommitIsRegistryOnly": true,
+    "countEvalPlusExecutedInnerCommands": true,
+    "freeMonthlyCommandLimit": 500000,
+    "additionalBusinessTrafficExcluded": true,
+    "existingUsageSnapshotCommands": 16345
+  },
+  "workerReproduction": {
+    "firstIdle": {
+      "reason": "idle",
+      "mcpHttpRequests": 5,
+      "toolCalls": 2,
+      "redisRestRequests": 32,
+      "internalRedisCommands": 45,
+      "commandsIncludingEval": 77,
+      "byKind": {
+        "SET": {
+          "restRequests": 1,
+          "internalCommands": 0,
+          "totalCommands": 1
+        },
+        "GET": {
+          "restRequests": 2,
+          "internalCommands": 0,
+          "totalCommands": 2
+        },
+        "EVAL checkLeases": {
+          "restRequests": 21,
+          "internalCommands": 21,
+          "totalCommands": 42
+        },
+        "EVAL writeRecord": {
+          "restRequests": 7,
+          "internalCommands": 22,
+          "totalCommands": 29
+        },
+        "EVAL releaseLease": {
+          "restRequests": 1,
+          "internalCommands": 2,
+          "totalCommands": 3
+        }
+      },
+      "providerRequests": 0,
+      "providerExecutions": 0
+    },
+    "restartedWarmIdle": {
+      "reason": "idle",
+      "mcpHttpRequests": 5,
+      "toolCalls": 2,
+      "redisRestRequests": 31,
+      "internalRedisCommands": 44,
+      "commandsIncludingEval": 75,
+      "byKind": {
+        "SET": {
+          "restRequests": 1,
+          "internalCommands": 0,
+          "totalCommands": 1
+        },
+        "GET": {
+          "restRequests": 1,
+          "internalCommands": 0,
+          "totalCommands": 1
+        },
+        "EVAL checkLeases": {
+          "restRequests": 21,
+          "internalCommands": 21,
+          "totalCommands": 42
+        },
+        "EVAL writeRecord": {
+          "restRequests": 7,
+          "internalCommands": 21,
+          "totalCommands": 28
+        },
+        "EVAL releaseLease": {
+          "restRequests": 1,
+          "internalCommands": 2,
+          "totalCommands": 3
+        }
+      },
+      "providerRequests": 0,
+      "providerExecutions": 0
+    },
+    "hostedRestCountsMatch": true,
+    "reference": "docs/evidence/continuous-seller-hosted-preview-2026-10-10.json",
+    "offlineTransportOnly": true
+  },
+  "bazaarMcpLowerBound": {
+    "parts": [
+      {
+        "path": "demoIngress on all 5 HTTP MCP requests",
+        "operations": 5,
+        "restPerOperation": 2,
+        "commandsPerOperation": 10,
+        "detail": "READ_WORKSPACE: EVAL + 3 GET = 4; successful registry-only COMMIT: EVAL + 3 GET + 2 SET = 6"
+      },
+      {
+        "path": "requireWorkspacePrincipal for identity and list_market_orders",
+        "operations": 2,
+        "restPerOperation": 1,
+        "commandsPerOperation": 4,
+        "detail": "resolveHash READ_WORKSPACE: EVAL + 3 GET = 4"
+      },
+      {
+        "path": "consumeRequest for the 2 authenticated tools",
+        "operations": 2,
+        "restPerOperation": 2,
+        "commandsPerOperation": 10,
+        "detail": "quota READ_WORKSPACE = 4; successful registry-only COMMIT = 6"
+      },
+      {
+        "path": "get_bazaar_identity walletIdentity",
+        "operations": 1,
+        "restPerOperation": 1,
+        "commandsPerOperation": 5,
+        "detail": "READ_MARKET_PERMISSION: EVAL + 4 GET = 5"
+      },
+      {
+        "path": "list_market_orders market state read",
+        "operations": 1,
+        "restPerOperation": 1,
+        "commandsPerOperation": 1,
+        "detail": "createMarketStore.transact GET; pure idle callback has no state change"
+      }
+    ],
+    "redisRestRequestsPerTickAtLeast": 18,
+    "commandsPerTickAtLeast": 84
+  },
+  "estimates": {
+    "workerOnlyRestRequestsPerDay": 8928,
+    "workerOnlyRestRequests30Days": 267840,
+    "workerOnlyCommandsPerTick": 75,
+    "workerOnlyCommands30Days": 648000,
+    "bazaarCommandsPerTickAtLeast": 84,
+    "bazaarCommands30DaysAtLeast": 725760,
+    "combinedCommandsPerTickAtLeast": 159,
+    "combinedCommands30DaysAtLeast": 1373760,
+    "workerOnlyExceedsFreeBy": 148000,
+    "combinedExceedsFreeByAtLeast": 873760,
+    "workerOnlyShareOfFreeLimit": 1.296,
+    "combinedShareOfFreeLimitAtLeast": 2.74752,
+    "firstTickInitializationAddsCommands": 2,
+    "combinedPlusObserved16345Usage": 1390105
+  },
+  "omittedAdditionalCosts": [
+    "operational budget accounting / gate / meter Redis",
+    "buyers, vendors, registrations and catalogue traffic",
+    "provider executions and delivery/checkpoint journals",
+    "CAS contention and retries",
+    "expired-content cleanup / reconciliation",
+    "existing paid orders on list pages or guard checks",
+    "manual probes, overlapping invocations and other consumers"
+  ],
+  "checks": [
+    {
+      "name": "fresh fixture cold32 REST/77 commands",
+      "pass": true
+    },
+    {
+      "name": "fresh-process warm31 REST/75 commands",
+      "pass": true
+    },
+    {
+      "name": "warm21 lease assertions/7 CAS writes/1 release",
+      "pass": true
+    },
+    {
+      "name": "real hosted31/32 REST reference matches offline trace",
+      "pass": true
+    },
+    {
+      "name": "pinned successful-path MCP lower bound84 commands",
+      "pass": true
+    },
+    {
+      "name": "worker REST267840 is not billable command estimate",
+      "pass": true
+    }
+  ],
+  "conclusion": "Five-minute cadence does not fit a 500000-command/month budget under the supplied EVAL+inner-command model. Worker alone is already 648000; combined idle lower bound is 1373760. This is a source/fixture estimate, not an invoice, live Upstash counter measurement or authorization to enable/change cron or plans.",
+  "actions": {
+    "networkRequests": 0,
+    "hostedTicks": 0,
+    "newOrders": 0,
+    "paymentSubmissions": 0,
+    "providerExecutions": 0,
+    "cronActivated": false,
+    "productionPublished": false,
+    "plansChanged": false
+  },
+  "currentQuotaEvidence": "docs/evidence/text-upstash-quota-2026-10-10.json"
+}

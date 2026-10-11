@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "status": "CURRENT_PLAN_OBSERVED_ONLY",
+  "observedAt": "2026-10-11T01:53:37.967Z",
+  "source": "Upstash console Usage tab; existing authenticated session",
+  "plan": "Free Tier",
+  "monthlyCommands": {
+    "displayRounded": "16 mil",
+    "writes": 5739,
+    "reads": 10606,
+    "derivedTotal": 16345,
+    "limit": 500000,
+    "derivedRemaining": 483655
+  },
+  "bandwidthDisplay": "21 MB / 10 GB",
+  "storageDisplay": "118 KB / 238 MB",
+  "displayedCostUsd": 0,
+  "screenshot": "docs/evidence/browser-2026-10-10/upstash-text-capacity.png",
+  "screenshotSha256": "af7b6fce398c101fdbeb52463dee48032b333bc2483aa171b70207bd0ec363b3",
+  "planChanged": false,
+  "budgetChanged": false,
+  "cronActivated": false,
+  "limitations": [
+    "Dashboard numbers are a point-in-time observation and may be delayed.",
+    "Current cost is not a monthly forecast or a guarantee of free operation.",
+    "Lua/internal commands and all clients consume the same database quota."
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "status": "READ_ONLY_METADATA",
+  "observedAt": "2026-10-11T01:47:34.564Z",
+  "projects": [
+    {
+      "role": "bazaar",
+      "id": "prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3",
+      "projectReadConfirmed": false,
+      "environmentReadConfirmed": false
+    },
+    {
+      "role": "seller",
+      "id": "prj_cHsv0UIK31fRuLBXkW5RXkz4eU9K",
+      "projectReadConfirmed": false,
+      "environmentReadConfirmed": false
+    }
+  ],
+  "firewall": {
+    "readConfirmed": false
+  },
+  "requests": 5,
+  "productionPublished": false,
+  "cronActivated": false,
+  "environmentMutations": 0,
+  "payments": 0
+}
