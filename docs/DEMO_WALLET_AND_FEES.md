@@ -1,6 +1,6 @@
 # Wallets y comisiones de la demo
 
-Estado del candidato nativo de Bazaar `4f250cd`, documentado el **2026-10-10 UTC**. Este archivo es documentación interna excluida del despliegue; no habilita funciones, publica una versión ni autoriza transacciones.
+Documentación de los cortes nativos Testnet de Bazaar `4f250cd` y `633e31e`, con una nueva comprobación de cadena el **2026-10-11 UTC**. Las compras se realizaron en previews protegidas y sus evidencias conservan el candidato correspondiente. Este archivo es documentación interna excluida del despliegue; no habilita funciones, publica una versión ni autoriza transacciones.
 
 ## Qué paga cada persona ahora
 
@@ -33,6 +33,17 @@ El parámetro **`maxSponsoredFeeStroops` es un control del cliente local**: rech
 La primera preparación de la compra de `0.01 USDC` se detuvo por este control local: la simulación dio `735723 + 100 = 735823` stroops (`0.0735823 XLM` Testnet), frente al límite de `50000`. Ese intento no firmó ni envió el pago. El usuario autorizó después continuar la misma orden con un límite local de `1000000` stroops (`0.1 XLM` Testnet), y la compra se confirmó y entregó. La [evidencia de preparación](evidence/hackathon-payment-preflight-2026-10-10.json) conserva el fallo anterior; el estado actual se documenta en [la compra confirmada](HACKATHON_NEXT_PURCHASE.md). No queda pendiente esa autorización adicional.
 
 En la liquidación real de la transacción `15d976c56f86bf8b104f7dbaa9d9b803d773ec3b61811eace8436d1e521812d0`, ledger `5130123`, el fee bump declaró `33370` stroops y cobró **`23169` stroops (`0.0023169 XLM` Testnet)**. Lo pagó `GA6THKUY2XJZOBRFMEQMMEADSCQLCZ2QMQWAWMMDXBTE7SARKAXVH7TL`. Los saldos XLM del comprador y vendedor no cambiaron. El precio `0.01 USDC` fue al vendedor y el ingreso comercial de Bazaar fue `0`. La estimación local previa y el fee cobrado son mediciones diferentes. El [informe consolidado](evidence/hackathon-paid-text-preview-2026-10-10.json) conserva la comprobación pública de cadena y los balances posteriores.
+
+La compra posterior, autorizada por separado en la preview `ezcuo3lgv` del candidato `633e31e`, también pagó **`0.01 USDC` Testnet** directamente del comprador al vendedor. El [informe de cadena](evidence/continuous-purchase-chain-2026-10-10.json), observado el `2026-10-11T01:29:18.2697297Z`, verificó autorización del comprador y transferencia de `100000` unidades atómicas en el SAC oficial: transacción `a418e24498a988af98e2e75ed1bbdbde04fe3c9c7133a565416b4915288a97e0`, ledger `5131675`, estado `SUCCESS` y fee bump.
+
+| Comisiones de esa segunda liquidación | Stroops | XLM Testnet |
+| --- | ---: | ---: |
+| Fee declarado en la transacción interna | `33264` | `0.0033264` |
+| Fee declarado en el fee bump externo | `33367` | `0.0033367` |
+| Fee realmente cobrado | **`23167`** | **`0.0023167`** |
+| Límite de simulación del cliente local | `1000000` | `0.1` |
+
+La cuenta que pagó XLM fue nuevamente `GA6THKUY2XJZOBRFMEQMMEADSCQLCZ2QMQWAWMMDXBTE7SARKAXVH7TL`, distinta del pagador USDC; el informe comprueba `buyerIsFeeSource:false`. **El comprador firmó su transferencia USDC y el facilitador externo pagó XLM.** El límite local de `1000000` stroops no fue una condición firmada que limitara el fee bump externo: sólo era el control de simulación/transacción propuesta del cliente. Los fees declarados y el realmente cobrado tampoco son valores intercambiables. La comprobación usó una lectura RPC y cero nuevos envíos de pago o firmas; registra la liquidación ya realizada, no otra compra. Esta evidencia no activa una wallet de gas o ingresos comerciales de Bazaar.
 
 El reparto **99% al vendedor / 1% a Bazaar** permanece como diseño separado en `lib/fee-split-design.ts` y `contracts/fee-split-router`. La política declara `status: "design-only"`. La dirección pública propuesta de tesorería es:
 
@@ -73,6 +84,6 @@ Las siguientes observaciones públicas de Horizon Testnet se tomaron antes de la
 | B: `GD454Z77ESZ5EHO6W7RE2WJCWQYKGFBS6HT2D375CYBWGHFFXOFIUWMU` | `22:48:11.567Z`, HTTP 200 | `99.9600000` | Sí |
 | Destino del catálogo legado: `GBYXQUSY7WA3DUXZSANGQ3HMER2EBMOK5IYPUJV4YY2UH7QS736J62LB` | `22:48:11.711Z`, HTTP 200 | No se encontró trustline oficial | No disponible para este activo |
 
-Después de la compra autorizada, A tenía `0.05 USDC` y B `99.95 USDC`. Sus saldos XLM se mantuvieron en `9999.9999900` y `9999.9999700`, respectivamente. El firmante existente de B se utilizó únicamente en el entorno local cifrado; no fue necesario un nuevo faucet. Los balances pueden cambiar; una transacción nueva requiere comprobar sus condiciones exactas. La dirección del catálogo legado no debe reutilizarse suponiendo que ya puede recibir el USDC oficial.
+Después de la primera compra autorizada, A tenía `0.05 USDC` y B `99.95 USDC`. Sus saldos XLM se mantuvieron en `9999.9999900` y `9999.9999700`, respectivamente. Son balances de ese corte histórico, no de la segunda compra. El firmante existente de B se utilizó únicamente en el entorno local cifrado; no fue necesario un nuevo faucet. Los balances pueden cambiar; una transacción nueva requiere comprobar sus condiciones exactas. La dirección del catálogo legado no debe reutilizarse suponiendo que ya puede recibir el USDC oficial.
 
-Las autorizaciones históricas y las de la [compra confirmada](HACKATHON_NEXT_PURCHASE.md) ya se consumieron. La compra, entrega de texto, historial privado, recuperación e aislamiento se comprobaron en una preview protegida mediante MCP/HTTP. Estos resultados no acreditan visualización pública en el navegador, imagen/video, entrega R2 ni aceptación de producción. No autorizan otra compra, cambio de destinatario, activación del reparto o publicación de producción.
+Las autorizaciones de la [primera compra confirmada](HACKATHON_NEXT_PURCHASE.md) y de la compra posterior `a418e244…` ya se consumieron. Las evidencias pertenecen a pruebas de preview protegida; la comprobación de cadena posterior aquí documentada acredita transferencia, autorización y comisión, y no sustituye la aceptación de entrega. Estos resultados no acreditan visualización pública en el navegador, imagen/video, entrega R2 ni aceptación de producción. No autorizan otra compra, cambio de destinatario, activación del reparto o publicación de producción.
