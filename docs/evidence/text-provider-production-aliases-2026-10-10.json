@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-11T02:18:23.204Z",
+  "project": "ai-video-scriptwriter",
+  "getOnly": true,
+  "domains": [
+    {
+      "name": "ai-video-scriptwriter.vercel.app",
+      "verified": true,
+      "gitBranch": null,
+      "redirect": null
+    }
+  ],
+  "mutations": 0
+}

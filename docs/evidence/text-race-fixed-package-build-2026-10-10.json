@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "status": "PASS",
+  "observedAt": "2026-10-11T02:53:20.320Z",
+  "candidate": "aedf2feecd35c4cbff70c7eb42913ed1e521b513",
+  "sourceDirectory": ".vercel/text-production-bazaar-race-fixed-source",
+  "effectiveSourceDigest": "764ba0e8997c0a47fba5b1e45ab55dbb6ff752f650736d4cffc78583abb19648",
+  "bazaarBuild": "next build --webpack; TypeScript; 29 static pages",
+  "providerBuildEvidence": "docs/evidence/text-capacity-package-build-2026-10-10.json",
+  "providerSourceDigest": "d4ee914bdee913e817c8a69c496a03ca0ca3c91457218536ed74e142ac783c51",
+  "providerSourceUnchangedSinceBuild": true,
+  "bazaarCrons": [],
+  "providerCrons": [],
+  "productionPublished": false,
+  "cronActivated": false,
+  "realPayments": 0,
+  "hostedValidated": false
+}

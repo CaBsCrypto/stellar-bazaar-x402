@@ -1,0 +1,1333 @@
+{
+  "schema": "bazaar-text-production-preparation/v1",
+  "version": 2,
+  "status": "PREPARED_NOT_APPLIED",
+  "preparedAt": "2026-10-11T02:53:20.320Z",
+  "scope": "public-text-demo-stellar-testnet",
+  "approved": false,
+  "approvalGates": {
+    "environmentApplication": {
+      "approved": false,
+      "status": "PENDING_EXPLICIT_AUTHORIZATION"
+    },
+    "productionPublication": {
+      "approved": false,
+      "status": "PENDING_CANDIDATE_CONFIGURATION_EVIDENCE_REVIEW"
+    },
+    "publicPerimeterChange": {
+      "approved": false,
+      "status": "PENDING_EXACT_RULE_REVIEW"
+    },
+    "registrationOpening": {
+      "approved": false,
+      "status": "PAUSED_BY_PREPARED_CONFIGURATION"
+    },
+    "purchaseOpening": {
+      "approved": false,
+      "status": "DISABLED_BY_PREPARED_CONFIGURATION"
+    },
+    "sellerActivation": {
+      "approved": false,
+      "status": "DISABLED_BY_PREPARED_CONFIGURATION"
+    },
+    "cronActivation": {
+      "approved": false,
+      "status": "EMPTY_SCHEDULES_REQUIRED"
+    },
+    "newTestnetTransaction": {
+      "approved": false,
+      "status": "SEPARATE_SERVICE_QUANTITY_AMOUNT_SIGNER_FEE_AUTHORIZATION_REQUIRED"
+    },
+    "publicPurchaseCapacity": {
+      "approved": false,
+      "status": "IMPLEMENTED_LOCAL_AND_REAL_REDIS_ACCEPTED_HOSTED_PENDING",
+      "requiredBefore": "public-purchase-opening",
+      "defaultPurchasesDisabled": true,
+      "sourceEvidence": "docs/evidence/text-seller-capacity-real-race-fixed-2026-10-10.json"
+    },
+    "cronCapacityBudget": {
+      "approved": false,
+      "status": "FIVE_MINUTE_30_DAY_IDLE_LOWER_BOUND_EXCEEDS_OBSERVED_FREE_COMMAND_BUDGET",
+      "requiredBefore": "any-automatic-seller-schedule-activation",
+      "sourceEvidence": "docs/evidence/text-cron-capacity-estimate-2026-10-10.json",
+      "noPlanOrBudgetChangeAuthorized": true
+    }
+  },
+  "sources": {
+    "bazaarRuntimeCandidate": "aedf2feecd35c4cbff70c7eb42913ed1e521b513",
+    "documentationHead": "cb3790b4f051c0970c22231ee354e0a4c25e9df8",
+    "localRuntimeDiffPaths": [
+      "app/api/market/capacity/route.ts",
+      "app/demo/page.tsx",
+      "app/page.tsx",
+      "components/MarketCatalog.tsx",
+      "examples/seller-hosted-handler.mjs",
+      "examples/seller-hosted-tick.mjs",
+      "lib/bazaar-skills.ts",
+      "lib/demo-instructions.ts",
+      "lib/market-retention-schema.ts",
+      "lib/market-seller-capacity.ts",
+      "lib/marketplace-capacity.ts",
+      "lib/marketplace-http.ts",
+      "lib/marketplace-mcp.ts",
+      "lib/marketplace-store.ts",
+      "lib/marketplace-x402-store.ts",
+      "lib/marketplace-x402.ts",
+      "lib/marketplace.ts",
+      "lib/mcp-onboarding-server.ts",
+      "lib/mcp-tool-contract.ts",
+      "lib/pilot-route-policy.ts",
+      "package.json",
+      "proxy.ts"
+    ],
+    "bazaarPreviewDeploymentId": "dpl_8di2mmiSCD2ubJzaTdAMp9YVnyuL",
+    "providerBaseSourceDigest": "04ce8e8aeba348761a86e84a0123f1c490cd1ac96bb2f11f54b586a0a166de9b",
+    "providerPreviewDeploymentId": "dpl_5uWd5GLtfT2zgfYk9ehbGiRVcwLp",
+    "providerEffectiveProductionSourceDigest": {
+      "type": "sha256",
+      "status": "PREPARED_LOCAL_NOT_PUBLISHED",
+      "value": "d4ee914bdee913e817c8a69c496a03ca0ca3c91457218536ed74e142ac783c51",
+      "requiredBefore": "publication",
+      "reason": "Exact 22-file production copy with no cron, authenticated availability, capacity and readiness recovery. Verify current file hashes before any approved deployment."
+    },
+    "deployCurrentCheckout": false,
+    "sourceCopyPolicy": "copy-only-frozen-runtime-and-approved-deployment-overrides-no-private-files",
+    "bazaarEffectiveSourceDigest": "764ba0e8997c0a47fba5b1e45ab55dbb6ff752f650736d4cffc78583abb19648",
+    "bazaarSourceExportEvidence": "docs/evidence/text-production-race-fixed-source-export-2026-10-10.json",
+    "previousAcceptedRuntimeCandidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+    "newRuntimeHostedAcceptance": false,
+    "previousPreparedRuntimeCandidate": "c009137bcb6b6a180f0ea75443a4e8970e2b3f33",
+    "previousAcceptedBazaarPreviewDeploymentId": "dpl_BFgPRuzqKh3Qv4xQxMmdvs7Y7juM",
+    "readOnlyHostedAcceptance": true,
+    "hostedAcceptanceScope": "Read-only protected Preview accepted; new seller control/provider activation and authenticated purchase journey pending"
+  },
+  "evidence": {
+    "metadata": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+    "metadataObservedAt": "2026-10-11T01:48:43.097Z",
+    "publicNetworkProbe": "docs/evidence/text-public-access-preproduction-network-2026-10-10.json",
+    "publicNetworkProbeCompletedAt": "2026-10-11T01:48:05.438Z",
+    "protectedPreviewAcceptance": "docs/evidence/continuous-purchase-acceptance-2026-10-10.json",
+    "capacityAcceptance": {
+      "status": "REAL_REDIS_CAPACITY_ACCEPTED",
+      "path": "docs/evidence/text-workspace-real-capacity-final-2026-10-10.json",
+      "completedAt": "2026-10-11T01:51:42.448Z",
+      "environment": "local-client-real-upstash-fresh-synthetic-namespace",
+      "checksPassed": 9,
+      "restCommands": 60,
+      "cleanupConfirmed": true,
+      "thresholdFixturesSeeded": true,
+      "realServiceOutageInduced": false,
+      "productionLoadAccepted": false
+    },
+    "currentQuota": {
+      "status": "CURRENT_PLAN_OBSERVED_ONLY",
+      "path": "docs/evidence/text-upstash-quota-2026-10-10.json",
+      "observedAt": "2026-10-11T01:53:37.967Z",
+      "plan": "Free Tier",
+      "monthlyCommandsUsed": 16345,
+      "monthlyCommandsLimit": 500000,
+      "monthlyCommandsRemaining": 483655,
+      "displayedCostUsd": 0,
+      "bandwidthDisplay": "21 MB / 10 GB",
+      "storageDisplay": "118 KB / 238 MB",
+      "pointInTimeOnly": true,
+      "planChanged": false,
+      "budgetChanged": false
+    },
+    "localCapacityReview": {
+      "path": "docs/evidence/text-capacity-local-review-2026-10-10.json",
+      "observedAt": "2026-10-11T01:49:58.419Z",
+      "failedSuites": [
+        {
+          "entrypoint": "scripts/test-open-workspace-core.mjs",
+          "status": "ORIGINAL_FAIL_PRESERVED",
+          "classification": "Original loopback EACCES resolved by separate successful local rerun without runtime changes"
+        },
+        {
+          "entrypoint": "scripts/test-marketplace-workspace-lifecycle.mjs",
+          "status": "ORIGINAL_FAIL_PRESERVED",
+          "classification": "Obsolete component harness repaired; separate 17-scenario rerun passes without runtime changes"
+        }
+      ],
+      "realRedisQuotaGapAddressedBySeparateCapacityReport": true,
+      "notAllRegressionsAccepted": false,
+      "originalFindingsPreserved": true,
+      "reviewedSuiteRerunsPassed": true,
+      "entireRepositoryRegressionAcceptanceClaimed": false
+    },
+    "marketCapacityAcceptance": {
+      "status": "PASS",
+      "path": "docs/evidence/text-market-real-capacity-2026-10-10.json",
+      "observedAt": "2026-10-11T01:55:16.826Z",
+      "checksPassed": 9,
+      "restCommands": 59,
+      "realRedisLuaVerified": true,
+      "isolatedSyntheticKeysRemoved": true,
+      "exactOwnedKeysDeleted": 3,
+      "realPayments": 0,
+      "providerExecutions": 0,
+      "productionLoadAccepted": false
+    },
+    "currentVercelUsage": {
+      "status": "CURRENT_TEAM_USAGE_OBSERVED_ONLY",
+      "path": "docs/evidence/text-vercel-usage-2026-10-10.json",
+      "observedAt": "2026-10-11T01:58:07.063Z",
+      "plan": "Pro",
+      "scope": "All Projects; all products; current billing cycle",
+      "billingCycleDisplay": "Sep 21 - Oct 21, 0:00",
+      "includedCreditDisplay": "USD 20.00 / USD 20.00",
+      "onDemandChargesDisplayUsd": 3.06,
+      "attributableToBazaar": false,
+      "incrementalPublicationOrCronCostEstablished": false,
+      "plansOrBudgetsChanged": false
+    },
+    "cronCostEstimate": {
+      "status": "OFFLINE_IDLE_COMMAND_LOWER_BOUND_ESTIMATED",
+      "path": "docs/evidence/text-cron-capacity-estimate-2026-10-10.json",
+      "observedAt": "2026-10-11T01:56:17.584Z",
+      "sourceCandidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+      "workerOnlyCommandsPerTick": 75,
+      "bazaarCommandsPerTickAtLeast": 84,
+      "combinedCommandsPerTickAtLeast": 159,
+      "workerOnlyCommands30Days": 648000,
+      "combinedCommands30DaysAtLeast": 1373760,
+      "countEvalAndInnerCommands": true,
+      "actualBillingObserved": false,
+      "additionalBusinessTrafficExcluded": true
+    },
+    "localCoreRecheck": {
+      "status": "PASS",
+      "path": "docs/evidence/text-workspace-core-recheck-2026-10-10.json",
+      "externalRequests": 0,
+      "runtimeSourceChanged": false,
+      "realRedis": false
+    },
+    "localLifecycleRecheck": {
+      "status": "PASS",
+      "path": "docs/evidence/text-workspace-lifecycle-recheck-2026-10-10.json",
+      "scenarios": 17,
+      "externalRequests": 0,
+      "runtimeSourceChanged": false
+    },
+    "frozenSourceExport": {
+      "status": "FROZEN_SOURCE_PREPARED_NO_CRON",
+      "path": "docs/evidence/text-production-race-fixed-source-export-2026-10-10.json",
+      "effectiveSourceDigest": "764ba0e8997c0a47fba5b1e45ab55dbb6ff752f650736d4cffc78583abb19648",
+      "cronSchedules": [],
+      "builtThisCopy": true,
+      "privateCredentialFilesCopied": 0
+    },
+    "previousPreviewAcceptanceAppliesTo": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+    "sellerCapacity": {
+      "status": "REAL_REDIS_ISOLATED_PASS_HOSTED_PENDING",
+      "path": "docs/evidence/text-seller-capacity-real-race-fixed-2026-10-10.json",
+      "checksPassed": 14,
+      "restRequests": 128,
+      "redisClockExpiryVerified": true,
+      "cleanupConfirmed": true,
+      "realPayments": 0,
+      "actualIdentityRevocationTested": false
+    },
+    "currentLocalRelease": {
+      "status": "PASS",
+      "path": "docs/evidence/text-race-fixed-release-local-2026-10-10.json",
+      "suitesPassed": 30,
+      "candidate": "aedf2feecd35c4cbff70c7eb42913ed1e521b513",
+      "productionValidated": false
+    },
+    "packageBuild": {
+      "status": "PASS",
+      "path": "docs/evidence/text-race-fixed-package-build-2026-10-10.json",
+      "bazaarBuilt": true,
+      "providerBuilt": true,
+      "providerSourceUnchanged": true,
+      "hostedValidated": false
+    },
+    "cronConsumptionProjectionScope": "Historical lower-bound estimate for accepted runtime 633e31e; current 1.1.0 adds availability health and capacity reporting. Re-measure current idle work before any separately approved schedule; no schedule is enabled.",
+    "preparedSellerScopedAccess": {
+      "status": "SCOPED_ACCESS_VALIDATED_NOT_ENABLED",
+      "path": "docs/evidence/text-production-seller-scoped-access-2026-10-10.json",
+      "scopedChecks": 12,
+      "isolationDenials": 4,
+      "enabled": false
+    },
+    "currentProtectedPreview": {
+      "status": "READ_ONLY_PROTECTED_PREVIEW_PASS_FULL_JOURNEY_PENDING",
+      "path": "docs/evidence/text-race-fixed-configured-preview-acceptance-2026-10-11.json",
+      "deploymentReceipt": "docs/evidence/text-race-fixed-configured-preview-deployment-2026-10-11.json",
+      "candidate": "aedf2feecd35c4cbff70c7eb42913ed1e521b513",
+      "url": "https://stellar-bazaar-x402-9ltdf5bsn-cabscryptocontacto-6028s-projects.vercel.app",
+      "deploymentId": "dpl_8di2mmiSCD2ubJzaTdAMp9YVnyuL",
+      "checksPassed": 19,
+      "requests": 14,
+      "rootQrRedirect": "/demo",
+      "mcpVersion": "1.1.0",
+      "tools": 35,
+      "liveSellerCapacity": false,
+      "purchasesEnabled": false,
+      "registrationPaused": true,
+      "filesEnabled": false,
+      "cronSchedules": [],
+      "externalPublicIpValidated": false,
+      "accountOrPaymentJourneyRepeated": false,
+      "newPayments": 0,
+      "browserEvidence": "docs/evidence/text-preview-browser-2026-10-11.json"
+    },
+    "initialUnconfiguredPreview": {
+      "status": "FAIL_CONFIGURATION_OMITTED_CORRECTED_IN_SECOND_PREVIEW",
+      "path": "docs/evidence/text-race-fixed-protected-preview-2026-10-11.json",
+      "diagnosis": "docs/evidence/text-race-fixed-preview-diagnosis-2026-10-11.json",
+      "sameCodeCandidate": true,
+      "productionChanged": false
+    }
+  },
+  "observedProduction": {
+    "bazaar": {
+      "project": "stellar-bazaar-x402",
+      "deployment": {
+        "id": "dpl_5rbJydG46d3EaTdWFaCkspPrqems",
+        "url": "stellar-bazaar-x402-q8oxsipdo-cabscryptocontacto-6028s-projects.vercel.app",
+        "state": "READY",
+        "target": "production",
+        "createdAt": 1790741965217,
+        "cronSchedules": []
+      },
+      "reviewedEnvironment": [
+        {
+          "key": "BAZAAR_ENABLE_OPEN_WORKSPACES",
+          "nonSecretValue": "true"
+        },
+        {
+          "key": "BAZAAR_ENABLE_MARKETPLACE",
+          "nonSecretValue": "true"
+        },
+        {
+          "key": "BAZAAR_ENABLE_MARKET_PURCHASES",
+          "nonSecretValue": "false"
+        },
+        {
+          "key": "BAZAAR_X402_MARKETPLACE_ENABLED",
+          "nonSecretValue": "false"
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_CREATION_PAUSED",
+          "nonSecretValue": "true"
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_ADMISSION",
+          "nonSecretValue": "open"
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_PUBLIC_ORIGIN",
+          "nonSecretValue": "https://bazaar.browns.studio"
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_BACKEND",
+          "nonSecretValue": "redis"
+        },
+        {
+          "key": "BAZAAR_WORKSPACE_PREFIX",
+          "namespaceSha256": "802d18bdd1e5e7b13c6b9d83f403ad659388387347ba8537d7157069d93e1184"
+        },
+        {
+          "key": "BAZAAR_MARKET_PREFIX",
+          "namespaceSha256": "0d95748fa0f01cc974e6f4baed73df7b5b16e92c7a5a4cbf7afac15298dc7177"
+        },
+        {
+          "key": "STELLAR_X402_RPC_URL",
+          "nonSecretValue": "https://soroban-testnet.stellar.org"
+        },
+        {
+          "key": "NEXT_PUBLIC_BAZAAR_MARKETPLACE",
+          "nonSecretValue": "true"
+        },
+        {
+          "key": "X402_ENABLE_LOCAL_PAYER",
+          "nonSecretValue": "false"
+        },
+        {
+          "key": "BAZAAR_ENABLE_PROVIDER_ACTIVATION",
+          "nonSecretValue": "false"
+        },
+        {
+          "key": "BAZAAR_ENABLE_SELF_LISTING_INTAKE",
+          "nonSecretValue": "false"
+        },
+        {
+          "key": "BAZAAR_REVIEW_PREFIX",
+          "namespaceSha256": "97b21ad39169e56c8114e16cd8beadc708705f22733cdf67c6b2b3d0a5c25d11"
+        },
+        {
+          "key": "BAZAAR_PROVIDER_REVIEW_BACKEND",
+          "nonSecretValue": "redis"
+        },
+        {
+          "key": "STELLAR_X402_FACILITATOR_URL",
+          "nonSecretValue": "https://channels.openzeppelin.com/x402/testnet"
+        }
+      ],
+      "cronSecretProductionConfigured": false,
+      "runtimeEnvironmentEquivalenceEstablished": false
+    },
+    "seller": {
+      "project": "ai-video-scriptwriter",
+      "deployment": {
+        "id": "dpl_8Pv5kWHWzkYVCiV7ouBUM9NQsWVC",
+        "url": "ai-video-scriptwriter-30tv878h2.vercel.app",
+        "state": "READY",
+        "target": "production",
+        "createdAt": 1790143488197,
+        "cronSchedules": []
+      },
+      "reviewedWorkerProductionEnvironmentKeys": [],
+      "deploymentProtectionPresent": true
+    },
+    "firewall": {
+      "enabled": true,
+      "activeConfigurationSha256": "45080024129ef4d529fd4120022db778f4721970e68892a22af3c0f6c7cb5a8a",
+      "acceptanceRuleId": "rule_bazaar_acceptance_egress_only_iPEa7V",
+      "productionHostExcepted": false,
+      "onlyPreviewMcpExceptionObserved": true,
+      "privateIpOmitted": true
+    },
+    "anonymousProbe": {
+      "observations": [
+        {
+          "kind": "demo-page",
+          "method": "GET",
+          "status": 404
+        },
+        {
+          "kind": "agent-guide",
+          "method": "GET",
+          "status": 404
+        },
+        {
+          "kind": "anonymous-catalogue",
+          "method": "GET",
+          "status": 404
+        },
+        {
+          "kind": "mcp-health",
+          "method": "GET",
+          "status": 200,
+          "version": "0.5.0",
+          "toolCount": 8
+        },
+        {
+          "kind": "mcp-initialize",
+          "method": "POST",
+          "status": 200,
+          "serverVersion": "0.5.0",
+          "initialized": true
+        },
+        {
+          "kind": "mcp-tools-list",
+          "method": "POST",
+          "status": 200,
+          "toolCount": 8
+        },
+        {
+          "kind": "absent-order-get-only",
+          "method": "GET",
+          "status": 404,
+          "getOnlyEndpointObservation": "not-found-on-get-no-order-created"
+        }
+      ],
+      "arbitraryExternalIpAccepted": false,
+      "noPrivateAuthenticationTested": true,
+      "absentOrderGetDoesNotProvePostPaymentRoute": true
+    }
+  },
+  "bazaar": {
+    "project": "stellar-bazaar-x402",
+    "target": "production",
+    "publicOrigin": "https://bazaar.browns.studio",
+    "network": "stellar:testnet",
+    "namespaceAllocation": {
+      "familyId": "0cd860b8cfc35fc459b4838fa9092007",
+      "environment": "production",
+      "initialized": true,
+      "reusesPreviewData": false,
+      "reusesObservedProductionFamily": false,
+      "namespaceSha256": {
+        "BAZAAR_WORKSPACE_PREFIX": "f1a571d2b96a4e9be33e2112ee0b74469a88a8a9db70280c18444ec00062c14a",
+        "BAZAAR_MARKET_PREFIX": "10a1506b03fa700c01ff74b1f1c4ae42616180298104b65c075fccce04b555c2",
+        "BAZAAR_REVIEW_PREFIX": "619dddbb20a89223539d83cc55f59691d338a75d54bb6207f4583542e6df0958",
+        "BAZAAR_DYNAMIC_PREFIX": "b32da7ebcb6560466fbd47eed9024bb3956d73f6adec6fa97987c6eedc83193d",
+        "BAZAAR_MARKET_FILE_PREFIX": "3ccd33edeae42bece622abca923bab3fef3682def5f329cff64e4f6d958cc265"
+      },
+      "comparisonAgainstObservedFingerprints": "all-distinct",
+      "snapshot": "Native seller account and human submission grant initialized in the prepared family; no real customer orders or service publication"
+    },
+    "nonSecretEnvironment": {
+      "NEXT_PUBLIC_BAZAAR_MARKETPLACE": "true",
+      "NEXT_PUBLIC_APP_URL": "https://bazaar.browns.studio",
+      "BAZAAR_PUBLIC_DEMO": "true",
+      "BAZAAR_ROUTE_BOUNDARY": "true",
+      "BAZAAR_ENABLE_OPEN_WORKSPACES": "true",
+      "BAZAAR_ENABLE_MARKETPLACE": "true",
+      "BAZAAR_WORKSPACE_ADMISSION": "open",
+      "BAZAAR_WORKSPACE_CREATION_PAUSED": "true",
+      "BAZAAR_WORKSPACE_BACKEND": "redis",
+      "BAZAAR_PROVIDER_REVIEW_BACKEND": "redis",
+      "BAZAAR_DEMO_NAMESPACE_ENV": "production",
+      "BAZAAR_WORKSPACE_PREFIX": "bazaar-workspace:pilot-0cd860b8cfc35fc459b4838fa9092007",
+      "BAZAAR_MARKET_PREFIX": "bazaar-market:pilot-0cd860b8cfc35fc459b4838fa9092007",
+      "BAZAAR_REVIEW_PREFIX": "bazaar-review:pilot-0cd860b8cfc35fc459b4838fa9092007",
+      "BAZAAR_DYNAMIC_PREFIX": "bazaar-market:pilot-0cd860b8cfc35fc459b4838fa9092007:catalog",
+      "BAZAAR_MARKET_FILE_PREFIX": "market-deliveries/v1/production/0cd860b8cfc35fc459b4838fa9092007",
+      "BAZAAR_ENABLE_SELF_LISTING_INTAKE": "true",
+      "BAZAAR_ENABLE_PROVIDER_ACTIVATION": "false",
+      "BAZAAR_ENABLE_MARKET_PURCHASES": "false",
+      "BAZAAR_X402_MARKETPLACE_ENABLED": "true",
+      "BAZAAR_MARKET_FILES_ENABLED": "false",
+      "STELLAR_X402_FACILITATOR_URL": "https://channels.openzeppelin.com/x402/testnet",
+      "STELLAR_X402_RPC_URL": "https://soroban-testnet.stellar.org",
+      "X402_ENABLE_LOCAL_PAYER": "false",
+      "BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE": "120",
+      "BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY": "10000",
+      "BAZAAR_OPERATIONAL_METER": "false",
+      "BAZAAR_OPERATIONAL_BUDGET": "false",
+      "BAZAAR_ACCEPTANCE_METER": "false",
+      "BAZAAR_ACCEPTANCE_SALE": "false",
+      "BAZAAR_ACCEPTANCE_X402": "false",
+      "X402_LEGACY_PAYMENTS_ENABLED": "false",
+      "X402_PILOT_PAYMENTS_ENABLED": "false",
+      "BAZAAR_ENABLE_REGISTRY_MUTATIONS": "false",
+      "BAZAAR_ENABLE_PROVIDER_REVIEW_ADMIN": "false",
+      "BAZAAR_ENABLE_PUBLIC_PROVIDER_REVIEW": "false",
+      "BAZAAR_WORKSPACE_PUBLIC_ORIGIN": "https://bazaar.browns.studio"
+    },
+    "environmentDiff": [
+      {
+        "key": "NEXT_PUBLIC_BAZAAR_MARKETPLACE",
+        "proposedValue": "true",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "true"
+      },
+      {
+        "key": "NEXT_PUBLIC_APP_URL",
+        "proposedValue": "https://bazaar.browns.studio",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_PUBLIC_DEMO",
+        "proposedValue": "true",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_ROUTE_BOUNDARY",
+        "proposedValue": "true",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_ENABLE_OPEN_WORKSPACES",
+        "proposedValue": "true",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "true"
+      },
+      {
+        "key": "BAZAAR_ENABLE_MARKETPLACE",
+        "proposedValue": "true",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "true"
+      },
+      {
+        "key": "BAZAAR_WORKSPACE_ADMISSION",
+        "proposedValue": "open",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "open"
+      },
+      {
+        "key": "BAZAAR_WORKSPACE_CREATION_PAUSED",
+        "proposedValue": "true",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "true"
+      },
+      {
+        "key": "BAZAAR_WORKSPACE_BACKEND",
+        "proposedValue": "redis",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "redis"
+      },
+      {
+        "key": "BAZAAR_PROVIDER_REVIEW_BACKEND",
+        "proposedValue": "redis",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "redis"
+      },
+      {
+        "key": "BAZAAR_DEMO_NAMESPACE_ENV",
+        "proposedValue": "production",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_WORKSPACE_PREFIX",
+        "proposedValue": "bazaar-workspace:pilot-0cd860b8cfc35fc459b4838fa9092007",
+        "comparison": "namespace-sha256-differs",
+        "observedNamespaceSha256": "802d18bdd1e5e7b13c6b9d83f403ad659388387347ba8537d7157069d93e1184",
+        "proposedNamespaceSha256": "f1a571d2b96a4e9be33e2112ee0b74469a88a8a9db70280c18444ec00062c14a"
+      },
+      {
+        "key": "BAZAAR_MARKET_PREFIX",
+        "proposedValue": "bazaar-market:pilot-0cd860b8cfc35fc459b4838fa9092007",
+        "comparison": "namespace-sha256-differs",
+        "observedNamespaceSha256": "0d95748fa0f01cc974e6f4baed73df7b5b16e92c7a5a4cbf7afac15298dc7177",
+        "proposedNamespaceSha256": "10a1506b03fa700c01ff74b1f1c4ae42616180298104b65c075fccce04b555c2"
+      },
+      {
+        "key": "BAZAAR_REVIEW_PREFIX",
+        "proposedValue": "bazaar-review:pilot-0cd860b8cfc35fc459b4838fa9092007",
+        "comparison": "namespace-sha256-differs",
+        "observedNamespaceSha256": "97b21ad39169e56c8114e16cd8beadc708705f22733cdf67c6b2b3d0a5c25d11",
+        "proposedNamespaceSha256": "619dddbb20a89223539d83cc55f59691d338a75d54bb6207f4583542e6df0958"
+      },
+      {
+        "key": "BAZAAR_DYNAMIC_PREFIX",
+        "proposedValue": "bazaar-market:pilot-0cd860b8cfc35fc459b4838fa9092007:catalog",
+        "comparison": "value-not-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_MARKET_FILE_PREFIX",
+        "proposedValue": "market-deliveries/v1/production/0cd860b8cfc35fc459b4838fa9092007",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_ENABLE_SELF_LISTING_INTAKE",
+        "proposedValue": "true",
+        "comparison": "value-differs",
+        "observedNonSecretValue": "false"
+      },
+      {
+        "key": "BAZAAR_ENABLE_PROVIDER_ACTIVATION",
+        "proposedValue": "false",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "false"
+      },
+      {
+        "key": "BAZAAR_ENABLE_MARKET_PURCHASES",
+        "proposedValue": "false",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "false"
+      },
+      {
+        "key": "BAZAAR_X402_MARKETPLACE_ENABLED",
+        "proposedValue": "true",
+        "comparison": "value-differs",
+        "observedNonSecretValue": "false"
+      },
+      {
+        "key": "BAZAAR_MARKET_FILES_ENABLED",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "STELLAR_X402_FACILITATOR_URL",
+        "proposedValue": "https://channels.openzeppelin.com/x402/testnet",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "https://channels.openzeppelin.com/x402/testnet"
+      },
+      {
+        "key": "STELLAR_X402_RPC_URL",
+        "proposedValue": "https://soroban-testnet.stellar.org",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "https://soroban-testnet.stellar.org"
+      },
+      {
+        "key": "X402_ENABLE_LOCAL_PAYER",
+        "proposedValue": "false",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "false"
+      },
+      {
+        "key": "BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE",
+        "proposedValue": "120",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY",
+        "proposedValue": "10000",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_OPERATIONAL_METER",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_OPERATIONAL_BUDGET",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_ACCEPTANCE_METER",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_ACCEPTANCE_SALE",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_ACCEPTANCE_X402",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "X402_LEGACY_PAYMENTS_ENABLED",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "X402_PILOT_PAYMENTS_ENABLED",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_ENABLE_REGISTRY_MUTATIONS",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_ENABLE_PROVIDER_REVIEW_ADMIN",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_ENABLE_PUBLIC_PROVIDER_REVIEW",
+        "proposedValue": "false",
+        "comparison": "not-reported-in-sanitized-inventory"
+      },
+      {
+        "key": "BAZAAR_WORKSPACE_PUBLIC_ORIGIN",
+        "proposedValue": "https://bazaar.browns.studio",
+        "comparison": "unchanged",
+        "observedNonSecretValue": "https://bazaar.browns.studio"
+      }
+    ],
+    "environmentKeysRequiredAbsent": [
+      "BAZAAR_WORKSPACE_INVITE_HASHES_JSON",
+      "BAZAAR_PROVIDER_PREVIEW_HOST",
+      "BAZAAR_PROVIDER_PREVIEW_BYPASS",
+      "X402_PAYER_SECRET"
+    ],
+    "existingReferences": [
+      {
+        "kind": "existing-vercel-environment-reference",
+        "project": "stellar-bazaar-x402",
+        "target": "production",
+        "key": "BAZAAR_WORKSPACE_REDIS_REST_URL",
+        "observedType": "sensitive",
+        "observedConfigured": true,
+        "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+        "value": null,
+        "materialized": false,
+        "action": "preserve-existing-reference"
+      },
+      {
+        "kind": "existing-vercel-environment-reference",
+        "project": "stellar-bazaar-x402",
+        "target": "production",
+        "key": "BAZAAR_WORKSPACE_REDIS_REST_TOKEN",
+        "observedType": "sensitive",
+        "observedConfigured": true,
+        "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+        "value": null,
+        "materialized": false,
+        "action": "preserve-existing-reference"
+      },
+      {
+        "kind": "existing-vercel-environment-reference",
+        "project": "stellar-bazaar-x402",
+        "target": "production",
+        "key": "BAZAAR_MARKET_REVIEW_SECRET",
+        "observedType": "sensitive",
+        "observedConfigured": true,
+        "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+        "value": null,
+        "materialized": false,
+        "action": "preserve-existing-reference"
+      },
+      {
+        "kind": "existing-vercel-environment-reference",
+        "project": "stellar-bazaar-x402",
+        "target": "production",
+        "key": "STELLAR_X402_FACILITATOR_API_KEY",
+        "observedType": "sensitive",
+        "observedConfigured": true,
+        "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+        "value": null,
+        "materialized": false,
+        "action": "preserve-existing-reference"
+      },
+      {
+        "kind": "existing-vercel-environment-reference",
+        "project": "stellar-bazaar-x402",
+        "target": "production",
+        "key": "BAZAAR_S3_BUCKET",
+        "observedType": "encrypted",
+        "observedConfigured": true,
+        "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+        "value": null,
+        "materialized": false,
+        "action": "preserve-existing-reference"
+      },
+      {
+        "kind": "existing-vercel-environment-reference",
+        "project": "stellar-bazaar-x402",
+        "target": "production",
+        "key": "BAZAAR_S3_REGION",
+        "observedType": "encrypted",
+        "observedConfigured": true,
+        "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+        "value": null,
+        "materialized": false,
+        "action": "preserve-existing-reference"
+      },
+      {
+        "kind": "existing-vercel-environment-reference",
+        "project": "stellar-bazaar-x402",
+        "target": "production",
+        "key": "BAZAAR_S3_ENDPOINT",
+        "observedType": "encrypted",
+        "observedConfigured": true,
+        "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+        "value": null,
+        "materialized": false,
+        "action": "preserve-existing-reference"
+      },
+      {
+        "kind": "existing-vercel-environment-reference",
+        "project": "stellar-bazaar-x402",
+        "target": "production",
+        "key": "BAZAAR_S3_ACCESS_KEY_ID",
+        "observedType": "sensitive",
+        "observedConfigured": true,
+        "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+        "value": null,
+        "materialized": false,
+        "action": "preserve-existing-reference"
+      },
+      {
+        "kind": "existing-vercel-environment-reference",
+        "project": "stellar-bazaar-x402",
+        "target": "production",
+        "key": "BAZAAR_S3_SECRET_ACCESS_KEY",
+        "observedType": "sensitive",
+        "observedConfigured": true,
+        "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+        "value": null,
+        "materialized": false,
+        "action": "preserve-existing-reference"
+      }
+    ],
+    "unresolvedRequirements": [
+      {
+        "key": "BAZAAR_MARKET_OPERATOR_HASH",
+        "expectedType": "sha256-of-private-operator-bearer",
+        "status": "UNRESOLVED",
+        "requiredBefore": "manual-service-review-and-activation",
+        "value": null,
+        "detail": "No production operator hash was reported. Do not reuse a preview operator credential."
+      },
+      {
+        "key": "CRON_SECRET",
+        "expectedType": "private-43-character-bearer",
+        "status": "UNRESOLVED",
+        "requiredBefore": "future-guardian-cron-activation",
+        "value": null,
+        "detail": "No production cron secret was reported. Must match own project operator hash; cron remains absent."
+      },
+      {
+        "key": "BAZAAR_MARKET_FILE_LIFECYCLE_ACK",
+        "expectedType": "verified-lifecycle-acknowledgement",
+        "status": "UNRESOLVED",
+        "requiredBefore": "any-future-private-file-activation",
+        "value": null,
+        "detail": "Files remain disabled; this preparation does not activate or assert R2 paid delivery."
+      }
+    ],
+    "deploymentConfig": {
+      "path": "docs/release/vercel-text-no-cron.json",
+      "appliesToProject": "stellar-bazaar-x402",
+      "sha256": "15130f187af4c3f2fbecc01616a726aa6ee63a2c5f75000c346a7a69931a72b6",
+      "plannedOnly": true,
+      "sourceCrons": [
+        {
+          "path": "/api/market/guardian/tick",
+          "schedule": "17 * * * *"
+        }
+      ],
+      "preparedCrons": [],
+      "applied": false
+    },
+    "preparedFeaturePolicy": {
+      "registration": "paused",
+      "catalogue": "enabled-subject-to-durable-runtime-checks",
+      "serviceSubmission": "enabled-subject-to-durable-runtime-checks",
+      "providerActivation": "disabled",
+      "purchases": "disabled",
+      "x402": "prepared-testnet-only",
+      "privateFiles": "disabled",
+      "guardianSchedule": "absent",
+      "effectiveRuntimeValidated": false
+    },
+    "mcpCandidate": {
+      "version": "1.1.0",
+      "tools": 35,
+      "connection": "/api/mcp",
+      "newTool": "report_market_capacity",
+      "hostedAccepted": false
+    }
+  },
+  "provider": {
+    "project": "ai-video-scriptwriter",
+    "target": "production",
+    "baseSourceDigest": "04ce8e8aeba348761a86e84a0123f1c490cd1ac96bb2f11f54b586a0a166de9b",
+    "executionOrigin": {
+      "type": "https-origin",
+      "status": "PERMANENT_ALIAS_VERIFIED_RUNTIME_PENDING",
+      "value": "https://ai-video-scriptwriter.vercel.app",
+      "requiredBefore": "production-service-submission-review-activation",
+      "previewOriginNotAllowedAsPlaceholder": true,
+      "sourceEvidence": "docs/evidence/text-provider-production-aliases-2026-10-10.json",
+      "newRuntimeAccepted": false
+    },
+    "workerOrigin": {
+      "type": "https-origin",
+      "status": "PERMANENT_ALIAS_VERIFIED_RUNTIME_PENDING",
+      "value": "https://ai-video-scriptwriter.vercel.app",
+      "requiredBefore": "publication-or-cron-activation",
+      "sourceEvidence": "docs/evidence/text-provider-production-aliases-2026-10-10.json",
+      "newRuntimeAccepted": false
+    },
+    "service": {
+      "delivery": "text/plain",
+      "network": "stellar:testnet",
+      "algorithmic": true,
+      "priceSelectedByProvider": true,
+      "status": "ACCOUNT_PERMISSION_CONFIG_SCOPED_ACCESS_PREPARED_CONTROL_REVIEW_ACTIVATION_PENDING",
+      "previewCardMustNotBeCopiedAsActivatedProductionService": true
+    },
+    "nonSecretEnvironment": {
+      "BAZAAR_HOSTED_SELLER_ENABLED": "false",
+      "BAZAAR_MARKETPLACE_TEXT_ENABLED": "false",
+      "BAZAAR_HOSTED_SELLER_PREFIX": "bazaar-seller:production-0cd860b8cfc35fc459b4838fa9092007"
+    },
+    "deploymentOverrides": {
+      "crons": [],
+      "requireEffectiveSourceManifest": true,
+      "applied": false,
+      "note": "Do not apply the Next.js Bazaar deployment configuration to the Express project; preserve provider build/functions settings and omit its own cron.",
+      "effectiveSourceDigest": "d4ee914bdee913e817c8a69c496a03ca0ca3c91457218536ed74e142ac783c51"
+    },
+    "environmentKeysRequiredAbsent": [
+      "BAZAAR_HOSTED_SELLER_MCP_PROTECTION",
+      "BAZAAR_HOSTED_SELLER_PROVIDER_PROTECTION"
+    ],
+    "unresolvedRequirements": [
+      {
+        "key": "BAZAAR_HOSTED_SELLER_CONFIG",
+        "expectedType": "private-validated-production-seller-config",
+        "status": "UNRESOLVED",
+        "requiredBefore": "seller-enablement",
+        "value": null,
+        "detail": "Bind own production owner/agent, exact Bazaar origin, reviewed card/hash, provider origin/allowlist and own application credentials."
+      },
+      {
+        "key": "BAZAAR_HOSTED_SELLER_KEY",
+        "expectedType": "private-32-byte-aes-key",
+        "status": "UNRESOLVED",
+        "requiredBefore": "seller-enablement",
+        "value": null,
+        "detail": "Fresh production encryption key; never publish its value."
+      },
+      {
+        "key": "BAZAAR_HOSTED_SELLER_REDIS_REST_URL",
+        "expectedType": "private-upstash-https-origin-reference",
+        "status": "UNRESOLVED",
+        "requiredBefore": "seller-enablement",
+        "value": null,
+        "detail": "Worker connects using scoped access, not Bazaar main credential."
+      },
+      {
+        "key": "BAZAAR_HOSTED_SELLER_REDIS_REST_TOKEN",
+        "expectedType": "private-scoped-acl-token",
+        "status": "UNRESOLVED",
+        "requiredBefore": "seller-enablement",
+        "value": null,
+        "detail": "New ACL limited to the new worker prefix; verify out-of-scope denials."
+      },
+      {
+        "key": "BAZAAR_MARKETPLACE_WORKER_TOKEN_SHA256",
+        "expectedType": "sha256-of-private-provider-application-bearer",
+        "status": "UNRESOLVED",
+        "requiredBefore": "provider-text-enablement",
+        "value": null,
+        "detail": "Must correspond to providerAccess in its own production worker config."
+      },
+      {
+        "key": "BAZAAR_MARKETPLACE_CONTROL_PROOF",
+        "expectedType": "public-fresh-http-proof-or-dns-proof",
+        "status": "UNRESOLVED",
+        "requiredBefore": "service-review-and-activation",
+        "value": null,
+        "detail": "Publish only the fresh public control challenge; no protected preview bypass."
+      },
+      {
+        "key": "CRON_SECRET",
+        "expectedType": "private-own-project-43-character-bearer",
+        "status": "UNRESOLVED",
+        "requiredBefore": "future-seller-cron-activation",
+        "value": null,
+        "detail": "Different from Bazaar operator/guardian secret; no cron included now."
+      }
+    ],
+    "effectiveSourceManifest": {
+      "status": "PREPARED_LOCAL_NO_CRON",
+      "sourceDirectory": ".vercel/text-production-provider-source",
+      "baseSourceDigest": "04ce8e8aeba348761a86e84a0123f1c490cd1ac96bb2f11f54b586a0a166de9b",
+      "sourceDigest": "d4ee914bdee913e817c8a69c496a03ca0ca3c91457218536ed74e142ac783c51",
+      "runtimeFiles": 9,
+      "files": [
+        {
+          "path": "seller/seller-hosted-handler.mjs",
+          "sha256": "f8dccc1d9fb198896682296741b1fe6b1dc84a8626edc8107d234bb1f92ab07d",
+          "bytes": 5396
+        },
+        {
+          "path": "seller/seller-hosted-tick.mjs",
+          "sha256": "350282d7d69e22f17a2f723e97e716513a5339e3fa73d9fa52b00b5ff197de8d",
+          "bytes": 19847
+        },
+        {
+          "path": "seller/seller-redis-secret-store.mjs",
+          "sha256": "a46bcbd4e1e10d17a5f4a7523808895a7f568132b538a75f44ebf03ad2f55bf1",
+          "bytes": 8416
+        },
+        {
+          "path": "seller/seller-mcp-transport.mjs",
+          "sha256": "e9f3abdbcf848e6d94ca8aea4a08627fa51ad6d28079aecb5a8031cf4f072ac3",
+          "bytes": 3410
+        },
+        {
+          "path": "seller/seller-http-adapter.mjs",
+          "sha256": "fa46e748fbfae30bedba3d861c7a8f7c1574bbd5e9f62e2d4a3382dc62109553",
+          "bytes": 2008
+        },
+        {
+          "path": "seller/seller-service-card.mjs",
+          "sha256": "a9c9078f653fc9f0c666e5b6682690752dcf580c4e95e05d8be2fd8070698000",
+          "bytes": 4332
+        },
+        {
+          "path": "seller/seller-marketplace-worker.mjs",
+          "sha256": "5605f6359287089c2769e479faade4b6e29af965afd8f5648a588eb41c453926",
+          "bytes": 13200
+        },
+        {
+          "path": "seller/private-mcp-client.mjs",
+          "sha256": "5b60dc9a8c3cba64e389f0de0143a9e70eba18fd5a405a42b8c63011411620bd",
+          "bytes": 1549
+        },
+        {
+          "path": "seller/market-price.mjs",
+          "sha256": "5bee11f95d5268c81cd3765e56243ad6d07be94073c57f3dfcb0e0b74499ee2e",
+          "bytes": 783
+        },
+        {
+          "path": "src/types.ts",
+          "sha256": "6aec009f2f8bb66d21aea7c803efd3258552285f67d1b9144df7532d05dec2cd",
+          "bytes": 1754
+        },
+        {
+          "path": "src/preview-app.ts",
+          "sha256": "35970c3f5ac87c8a05c84ab59007dde94d79ff41b2db4decfabef2e7499dc0dd",
+          "bytes": 1394
+        },
+        {
+          "path": "src/marketplace-text.ts",
+          "sha256": "94297841d6de2eb8654774e088252859b384e30674c71c3a633239f59c036ba9",
+          "bytes": 1269
+        },
+        {
+          "path": "src/marketplace-routes.ts",
+          "sha256": "ef38d1f5160588df188a6dd66492bbefa9e4791a0ccad8a3cd1626e067c4d465",
+          "bytes": 2868
+        },
+        {
+          "path": "src/engine/wpm-calculator.ts",
+          "sha256": "e475becd845bcf38e04dd2a617e0c1058060d0204ffc7e8871636456eece2d4d",
+          "bytes": 6081
+        },
+        {
+          "path": "src/engine/algorithmic-script-generator.ts",
+          "sha256": "f0611e1ee52a1bd49d3bb5bfc578bbb2e7aca4abde7bf9715fc25cedb1c0a021",
+          "bytes": 20354
+        },
+        {
+          "path": "server.ts",
+          "sha256": "5172a5bdc28bcef4486d1d770e89980dbd6550120cb4452f12ee0b82ee4b3ead",
+          "bytes": 1015
+        },
+        {
+          "path": "seller/seller-hosted-handler.d.mts",
+          "sha256": "992686fee3d86239d9afcecb5867740c52a05c7bd88d0c2659cfae6f43f4efed",
+          "bytes": 137
+        },
+        {
+          "path": "package.json",
+          "sha256": "0d2d24462ec508e748d26e8b8b220305a35fb680d700599bf5d7ad9d8a86c7d4",
+          "bytes": 681
+        },
+        {
+          "path": "package-lock.json",
+          "sha256": "5a06a81ad646308ca292b80094a6c09501dd7afff2b2da17da19d74c1f8bab05",
+          "bytes": 108045
+        },
+        {
+          "path": "tsconfig.json",
+          "sha256": "eca1849b27f216faa98080ef645c33e4b25cfc4a0f5f781886b89154cd288619",
+          "bytes": 464
+        },
+        {
+          "path": "vercel.json",
+          "sha256": "1dd93a9233ee7082134caa24cf95f3011415510d619ff52ccddb75bb758735c3",
+          "bytes": 136
+        },
+        {
+          "path": ".vercelignore",
+          "sha256": "bba1c4f9cdc33211b3004fecb11b764505fecde459124ddf3c88c4c913c94c8a",
+          "bytes": 324
+        }
+      ],
+      "changedFiles": [
+        "seller/seller-hosted-handler.mjs",
+        "seller/seller-hosted-tick.mjs",
+        "src/marketplace-routes.ts",
+        "vercel.json"
+      ],
+      "credentialsCopied": false,
+      "cronSchedules": [],
+      "tickInvocations": 0,
+      "productionPublished": false,
+      "sourceChanges": [
+        {
+          "path": "vercel.json",
+          "reason": "Remove automatic schedules; crons remains empty."
+        },
+        {
+          "path": "src/marketplace-routes.ts",
+          "reason": "Authenticated bounded Testnet availability GET; no product execution."
+        },
+        {
+          "path": "seller/seller-hosted-tick.mjs",
+          "reason": "Check provider availability and publish saved capacity reports; recover the same readiness intention without extending server lease."
+        },
+        {
+          "path": "seller/seller-hosted-handler.mjs",
+          "reason": "Keep production guard and deadline bounded; no new cron or public trigger."
+        }
+      ]
+    },
+    "prefixAllocation": {
+      "status": "PREPARED_NOT_INITIALIZED",
+      "value": "bazaar-seller:production-0cd860b8cfc35fc459b4838fa9092007",
+      "sharesRandomFamilyIdOnly": true,
+      "redisKeysIndependentOfBazaarStores": true,
+      "initialized": false
+    },
+    "aclDraft": {
+      "status": "SCOPED_ACCESS_VALIDATED_NOT_ENABLED",
+      "user": "bazaar_worker_production_0cd860b8cfc35fc459b4838fa9092007",
+      "keyPatterns": [
+        "bazaar-seller:production-0cd860b8cfc35fc459b4838fa9092007:*"
+      ],
+      "commands": [
+        "GET",
+        "SET",
+        "DEL",
+        "EXISTS",
+        "EVAL",
+        "PTTL",
+        "TIME",
+        "PING"
+      ],
+      "commandPolicyMatchesAcceptedPreview": true,
+      "forbiddenCommandExamples": [
+        "FLUSHALL",
+        "FLUSHDB",
+        "KEYS",
+        "SCAN",
+        "DBSIZE",
+        "ACL"
+      ],
+      "token": {
+        "type": "opaque-scoped-redis-token",
+        "status": "CREATED_VALIDATED_SEALED_LOCAL",
+        "value": null
+      },
+      "created": true,
+      "credentialMaterialized": true,
+      "scopeDenialsRequiredBeforeEnablement": true,
+      "sourceEvidence": "docs/evidence/text-production-seller-scoped-access-2026-10-10.json",
+      "scopeDenialsVerified": true
+    },
+    "sellerProfileEvidence": "docs/evidence/text-production-seller-profile-prepared-2026-10-10.json",
+    "scopedAccessEvidence": "docs/evidence/text-production-seller-scoped-access-2026-10-10.json",
+    "profileBinding": {
+      "preparationId": "c07d0357-aa60-41ce-9ccd-90254e50fa31",
+      "canonicalManifestSha256": "1933b94459945cc01e6a3f2bca679f46c8abc3d0d48d6ea79b87ea94a76c9401",
+      "profileBindingHash": "bfaf957d8f6154a8fbb21dfa5bf9ae9d369166007ab5896362f065694b190753",
+      "originalSourceSha": "c009137bcb6b6a180f0ea75443a4e8970e2b3f33",
+      "currentRuntimeCandidate": "aedf2feecd35c4cbff70c7eb42913ed1e521b513",
+      "rebindingRequired": false,
+      "scope": "Identity, immutable card, account and encrypted credentials unchanged; original journal remains frozen. Current release approves no native write or deployment."
+    }
+  },
+  "scheduling": {
+    "bazaarCrons": [],
+    "providerCrons": [],
+    "sellerEnabled": false,
+    "guardianAutomaticEnabled": false,
+    "activationApproved": false,
+    "futureSellerSchedule": "*/5 * * * *",
+    "futureGuardianSchedule": "17 * * * *",
+    "guardianOriginGateIssue": "PENDING_BEFORE_GUARDIAN_CRON_ACCEPTANCE",
+    "disabledFlagDoesNotProveScheduleAbsent": true,
+    "budgetDecisionRequired": true,
+    "boundedEventWindowOption": {
+      "status": "UNAPPROVED_OPTION_NOT_SCHEDULED",
+      "hours": 24,
+      "proposedCadence": "*/5 * * * *",
+      "ticks": 288,
+      "estimatedCombinedIdleCommandsAtLeast": 45792,
+      "additionalBusinessTrafficExcluded": true,
+      "actualBillingOrCapacityGuarantee": false,
+      "approved": false
+    }
+  },
+  "limits": {
+    "registrationsGlobalPerDay": 200,
+    "registrationsPerIpPerHour": 200,
+    "authenticatedRequestsPerAccountPerMinute": 60,
+    "ingressGlobalAndPerIpPerMinute": 120,
+    "globalRequestsPerDay": 10000,
+    "visibleContentRetentionDays": 7,
+    "marketStateBytes": 524288,
+    "settlementStateBytes": 131072,
+    "capacityReservationBytes": 65536,
+    "sellerProviderExecutionsPerTick": 1,
+    "sellerProviderExecutionsPerDay": 50,
+    "sellerHttpMcpPerDay": 5000,
+    "projectedSellerIdleRedisRestPer30Days": 267840,
+    "projectionIsNotBilledLuaConsumption": true,
+    "projectedSellerIdleBillableCommandsPer30Days": 648000,
+    "projectedSellerAndBazaarIdleCommandsPer30DaysAtLeast": 1373760,
+    "billableCommandProjectionIsNotInvoice": true,
+    "sellerPendingOrders": 1,
+    "sellerAdmissionsPerUtcDay": 50,
+    "sellerLimitsSharedAcrossServices": true,
+    "sellerAvailabilityLeaseSeconds": 360,
+    "sellerUnpaidReservationSeconds": 300
+  },
+  "publicPerimeter": {
+    "status": "PREPARE_ONLY_NOT_APPLIED",
+    "reviewMemo": "docs/HACKATHON_TEXT_PRODUCTION_REVIEW.md",
+    "productionHost": "bazaar.browns.studio",
+    "preservePrivateAuthentication": true,
+    "preserveExistingPreviewProtection": true,
+    "doNotAllowAllApiOrWildcardDomains": true,
+    "finalExactRuleAndExternalClientAcceptanceRequired": true,
+    "exactTemplate": "docs/TEXT_DEMO_PUBLIC_WAF_PROPOSAL.json",
+    "localEvidence": "docs/evidence/text-demo-qr-local-2026-10-10.json",
+    "rootQrRedirect": "/demo"
+  },
+  "applicationPlan": [
+    {
+      "step": 1,
+      "action": "Review this manifest, current metadata/network/capacity evidence and exact perimeter proposal; resolve source/configuration and secret references.",
+      "approved": false
+    },
+    {
+      "step": 2,
+      "action": "After explicit authorization only, apply exact non-secret environment and retain existing sensitive references; read back configuration fingerprints without exporting values.",
+      "approved": false
+    },
+    {
+      "step": 3,
+      "action": "Prepare isolated frozen build with no cron configuration for each project; exclude .vercel, env files, test harnesses and payment simulators; freeze effective package hashes.",
+      "approved": false
+    },
+    {
+      "step": 4,
+      "action": "After publication authorization only, publish the single approved Bazaar version with registration paused, purchases disabled and no schedules; independently review provider publication if needed.",
+      "approved": false
+    },
+    {
+      "step": 5,
+      "action": "Review/authorize exact public perimeter, production provider proof/activation, registration opening and seller scheduling separately; keep data authentication enabled.",
+      "approved": false
+    },
+    {
+      "step": 6,
+      "action": "After separate exact transaction authorization, accept one fresh external QR/account/MCP/Testnet purchase/automatic text delivery/private history/recovery/isolation journey.",
+      "approved": false
+    }
+  ],
+  "rollback": {
+    "currentBazaarDeployment": "dpl_5rbJydG46d3EaTdWFaCkspPrqems",
+    "currentSellerDeployment": "dpl_8Pv5kWHWzkYVCiV7ouBUM9NQsWVC",
+    "currentFirewallConfigurationSha256": "45080024129ef4d529fd4120022db778f4721970e68892a22af3c0f6c7cb5a8a",
+    "currentCronSchedules": {
+      "bazaar": [],
+      "seller": []
+    },
+    "closeNewAdmissionAndPurchasesFirst": true,
+    "stopNewSellerTicksWithoutReexecutingInFlightEffects": true,
+    "preserveNewNamespaceRecoveryAfterAnyNewAccountsOrPayments": true,
+    "neverResetPaymentOrExecutionControls": true,
+    "neverDeleteNamespacesOrRollbackConfirmedLedgerPayments": true
+  },
+  "performedEffects": {
+    "scope": "Current preparation only",
+    "sourceCommitsLocalOnly": true,
+    "productionEnvironmentApplied": false,
+    "productionPublished": false,
+    "publicPerimeterChanged": false,
+    "cronActivated": false,
+    "nativeSellerAccountCreateWrites": 1,
+    "nativePermissionGrantWrites": 1,
+    "scopedAclGeneratedOnce": true,
+    "scopedAclConfiguredOnce": true,
+    "scopedAclValidationOnlySynthetic": true,
+    "realCapacityValidationKeys": 3,
+    "syntheticCleanupConfirmed": true,
+    "newOrders": 0,
+    "newPayments": 0,
+    "newSignatures": 0,
+    "newProviderExecutions": 0,
+    "privateCredentialsStored": "Ignored DPAPI journals; no root token in worker configuration",
+    "historicalPreparationRetained": true,
+    "currentCandidatePreviewDeployments": 2,
+    "previewConfigurationApplied": "Reviewed non-secret deployment overrides only; synthetic namespaces retained; no project secret mutation",
+    "currentPreviewAcceptance": "docs/evidence/text-race-fixed-configured-preview-acceptance-2026-10-11.json"
+  },
+  "supersedes": {
+    "path": "docs/release/text-production-manifest-2026-10-10.json",
+    "canonicalSha256": "1933b94459945cc01e6a3f2bca679f46c8abc3d0d48d6ea79b87ea94a76c9401",
+    "runtimeCandidate": "c009137bcb6b6a180f0ea75443a4e8970e2b3f33",
+    "reason": "Expire seller admission using Redis TIME and reject delayed settlement ACK; complete external-provider instructions"
+  },
+  "pendingAcceptance": [
+    "Authenticated current-candidate account and recovery journey; read-only protected Preview already passed 19 checks",
+    "Native draft, fresh provider control proof and manual review",
+    "Provider environment and text-worker activation review",
+    "Production publication and exact public route exception approval",
+    "External public QR/account/MCP/history validation",
+    "Separate transaction authorization if new hosted paid acceptance is needed",
+    "Scheduler consumption remeasurement and separate authorization"
+  ]
+}

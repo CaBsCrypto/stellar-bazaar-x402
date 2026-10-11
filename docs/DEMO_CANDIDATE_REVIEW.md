@@ -1,5 +1,7 @@
 # Candidato revisable de la demo — 10 de octubre de 2026
 
+> **Registro histórico.** La [revisión vigente](TEXT_DEMO_READINESS_REVIEW.md) reúne el estado y los pendientes actuales. Los candidatos y resultados de este documento corresponden a su corte; no acreditan publicación de producción ni activación del cron.
+
 ## Evidencia actual y preparación de producción — 10 de octubre
 
 El candidato actual comprobado es Bazaar `633e31e4aaefa5c59b9d19af02c92dc97325f6c9` en preview protegida `ezcuo3lgv`, con proveedor alojado `ejl18kzo8` y fuente `04ce8e8aeba348761a86e84a0123f1c490cd1ac96bb2f11f54b586a0a166de9b`. La [compra nueva](HACKATHON_CONTINUOUS_PURCHASE.md) pasó un pago de texto, un tick manual, entrega, recuperación e aislamiento. La [revisión de producción](HACKATHON_TEXT_PRODUCTION_REVIEW.md) incorpora readback actual, acceso sin credenciales y manifiesto con altas pausadas, compras/archivos/vendedor deshabilitados y crons vacíos, todavía sin aplicar. Producción observada sigue en MCP 0.5.0 con ocho herramientas; publicación, cron automático y QR público no están aceptados. HEAD de documentación de esa evidencia: `cb3790b4f051c0970c22231ee354e0a4c25e9df8`.

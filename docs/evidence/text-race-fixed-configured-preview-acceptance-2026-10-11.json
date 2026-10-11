@@ -1,0 +1,78 @@
+{
+  "version": 1,
+  "status": "PASS",
+  "observedAt": "2026-10-11T03:05:50.596Z",
+  "environment": "protected-preview",
+  "url": "https://stellar-bazaar-x402-9ltdf5bsn-cabscryptocontacto-6028s-projects.vercel.app",
+  "candidate": "aedf2feecd35c4cbff70c7eb42913ed1e521b513",
+  "checks": [
+    "READY_PREVIEW_OF_EXACT_PROJECT",
+    "UPLOADED_CONFIG_CRON_EMPTY",
+    "ROOT_QR_REDIRECTS_TO_SAME_PREVIEW_DEMO",
+    "PAGE_DEMO",
+    "PAGE_OPEN",
+    "PAGE_CATALOGO",
+    "PAGE_HISTORY",
+    "PUBLIC_QR_ASSET_/demo-qr.svg",
+    "PUBLIC_QR_ASSET_/bazaar-qr.svg",
+    "MCP_1_1_0_METADATA",
+    "MCP_INITIALIZE_HAS_EXTERNAL_SELLER_INSTRUCTIONS",
+    "EXACT_35_TOOL_SUITE",
+    "EFFECTIVE_TESTNET_SELLER_LIMITS",
+    "ANONYMOUS_CATALOG",
+    "ACTIVE_REVIEWED_CARD_VISIBLE",
+    "NO_FRESH_SELLER_LEASE_NO_COMPRABLE_SERVICE",
+    "UNAVAILABLE_CATALOG_HAS_NO_PURCHASE_CTA",
+    "MISSING_ACCOUNT_CREDENTIAL_REJECTED",
+    "CAPACITY_REPORT_WITHOUT_SELLER_CREDENTIAL_REJECTED"
+  ],
+  "scope": "Read-only public entry, MCP, native credential rejection and unavailable purchase UI; no authenticated account mutation or paid acceptance",
+  "newAccounts": 0,
+  "newOrders": 0,
+  "newPayments": 0,
+  "signatures": 0,
+  "providerExecutions": 0,
+  "cronActivated": false,
+  "productionPublished": false,
+  "externalPublicIpValidated": false,
+  "deploymentCronMetadata": [],
+  "deploymentId": "dpl_8di2mmiSCD2ubJzaTdAMp9YVnyuL",
+  "uploadedSourceDigest": "764ba0e8997c0a47fba5b1e45ab55dbb6ff752f650736d4cffc78583abb19648",
+  "effectiveAdmission": {
+    "capacityTool": "report_market_capacity",
+    "capacityAuthentication": "owning workspace agent Authorization Bearer",
+    "leaseSeconds": 360,
+    "reservationSeconds": 300,
+    "pendingPerSeller": 1,
+    "dailyPerSeller": 50,
+    "checks": [
+      "order creation",
+      "before first payment authorization",
+      "before settlement"
+    ],
+    "unavailableStatus": 503,
+    "deliveryGuarantee": false
+  },
+  "effectiveQuotas": {
+    "registrationsPerDay": 200,
+    "registrationsPerIpHour": 200,
+    "authenticatedPerAccountMinute": 60,
+    "ingressGlobalMinute": 120,
+    "ingressPerIpMinute": 120
+  },
+  "stage": "COMPLETE",
+  "visibleServices": [
+    {
+      "id": "guionista-bazaar-pilot-text-funded-v1",
+      "availability": {
+        "ready": false,
+        "reason": "SELLER_UNAVAILABLE",
+        "pendingLimit": 1,
+        "dailyLimit": 50
+      }
+    }
+  ],
+  "requests": 14,
+  "completedAt": "2026-10-11T03:06:03.125Z",
+  "elapsedMs": 12529
+}

@@ -1,5 +1,7 @@
 # Resultados antes de abrir la demo de texto
 
+> **Registro histórico.** La [revisión vigente](TEXT_DEMO_READINESS_REVIEW.md) reúne el estado y los pendientes actuales. Los candidatos y resultados de este documento corresponden a su corte; no acreditan publicación de producción ni activación del cron.
+
 Revisión del 10 de octubre de 2026, Santiago; pruebas finales del 11 de octubre UTC. **La configuración está preparada como borrador; la demo pública todavía no está aceptada.** No se publicó producción, no se activó ningún cron, no se cambió el presupuesto y no se hizo otra compra.
 
 La [revisión final del paquete](evidence/text-production-preparation-final-review-2026-10-10.json) pasó 91 comprobaciones de hashes, enlaces, estados y configuración. Las puertas de apertura permanecen cerradas; el runtime sigue siendo el candidato probado. El escaneo redactado no encontró semillas Stellar ni copias exactas de los secretos locales conocidos en los archivos actuales; conserva el hallazgo histórico previo y no constituye una auditoría exhaustiva de credenciales.

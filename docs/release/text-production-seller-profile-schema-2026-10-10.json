@@ -1,0 +1,287 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:bazaar:text-production-seller-profile:v1",
+  "title": "Private production seller preparation profile",
+  "description": "Schema only. Actual values remain CurrentUser DPAPI ciphertext in the ignored local profile. No account, submission, control verification, activation, cron, ACL, wallet signature or deployment is implied by a prepared profile.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "version",
+    "type",
+    "phase",
+    "preparationId",
+    "preparedAt",
+    "manifestHash",
+    "sourceSha",
+    "providerSourceDigest",
+    "namespaceFamily",
+    "workspacePrefix",
+    "marketPrefix",
+    "reviewPrefix",
+    "sellerPrefix",
+    "bazaarOrigin",
+    "providerOrigin",
+    "workerOrigin",
+    "originEvidence",
+    "creation",
+    "permissionChangeId",
+    "submissionId",
+    "secrets",
+    "card",
+    "cardHash",
+    "controlProof",
+    "account",
+    "config",
+    "submission",
+    "gate"
+  ],
+  "properties": {
+    "version": {
+      "const": 1
+    },
+    "type": {
+      "const": "bazaar-text-production-seller-profile"
+    },
+    "phase": {
+      "enum": [
+        "prepared",
+        "account-create-started",
+        "account-unconfirmed",
+        "account-bound",
+        "permission-started",
+        "permission-unconfirmed",
+        "ready-for-submission",
+        "submission-started",
+        "submission-unconfirmed",
+        "awaiting-control-proof"
+      ]
+    },
+    "preparationId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "preparedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "manifestHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "sourceSha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$"
+    },
+    "providerSourceDigest": {
+      "$ref": "#/$defs/sha256"
+    },
+    "namespaceFamily": {
+      "const": "0cd860b8cfc35fc459b4838fa9092007"
+    },
+    "workspacePrefix": {
+      "const": "bazaar-workspace:pilot-0cd860b8cfc35fc459b4838fa9092007"
+    },
+    "marketPrefix": {
+      "const": "bazaar-market:pilot-0cd860b8cfc35fc459b4838fa9092007"
+    },
+    "reviewPrefix": {
+      "const": "bazaar-review:pilot-0cd860b8cfc35fc459b4838fa9092007"
+    },
+    "sellerPrefix": {
+      "const": "bazaar-seller:production-0cd860b8cfc35fc459b4838fa9092007"
+    },
+    "bazaarOrigin": {
+      "const": "https://bazaar.browns.studio"
+    },
+    "providerOrigin": {
+      "const": "https://ai-video-scriptwriter.vercel.app",
+      "description": "Exact permanent alias verified by read-only Vercel metadata on 2026-10-11; availability and the new production runtime are still unaccepted."
+    },
+    "workerOrigin": {
+      "const": "https://ai-video-scriptwriter.vercel.app",
+      "description": "Same permanent project origin; scheduler stays disabled."
+    },
+    "originEvidence": {
+      "type": "object",
+      "required": [
+        "version",
+        "source",
+        "projectId",
+        "productionDeploymentId",
+        "permanentOrigin",
+        "observedAt",
+        "aliases"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "source": {
+          "const": "vercel-cli-get"
+        },
+        "projectId": {
+          "const": "prj_cHsv0UIK31fRuLBXkW5RXkz4eU9K"
+        },
+        "productionDeploymentId": {
+          "type": "string",
+          "pattern": "^dpl_[A-Za-z0-9]+$"
+        },
+        "permanentOrigin": {
+          "type": "string",
+          "format": "uri"
+        },
+        "observedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "aliases": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 20,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9.-]+$"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "creation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "creationId",
+        "humanAccessHash",
+        "agentAccessHash"
+      ],
+      "properties": {
+        "creationId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "humanAccessHash": {
+          "$ref": "#/$defs/sha256"
+        },
+        "agentAccessHash": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "permissionChangeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "submissionId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "secrets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "human",
+        "agent",
+        "recovery",
+        "providerAccess",
+        "workerAesKey",
+        "workerCronSecret"
+      ],
+      "properties": {
+        "human": {
+          "$ref": "#/$defs/private32"
+        },
+        "agent": {
+          "$ref": "#/$defs/private32"
+        },
+        "recovery": {
+          "$ref": "#/$defs/private32"
+        },
+        "providerAccess": {
+          "$ref": "#/$defs/private32"
+        },
+        "workerAesKey": {
+          "$ref": "#/$defs/private32"
+        },
+        "workerCronSecret": {
+          "$ref": "#/$defs/private32"
+        }
+      }
+    },
+    "card": {
+      "type": "object",
+      "description": "Validated by native createSellerCard and marketCard; exact text service, GAHV Testnet recipient, official USDC and price 0.01. No wallet private key."
+    },
+    "cardHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "controlProof": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "method",
+        "domain"
+      ],
+      "properties": {
+        "method": {
+          "const": "http-well-known"
+        },
+        "domain": {
+          "type": "string",
+          "maxLength": 253
+        }
+      }
+    },
+    "account": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Populated only from the same native creation receipt and independently resolved human/agent/recovery identities, generation one."
+    },
+    "config": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Validated by validateSellerConfiguration after account binding, with own agent/provider accesses and no preview protection fields."
+    },
+    "submission": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Authentic native submission response only. Its server-issued challenge remains unverified until independent public control proof is reviewed."
+    },
+    "gate": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "description": "Durable consumed gate is appended before a native write. A lost acknowledgement permits read-only recovery of the same IDs; no automatic write retry or phase reset."
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "private32": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$",
+      "writeOnly": true,
+      "description": "Generated locally and stored only in CurrentUser DPAPI ciphertext. Never a public output or environment text file."
+    }
+  },
+  "x-procedure": [
+    "Root obtains read-only sanitized permanent Vercel alias evidence, freezes runtime/provider hashes and reviews the helper before running preparation.",
+    "Generate fresh accesses, stable UUIDs and text card locally; seal prepared profile with CurrentUser DPAPI, fsync and roundtrip. This has no Redis or remote effects.",
+    "After exact root coordination, consume the sealed create gate before calling createRedisWorkspaceStore.createWorkspace once in the new production family. Keep public registration paused.",
+    "If outcome is uncertain, use the native creation replay lookup with admission disabled and a Redis READ-only adapter; verify the same creationId, hashes and three identities. Never issue another creation write or reset the gate.",
+    "Verify all three native identities and generation one; grant market:submit through the human principal with one stable changeId and expectedRevision zero, sealing a gate before the write. Recovery checks the exact persisted changeId and native digest through a validated READ-only snapshot.",
+    "Submit the frozen card through the native submitMarketService function with explicitly coordinated production stores, or later submit_market_service on the published MCP. Preserve submissionId and recover with readMarketSubmission/get_market_submission; do not synthesize review evidence.",
+    "Obtain the actual server challenge for the permanent hostname and prepare its exact public proof separately. Publishing the proof, independent HTTP verification, manual review and service activation remain later steps.",
+    "Prepare scoped worker ACL/AES/config/application hash and own CRON secret only through separately reviewed controls. No principal Redis token, wallet signer, test payment bypass or preview protection is part of the worker config.",
+    "Worker, text endpoint, purchases and cron stay disabled until candidate/configuration/evidence are presented and the corresponding action is approved."
+  ],
+  "x-origin-evidence": "docs/evidence/text-provider-production-aliases-2026-10-10.json",
+  "x-source-policy": "The preparation helper verifies all exact 22 effective provider file hashes and no cron before generating or sealing a real profile. A stale source manifest fails closed."
+}

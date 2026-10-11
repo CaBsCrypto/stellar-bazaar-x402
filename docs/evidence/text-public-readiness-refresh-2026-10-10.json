@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-11T02:40:22.410Z",
+  "host": "bazaar.browns.studio",
+  "client": "operator machine without Authorization or cookies",
+  "probes": [
+    {
+      "path": "/demo",
+      "status": 404
+    },
+    {
+      "path": "/catalogo",
+      "status": 200
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "serverVersion": "0.5.0",
+      "toolCount": 8
+    }
+  ],
+  "arbitraryExternalIpValidated": false,
+  "currentCandidateHostedAccepted": false,
+  "privateAuthenticationTestsPerformed": false,
+  "productionPublished": false,
+  "cronActivated": false,
+  "newPayments": 0
+}

@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "status": "READ_ONLY_BROWSER_PASS",
+  "observedAt": "2026-10-11T03:09:25.412Z",
+  "environment": "protected-preview",
+  "candidate": "aedf2feecd35c4cbff70c7eb42913ed1e521b513",
+  "url": "https://stellar-bazaar-x402-9ltdf5bsn-cabscryptocontacto-6028s-projects.vercel.app",
+  "source": "Codex In-app Browser, visible accessibility tree and screenshot",
+  "checks": [
+    "Navigation from root reached /demo",
+    "Demo displays MCP 1.1.0 and disabled admission/purchases/files",
+    "Catalog finished loading historical reviewed pilot card",
+    "Seller unavailable and no buy action; connect to consult remains visible"
+  ],
+  "visibleService": "guionista-bazaar-pilot-text-funded-v1",
+  "newPreparedProductionServicePublished": false,
+  "usesPreviousVercelBrowserSession": true,
+  "privateAccountCredentialsEntered": 0,
+  "screenshot": {
+    "path": "docs/evidence/text-preview-unavailable-catalog-2026-10-11.png",
+    "bytes": 59889,
+    "sha256": "8c71fdd6df44fd1c2c0055edd5f3e158adf61bec61ac99f2279fa5e08fe83a6d"
+  },
+  "newAccounts": 0,
+  "newOrders": 0,
+  "newPayments": 0,
+  "providerExecutions": 0,
+  "cronActivated": false,
+  "productionPublished": false,
+  "externalPublicIpValidated": false,
+  "privateHistoryValidatedThisRun": false,
+  "observationTimeSource": "Screenshot file write time after final visible catalogue state"
+}

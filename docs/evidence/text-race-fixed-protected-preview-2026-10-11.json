@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "status": "FAIL",
+  "observedAt": "2026-10-11T02:57:04.651Z",
+  "environment": "protected-preview",
+  "url": "https://stellar-bazaar-x402-km9ke18lk-cabscryptocontacto-6028s-projects.vercel.app",
+  "candidate": "aedf2feecd35c4cbff70c7eb42913ed1e521b513",
+  "checks": [
+    "READY_PREVIEW_OF_EXACT_PROJECT",
+    "UPLOADED_CONFIG_CRON_EMPTY"
+  ],
+  "scope": "Read-only public entry, MCP, native credential rejection and unavailable purchase UI; no authenticated account mutation or paid acceptance",
+  "newAccounts": 0,
+  "newOrders": 0,
+  "newPayments": 0,
+  "signatures": 0,
+  "providerExecutions": 0,
+  "cronActivated": false,
+  "productionPublished": false,
+  "externalPublicIpValidated": false,
+  "deploymentCronMetadata": [],
+  "deploymentId": "dpl_rVNJuaPbGRnrEmCQysGvpkcKf8XX",
+  "uploadedSourceDigest": "764ba0e8997c0a47fba5b1e45ab55dbb6ff752f650736d4cffc78583abb19648",
+  "stage": "public-pages",
+  "code": "ROOT_QR_REDIRECTS_TO_SAME_PREVIEW_DEMO",
+  "requests": 1,
+  "completedAt": "2026-10-11T02:57:08.215Z",
+  "elapsedMs": 3564
+}

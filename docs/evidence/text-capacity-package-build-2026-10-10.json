@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "status": "PASS",
+  "observedAt": "2026-10-11T02:36:25.019Z",
+  "candidate": "c009137bcb6b6a180f0ea75443a4e8970e2b3f33",
+  "sourceDirectory": ".vercel/text-production-bazaar-capacity-source",
+  "effectiveSourceDigest": "cb8f8c12c9eb6b66b76f59f0097020a569795ddbcda3eb6ef0664b0355e3e2aa",
+  "bazaar": "next build --webpack with compiled TypeScript and 29 generated static pages",
+  "provider": "npm ci --ignore-scripts from unchanged package-lock; tsc",
+  "providerSourceDigest": "d4ee914bdee913e817c8a69c496a03ca0ca3c91457218536ed74e142ac783c51",
+  "providerManifestEntries": 22,
+  "providerPackageChecks": 51,
+  "providerRuntimeRouterChecks": 19,
+  "bazaarCronSchedules": [],
+  "providerCronSchedules": [],
+  "productionPublished": false,
+  "cronActivated": false,
+  "newPayments": 0,
+  "newProviderExecutions": 0,
+  "limitation": "Local package compilation; no hosted or public acceptance of this candidate"
+}

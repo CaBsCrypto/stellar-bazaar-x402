@@ -1,0 +1,126 @@
+{
+  "version": 1,
+  "status": "PASS_LOCAL_PREPARATION",
+  "recordedAt": "2026-10-11T02:24:06.826Z",
+  "environment": "offline synthetic application checks; public documentation read separately",
+  "checkout": "beta-open-build",
+  "baselineCommitAtReview": "e6b37abd547a7b63ebf6a412830c2eae00a90183",
+  "candidateStatus": "Owned source changes uncommitted; final combined build and deployment remain separate",
+  "runtimeConfiguration": {
+    "publicDemo": true,
+    "marketplace": true,
+    "routeBoundary": true,
+    "openWorkspaces": true,
+    "metersEnabled": false,
+    "privateFilesEnabled": false,
+    "operatorHash": "synthetic only"
+  },
+  "sourceFilesSha256": {
+    "app/demo/page.tsx": "8b148024d40ea31a9636f6a11f60435f5a86b82a2f2f7891f16ced2308d94d97",
+    "app/page.tsx": "27293fe34870ff885c1fc0efb07f2ffae42c6e2514aef9679b851cec1a6a3dad",
+    "components/MarketCatalog.tsx": "80da1417256d34066efef6565a19ef998da3d67949e6218cb973ff416747fa9f",
+    "lib/pilot-route-policy.ts": "d3ff8cdc3fffdd5bfc0028ed3d3d41e0521c9daf475348f4471ba81ce53df3fb",
+    "proxy.ts": "5e76815902b51e78f54fbae523c93103a047d836e6652833cdcd7e71740ec00f",
+    "public/DEMO_TESTNET.md": "6b720a920492ae9953283a8001a896da6ae8f85274b183d8de84bf2a599aa2ef",
+    "scripts/test-demo-routes.mjs": "1921791cf36882033fe1e97d5666316a00fd45a1f7729671fb46bb09425b8153",
+    "scripts/test-pilot-route-policy.mjs": "1cadcec133830ee82026098d1398cd9cf817f354f1c98fadae4e9fd5c3619ea4",
+    "scripts/test-demo-qr-boundary.mjs": "61c3ca5c8d89cc49ce87e7b06c555eb8010d812b5391070da1771b133e089f62",
+    "scripts/test-market-catalog-availability.mjs": "7765515314da362eb6d5362b1e1b44e9ac7d94ff2c0cec7f4d926f02023460c5",
+    "scripts/test-text-demo-waf-proposal.mjs": "6a0d1419cc52bd9b1fdc63ffd0f231efa971baaf7368d1eb8141a7bc3d22be6f",
+    "scripts/test-public-qr.py": "42b28bcece39275fab43ab51b39220dc46425b4900872bdf2b61d72bdb716dcf",
+    "docs/TEXT_DEMO_PUBLIC_WAF_PROPOSAL.json": "846d7cb94ebc5858ac5885191479117c57e2d9b0cbc8bdb37f6a588fc851a50f",
+    "docs/DEMO_QR_PREPARATION.md": "c2ff06a36a89926ee2191d549e5ff6a36c758970713a277802e3c707faeb2a04"
+  },
+  "unchangedQrAssets": {
+    "public/demo-qr.svg": {
+      "sha256": "d6799235cfb44a03d66d272d0772a2ad7e2819c3e3ea9f7d0b28e4bea2575ecb",
+      "decoded": "https://bazaar.browns.studio/demo"
+    },
+    "public/bazaar-qr.svg": {
+      "sha256": "67f725cce36c8ae92f78931ff10df333476d1a8d6f52fe69d29b400eacb39699",
+      "decoded": "https://bazaar.browns.studio/"
+    }
+  },
+  "checks": [
+    {
+      "command": "node --experimental-strip-types scripts/test-demo-qr-boundary.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "scenarios": 11,
+      "usesNativeNextProxy": true,
+      "usesNativeOperatorHandlers": true,
+      "scope": [
+        "GET and HEAD root to /demo without query",
+        "actual demo links and scoped SVG",
+        "Next static matcher",
+        "private bearer, origin, body size and MCP tool preflight",
+        "native operator authentication",
+        "non-public /pilot compatibility"
+      ]
+    },
+    {
+      "command": "node --experimental-strip-types scripts/test-market-catalog-availability.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "scenarios": 8,
+      "scope": "Actual component with synthetic catalog and controlled clock; no live provider"
+    },
+    {
+      "command": "node --experimental-strip-types scripts/test-text-demo-waf-proposal.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "permissionChecks": 189,
+      "truthTableCases": 768,
+      "scope": "Offline existing deny AND NOT exact production exception equivalence; not an API mutation"
+    },
+    {
+      "command": "node --experimental-strip-types scripts/test-demo-routes.mjs",
+      "status": "PASS",
+      "exitCode": 0
+    },
+    {
+      "command": "node --experimental-strip-types scripts/test-pilot-route-policy.mjs",
+      "status": "PASS",
+      "exitCode": 0,
+      "note": "Old discovery expectation corrected to current intentional native-market boundary; no discovery route opened"
+    },
+    {
+      "command": "python scripts/test-public-qr.py",
+      "status": "PASS",
+      "exitCode": 0,
+      "decodedSvgFiles": 2,
+      "scope": "In-memory SVG module decode; no SVG regeneration or modification"
+    },
+    {
+      "command": "git diff --check -- <owned tracked source files>",
+      "status": "PASS",
+      "exitCode": 0
+    }
+  ],
+  "effectCounters": {
+    "applicationExternalRequests": 0,
+    "realPayments": 0,
+    "realOrders": 0,
+    "providerExecutions": 0,
+    "remoteFirewallWrites": 0,
+    "deployments": 0,
+    "cronChanges": 0
+  },
+  "publicProductionAccepted": false,
+  "hostedQrValidated": false,
+  "hostedCapacityValidated": false,
+  "remoteFirewallApplied": false,
+  "limitations": [
+    "Native Next proxy invoked offline; full browser hydration and final combined build remain separate",
+    "UI availability is advisory; server admission and payment checks must reserve capacity atomically",
+    "WAF request is a review template with a private-IP placeholder; current config must be read and preserved after authorization",
+    "API acceptance of twelve condition groups and public outside-client access remain unverified",
+    "Production publication, cron, and file/image/video acceptance are not performed by these checks",
+    "Prior hosted paid-text proof belongs to a protected preview and is not replaced or expanded by this evidence"
+  ],
+  "references": [
+    "docs/DEMO_QR_PREPARATION.md",
+    "docs/TEXT_DEMO_PUBLIC_WAF_PROPOSAL.json",
+    "docs/evidence/text-production-metadata-final-2026-10-10.json"
+  ]
+}

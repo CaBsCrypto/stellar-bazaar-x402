@@ -2,7 +2,7 @@
   "schema": "bazaar-text-production-preparation/v1",
   "version": 1,
   "status": "PREPARED_NOT_APPLIED",
-  "preparedAt": "2026-10-11T01:51:38.388Z",
+  "preparedAt": "2026-10-11T02:36:25.019Z",
   "scope": "public-text-demo-stellar-testnet",
   "approved": false,
   "approvalGates": {
@@ -40,10 +40,10 @@
     },
     "publicPurchaseCapacity": {
       "approved": false,
-      "status": "UNRESOLVED_SELLER_CAPACITY_NOT_LINKED_TO_PAYMENT_ADMISSION",
+      "status": "IMPLEMENTED_LOCAL_AND_REAL_REDIS_ACCEPTED_HOSTED_PENDING",
       "requiredBefore": "public-purchase-opening",
       "defaultPurchasesDisabled": true,
-      "sourceEvidence": "docs/evidence/text-capacity-local-review-2026-10-10.json"
+      "sourceEvidence": "docs/evidence/text-seller-capacity-real-2026-10-10.json"
     },
     "cronCapacityBudget": {
       "approved": false,
@@ -54,23 +54,47 @@
     }
   },
   "sources": {
-    "bazaarRuntimeCandidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+    "bazaarRuntimeCandidate": "c009137bcb6b6a180f0ea75443a4e8970e2b3f33",
     "documentationHead": "cb3790b4f051c0970c22231ee354e0a4c25e9df8",
-    "localRuntimeDiffPaths": [],
+    "localRuntimeDiffPaths": [
+      "app/api/market/capacity/route.ts",
+      "app/demo/page.tsx",
+      "app/page.tsx",
+      "components/MarketCatalog.tsx",
+      "examples/seller-hosted-handler.mjs",
+      "examples/seller-hosted-tick.mjs",
+      "lib/bazaar-skills.ts",
+      "lib/market-retention-schema.ts",
+      "lib/market-seller-capacity.ts",
+      "lib/marketplace-capacity.ts",
+      "lib/marketplace-http.ts",
+      "lib/marketplace-mcp.ts",
+      "lib/marketplace-store.ts",
+      "lib/marketplace-x402-store.ts",
+      "lib/marketplace-x402.ts",
+      "lib/marketplace.ts",
+      "lib/mcp-onboarding-server.ts",
+      "lib/mcp-tool-contract.ts",
+      "lib/pilot-route-policy.ts",
+      "package.json",
+      "proxy.ts"
+    ],
     "bazaarPreviewDeploymentId": "dpl_BFgPRuzqKh3Qv4xQxMmdvs7Y7juM",
     "providerBaseSourceDigest": "04ce8e8aeba348761a86e84a0123f1c490cd1ac96bb2f11f54b586a0a166de9b",
     "providerPreviewDeploymentId": "dpl_5uWd5GLtfT2zgfYk9ehbGiRVcwLp",
     "providerEffectiveProductionSourceDigest": {
       "type": "sha256",
       "status": "PREPARED_LOCAL_NOT_PUBLISHED",
-      "value": "dd1c88c37378116807a31369199b348ad0e2adad5db4427af2eb1573d14e2c5e",
+      "value": "d4ee914bdee913e817c8a69c496a03ca0ca3c91457218536ed74e142ac783c51",
       "requiredBefore": "publication",
-      "reason": "Exact 22-file copy of the accepted source; only provider vercel.json removes cron. Verify file hashes before any approved deployment."
+      "reason": "Exact 22-file production copy with no cron, authenticated availability, capacity and readiness recovery. Verify current file hashes before any approved deployment."
     },
     "deployCurrentCheckout": false,
     "sourceCopyPolicy": "copy-only-frozen-runtime-and-approved-deployment-overrides-no-private-files",
-    "bazaarEffectiveSourceDigest": "85df6a7e3bf6e2372031517ff058670e1345d47ff1352420309ea38af83b46d6",
-    "bazaarSourceExportEvidence": "docs/evidence/text-production-source-export-2026-10-10.json"
+    "bazaarEffectiveSourceDigest": "cb8f8c12c9eb6b66b76f59f0097020a569795ddbcda3eb6ef0664b0355e3e2aa",
+    "bazaarSourceExportEvidence": "docs/evidence/text-production-capacity-source-export-2026-10-10.json",
+    "previousAcceptedRuntimeCandidate": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+    "newRuntimeHostedAcceptance": false
   },
   "evidence": {
     "metadata": "docs/evidence/text-production-metadata-final-2026-10-10.json",
@@ -182,12 +206,37 @@
     },
     "frozenSourceExport": {
       "status": "FROZEN_SOURCE_PREPARED_NO_CRON",
-      "path": "docs/evidence/text-production-source-export-2026-10-10.json",
-      "effectiveSourceDigest": "85df6a7e3bf6e2372031517ff058670e1345d47ff1352420309ea38af83b46d6",
+      "path": "docs/evidence/text-production-capacity-source-export-2026-10-10.json",
+      "effectiveSourceDigest": "cb8f8c12c9eb6b66b76f59f0097020a569795ddbcda3eb6ef0664b0355e3e2aa",
       "cronSchedules": [],
-      "builtThisCopy": false,
+      "builtThisCopy": true,
       "privateCredentialFilesCopied": 0
-    }
+    },
+    "previousPreviewAcceptanceAppliesTo": "633e31e4aaefa5c59b9d19af02c92dc97325f6c9",
+    "sellerCapacity": {
+      "status": "REAL_REDIS_ISOLATED_PASS_HOSTED_PENDING",
+      "path": "docs/evidence/text-seller-capacity-real-2026-10-10.json",
+      "checksPassed": 13,
+      "restRequests": 121,
+      "cleanupConfirmed": true,
+      "realPayments": 0,
+      "actualIdentityRevocationTested": false
+    },
+    "currentLocalRelease": {
+      "status": "PASS",
+      "path": "docs/evidence/text-capacity-release-local-2026-10-10.json",
+      "suitesPassed": 30,
+      "candidate": "c009137bcb6b6a180f0ea75443a4e8970e2b3f33",
+      "productionValidated": false
+    },
+    "packageBuild": {
+      "status": "PASS",
+      "path": "docs/evidence/text-capacity-package-build-2026-10-10.json",
+      "bazaarBuilt": true,
+      "providerBuilt": true,
+      "hostedValidated": false
+    },
+    "cronConsumptionProjectionScope": "Historical lower-bound estimate for accepted runtime 633e31e; current 1.1.0 adds availability health and capacity reporting. Re-measure current idle work before any separately approved schedule; no schedule is enabled."
   },
   "observedProduction": {
     "bazaar": {
@@ -365,7 +414,8 @@
         "BAZAAR_DYNAMIC_PREFIX": "b32da7ebcb6560466fbd47eed9024bb3956d73f6adec6fa97987c6eedc83193d",
         "BAZAAR_MARKET_FILE_PREFIX": "3ccd33edeae42bece622abca923bab3fef3682def5f329cff64e4f6d958cc265"
       },
-      "comparisonAgainstObservedFingerprints": "all-distinct"
+      "comparisonAgainstObservedFingerprints": "all-distinct",
+      "snapshot": "Allocation before optional seller account preparation; latest state is recorded separately in text-production-seller-profile evidence"
     },
     "nonSecretEnvironment": {
       "NEXT_PUBLIC_BAZAAR_MARKETPLACE": "true",
@@ -780,6 +830,13 @@
       "privateFiles": "disabled",
       "guardianSchedule": "absent",
       "effectiveRuntimeValidated": false
+    },
+    "mcpCandidate": {
+      "version": "1.1.0",
+      "tools": 35,
+      "connection": "/api/mcp",
+      "newTool": "report_market_capacity",
+      "hostedAccepted": false
     }
   },
   "provider": {
@@ -788,23 +845,27 @@
     "baseSourceDigest": "04ce8e8aeba348761a86e84a0123f1c490cd1ac96bb2f11f54b586a0a166de9b",
     "executionOrigin": {
       "type": "https-origin",
-      "status": "UNRESOLVED",
-      "value": null,
+      "status": "PERMANENT_ALIAS_VERIFIED_RUNTIME_PENDING",
+      "value": "https://ai-video-scriptwriter.vercel.app",
       "requiredBefore": "production-service-submission-review-activation",
-      "previewOriginNotAllowedAsPlaceholder": true
+      "previewOriginNotAllowedAsPlaceholder": true,
+      "sourceEvidence": "docs/evidence/text-provider-production-aliases-2026-10-10.json",
+      "newRuntimeAccepted": false
     },
     "workerOrigin": {
       "type": "https-origin",
-      "status": "UNRESOLVED",
-      "value": null,
-      "requiredBefore": "publication-or-cron-activation"
+      "status": "PERMANENT_ALIAS_VERIFIED_RUNTIME_PENDING",
+      "value": "https://ai-video-scriptwriter.vercel.app",
+      "requiredBefore": "publication-or-cron-activation",
+      "sourceEvidence": "docs/evidence/text-provider-production-aliases-2026-10-10.json",
+      "newRuntimeAccepted": false
     },
     "service": {
       "delivery": "text/plain",
       "network": "stellar:testnet",
       "algorithmic": true,
       "priceSelectedByProvider": true,
-      "status": "PRODUCTION_ACCOUNT_CARD_CONTROL_PROOF_REVIEW_AND_WALLET_PENDING",
+      "status": "FROZEN_CARD_PROFILE_PREPARATION_READY_CONTROL_REVIEW_ACTIVATION_PENDING",
       "previewCardMustNotBeCopiedAsActivatedProductionService": true
     },
     "nonSecretEnvironment": {
@@ -817,7 +878,7 @@
       "requireEffectiveSourceManifest": true,
       "applied": false,
       "note": "Do not apply the Next.js Bazaar deployment configuration to the Express project; preserve provider build/functions settings and omit its own cron.",
-      "effectiveSourceDigest": "dd1c88c37378116807a31369199b348ad0e2adad5db4427af2eb1573d14e2c5e"
+      "effectiveSourceDigest": "d4ee914bdee913e817c8a69c496a03ca0ca3c91457218536ed74e142ac783c51"
     },
     "environmentKeysRequiredAbsent": [
       "BAZAAR_HOSTED_SELLER_MCP_PROTECTION",
@@ -885,18 +946,18 @@
       "status": "PREPARED_LOCAL_NO_CRON",
       "sourceDirectory": ".vercel/text-production-provider-source",
       "baseSourceDigest": "04ce8e8aeba348761a86e84a0123f1c490cd1ac96bb2f11f54b586a0a166de9b",
-      "sourceDigest": "dd1c88c37378116807a31369199b348ad0e2adad5db4427af2eb1573d14e2c5e",
+      "sourceDigest": "d4ee914bdee913e817c8a69c496a03ca0ca3c91457218536ed74e142ac783c51",
       "runtimeFiles": 9,
       "files": [
         {
           "path": "seller/seller-hosted-handler.mjs",
-          "sha256": "7694d8f73887965bd0c79a0be1077484d8e49a98b9cd4ea624934820f1d19ad1",
-          "bytes": 5221
+          "sha256": "f8dccc1d9fb198896682296741b1fe6b1dc84a8626edc8107d234bb1f92ab07d",
+          "bytes": 5396
         },
         {
           "path": "seller/seller-hosted-tick.mjs",
-          "sha256": "c35a74c454cd03ab73d8e66f147263671f53ac3ba806387b3e15cf6450119419",
-          "bytes": 17715
+          "sha256": "350282d7d69e22f17a2f723e97e716513a5339e3fa73d9fa52b00b5ff197de8d",
+          "bytes": 19847
         },
         {
           "path": "seller/seller-redis-secret-store.mjs",
@@ -950,8 +1011,8 @@
         },
         {
           "path": "src/marketplace-routes.ts",
-          "sha256": "2dfa606e25edcbd267f606524bae75f6e6e5269f22a21384e8d3c732e4dff964",
-          "bytes": 2404
+          "sha256": "ef38d1f5160588df188a6dd66492bbefa9e4791a0ccad8a3cd1626e067c4d465",
+          "bytes": 2868
         },
         {
           "path": "src/engine/wpm-calculator.ts",
@@ -1000,12 +1061,33 @@
         }
       ],
       "changedFiles": [
+        "seller/seller-hosted-handler.mjs",
+        "seller/seller-hosted-tick.mjs",
+        "src/marketplace-routes.ts",
         "vercel.json"
       ],
       "credentialsCopied": false,
       "cronSchedules": [],
       "tickInvocations": 0,
-      "productionPublished": false
+      "productionPublished": false,
+      "sourceChanges": [
+        {
+          "path": "vercel.json",
+          "reason": "Remove automatic schedules; crons remains empty."
+        },
+        {
+          "path": "src/marketplace-routes.ts",
+          "reason": "Authenticated bounded Testnet availability GET; no product execution."
+        },
+        {
+          "path": "seller/seller-hosted-tick.mjs",
+          "reason": "Check provider availability and publish saved capacity reports; recover the same readiness intention without extending server lease."
+        },
+        {
+          "path": "seller/seller-hosted-handler.mjs",
+          "reason": "Keep production guard and deadline bounded; no new cron or public trigger."
+        }
+      ]
     },
     "prefixAllocation": {
       "status": "PREPARED_NOT_INITIALIZED",
@@ -1048,7 +1130,8 @@
       "credentialMaterialized": false,
       "scopeDenialsRequiredBeforeEnablement": true,
       "sourceEvidence": "docs/evidence/continuous-seller-access-review-2026-10-10.json"
-    }
+    },
+    "sellerProfileEvidence": "docs/evidence/text-production-seller-profile-prepared-2026-10-10.json"
   },
   "scheduling": {
     "bazaarCrons": [],
@@ -1089,7 +1172,12 @@
     "projectionIsNotBilledLuaConsumption": true,
     "projectedSellerIdleBillableCommandsPer30Days": 648000,
     "projectedSellerAndBazaarIdleCommandsPer30DaysAtLeast": 1373760,
-    "billableCommandProjectionIsNotInvoice": true
+    "billableCommandProjectionIsNotInvoice": true,
+    "sellerPendingOrders": 1,
+    "sellerAdmissionsPerUtcDay": 50,
+    "sellerLimitsSharedAcrossServices": true,
+    "sellerAvailabilityLeaseSeconds": 360,
+    "sellerUnpaidReservationSeconds": 300
   },
   "publicPerimeter": {
     "status": "PREPARE_ONLY_NOT_APPLIED",
@@ -1098,7 +1186,10 @@
     "preservePrivateAuthentication": true,
     "preserveExistingPreviewProtection": true,
     "doNotAllowAllApiOrWildcardDomains": true,
-    "finalExactRuleAndExternalClientAcceptanceRequired": true
+    "finalExactRuleAndExternalClientAcceptanceRequired": true,
+    "exactTemplate": "docs/TEXT_DEMO_PUBLIC_WAF_PROPOSAL.json",
+    "localEvidence": "docs/evidence/text-demo-qr-local-2026-10-10.json",
+    "rootQrRedirect": "/demo"
   },
   "applicationPlan": [
     {
@@ -1159,7 +1250,7 @@
     "providerExecutions": 0,
     "secretValuesReadOrCopiedScope": "Vercel metadata readback and production package preparation only; no Vercel secret value exported or materialized",
     "existingLocalEncryptedRedisAccessUsed": "Existing CurrentUser DPAPI validation profile decrypted in memory for isolated synthetic Redis tests; no credential copied into release artifacts",
-    "scope": "Production configuration and release effects; isolated synthetic Redis validation is recorded separately",
+    "scope": "Release configuration snapshot before optional isolated seller profile preparation; local preparation effects are recorded separately in the seller profile evidence",
     "syntheticRedisAccountsCreatedAndRemoved": 2
   }
 }

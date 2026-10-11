@@ -1,0 +1,132 @@
+{
+  "version": 1,
+  "environment": "local",
+  "startedAt": "2026-10-11T02:50:13.266Z",
+  "checks": [
+    {
+      "script": "test-demo-routes",
+      "status": "PASS"
+    },
+    {
+      "script": "test-demo-configuration",
+      "status": "PASS"
+    },
+    {
+      "script": "test-demo-wallet",
+      "status": "PASS"
+    },
+    {
+      "script": "test-mcp-stateless-transport",
+      "status": "PASS"
+    },
+    {
+      "script": "test-workspace-retention",
+      "status": "PASS"
+    },
+    {
+      "script": "test-workspace-global-quota",
+      "status": "PASS"
+    },
+    {
+      "script": "test-open-workspace-core",
+      "status": "PASS"
+    },
+    {
+      "script": "test-open-market-mcp",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-card-contract",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-capacity",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-files",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-file-retention",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-guardian-cron",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-purchase-admission",
+      "status": "PASS"
+    },
+    {
+      "script": "test-operational-file-recovery",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-recovery",
+      "status": "PASS"
+    },
+    {
+      "script": "test-marketplace-x402",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-file-client",
+      "status": "PASS"
+    },
+    {
+      "script": "test-buyer-portable-runtime",
+      "status": "PASS"
+    },
+    {
+      "script": "test-external-seller-kit",
+      "status": "PASS"
+    },
+    {
+      "script": "test-buyer-execution",
+      "status": "PASS"
+    },
+    {
+      "script": "test-no-hosted-payment-fixtures",
+      "status": "PASS"
+    },
+    {
+      "script": "test-deliverables",
+      "status": "PASS"
+    },
+    {
+      "script": "test-deliverable-viewers",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-seller-capacity",
+      "status": "PASS"
+    },
+    {
+      "script": "test-seller-hosted-tick",
+      "status": "PASS"
+    },
+    {
+      "script": "test-seller-hosted-handler",
+      "status": "PASS"
+    },
+    {
+      "script": "test-demo-qr-boundary",
+      "status": "PASS"
+    },
+    {
+      "script": "test-market-catalog-availability",
+      "status": "PASS"
+    },
+    {
+      "script": "test-text-demo-waf-proposal",
+      "status": "PASS"
+    }
+  ],
+  "networkPayments": 0,
+  "productionValidated": false,
+  "candidate": "aedf2feecd35c4cbff70c7eb42913ed1e521b513",
+  "completedAt": "2026-10-11T02:50:42.392Z",
+  "ok": true
+}

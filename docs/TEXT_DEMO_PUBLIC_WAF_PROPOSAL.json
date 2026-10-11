@@ -1,0 +1,495 @@
+{
+  "version": 1,
+  "status": "DRAFT_NOT_APPLIED",
+  "approved": false,
+  "remoteApplied": false,
+  "purpose": "Exempt only the text-demo production host, route and method from the existing private acceptance deny rule. Keep the rule denying other traffic; native authorization, quota, expiry and size gates remain required.",
+  "sourceEvidence": "docs/evidence/text-production-metadata-final-2026-10-10.json",
+  "expectedSourceConfigurationSha256": "45080024129ef4d529fd4120022db778f4721970e68892a22af3c0f6c7cb5a8a",
+  "sourceRuleCount": 1,
+  "sourceRuleId": "rule_bazaar_acceptance_egress_only_iPEa7V",
+  "sourceRuleSanitized": {
+    "active": true,
+    "action": "deny",
+    "conditionGroup": [
+      {
+        "conditions": [
+          {
+            "type": "ip_address",
+            "op": "eq",
+            "neg": true,
+            "value": "PRIVATE_LOCAL_IP"
+          },
+          {
+            "type": "host",
+            "op": "inc",
+            "neg": true,
+            "value": [
+              "stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+              "stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app"
+            ]
+          }
+        ]
+      },
+      {
+        "conditions": [
+          {
+            "type": "ip_address",
+            "op": "eq",
+            "neg": true,
+            "value": "PRIVATE_LOCAL_IP"
+          },
+          {
+            "type": "path",
+            "op": "eq",
+            "neg": true,
+            "value": "/api/mcp"
+          }
+        ]
+      }
+    ]
+  },
+  "exceptionPredicate": {
+    "conditionGroup": [
+      {
+        "conditions": [
+          {
+            "type": "host",
+            "op": "eq",
+            "value": "bazaar.browns.studio"
+          },
+          {
+            "type": "environment",
+            "op": "eq",
+            "value": "production"
+          },
+          {
+            "type": "method",
+            "op": "re",
+            "value": "^(?:GET|HEAD)$"
+          },
+          {
+            "type": "path",
+            "op": "re",
+            "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+)$"
+          }
+        ]
+      },
+      {
+        "conditions": [
+          {
+            "type": "host",
+            "op": "eq",
+            "value": "bazaar.browns.studio"
+          },
+          {
+            "type": "environment",
+            "op": "eq",
+            "value": "production"
+          },
+          {
+            "type": "method",
+            "op": "eq",
+            "value": "GET"
+          },
+          {
+            "type": "path",
+            "op": "re",
+            "value": "^(?:/api/mcp|/api/market/catalog|/api/account/identity|/api/account/queries|/api/operations|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/deliveries)$"
+          }
+        ]
+      },
+      {
+        "conditions": [
+          {
+            "type": "host",
+            "op": "eq",
+            "value": "bazaar.browns.studio"
+          },
+          {
+            "type": "environment",
+            "op": "eq",
+            "value": "production"
+          },
+          {
+            "type": "method",
+            "op": "eq",
+            "value": "POST"
+          },
+          {
+            "type": "path",
+            "op": "re",
+            "value": "^(?:/api/mcp|/api/workspaces|/api/workspaces/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/access|/api/account/wallet/(?:challenge|complete)|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/capacity|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/(?:x402|deliveries|deliveries/confirm))$"
+          }
+        ]
+      }
+    ]
+  },
+  "requestTemplate": {
+    "method": "PATCH",
+    "url": "https://api.vercel.com/v1/security/firewall/config",
+    "query": {
+      "projectId": "prj_90kScJhUr9FlOY4LAmvb5Xg1mnS3"
+    },
+    "body": {
+      "action": "rules.update",
+      "id": "rule_bazaar_acceptance_egress_only_iPEa7V",
+      "value": {
+        "active": true,
+        "name": "Bazaar acceptance boundary and text demo",
+        "description": "Preserve private preview acceptance, allow exact production text-demo routes, retain operator and other route denies.",
+        "conditionGroup": [
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "host",
+                "op": "inc",
+                "neg": true,
+                "value": [
+                  "stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+                  "stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app"
+                ]
+              },
+              {
+                "type": "host",
+                "op": "eq",
+                "neg": true,
+                "value": "bazaar.browns.studio"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "host",
+                "op": "inc",
+                "neg": true,
+                "value": [
+                  "stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+                  "stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app"
+                ]
+              },
+              {
+                "type": "environment",
+                "op": "eq",
+                "neg": true,
+                "value": "production"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "host",
+                "op": "inc",
+                "neg": true,
+                "value": [
+                  "stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+                  "stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app"
+                ]
+              },
+              {
+                "type": "method",
+                "op": "re",
+                "neg": true,
+                "value": "^(?:GET|HEAD|POST)$"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "host",
+                "op": "inc",
+                "neg": true,
+                "value": [
+                  "stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+                  "stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app"
+                ]
+              },
+              {
+                "type": "method",
+                "op": "eq",
+                "value": "HEAD"
+              },
+              {
+                "type": "path",
+                "op": "re",
+                "neg": true,
+                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+)$"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "host",
+                "op": "inc",
+                "neg": true,
+                "value": [
+                  "stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+                  "stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app"
+                ]
+              },
+              {
+                "type": "method",
+                "op": "eq",
+                "value": "GET"
+              },
+              {
+                "type": "path",
+                "op": "re",
+                "neg": true,
+                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+|/api/mcp|/api/market/catalog|/api/account/identity|/api/account/queries|/api/operations|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/deliveries)$"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "host",
+                "op": "inc",
+                "neg": true,
+                "value": [
+                  "stellar-bazaar-x402-6jo39edlm-cabscryptocontacto-6028s-projects.vercel.app",
+                  "stellar-bazaar-x402-ezcuo3lgv-cabscryptocontacto-6028s-projects.vercel.app"
+                ]
+              },
+              {
+                "type": "method",
+                "op": "eq",
+                "value": "POST"
+              },
+              {
+                "type": "path",
+                "op": "re",
+                "neg": true,
+                "value": "^(?:/api/mcp|/api/workspaces|/api/workspaces/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/access|/api/account/wallet/(?:challenge|complete)|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/capacity|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/(?:x402|deliveries|deliveries/confirm))$"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "path",
+                "op": "eq",
+                "neg": true,
+                "value": "/api/mcp"
+              },
+              {
+                "type": "host",
+                "op": "eq",
+                "neg": true,
+                "value": "bazaar.browns.studio"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "path",
+                "op": "eq",
+                "neg": true,
+                "value": "/api/mcp"
+              },
+              {
+                "type": "environment",
+                "op": "eq",
+                "neg": true,
+                "value": "production"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "path",
+                "op": "eq",
+                "neg": true,
+                "value": "/api/mcp"
+              },
+              {
+                "type": "method",
+                "op": "re",
+                "neg": true,
+                "value": "^(?:GET|HEAD|POST)$"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "path",
+                "op": "eq",
+                "neg": true,
+                "value": "/api/mcp"
+              },
+              {
+                "type": "method",
+                "op": "eq",
+                "value": "HEAD"
+              },
+              {
+                "type": "path",
+                "op": "re",
+                "neg": true,
+                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+)$"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "path",
+                "op": "eq",
+                "neg": true,
+                "value": "/api/mcp"
+              },
+              {
+                "type": "method",
+                "op": "eq",
+                "value": "GET"
+              },
+              {
+                "type": "path",
+                "op": "re",
+                "neg": true,
+                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+|/api/mcp|/api/market/catalog|/api/account/identity|/api/account/queries|/api/operations|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/deliveries)$"
+              }
+            ]
+          },
+          {
+            "conditions": [
+              {
+                "type": "ip_address",
+                "op": "eq",
+                "neg": true,
+                "value": "PRIVATE_LOCAL_IP"
+              },
+              {
+                "type": "path",
+                "op": "eq",
+                "neg": true,
+                "value": "/api/mcp"
+              },
+              {
+                "type": "method",
+                "op": "eq",
+                "value": "POST"
+              },
+              {
+                "type": "path",
+                "op": "re",
+                "neg": true,
+                "value": "^(?:/api/mcp|/api/workspaces|/api/workspaces/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/access|/api/account/wallet/(?:challenge|complete)|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/capacity|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/(?:x402|deliveries|deliveries/confirm))$"
+              }
+            ]
+          }
+        ],
+        "action": {
+          "mitigate": {
+            "action": "deny"
+          }
+        }
+      }
+    }
+  },
+  "semantics": "newDeny = existingDeny AND NOT productionTextDemoException; AND within a condition group, OR between groups. No bypass rule is added.",
+  "placeholder": "PRIVATE_LOCAL_IP is a public placeholder. A future authorized operation must read the current configuration and replace every occurrence with exactly the existing condition value, without recording it in public files or logs.",
+  "requiredBeforeApplication": [
+    "Obtain explicit authorization for publication and the firewall change. This file grants neither.",
+    "Read the current complete firewall configuration. Abort if source rule identity, active deny, rule count or sanitized conditions changed; prepare a new reviewed proposal.",
+    "Retain the existing private IP value and two preview hosts; never infer a new IP or remove another rule.",
+    "Verify the API accepts twelve condition groups and their types before considering application successful.",
+    "Apply only this existing rule update and read back conditions. Retain deployment protection, managed security settings and native API authorization.",
+    "Validate from an external client that allowed paths load, private unauthenticated requests fail, and operator/admin/media/test routes remain blocked."
+  ],
+  "exclusions": [
+    "/admin",
+    "/api/admin/*",
+    "/api/market/review",
+    "/api/market/control",
+    "/api/market/guardian",
+    "/api/market/guardian/tick",
+    "/api/market/operations-budget",
+    "/market-operations",
+    "/api/buyer-execution/reference",
+    "/api/deliveries/uploads",
+    "/api/x402/demo-pay",
+    "/cover.jpg",
+    "/demo-deliveries/*",
+    "/images/*",
+    "/icons/*",
+    "/fonts/*"
+  ],
+  "sources": [
+    "https://vercel.com/docs/rest-api/security/update-firewall-configuration",
+    "https://vercel.com/docs/vercel-firewall/vercel-waf/rule-configuration"
+  ]
+}

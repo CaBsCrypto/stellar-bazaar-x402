@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "observedAt": "2026-10-11T02:57:58.684Z",
+  "origin": "https://stellar-bazaar-x402-km9ke18lk-cabscryptocontacto-6028s-projects.vercel.app",
+  "checks": [
+    {
+      "path": "/",
+      "status": 200,
+      "redirect": null,
+      "mcpVersion": null,
+      "toolCount": null,
+      "code": null,
+      "serviceCount": null
+    },
+    {
+      "path": "/demo",
+      "status": 200,
+      "redirect": null,
+      "mcpVersion": null,
+      "toolCount": null,
+      "code": null,
+      "serviceCount": null
+    },
+    {
+      "path": "/api/mcp",
+      "status": 200,
+      "redirect": null,
+      "mcpVersion": "1.1.0",
+      "toolCount": 35,
+      "code": null,
+      "serviceCount": null
+    },
+    {
+      "path": "/api/market/catalog",
+      "status": 503,
+      "redirect": null,
+      "mcpVersion": null,
+      "toolCount": null,
+      "code": null
+    }
+  ],
+  "requests": 4,
+  "newPayments": 0,
+  "newAccounts": 0,
+  "newOrders": 0,
+  "productionPublished": false,
+  "cronActivated": false
+}
