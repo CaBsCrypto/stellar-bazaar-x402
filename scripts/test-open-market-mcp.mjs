@@ -131,6 +131,9 @@ try {
   const found=await tool('search_services',{query:'text',limit:5});assert.equal(found.results.length,5);assert.ok(found.nextCursor);assert.ok(found.results.every(r=>r.status==='activated'&&r.cardHash===computeCanonicalServiceCardHash(r.resource)));
   assert.equal((await tool('get_service',{id:'swap-risk-quote'})).code,'RESOURCE_NOT_FOUND');
   const capabilities=await tool('get_bazaar_capabilities');assert.equal(capabilities.workspace.payments,'x402-stellar-exact-v2');assert.equal(capabilities.architecture.settlementIdentity.issuer,USDC_TESTNET_PAYMENT_IDENTITY.issuer);assert.equal(JSON.stringify(capabilities).includes('native-XLM-testnet-direct'),false);
+  const externalProviderInstructions=client.getInstructions();
+  for(const required of ['report_market_capacity','observedAt','ready:false','generic CLI/watch','six-minute lease'])assert.ok(externalProviderInstructions.includes(required),'initialize must explain seller availability without private operator instructions: '+required);
+  assert.equal(externalProviderInstructions,capabilities.demo.instructions,'initialize and effective capabilities describe the same provider flow');
   assert.equal(capabilities.workspace.humanView,'/history','An external marketplace agent must send its human to private orders and publication consent');
   assert.equal(capabilities.providerOnboarding.guide,'/SELLER_AGENT_KIT.md');
   assert.equal(capabilities.demo.walletRequiredForNewOrders,false);

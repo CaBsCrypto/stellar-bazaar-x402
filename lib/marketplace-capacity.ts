@@ -8,12 +8,16 @@ import {validateMarketX402State,type MarketX402State,type MarketX402Settlement} 
 import {deliveryStorage} from './delivery-contract.ts';
 import {MARKET_FILE_METADATA_BYTES,maximumMarketFileCleanupBytes,MARKET_FILE_CLEANUP_CAPACITY_BYTES} from './market-file-delivery-schema.ts';
 import {maximumMarketRecoveryBytes,MARKET_RECOVERY_CAPACITY_BYTES} from './market-retention-schema.ts';
-import {assertSellerReservation,commitSellerReservation} from './market-seller-capacity.ts';
+import {assertSellerReservation,commitSellerReservation,type SellerCapacity} from './market-seller-capacity.ts';
 
 export const MARKET_CAPACITY_BYTES=524288;
 export const SETTLEMENT_CAPACITY_BYTES=131072;
 export const RESERVATION_CAPACITY_BYTES=65536;
-export type MarketCommitGuard={keys:string[];values:(string|null)[]};
+export type MarketCommitGuard={keys:string[];values:(string|null)[];admissionExpiresAt?:number};
+/** A lease cannot admit a new payment beyond its UTC day or unpaid seat. */
+export function sellerAdmissionExpiresAt(capacity:SellerCapacity,order:MarketOrder){
+ return Math.min(Date.parse(capacity.leaseExpiresAt),Date.parse(capacity.day+'T00:00:00.000Z')+86400000,...(order.sellerReservation&&!order.sellerReservation.committed?[Date.parse(order.sellerReservation.expiresAt)]:[]));
+}
 type Entry={operationId:string;binding:string;marketMaximumBytes:number;settlementMaximumBytes:number};
 const ledgerSchema=z.object({version:z.literal(1),revision:z.string().uuid(),entries:z.array(z.object({operationId:z.string().uuid(),binding:z.string().regex(/^[a-f0-9]{64}$/),marketMaximumBytes:z.number().int().positive(),settlementMaximumBytes:z.number().int().nonnegative()}).strict())}).strict();
 type Ledger=z.infer<typeof ledgerSchema>;
@@ -120,6 +124,11 @@ if ARGV[12]~='unchecked' then
  local guard=redis.call('GET',KEYS[5])
  if ARGV[12]=='missing' then if guard then return 0 end else if not guard or guard~=ARGV[13] then return 0 end end
 end
+if ARGV[14] and ARGV[14]~='' then
+ local deadline=tonumber(ARGV[14]); if not deadline or deadline<=0 then return -2 end
+ local clock=redis.call('TIME')
+ if tonumber(clock[1])*1000+math.floor(tonumber(clock[2])/1000)>=deadline then return -1 end
+end
 if ARGV[7]~='' then redis.call('SET',KEYS[1],ARGV[7]) end
 if ARGV[8]~='' then redis.call('SET',KEYS[2],ARGV[8]) end
 if ARGV[9]~='' then redis.call('SET',KEYS[3],ARGV[9]) end
@@ -127,12 +136,12 @@ return 1`;
 
 export async function commitCapacityStore(redis:MarketRedis,prefix:string,kind:'market'|'settlement',expectedRaw:string|null,nextRaw:string|null,guard?:MarketCommitGuard){
  const marketKey=prefix+':state',settlementKey=prefix+':x402-settlements:state',ledgerKey=capacityReservationKey(prefix);
- if(guard&&(guard.keys.length!==guard.values.length||guard.keys.length>2||guard.keys.some(k=>typeof k!=='string'||!k||k.length>256)||guard.values.some(v=>v!==null&&(typeof v!=='string'||Buffer.byteLength(v)>1048576))))throw new WorkspaceError('INVALID_COMMIT_GUARD');
+ if(guard&&(guard.keys.length!==guard.values.length||guard.keys.length>2||guard.keys.some(k=>typeof k!=='string'||!k||k.length>256)||guard.values.some(v=>v!==null&&(typeof v!=='string'||Buffer.byteLength(v)>1048576))||guard.admissionExpiresAt!==undefined&&(!Number.isSafeInteger(guard.admissionExpiresAt)||guard.admissionExpiresAt<=0)))throw new WorkspaceError('INVALID_COMMIT_GUARD');
  const other=await redis.get(kind==='market'?settlementKey:marketKey),storedLedger=await redis.get(ledgerKey);
  if((other!==null&&typeof other!=='string')||(storedLedger!==null&&typeof storedLedger!=='string'))throw new WorkspaceError('CAPACITY_STATE_UNAVAILABLE');
  const oldMarket=kind==='market'?expectedRaw:other as string|null,oldSettlement=kind==='settlement'?expectedRaw:other as string|null;
  let newMarket=kind==='market'?(nextRaw??oldMarket):oldMarket;const newSettlement=kind==='settlement'?(nextRaw??oldSettlement):oldSettlement;
- const before=snapshot(oldMarket,oldSettlement),after=snapshot(newMarket,newSettlement);
+ const before=snapshot(oldMarket,oldSettlement),after=snapshot(newMarket,newSettlement);let admissionExpiresAt=guard?.admissionExpiresAt;
  if(kind==='settlement'){
   let changed=false;
   for(const record of after.settlements.records){
@@ -140,7 +149,8 @@ export async function commitCapacityStore(redis:MarketRedis,prefix:string,kind:'
    if(old?.phase===record.phase||!['challenged','verifying','settling'].includes(record.phase))continue;
    if(before.market.paused)throw new WorkspaceError('PURCHASES_PAUSED',503);
    const order=after.market.orders.find(o=>o.operationId===record.operationId);if(!order)throw new WorkspaceError('SELLER_UNAVAILABLE',503);
-   if(record.phase==='verifying'){commitSellerReservation(after.market,order);changed=true;}else assertSellerReservation(after.market,order);
+   const capacity=assertSellerReservation(after.market,order),expiresAt=sellerAdmissionExpiresAt(capacity,order);admissionExpiresAt=Math.min(admissionExpiresAt??expiresAt,expiresAt);
+   if(record.phase==='verifying'){commitSellerReservation(after.market,order);changed=true;}
   }
   if(changed){validateMarketState(after.market);newMarket=JSON.stringify({version:1,revision:randomUUID(),state:after.market});}
  }
@@ -150,6 +160,9 @@ export async function commitCapacityStore(redis:MarketRedis,prefix:string,kind:'
  const keys=[marketKey,settlementKey,ledgerKey,...(guard?.keys??[])];
  const args=[...expected(oldMarket),...expected(oldSettlement),...expected(storedLedger as string|null),newMarket!==oldMarket?(newMarket??''):'',kind==='settlement'?(nextRaw??''):'',projected.ledgerRaw!==storedLedger?(projected.ledgerRaw??''):''];
  for(let i=0;i<2;i++)args.push(...(guard&&i<guard.keys.length?expected(guard.values[i]):['unchecked','']));
- if(await redis.eval(MARKET_CAPACITY_CAS,keys,args)!==1)throw new WorkspaceError('CAPACITY_WRITE_UNCONFIRMED',409);
+ args.push(admissionExpiresAt===undefined?'':String(admissionExpiresAt));
+ const result=await redis.eval(MARKET_CAPACITY_CAS,keys,args);
+ if(result===-1)throw new WorkspaceError('SELLER_UNAVAILABLE',503,60);
+ if(result!==1)throw new WorkspaceError('CAPACITY_WRITE_UNCONFIRMED',409);
  return projected;
 }

@@ -16,6 +16,7 @@ const publicPackageFiles=['server.ts','seller/seller-hosted-handler.d.mts','pack
 const allowedManifestFiles=new Set([...allowedSources,...publicPackageFiles]);
 const dependencies={'@modelcontextprotocol/sdk':'1.30.0','@stellar/stellar-sdk':'14.4.2',cors:'^2.8.5',dotenv:'^16.4.7',express:'^4.21.2'};
 const defaultStage=resolve(repo,'../provider-guionista-recovered/hosted-seller-preview-candidate');
+const productionStage=resolve(repo,'.vercel/text-production-provider-source');
 const workspace=resolve(repo,'..');
 const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 const contained=(base,path)=>{const part=relative(base,path);return part!==''&&!part.startsWith('..')&&!isAbsolute(part);};
@@ -26,7 +27,7 @@ const json=async path=>JSON.parse(await readFile(path,'utf8'));
  * Run: node --experimental-strip-types scripts/test-hosted-seller-provider-package.mjs [stage]
  */
 export async function testHostedSellerProviderPackage(stagePath=defaultStage){
- const stage=resolve(stagePath);let checks=0;
+ const stage=resolve(stagePath),productionPreparation=stage===productionStage;let checks=0,expressRouterChecks=0;
  assert.ok(contained(workspace,stage),'Stage must be inside the owned workspace');
  // Windows sandboxing can forbid realpath while allowing lstat. Check every
  // directory component from the workspace and reject symlinks/junctions before
@@ -43,9 +44,17 @@ export async function testHostedSellerProviderPackage(stagePath=defaultStage){
    assert.ok(directory?info.isDirectory():info.isFile(),'Source must be a regular file or directory');
   }
  }
- await assertRegularPath(stage,true);await assertRegularPath(join(stage,'source-manifest.json'));checks++;
- const manifest=await json(join(stage,'source-manifest.json'));
- assert.ok(['PREPARED_LOCAL','PREPARED_AND_COMPILED_LOCAL'].includes(manifest.status));assert.equal(manifest.credentialsCopied,false);assert.equal(manifest.payments,0);assert.equal(manifest.productionPublished,false);assert.equal(manifest.runtimeFiles,runtimeFiles.length);checks++;
+ await assertRegularPath(stage,true);
+ let manifest;
+ if(productionPreparation){
+  const releasePath=join(repo,'docs/release/text-production-manifest-2026-10-10.json');await assertRegularPath(releasePath);const release=await json(releasePath);manifest=release.provider.effectiveSourceManifest;
+  assert.equal(manifest.status,'PREPARED_LOCAL_NO_CRON');assert.equal(resolve(repo,manifest.sourceDirectory),stage);assert.equal(manifest.tickInvocations,0);assert.deepEqual(manifest.cronSchedules,[]);assert.equal(release.provider.deploymentOverrides.effectiveSourceDigest,manifest.sourceDigest);assert.equal(release.sources.providerEffectiveProductionSourceDigest.value,manifest.sourceDigest);
+ }else{
+  await assertRegularPath(join(stage,'source-manifest.json'));manifest=await json(join(stage,'source-manifest.json'));
+  assert.ok(['PREPARED_LOCAL','PREPARED_AND_COMPILED_LOCAL'].includes(manifest.status));assert.equal(manifest.payments,0);
+ }
+ checks++;
+ assert.equal(manifest.credentialsCopied,false);assert.equal(manifest.productionPublished,false);assert.equal(manifest.runtimeFiles,runtimeFiles.length);checks++;
  assert.ok(Array.isArray(manifest.files));assert.equal(manifest.files.length,allowedManifestFiles.size);
  assert.equal(new Set(manifest.files.map(value=>value.path)).size,allowedManifestFiles.size);checks++;
  assert.equal(manifest.sourceDigest,digest(JSON.stringify(manifest.files)),'Manifest aggregate hash');checks++;
@@ -55,7 +64,9 @@ export async function testHostedSellerProviderPackage(stagePath=defaultStage){
   const path=resolve(stage,entry.path);assert.ok(contained(stage,path));
   await assertRegularPath(path);
   const bytes=await readFile(path);assert.equal(bytes.length,entry.bytes,entry.path+' size');assert.equal(digest(bytes),entry.sha256,entry.path+' hash');if(allowedSources.has(entry.path)||entry.path==='server.ts')sourceTexts.set(entry.path,bytes.toString('utf8'));
-  if(entry.path.startsWith('seller/')&&runtimeFiles.includes(entry.path.slice(7)))assert.equal(digest(await readFile(join(repo,'examples',entry.path.slice(7)))),entry.sha256,entry.path+' must match the reviewed runtime');
+  // The accepted preview is pinned to its historical manifest. Only the
+  // explicitly selected production copy must equal today's reviewed runtime.
+  if(productionPreparation&&entry.path.startsWith('seller/')&&runtimeFiles.includes(entry.path.slice(7)))assert.equal(digest(await readFile(join(repo,'examples',entry.path.slice(7)))),entry.sha256,entry.path+' must match the reviewed runtime');
   checks++;
  }
  // Inspect directory entries without reading an unexpected file or profile.
@@ -71,7 +82,9 @@ export async function testHostedSellerProviderPackage(stagePath=defaultStage){
  const pkg=await json(join(stage,'package.json'));
  assert.equal(pkg.name,'ai-video-scriptwriter');assert.equal(pkg.private,true);assert.equal(pkg.type,'module');assert.equal(pkg.engines?.node,'24.x');assert.deepEqual(pkg.scripts,{build:'tsc'});assert.deepEqual(pkg.dependencies,dependencies);checks++;
  const vercel=await json(join(stage,'vercel.json'));
- assert.deepEqual(vercel.crons,[{path:'/api/bazaar/seller/tick',schedule:'*/5 * * * *'}]);assert.equal(vercel.functions?.['server.ts']?.maxDuration,60);assert.equal(manifest.cron.path,vercel.crons[0].path);assert.equal(manifest.cron.schedule,vercel.crons[0].schedule);assert.equal(manifest.cron.previewAutomatic,false);checks++;
+ if(productionPreparation)assert.deepEqual(vercel.crons,[],'Production preparation must not schedule the worker');
+ else{assert.deepEqual(vercel.crons,[{path:'/api/bazaar/seller/tick',schedule:'*/5 * * * *'}]);assert.equal(manifest.cron.path,vercel.crons[0].path);assert.equal(manifest.cron.schedule,vercel.crons[0].schedule);assert.equal(manifest.cron.previewAutomatic,false);}
+ assert.equal(vercel.functions?.['server.ts']?.maxDuration,60);checks++;
  const ignore=await readFile(join(stage,'.vercelignore'),'utf8');
  for(const rule of ['**/.env','**/.env.*','**/.vercel','**/.git','**/tests','**/fixtures','**/*.key','**/*.pem','**/*.dpapi','**/*secrets*.json','**/*credentials*.json'])assert.ok(ignore.split(/\r?\n/).includes(rule),'Missing deployment exclusion');checks++;
  const server=await readFile(join(stage,'server.ts'),'utf8');sourceTexts.set('server.ts',server);
@@ -103,14 +116,14 @@ export async function testHostedSellerProviderPackage(stagePath=defaultStage){
   }
   return nextResolve(specifier,context);
  }});
- let attemptedExternalRequests=0;const previousFetch=globalThis.fetch;
+ let attemptedExternalRequests=0;const previousFetch=globalThis.fetch,previousEnvironment={...process.env};
  globalThis.fetch=async()=>{attemptedExternalRequests++;throw Error('TEST_EXTERNAL_TRANSPORT_DENIED');};
  // The test runs in its own process. All endpoint effects are disabled before
  // importing source, regardless of variables inherited from the caller.
  process.env.CRON_SECRET='c'.repeat(43);
  process.env.BAZAAR_HOSTED_SELLER_ENABLED='false';
  process.env.BAZAAR_MARKETPLACE_TEXT_ENABLED='false';
- process.env.VERCEL='1';process.env.VERCEL_URL='synthetic-provider.vercel.app';
+ process.env.VERCEL='1';process.env.VERCEL_ENV=productionPreparation?'production':'preview';process.env.VERCEL_URL='synthetic-provider.vercel.app';
  try{
   const {app}=await import(pathToFileURL(join(stage,'server.ts')).href);
   async function invoke(method,path,headers={}){
@@ -132,9 +145,19 @@ export async function testHostedSellerProviderPackage(stagePath=defaultStage){
   assert.equal((await invoke('GET','/health')).status,200);checks++;
   assert.equal((await invoke('POST','/v1/marketplace-text')).status,503);checks++;
   assert.equal((await invoke('POST','/api/bazaar/seller/tick')).status,404);checks++;
+  expressRouterChecks+=8;
+  if(productionPreparation){
+   const health='/v1/marketplace-text/availability',providerToken='p'.repeat(43),providerAuth={authorization:'Bearer '+providerToken};
+   const disabledHealth=await invoke('GET',health,providerAuth);assert.equal(disabledHealth.status,503);assert.equal(disabledHealth.body.error.code,'PRODUCT_DISABLED');checks++;expressRouterChecks++;
+   process.env.BAZAAR_MARKETPLACE_TEXT_ENABLED='true';process.env.BAZAAR_MARKETPLACE_WORKER_TOKEN_SHA256=digest(providerToken);
+   for(const authorization of [undefined,'Bearer wrong','Bearer '+'x'.repeat(43)]){const denied=await invoke('GET',health,authorization?{authorization}:{});assert.equal(denied.status,401);assert.equal(denied.body.error.code,'UNAUTHORIZED');checks++;expressRouterChecks++;}
+   const ready=await invoke('GET',health,providerAuth);assert.equal(ready.status,200);assert.deepEqual(ready.body,{ready:true,network:'stellar:testnet'});assert.equal(ready.headers['cache-control'],'private, no-store');assert.ok(!JSON.stringify(ready).includes(providerToken));checks++;expressRouterChecks++;
+   for(const [method,path,headers,status]of [['GET',health+'?input=arbitrary',providerAuth,400],['GET',health,{...providerAuth,'content-length':'1'},400],['GET',health,{...providerAuth,'transfer-encoding':'chunked'},400],['HEAD',health,providerAuth,405],['POST',health,providerAuth,404]]){assert.equal((await invoke(method,path,headers)).status,status);checks++;expressRouterChecks++;}
+   assert.equal((await invoke('POST','/v1/marketplace-text')).status,401);checks++;expressRouterChecks++;
+  }
   assert.equal(attemptedExternalRequests,0);
- }finally{globalThis.fetch=previousFetch;hook.deregister();}
- return {status:'PASS',checks,expressRouterChecks:8,manifestEntries:manifest.files.length,sourceDigest:manifest.sourceDigest,reviewedRuntimeFiles:runtimeFiles.length,typescriptSourceLoaded:true,socketsOpened:0,externalRequests:attemptedExternalRequests,redisWrites:0,providerExecutions:0,payments:0,productionPublished:false};
+ }finally{globalThis.fetch=previousFetch;hook.deregister();for(const name of Object.keys(process.env))if(!(name in previousEnvironment))delete process.env[name];Object.assign(process.env,previousEnvironment);}
+ return {status:'PASS',checks,stage:productionPreparation?'production-preparation':'historical-preview',runtimeComparison:productionPreparation?'current-reviewed-runtime':'historical-manifest',expressRouterChecks,manifestEntries:manifest.files.length,sourceDigest:manifest.sourceDigest,reviewedRuntimeFiles:runtimeFiles.length,typescriptSourceLoaded:true,socketsOpened:0,externalRequests:attemptedExternalRequests,redisWrites:0,providerExecutions:0,payments:0,productionPublished:false};
 }
 
 if(process.argv[1]&&resolve(process.argv[1])===fileURLToPath(import.meta.url)){

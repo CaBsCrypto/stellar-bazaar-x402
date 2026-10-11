@@ -6,7 +6,8 @@ import {z} from 'zod';
 import {canonical,sha} from './marketplace-identity.ts';
 import {configuredMarketStore,type MarketOrder} from './marketplace-store.ts';
 import {readMarketOrder,readMarketRecovery,assertMarketEnabled,assertMarketPurchaseAdmission,sellerPaymentGuard} from './marketplace.ts';
-import type {MarketCommitGuard} from './marketplace-capacity.ts';
+import {sellerAdmissionExpiresAt,type MarketCommitGuard} from './marketplace-capacity.ts';
+import {assertSellerReservation} from './market-seller-capacity.ts';
 import {isCanonicalUsdcTestnet} from './payment-assets.ts';
 import {decimalToAtomic} from './operation-history-client.ts';
 import {WorkspaceError,type WorkspacePrincipal} from './workspace-types.ts';
@@ -105,6 +106,15 @@ function assertRecordBinding(record:MarketX402Settlement,o:MarketOrder){
 async function boundRecord(store:MarketX402Store,o:MarketOrder){const record=await store.transact(s=>s.records.find(r=>r.operationId===o.operationId));if(!record)throw new WorkspaceError('X402_SETTLEMENT_BINDING_MISMATCH',409);assertRecordBinding(record,o);return record;}
 async function updateRecord(store:MarketX402Store,o:MarketOrder,attemptId:string,change:(r:MarketX402Settlement)=>void,guard?:MarketCommitGuard){return store.transact(s=>{const r=s.records.find(v=>v.operationId===o.operationId);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.attemptId!==attemptId)throw new WorkspaceError('OPERATION_CONFLICT',409);change(r);r.updatedAt=new Date().toISOString();return r;},guard);}
 async function releaseRejectedSeat(o:MarketOrder,attemptId:string){await configuredMarketStore().transact(s=>{const current=s.orders.find(v=>v.operationId===o.operationId);if(!current||current.settlementAttemptId&&current.settlementAttemptId!==attemptId||current.paymentVerifiedAt||current.transactionHash)throw new WorkspaceError('OPERATION_CONFLICT',409);if(current.sellerReservation){current.sellerReservation.committed=false;current.sellerReservation.expiresAt=new Date().toISOString();}if(current.phase==='payment-submitting')current.phase='awaiting-payment';});}
+/** A delayed settling acknowledgement does not authorize a late submission. */
+async function assertBeforeSettlement(p:WorkspacePrincipal,o:MarketOrder){
+ const store=configuredMarketStore(),guard=await sellerPaymentGuard(o,p);
+ const expiresAt=await store.transact(s=>{const current=s.orders.find(v=>v.operationId===o.operationId);if(!current)throw new WorkspaceError('SELLER_UNAVAILABLE',503);return sellerAdmissionExpiresAt(assertSellerReservation(s,current),current);});
+ // Re-read availability and atomically compare the account generation again.
+ // Redis checks this deadline using TIME even if the client clock is stalled.
+ await store.transact(s=>{const current=s.orders.find(v=>v.operationId===o.operationId);if(!current)throw new WorkspaceError('SELLER_UNAVAILABLE',503);assertSellerReservation(s,current);},{...guard,admissionExpiresAt:expiresAt});
+ return expiresAt;
+}
 /** A settling call can finish after seven-day maintenance erased its content.
  * Preserve only its matching transaction identifier, never the signed payload,
  * provider response, prompt or result. Confirmation still requires a ledger read. */
@@ -190,6 +200,11 @@ export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,or
   const settleGuard=await sellerPaymentGuard(o,p);
   await markOrder(o,attemptId);
   record=await updateRecord(deps.store,o,attemptId,r=>{if(r.phase!=='verifying')throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='settling';},settleGuard);
+  const admissionWallStart=Date.now(),admissionMonotonicStart=performance.now();
+  const expiresAt=await assertBeforeSettlement(p,o);
+  // A stalled wall clock cannot hide time spent awaiting the final Redis ACK.
+  const admissionNow=Math.max(Date.now(),admissionWallStart+Math.max(0,performance.now()-admissionMonotonicStart));
+  if(admissionNow>=expiresAt)throw new WorkspaceError('SELLER_UNAVAILABLE',503,60);
   const outcome=await deps.facilitator.settle(proof.payload,record.challenge.accepts[0]);
   try{record=await updateRecord(deps.store,o,attemptId,r=>{r.responseHash=sha(canonical(outcome));if(outcome.network==='stellar:testnet'&&outcome.payer===o.payer&&/^[a-f0-9]{64}$/.test(outcome.transaction))r.transactionHash=outcome.transaction;});}
   catch(e){if(await retainArchivedOutcome(o,record,outcome))throw new WorkspaceError('ORDER_CONTENT_EXPIRED',410);throw e;}
