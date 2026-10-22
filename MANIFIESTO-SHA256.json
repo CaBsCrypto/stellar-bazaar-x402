@@ -50,6 +50,12 @@
       "sha256": "63f2c50380ed6303237cce215ce27af1d620d094c215e28d1b1538a3c070e3bb"
     },
     {
+      "path": "AUDITORIA-MIGRACION.json",
+      "mode": "100644",
+      "bytes": 4001,
+      "sha256": "6adf91a656f60928280860be86c2bf8c181bf003fc38fc552add3531f2756604"
+    },
+    {
       "path": "CLAUDE.md",
       "mode": "100644",
       "bytes": 11,
@@ -76,8 +82,8 @@
     {
       "path": "README-MIGRACION.md",
       "mode": "100644",
-      "bytes": 19673,
-      "sha256": "624559657e10c190ae2ebdef879cbd222d2045c0907df97fff39a5432459f752"
+      "bytes": 20767,
+      "sha256": "85bdcda66a22c921abe5331145cea62f18995ff8338914b5a7d1b93ce31b5965"
     },
     {
       "path": "README.es.md",

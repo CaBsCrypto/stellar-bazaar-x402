@@ -102,6 +102,12 @@ La recepción queda completa cuando se cumpla lo siguiente:
 - Instalación, pruebas y ejecución quedan autorizadas y realizadas en la notebook antes de afirmar que allí funciona. Registrar sus resultados reales y cualquier bloqueo, sin heredar como actuales los recibos históricos.
 - No se han aplicado migraciones, reseteado claves o datos, creado pedidos, firmado pagos, desplegado, abierto PR ni hecho merge como parte de esta recepción.
 
+## Revisión realizada
+
+`AUDITORIA-MIGRACION.json` registra la revisión de los 151 commits originales que no estaban en las referencias GitHub comprobadas: 1.445 blobs, incluidos borrados históricos, y 63 imágenes con OCR y revisión de contexto, QR y metadatos. Las seis dudas de OCR se resolvieron por hashes y evidencia de cuentas/entregas sintéticas. No se detectaron credenciales reales confirmadas ni un bloqueo concreto por datos privados. Es una revisión documentada, no una garantía absoluta. Los commits nuevos contienen fuentes revisadas y los documentos de continuidad.
+
+Se conservaron las descargas ZIP/TGZ originales del producto; no se creó un ZIP de migración. Se inspeccionaron sus 39 miembros en memoria y se cotejaron sus manifests: no contienen credenciales ni datos privados identificados. El WASM de multiseller se conserva junto con Rust y Cargo.lock; usa Soroban SDK 21.7.7. No se compiló ni se certificó equivalencia binario-fuente o una toolchain Rust exacta para la notebook. Sus rutas de compilador embebidas son metadatos, no dependencias de ejecución.
+
 ## Alcance concreto de esta rama
 
 Esta copia corresponde a **migracion/bazaar-trabajo-local-20261022-6b7a6d**. Origen Git conservado: `e9daaf13e792760da0664485d7b189c699a1b0ad` de `beta-open-build`, rama `codex/bazaar-open-release`. Fuente de esta variante: `beta-open-build`. El archivo `ORIGEN-MIGRACION.json` registra estos datos sin valores secretos. Producción y multiseller conservan documentación y scripts del Git base; el trabajo local separado conserva 77 cambios rastreados y 604 archivos nuevos de código seleccionados. No se mezclaron los 27 árboles de trabajo.
