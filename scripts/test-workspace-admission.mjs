@@ -3,7 +3,7 @@ import { randomBytes, randomUUID, createHash } from 'node:crypto';
 import { createRedisWorkspaceStore, READ_WORKSPACE_LUA, COMMIT_WORKSPACE_LUA, setWorkspaceStoreForTests } from '../lib/workspace-store.ts';
 import { createWorkspaceHandlers } from '../lib/workspace-http.ts';
 
-const names = ['BAZAAR_ENABLE_OPEN_WORKSPACES', 'BAZAAR_WORKSPACE_BACKEND', 'BAZAAR_WORKSPACE_PREFIX', 'BAZAAR_WORKSPACE_ADMISSION', 'BAZAAR_WORKSPACE_INVITE_HASHES_JSON', 'BAZAAR_WORKSPACE_PUBLIC_ORIGIN', 'BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE', 'BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY'];
+const names = ['BAZAAR_ENABLE_OPEN_WORKSPACES', 'BAZAAR_WORKSPACE_BACKEND', 'BAZAAR_WORKSPACE_PREFIX', 'BAZAAR_WORKSPACE_ADMISSION', 'BAZAAR_WORKSPACE_INVITE_HASHES_JSON', 'BAZAAR_WORKSPACE_PUBLIC_ORIGIN', 'BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_MINUTE', 'BAZAAR_WORKSPACE_GLOBAL_REQUESTS_PER_DAY', 'BAZAAR_FREE_DEMO_ADMISSION_UNTIL'];
 const previous = Object.fromEntries(names.map(name => [name, process.env[name]]));
 const hash = value => createHash('sha256').update(value).digest('hex');
 const credentials = () => Object.fromEntries(['bootstrap', 'human', 'agent'].map(role => [role, randomBytes(32).toString('base64url')]));
@@ -25,6 +25,7 @@ const request = (tokens, input) => new Request('https://pilot.example/api/worksp
 const inputFor = tokens => ({ creationId: randomUUID(), humanAccessHash: hash(tokens.human), agentAccessHash: hash(tokens.agent) });
 try {
   process.env.BAZAAR_ENABLE_OPEN_WORKSPACES = 'true';
+  delete process.env.BAZAAR_FREE_DEMO_ADMISSION_UNTIL;
   process.env.BAZAAR_WORKSPACE_BACKEND = 'redis';
   const prefix = 'bazaar-workspace:pilot-' + randomBytes(16).toString('hex');
   process.env.BAZAAR_WORKSPACE_PREFIX = prefix;
@@ -75,6 +76,12 @@ try {
   const createdB = await handlers.POST(request(b, bInput));
   assert.equal(createdB.status, 201);
   assert.notEqual((await createdB.json()).record.ownerId, receipt.ownerId);
+  process.env.BAZAAR_FREE_DEMO_ADMISSION_UNTIL = '2000-01-01T00:00:00.000Z';
+  assert.equal((await handlers.POST(request(b, inputFor(b)))).status, 503, 'Expired demo cannot create a new account');
+  const freeReplay = await handlers.POST(request(a, aInput));
+  assert.equal(freeReplay.status, 200, 'A lost registration response remains recoverable after expiry');
+  assert.deepEqual((await freeReplay.json()).record, receipt, 'Expiry does not mint a replacement account or rotate credentials');
+  delete process.env.BAZAAR_FREE_DEMO_ADMISSION_UNTIL;
   process.env.BAZAAR_WORKSPACE_INVITE_HASHES_JSON = JSON.stringify([allow[1]]);
   const beforeRemoval = exchanges;
   assert.equal((await handlers.POST(request(a, aInput))).status, 403);

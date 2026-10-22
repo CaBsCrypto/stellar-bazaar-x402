@@ -1,0 +1,12 @@
+// Local evidence only. No credential files, network or ledger access.
+import {createHash} from 'node:crypto';
+import {readFile,writeFile} from 'node:fs/promises';
+import {execFileSync} from 'node:child_process';
+const scripts=['scripts/test-example-budget-profile-proof.mjs','scripts/test-example-budget-command-weight.mjs','scripts/test-continuous-free-budget.mjs','scripts/test-continuous-recovery-transfer-budget.mjs'];
+const results=scripts.map(script=>({script,result:JSON.parse(execFileSync(process.execPath,[script],{encoding:'utf8'}).trim())}));
+const files=['lib/continuous-free-budget.ts','lib/example-budget-command-weight.ts','scripts/prepare-example-budget-command-catalog.mjs',...scripts,'scripts/fixtures/example-budget-command-catalog.json'];
+const sourceSha256=Object.fromEntries(await Promise.all(files.map(async path=>[path,createHash('sha256').update(await readFile(path)).digest('hex')])));
+const receipt={version:1,status:'PASS_LOCAL_PROFILE_GROUNDWORK_NUMERICAL_REPLACEMENT_PENDING',observedAt:new Date().toISOString(),results,sourceSha256,newProfileVersion:'example-text-wire/v1',newOrderMarkerOnly:true,currentPublicationRotationDoesNotResizeOlderHolds:true,brandCannotBeForgedThroughJson:true,exactLuaCatalogScripts:19,largestReviewedLuaCommandUpperBoundIncludingEval:17,configurationIdUnchanged:true,genericHeldBytes:2000000000,legacyGuionHeldBytes:900000000,backgroundCreditStillLegacy:{commands:1000,transferBytes:100000000},providerOnlyEnforcedBound:{commands:1000,transferBytes:41943040,completeBackgroundCredit:false},numericalSavingsActivated:false,networkRequests:0,credentialReads:0,ledgerWrites:0,productionChanges:0,realPayments:0,limitations:['This verifies local proof, selector and exact-script command accounting. It is not a full native purchase or Redis Lua runtime acceptance.','A complete real isolated Redis trace, snapshot replay, finite retry policy and lower-wire bounds are required before replacing numeric costs.','The provider-only bound excludes native readiness/dispatch reads and CAS; it is not a complete reservation.']};
+const path='docs/evidence/example-budget-profile-groundwork-local-2026-10-12.json';
+await writeFile(path,JSON.stringify(receipt,null,2)+'\n',{flag:'wx'});
+console.log(JSON.stringify({status:receipt.status,evidence:path,checks:results.reduce((sum,row)=>sum+row.result.checks,0),numericalSavingsActivated:false,networkRequests:0,ledgerWrites:0,realPayments:0}));

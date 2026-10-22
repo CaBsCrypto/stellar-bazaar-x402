@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {deriveRecoveryExampleBudgetPolicyMatrix,EXAMPLE_BUDGET_POLICY} from './recovery-example-budget-policy-matrix.mjs';
+import {continuousFreeReservation} from '../lib/continuous-free-budget.ts';
+import {EXPECTED_EXAMPLE_PROVIDER_IO_LIMITS} from '../lib/example-provider-readiness-proof.ts';
+const costs={metadata:continuousFreeReservation({profile:'public',newOperation:false,workload:'metadata'}),identity:continuousFreeReservation({profile:'recovery',newOperation:false,workload:'identity'}),capacity:continuousFreeReservation({profile:'authenticated',newOperation:false,workload:'capacity'}),orders:continuousFreeReservation({profile:'recovery',newOperation:false,workload:'orders'}),financial:continuousFreeReservation({profile:'recovery',newOperation:false,workload:'financial'})};
+const input={providerIoLimits:EXPECTED_EXAMPLE_PROVIDER_IO_LIMITS,nativeCosts:costs,nativeBackground:{commands:256,transferBytes:16*1048576},buyerScenario:{financialCalls:3,orderReads:2,globalRequests:[{family:'buyer-catalog',profile:'public',count:1,unit:continuousFreeReservation({profile:'public',newOperation:false}),reason:'One anonymous catalog request remains generic.'}]},remaining:null};
+let checks=0;const result=deriveRecoveryExampleBudgetPolicyMatrix(input);
+assert.equal(result.appliesNumericalLimits,false);checks++;
+assert.deepEqual(result.policy,EXAMPLE_BUDGET_POLICY);checks++;
+assert.equal(result.completeTickBound.commands,1260);checks++;
+assert.equal(result.completeTickBound.transferBytes,56*1048576+4096);checks++;
+assert.equal(result.heldRows.find(row=>row.family==='background').count,5);checks++;
+assert.equal(result.heldRows.find(row=>row.family==='seller-orders').count,21);checks++;
+assert.equal(result.globalRows.find(row=>row.family==='seller-sdk-metadata').count,18);checks++;
+assert.equal(result.globalRows.find(row=>row.family==='seller-identity').count,6);checks++;
+assert.equal(result.globalRows.find(row=>row.family==='seller-capacity').count,12);checks++;
+assert.equal(result.completeForecast.transferBytes,result.held.transferBytes+result.global.transferBytes);checks++;
+assert.equal(result.heldRows.find(row=>row.family==='archived-financial').unit.transferBytes,96*1048576+262144);checks++;
+assert.equal(result.heldRows.find(row=>row.family==='archived-get').unit.transferBytes,32*1048576+262144);checks++;
+assert.ok(result.completeForecast.transferBytes>1021000000,'Legacy costs cannot be described as a new fit inside the old 1.021GB margin.');checks++;
+const observed=deriveRecoveryExampleBudgetPolicyMatrix({...input,remaining:{transferBytes:1021000000,commandsByProfile:{public:50000,authenticated:50000,recovery:50000,background:25000},observedAt:'2026-10-12T00:00:00.000Z',source:'Last known root-supplied observation only'}});
+assert.ok(observed.suppliedRemainingProjection.byteMargin<0);checks++;
+assert.equal(observed.suppliedRemainingProjection.freshReadVerifiedByThisModule,false);checks++;
+assert.equal(observed.suppliedRemainingProjection.commandMarginsByProfile.background,25000-6*1260,'Global cold tick cannot disappear from background margin.');checks++;
+assert.throws(()=>deriveRecoveryExampleBudgetPolicyMatrix({...input,providerIoLimits:{...EXPECTED_EXAMPLE_PROVIDER_IO_LIMITS,combinedConservativeRedisCommands:999}}));checks++;
+for(const mutate of [value=>value.nativeCosts.financial.transferBytes=-1,value=>value.nativeCosts.orders.commands=1,value=>value.nativeCosts.extra=costs.orders,value=>value.buyerScenario.financialCalls=2,value=>value.buyerScenario.orderReads=1,value=>value.buyerScenario.globalRequests[0].count=Infinity,value=>value.nativeBackground.extra=1,value=>value.remaining={transferBytes:1021000000},value=>value.productionApply=true]){const value=structuredClone(input);mutate(value);assert.throws(()=>deriveRecoveryExampleBudgetPolicyMatrix(value),/REVIEWED_FINITE_EXAMPLE_MATRIX_INPUT_REQUIRED/);checks++;}
+console.log(JSON.stringify({status:'PASS_LOCAL_FINITE_EXAMPLE_POLICY_ARITHMETIC',checks,fixture:'Legacy native request costs with a hypothetical enforced background16MiB/256commands; not a selected profile.',computedHeld:result.held,computedGlobal:result.global,completeForecast:result.completeForecast,numericalSavingsActivated:false,networkRequests:0,ledgerWrites:0,payments:0,productionChanged:false}));

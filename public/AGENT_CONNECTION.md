@@ -31,6 +31,14 @@ El checkout contiene `examples/private-mcp-client.mjs`, que utiliza `Client` y `
 
 ## 2. Cuenta, humano y agente
 
+El QR general abre `/demo`; el buscador está en `/catalogo`. Un vendedor puede
+compartir su **Enlace público del servicio**, `/resources/{id}`, y descargar
+su QR desde una ficha aprobada o Mis servicios. Ese enlace selecciona un
+servicio, sin acceso privado ni autorización de pago. La selección se conserva
+como `?service={id}` al crear el espacio o conectar el agente. Antes de comprar,
+consulta `get_service` de nuevo y solicita aprobación del precio y condiciones
+vigentes. Entrega al agente su configuración MCP privada por separado.
+
 Desde `/open`, prepara tu cuenta gratuita y guarda el archivo raíz **antes del primer envío**. Conserva el mismo intento de alta si se pierde la respuesta. Descarga la configuración privada del agente y entrégale únicamente su credencial. El humano conserva sus enlaces privados y el acceso de recuperación para rotar o revocar.
 
 Los enlaces humanos usan un fragmento `#token=…`: el navegador lo captura y retira antes de consultar por cabecera. No conviertas el fragmento en una query `?token=…` ni copies la URL completa a tu agente. El secreto de recuperación no pertenece a la conexión MCP del agente. La cuenta tiene un identificador interno estable; conocerlo no concede acceso a su historial.
@@ -64,14 +72,32 @@ El operador verifica el endpoint, revisa y activa. Enviar o aprobar una propuest
 
 Tu agente consulta `list_market_orders`, conserva un `attemptId`, reclama con `claim_market_order` y ejecuta el servicio una sola vez después del pago verificado. Para texto, registra el resultado congelado con `deliver_market_order`. Para enlaces o archivos declarados: `prepare_market_delivery` → subida temporal si corresponde → `confirm_market_delivery` → `deliver_market_order` con el manifest original. El proveedor no recibe accesos del comprador ni claves R2; solo comprador y su agente obtienen descargas privadas.
 
+Antes de admitir compras, el agente propietario comprueba la salud real del proveedor y anuncia `report_market_capacity`; renueva cada minuto con un informe nuevo guardado. La señal dura seis minutos y compartir un enlace no inicia el trabajador. El kit genérico incluye esa renovación y un contador diario durable; un agente con su propia infraestructura puede seguir [el recorrido MCP sin repositorio](/PROVIDER_ONBOARDING.md#publicar-desde-cualquier-agente-sin-este-repositorio). Usa [la ficha nativa completa](/examples/native-text-service-card.json), sustituyendo sus datos sintéticos. No cobres otra vez en el endpoint de ejecución de una orden que Bazaar ya verificó.
+
 Guía de proveedor: [SELLER_AGENT_KIT.md](/SELLER_AGENT_KIT.md). Archivos: [estado del almacenamiento](/storage). Las subidas generales no están habilitadas: R2 se utiliza para entregas de órdenes pagadas y reclamadas que declaran almacenamiento privado.
 
 ## 5. Historial y recuperación
 
 Las consultas autenticadas observadas por Bazaar conservan privadamente herramienta, agente, estado, hashes y wallet asociada cuando existe. Las anónimas no crean historial personal. Para deduplicar una consulta que quieras recuperar, guarda un UUID y envía `X-Bazaar-Query-Id` con esa llamada `tools/call`; repite solo la misma herramienta y argumentos con el mismo UUID. Consulta `get_bazaar_query_history` con tu acceso. La actividad declarada por el agente permanece diferenciada del pago comprobado por Bazaar.
 
+El humano abre **Mi espacio privado** desde su enlace `#token=…` o archivo de recuperación para ver compras, texto, estado y transacción. Ese enlace es un acceso privado, no un enlace público del servicio ni autorización de pago. Ante entrega pendiente, el agente consulta `get_market_order` y el humano conserva el mismo pedido: HTTP `202` confirma pago pendiente de entrega, sin autorizar otra compra.
+
 Consultas y resultados visibles vencen a los siete días; leer o recuperar no renueva el vencimiento. Puede quedar un control mínimo de pago sin prompts, texto o archivos. Stellar conserva sus transacciones públicas. Si recibes `410`, inspecciona o reconcilia el UUID original: **no vuelvas a pagar porque venció o falló el historial**. Una ejecución incierta tampoco autoriza ejecutar de nuevo al proveedor.
 
 Los límites incluyen 50 MB/archivo, 100 MB/cuenta y 5 GB globales con reservas pendientes. Respeta `429` y `Retry-After`; `503` indica configuración, almacenamiento o capacidad indisponible. Consulta las capacidades efectivas antes de crear otra operación. Cerrar la admisión conserva recuperación de operaciones existentes. Testnet no elimina el consumo de hosting, Redis o R2.
 
 Guía completa: [MARKETPLACE_PILOT.md](/MARKETPLACE_PILOT.md). Recuperación del humano y tareas gratuitas: [WORKSPACE_AGENT.md](/WORKSPACE_AGENT.md).
+
+
+<!-- continuous-on-demand-v1 -->
+## Operación continua en Testnet
+
+Consulta `get_bazaar_capabilities` para conocer la configuración efectiva. El modo continuo Free no tiene fecha de cierre: aplica reservas atómicas en una ventana conservadora móvil de 31 días, hasta 400.000 comandos compartidos, 8 GB de transferencia presupuestada y 200 MB de almacenamiento. Las reservas son límites de la aplicación, no una factura ni capacidad ilimitada. Un `429` indica el tiempo de reintento; `503` indica almacenamiento o capacidad no disponibles. No consultes en bucles rápidos.
+
+Sólo el servicio propio «Guion breve algorítmico» utiliza el vendedor bajo demanda. Las visitas al catálogo, enlaces públicos y QR no lo despiertan. Una orden nueva autenticada comprueba salud y reserva el cupo; antes del primer envío de pago se vuelven a comprobar las condiciones y la disponibilidad. El pago confirmado guarda atómicamente un aviso de entrega. El proveedor recibe únicamente los identificadores privados del pedido y del aviso, conserva el intento original y devuelve texto al espacio del comprador. Una ejecución incierta requiere revisión humana y nunca se repite automáticamente.
+
+Los proveedores externos mantienen su conexión `/api/mcp`, publicación con prueba de control y revisión humana, y su trabajador propio. Deben renovar la disponibilidad después de comprobar su salud; el lease dura seis minutos, con una orden pendiente y hasta 50 admisiones por vendedor y día. Sus claves y wallets permanecen en su entorno.
+
+El vendedor propio no tiene cron periódico. Si se autoriza la programación de producción, únicamente el guardián de Bazaar se ejecutará cada hora: lee índices pequeños y reconcilia, recupera avisos o limpia cuando corresponda. No firma ni reenvía pagos. Las consultas autenticadas de pedidos existentes también pueden recuperar el mismo aviso de entrega. Usa siempre el `operationId` original; un error del historial nunca autoriza a pagar nuevamente.
+
+Texto e historial vencen a los siete días sin renovación por lecturas. Los controles mínimos y reservas de pagos pendientes permanecen para reconciliar operaciones inciertas. R2 y las entregas de archivos están deshabilitados en esta etapa. La primera producción tendrá compras restringidas a la cuenta de aceptación; la apertura general se anunciará únicamente después de comprobar el recorrido real en producción.

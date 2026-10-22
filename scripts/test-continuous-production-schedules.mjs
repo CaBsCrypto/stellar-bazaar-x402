@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {productionScheduleConfig,prepareContinuousProductionSchedules} from './prepare-continuous-production-schedules.mjs';
+let checks=0;const baseline={regions:['iad1'],crons:[],functions:{'app/api/**/route.ts':{maxDuration:60}},git:{deploymentEnabled:{main:false}}};
+const provider=productionScheduleConfig('provider',baseline);assert.deepEqual(provider.crons,[{path:'/api/bazaar/seller/tick',schedule:'*/2 * * * *'}]);checks++;
+const bazaar=productionScheduleConfig('bazaar',baseline);assert.deepEqual(bazaar.crons,[{path:'/api/market/guardian/tick',schedule:'*/15 * * * *'}]);checks++;
+assert.deepEqual(baseline.crons,[]);assert.deepEqual(provider.regions,baseline.regions);assert.deepEqual(bazaar.functions,baseline.functions);assert.deepEqual(bazaar.git,baseline.git);checks++;
+for(const role of ['unknown','production','cron'])assert.throws(()=>productionScheduleConfig(role,baseline),/UNSCHEDULED_EXACT_ROLE_REQUIRED/);for(const config of [{crons:[{path:'/other',schedule:'* * * * *'}]},{}])assert.throws(()=>productionScheduleConfig('provider',config),/UNSCHEDULED_EXACT_ROLE_REQUIRED/);checks++;
+await assert.rejects(prepareContinuousProductionSchedules({action:'deploy'}),/OFFLINE_ACTION_REQUIRED/);checks++;
+const prior=globalThis.fetch;let networkRequests=0;globalThis.fetch=async()=>{networkRequests++;throw Error('OFFLINE_ONLY');};
+try{const plan=await prepareContinuousProductionSchedules();assert.equal(plan.applySupported,false);assert.equal(plan.roles.bazaar.fileCount,333);assert.equal(plan.roles.provider.fileCount,22);assert.equal(plan.roles.bazaar.onlyChangedPath,'vercel.json');assert.equal(plan.roles.provider.onlyChangedPath,'vercel.json');assert.equal(plan.roles.bazaar.baseSourceDigest,'d6d0ac502cf6b0f7ae3a1c6110beb5060faf8f0a9a320c3a025422aa0adb5402');assert.equal(plan.previewSchedulesRemainEmpty,true);assert.equal(plan.expectedReadyAcceptance.provider.status,'EXACT_UPDATED_PREVIEW_REQUIRED');assert.equal(plan.productionPublished,false);assert.equal(plan.cronActivated,false);assert.equal(plan.profilesRead,0);assert.equal(networkRequests,0);checks++;
+console.log(JSON.stringify({status:'PASS',checks,filesVerified:355,networkRequests,privateProfileReads:0,sourceCopies:0,cloudWrites:0,manualTicks:0,payments:0,cronActivated:false,productionPublished:false}));}finally{globalThis.fetch=prior;}

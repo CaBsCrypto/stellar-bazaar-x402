@@ -71,7 +71,7 @@
           {
             "type": "path",
             "op": "re",
-            "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+)$"
+            "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+(?:/qr\\.svg)?|/_next/static/[^?#]+)$"
           }
         ]
       },
@@ -240,7 +240,7 @@
                 "type": "path",
                 "op": "re",
                 "neg": true,
-                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+)$"
+                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+(?:/qr\\.svg)?|/_next/static/[^?#]+)$"
               }
             ]
           },
@@ -270,7 +270,7 @@
                 "type": "path",
                 "op": "re",
                 "neg": true,
-                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+|/api/mcp|/api/market/catalog|/api/account/identity|/api/account/queries|/api/operations|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/deliveries)$"
+                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+(?:/qr\\.svg)?|/_next/static/[^?#]+|/api/mcp|/api/market/catalog|/api/account/identity|/api/account/queries|/api/operations|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/deliveries)$"
               }
             ]
           },
@@ -393,7 +393,7 @@
                 "type": "path",
                 "op": "re",
                 "neg": true,
-                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+)$"
+                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+(?:/qr\\.svg)?|/_next/static/[^?#]+)$"
               }
             ]
           },
@@ -420,7 +420,7 @@
                 "type": "path",
                 "op": "re",
                 "neg": true,
-                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+|/_next/static/[^?#]+|/api/mcp|/api/market/catalog|/api/account/identity|/api/account/queries|/api/operations|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/deliveries)$"
+                "value": "^(?:/|/demo|/open|/hub|/catalogo|/publish|/history|/storage|/demo-qr\\.svg|/bazaar-qr\\.svg|/favicon\\.ico|/DEMO_TESTNET\\.md|/AGENT_CONNECTION\\.md|/MARKETPLACE_PILOT\\.md|/WORKSPACE_AGENT\\.md|/PROVIDER_ONBOARDING\\.md|/HISTORY_CONNECTION\\.md|/BUYER\\.md|/SELLER_AGENT_KIT\\.md|/llms\\.txt|/mcp\\.json|/skills/(?:buyer|seller|recovery)/SKILL\\.md|/resources/[a-z0-9-]+(?:/qr\\.svg)?|/_next/static/[^?#]+|/api/mcp|/api/market/catalog|/api/account/identity|/api/account/queries|/api/operations|/api/market/services|/api/market/orders|/api/market/agent-permissions|/api/market/(?:services|orders)/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}|/api/market/orders/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/deliveries)$"
               }
             ]
           },

@@ -10,7 +10,7 @@ import {setWorkspaceStoreForTests} from '../lib/workspace-store.ts';
 import {marketHandlers} from '../lib/marketplace-http.ts';
 import {pruneExpiredMarketContent} from '../lib/market-maintenance.ts';
 import {marketRecoveryRecord} from '../lib/market-retention-schema.ts';
-import {marketGuardianSnapshot,marketGuardianHandlers} from '../lib/market-guardian.ts';
+import {marketGuardianSnapshot,marketGuardianHandlers,createMarketGuardianRunner} from '../lib/market-guardian.ts';
 import {capacityRedis} from './fixtures/market-capacity-redis.mjs';
 import {USDC_TESTNET_PAYMENT_IDENTITY} from '../lib/payment-assets.ts';
 import {syncDeliveryContract} from '../lib/delivery-contract.ts';
@@ -71,7 +71,12 @@ try{
  chainXdr=tx.toXDR();const confirmed=await reconcileMarketX402Payment(buyer,expired.operationId,deps);assert.equal(confirmed.paymentPhase,'confirmed');assert.ok(confirmed.paymentVerifiedAt);assert.ok(!JSON.stringify(confirmed).includes(expired.input.prompt));
  const afterFirst=rpcCalls;await reconcileMarketGuardianOrder(expired.operationId,deps);assert.equal(rpcCalls,afterFirst);assert.equal(externalEffects,0,'Recovery never submits to facilitator');
  assert.equal((await store.transact(state=>state.sellerCapacities??[])).length,0,'Legacy confirmed recovery requires no fresh seller admission');
- const buyerToken=randomBytes(32).toString('base64url'),otherToken=randomBytes(32).toString('base64url');setWorkspaceStoreForTests({resolveHash:async digest=>digest===sha(buyerToken)?buyer:digest===sha(otherToken)?stranger:Promise.reject(Error('UNAUTHORIZED')),consumeRequest:async()=>{},walletIdentity:async p=>({identity:{...p,wallet:null,network:'stellar:testnet'},guard:{keys:[],values:[]}})});setMarketX402DependenciesForTests(deps);
+ const buyerToken=randomBytes(32).toString('base64url'),otherToken=randomBytes(32).toString('base64url');
+ // Realistic guard shape keeps fresh recovery-race admissions generation-bound
+ // without falsely requiring owner-specific service permission keys to match.
+ const workspacePrefix=prefix.replace('bazaar-market:','bazaar-workspace:'),workspaceRoot=workspacePrefix+':{'+workspacePrefix.split(':')[1]+'}',registryKey=workspaceRoot+':registry';
+ redis.data.set(registryKey,JSON.stringify({version:1,revision:randomUUID(),fixtureGeneration:1}));
+ setWorkspaceStoreForTests({resolveHash:async digest=>digest===sha(buyerToken)?buyer:digest===sha(otherToken)?stranger:Promise.reject(Error('UNAUTHORIZED')),consumeRequest:async()=>{},walletIdentity:async p=>{const permissionKey=workspaceRoot+':market-permissions:'+p.ownerId;return {identity:{...p,wallet:null,network:'stellar:testnet'},guard:{keys:[registryKey,permissionKey],values:[redis.data.get(registryKey),redis.data.get(permissionKey)??null]}};}});setMarketX402DependenciesForTests(deps);
  const reconcileRequest=token=>new Request(origin+'/api/market/orders/'+expired.operationId,{method:'POST',headers:{authorization:'Bearer '+token,'content-type':'application/json'},body:JSON.stringify({action:'reconcile'})});
  const reconciledResponse=await marketHandlers.action(reconcileRequest(buyerToken),expired.operationId);assert.equal(reconciledResponse.status,200);const reconciledBody=await reconciledResponse.text();assert.ok(reconciledBody.includes(proof.transactionHash));assert.ok(!reconciledBody.includes(expired.input.prompt));assert.ok(!reconciledBody.includes(tx.toXDR()));assert.equal((await marketHandlers.action(reconcileRequest(otherToken),expired.operationId)).status,404);
  const unknown=order(),unknownTx=await chain(unknown,99n),unknownProof=marketX402Authorization(unknownTx.toXDR(),unknown,true);
@@ -139,5 +144,24 @@ try{
  const settlingDeps={...deps,rpc:{async transaction(){settlingReads++;return {status:'SUCCESS',envelopeXdr:settlingTx.toXDR()};}}};
  const settled=await reconcileMarketGuardianOrder(settling.operationId,settlingDeps);assert.equal(settled.phase,'paid');assert.equal(settlingReads,1);assert.equal(externalEffects,0);
  await reconcileMarketX402Payment(buyer,settling.operationId,settlingDeps);assert.equal(settlingReads,1,'Confirmed recovery avoids repeated ledger reads');
- console.log(JSON.stringify({status:'PASS',externalRequests:0,payments:0,simulatedSettleCalls,redisLua:'protocol-double',checks:['seven-day content denial and content-free atomic archive','private archive identity and immutable intent replay','uncertain payment remains durable','read-ledger-only cryptographic reconciliation','wrong nonce and amount rejected','archived authorization blocks reuse','paused admission preserves recovery','operator-only private guardian snapshot','settle/archive interleaving retains only matching transaction identifier','late wrong network/payer/hash/binding/fingerprint rejected','known-hash settling recovers without resubmission']}));
+ // A confirmed ledger record must survive failure of the final order CAS.
+ // The next scheduled run finalizes that same order, with no second chain read
+ // and no facilitator invocation even while fresh purchases remain closed.
+ const finalization=order();finalization.createdAt=new Date().toISOString();finalization.updatedAt=finalization.createdAt;
+ await admitFreshOrder(finalization);
+ const finalizationTx=await chain(finalization,1007n),finalizationProof=marketX402Authorization(finalizationTx.toXDR(),finalization,true);
+ await store.transact(state=>{state.orders.find(o=>o.operationId===finalization.operationId).transactionHash=finalizationProof.transactionHash;});
+ await settlements.transact(state=>state.records.push({operationId:finalization.operationId,buyerOwnerId:buyer.ownerId,orderBinding:marketX402OrderBinding(finalization),challenge:createMarketX402Challenge(finalization,origin),phase:'settling',createdAt:finalization.createdAt,updatedAt:finalization.updatedAt,attemptId:finalization.settlementAttemptId,payload:{transaction:finalizationTx.toXDR()},payloadHash:sha(finalizationTx.toXDR()),authorizationFingerprint:finalizationProof.fingerprint,transactionHash:finalizationProof.transactionHash}));
+ let finalizationReads=0,rejectFinalCas=true;
+ const finalizationDeps={...deps,rpc:{async transaction(){finalizationReads++;return {status:'SUCCESS',envelopeXdr:finalizationTx.toXDR()};}}},originalEval=redis.eval;
+ redis.eval=async(...args)=>{const next=args[2][6]&&JSON.parse(args[2][6]);if(rejectFinalCas&&next?.state?.orders?.find(o=>o.operationId===finalization.operationId)?.phase==='paid'){rejectFinalCas=false;throw Error('SYNTHETIC_FINAL_ORDER_CAS_FAILURE');}return originalEval(...args);};
+ try{await assert.rejects(reconcileMarketGuardianOrder(finalization.operationId,finalizationDeps),/SYNTHETIC_FINAL_ORDER_CAS_FAILURE/);}finally{redis.eval=originalEval;}
+ assert.equal((await settlements.transact(state=>state.records.find(r=>r.operationId===finalization.operationId))).phase,'confirmed');
+ assert.equal((await store.transact(state=>state.orders.find(o=>o.operationId===finalization.operationId))).phase,'payment-uncertain');
+ assert.ok((await marketGuardianSnapshot(1000)).incidents.some(i=>i.operationId===finalization.operationId&&i.code==='PAYMENT_FINALIZATION_REQUIRED'&&i.canReconcile));
+ const guardian=createMarketGuardianRunner({marketStore:()=>store,reconcile:id=>reconcileMarketGuardianOrder(id,finalizationDeps),cleanup:()=>pruneExpiredMarketContent({redis,prefix,limit:2}),workspaceStore:()=>({retentionOwnerIds:async()=>[],pruneExpiredContent:async()=>assert.fail('No synthetic workspace has expired')})});
+ const recoveredFinalization=await guardian();assert.ok(recoveredFinalization.reconciliation.some(i=>i.operationId===finalization.operationId&&i.confirmed));
+ assert.equal((await store.transact(state=>state.orders.find(o=>o.operationId===finalization.operationId))).phase,'paid');assert.equal(finalizationReads,1);assert.equal(externalEffects,0);
+ await guardian();assert.equal(finalizationReads,1,'Repeated guardian execution never replays confirmation or payment');
+ console.log(JSON.stringify({status:'PASS',externalRequests:0,payments:0,simulatedSettleCalls,redisLua:'protocol-double',checks:['seven-day content denial and content-free atomic archive','private archive identity and immutable intent replay','uncertain payment remains durable','read-ledger-only cryptographic reconciliation','wrong nonce and amount rejected','archived authorization blocks reuse','paused admission preserves recovery','operator-only private guardian snapshot','settle/archive interleaving retains only matching transaction identifier','late wrong network/payer/hash/binding/fingerprint rejected','known-hash settling recovers without resubmission','confirmed ledger plus failed order CAS recovers through guardian without another payment']}));
 }finally{setMarketStoreForTests(undefined);setMarketX402StoreForTests(undefined);setWorkspaceStoreForTests(undefined);setMarketX402DependenciesForTests(undefined);for(const key of Object.keys(process.env))if(!(key in previous))delete process.env[key];Object.assign(process.env,previous);}

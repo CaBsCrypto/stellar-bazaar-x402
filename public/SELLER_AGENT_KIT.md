@@ -13,9 +13,12 @@ Run the agent and provider on your own hosting. A sample, an idea or a text echo
 is not an implemented AI service. Establish the service's actual input and
 delivery before submitting a card.
 
-The external kit in `docs/EXTERNAL_SELLER_KIT.md` and
-`examples/marketplace-seller-mcp.mjs` provides encrypted setup, native card
-preparation, submission and execution. Choose a positive price in USDC on Stellar
+Download the [executable text provider kit](/downloads/bazaar-native-text-provider-kit.tgz)
+and its [integrity manifest](/downloads/bazaar-native-text-provider-kit.manifest.json).
+The package includes pinned dependencies, an executable CLI, a complete card and
+instructions for Node.js 24. Extract it, run `npm ci --ignore-scripts` and follow
+its README to implement your own adapter and configure encrypted access. The kit
+provides native card preparation, submission, health and execution. Choose a positive price in USDC on Stellar
 Testnet (up to seven decimals, at most Stellar signed-int64 atomic units), with
 Circle's exact issuer and SAC identity and x402 exact v2 resource
 `/api/market/orders/{operationId}/x402`. The text worker supports 1..2000 characters. A
@@ -50,11 +53,20 @@ catalog availability; an activated card without a current lease cannot accept a
 new purchase. These checks reduce known unavailability; they do not guarantee
 delivery after a payment or provide automatic refunds.
 
-The hosted text worker implements health checks and capacity reports. The generic
-CLI/watch below does not send these reports: its execution loop alone is
-insufficient to accept purchases. An independently hosted agent must implement
-this step, alongside its durable execution and recovery loop. Respect `429` and
-`503`; do not report health based only on the existence of a catalog card.
+The hosted text worker and generic CLI/watch implement health checks and capacity
+reports. The generic HTTP adapter calls authenticated `GET {route}/availability`
+with the provider's own token and requires a Boolean `ready` and
+`network:"stellar:testnet"`. Optional `usedToday` is the real seller-wide UTC-day
+execution count. The runtime exposes this endpoint only when your trusted adapter
+exports `availability()` and its encrypted store can be read; missing or failed
+health closes availability without calling `execute()`. Respect `429` and `503`.
+Do not report health based only on the existence of a catalog card.
+
+For MCP-only agents without the checkout, follow the complete native flow in
+[PROVIDER_ONBOARDING.md](/PROVIDER_ONBOARDING.md) and start with
+[the native text card](/examples/native-text-service-card.json). Replace the
+synthetic origin and destination with your own confirmed public values. The
+card fixes x402 exact v2, official USDC Testnet and private text delivery.
 
 A card may include `skill: {version,title,instructions}`: versioned UTF-8
 instructions up to 8 KB, included in the full card hash and manual review.
@@ -63,26 +75,12 @@ the associated service uses its x402 price. Bazaar does not execute uploaded cod
 Changing price, instructions or delivery requires a new card and review; old
 orders retain their original card. Withdraw an obsolete listing to close new purchases.
 
-Declare `delivery.storage` as `{mode:"text"}` (also the legacy default),
-`{mode:"external",maxFiles:10}` or
-`{mode:"bazaar",maxFiles:10,maxTotalBytes:100000000,maxFileBytes:50000000}`.
-Use lower declared limits when possible. Bazaar storage reserves capacity before
-admission and enforces 50 MB/file, 100 MB/account and 5 GB globally, including
-pending reservations. Check enabled capabilities before advertising file delivery.
-
-For a paid order claimed by your agent, preserve immutable file bytes and
-SHA-256 before `prepare_market_delivery`; upload using only the temporary
-authorization and required headers returned, then call `confirm_market_delivery`.
-Recovery uses the same order, attempt and file identifiers, never another provider
-execution or payment. Bazaar verifies object size, type and checksum before
-availability; the buyer obtains temporary links with `get_market_delivery`.
-You never receive R2 keys or the buyer's credentials. The text worker below
-remains a text adapter; an external file agent uses the announced file tools.
-The portable file helper is `examples/market-file-delivery.mjs`; reproducible
-setup, explicit recovery and encrypted-journal integration are documented in
-`docs/MARKET_FILE_AGENT_GUIDE.md` in the checkout.
-For external links, retain hosting and allow recovery of the same delivery without
-another charge. Visible results expire after seven days; reads do not extend retention.
+This release accepts text delivery only. Declare `delivery.storage` as
+`{mode:"text"}` and check the effective capabilities before submitting a card.
+Private R2 files and general uploads remain disabled. Preserve the original
+order and attempt when recovering a delivery; never execute or pay again because
+a response was lost. Visible text and history expire after seven days; reads do
+not extend retention.
 
 Use list, prepare, claim, execute, deliver, fail, recover and uncertain commands
 against an encrypted local store. The generic adapter exports
@@ -95,6 +93,17 @@ permits only explicit replay of the frozen delivery for the original attempt.
 
 Opt-in watch polls at least every 60 seconds, at most ten times, with one
 execution at a time and a 100-request per-minute limit including MCP initialization.
+Before each poll it checks health and renews capacity with a new saved report.
+An uncertain acknowledgement reuses the exact report after checking health again;
+it cannot extend that report's lease. If health has failed or the worker stops,
+a new `ready:false` observation supersedes uncertain readiness. A pending paid
+order can make effective availability false while the report is accepted; the
+worker still finishes that original order. The shared encrypted `seller.execution-budget` journal reserves each
+operation before provider execution and keeps the 50-attempt UTC-day counter
+across restarts. Use one encrypted store for the seller's services; additional
+stores must still report the actual shared usage. Bazaar also independently
+enforces its seller-wide admission counter. Watch sends `ready:false` on exit;
+if shutdown cannot be acknowledged, the old six-minute lease expires.
 Each list command reads one page and returns a cursor. Watch durably saves its
 scan cursor after processing a page, so another invocation continues through
 catalogs and histories exceeding 100 records without repeating executions.
@@ -102,6 +111,18 @@ Stop on uncertainty, quota or unresolved state, and respect Retry-After.
 Hosting, TLS, scheduler, process supervision and encrypted backups belong to the
 participant. The kit requires no Vercel authentication for public Bazaar.
 Provider-specific protection is configured only for the participant's own host.
+
+After encrypted setup, `node examples/marketplace-seller-mcp.mjs capacity STORE`
+checks real health and sends a single saved report. `unavailable STORE` sends
+`ready:false` without executing. `watch STORE 10` renews while processing a
+bounded session. The supervised CLI reconnects bounded sessions, reserves MCP
+headroom for withdrawing availability, and records health requests separately
+from provider executions. For example, after owner approval of these local
+limits: `node examples/seller-marketplace-supervisor.mjs STORE --hours 12
+--max-mcp-requests 5000 --max-provider-requests 50 --max-health-requests 1500`.
+This starts a process on the participant's machine, which must remain awake.
+It does not configure any cloud scheduler. Old supervisor version-one journals
+require owner review; the new version does not reset their budgets to restart.
 
 An activated listing does not start an always-running seller. Keep a supervised
 runtime available while accepting purchases. The bounded local watch above stops
@@ -117,3 +138,17 @@ Read secrets through hidden TTY input or an explicitly inherited private pipe.
 Never put tokens or passwords in arguments, environment variables, public JSON,
 URLs, chats, shell history or logs. Retain abandoned locks and invalid journals
 for owner inspection; do not erase them automatically to resume execution.
+
+
+<!-- continuous-on-demand-v1 -->
+## Operación continua en Testnet
+
+Consulta `get_bazaar_capabilities` para conocer la configuración efectiva. El modo continuo Free no tiene fecha de cierre: aplica reservas atómicas en una ventana conservadora móvil de 31 días, hasta 400.000 comandos compartidos, 8 GB de transferencia presupuestada y 200 MB de almacenamiento. Las reservas son límites de la aplicación, no una factura ni capacidad ilimitada. Un `429` indica el tiempo de reintento; `503` indica almacenamiento o capacidad no disponibles. No consultes en bucles rápidos.
+
+Sólo el servicio propio «Guion breve algorítmico» utiliza el vendedor bajo demanda. Las visitas al catálogo, enlaces públicos y QR no lo despiertan. Una orden nueva autenticada comprueba salud y reserva el cupo; antes del primer envío de pago se vuelven a comprobar las condiciones y la disponibilidad. El pago confirmado guarda atómicamente un aviso de entrega. El proveedor recibe únicamente los identificadores privados del pedido y del aviso, conserva el intento original y devuelve texto al espacio del comprador. Una ejecución incierta requiere revisión humana y nunca se repite automáticamente.
+
+Los proveedores externos mantienen su conexión `/api/mcp`, publicación con prueba de control y revisión humana, y su trabajador propio. Deben renovar la disponibilidad después de comprobar su salud; el lease dura seis minutos, con una orden pendiente y hasta 50 admisiones por vendedor y día. Sus claves y wallets permanecen en su entorno.
+
+El vendedor propio no tiene cron periódico. Si se autoriza la programación de producción, únicamente el guardián de Bazaar se ejecutará cada hora: lee índices pequeños y reconcilia, recupera avisos o limpia cuando corresponda. No firma ni reenvía pagos. Las consultas autenticadas de pedidos existentes también pueden recuperar el mismo aviso de entrega. Usa siempre el `operationId` original; un error del historial nunca autoriza a pagar nuevamente.
+
+Texto e historial vencen a los siete días sin renovación por lecturas. Los controles mínimos y reservas de pagos pendientes permanecen para reconciliar operaciones inciertas. R2 y las entregas de archivos están deshabilitados en esta etapa. La primera producción tendrá compras restringidas a la cuenta de aceptación; la apertura general se anunciará únicamente después de comprobar el recorrido real en producción.

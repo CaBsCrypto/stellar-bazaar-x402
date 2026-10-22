@@ -1,0 +1,19 @@
+{
+  "format": 1,
+  "repository": "https://github.com/CaBsCrypto/stellar-bazaar-x402",
+  "visibility": "public",
+  "migrationBranch": "migracion/bazaar-trabajo-local-20261022-6b7a6d",
+  "variant": "trabajo-local",
+  "originalBranch": "codex/bazaar-open-release",
+  "originalGitSha": "e9daaf13e792760da0664485d7b189c699a1b0ad",
+  "sourcePathRelativeToOriginalWorkspace": "beta-open-build",
+  "sourceDigestSha256": null,
+  "defaultBranchObserved": "main",
+  "defaultBranchShaObserved": "76ba7b19eacb424d8c9e872a2d01569e1eb45b3d",
+  "originalModifiedTrackedFilesInSelectedCheckout": 77,
+  "selectedNewCodeFilesInWorkingSnapshot": 604,
+  "excludedUntrackedFilesInSelectedCheckout": 868,
+  "secretsCopied": false,
+  "applicationExecuted": false,
+  "notebookValidated": false
+}

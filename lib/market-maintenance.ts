@@ -1,7 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {Redis} from '@upstash/redis';
 import {meteredRedis} from './acceptance-meter.ts';
-import {marketPrefix,validateMarketState,type MarketRedis,type MarketState} from './marketplace-store.ts';
+import {marketPrefix,validateMarketState,recomputeMarketMaintenanceIndex,type MarketRedis,type MarketState} from './marketplace-store.ts';
 import {validateMarketX402State,type MarketX402State} from './marketplace-x402-store.ts';
 import {MARKET_CAPACITY_CAS,capacityReservationKey,projectCapacity,MARKET_CAPACITY_BYTES,SETTLEMENT_CAPACITY_BYTES,RESERVATION_CAPACITY_BYTES} from './marketplace-capacity.ts';
 import {marketRecoveryRecord} from './market-retention-schema.ts';
@@ -9,6 +9,9 @@ import {marketContentExpiresAt,MARKET_FILE_CLEANUP_GRACE_MS} from './market-file
 import {marketFileCleanupKeys,configuredMarketFileStorage} from './market-file-delivery.ts';
 import type {PrivateObjectStorage} from './deliverable-s3.ts';
 import {WorkspaceError} from './workspace-types.ts';
+import {continuousFreeBudgetConfiguration,continuousFreeBudgetKey,continuousFreeOperationRequest,continuousFreeReleaseBatchCommitScript} from './continuous-free-budget.ts';
+import {prepareContinuousStorageCommit} from './continuous-free-storage.ts';
+import {sha} from './marketplace-identity.ts';
 
 function parse<T>(raw:unknown,empty:T):T{
  if(raw===null)return empty;
@@ -28,17 +31,49 @@ export async function pruneExpiredMarketContent({redis,prefix,objects,now=Date.n
  if(raw.some((value,i)=>value!==null&&(typeof value!=='string'||Buffer.byteLength(value)>[MARKET_CAPACITY_BYTES,SETTLEMENT_CAPACITY_BYTES,RESERVATION_CAPACITY_BYTES][i])))throw new WorkspaceError('MAINTENANCE_UNAVAILABLE',503);
  const market=parse<MarketState>(raw[0],{version:1,services:[],orders:[]}),settlements=parse<MarketX402State>(raw[1],{version:1,records:[]});
  validateMarketState(market);validateMarketX402State(settlements);
+ const budgetReleases:ReturnType<typeof continuousFreeOperationRequest>[]=[],releasedOperationIds:string[]=[];
  async function commit(){
+  if(process.env.BAZAAR_FREE_DEMO_MODE==='continuous')recomputeMarketMaintenanceIndex(market);
   validateMarketState(market);validateMarketX402State(settlements);
   const nextMarket=JSON.stringify({version:1,revision:randomUUID(),state:market}),nextSettlement=JSON.stringify({version:1,revision:randomUUID(),state:settlements});
   const projected=projectCapacity(nextMarket,nextSettlement,raw[2] as string|null),expected=(value:unknown)=>[value===null?'missing':'present',value??''];
   const nextLedger=projected.ledgerRaw??raw[2];
-  const args=[...expected(raw[0]),...expected(raw[1]),...expected(raw[2]),nextMarket,nextSettlement,nextLedger!==raw[2]?nextLedger??'':'','unchecked','','unchecked',''] as string[];
-  if(await redis.eval(MARKET_CAPACITY_CAS,keys,args)!==1)throw new WorkspaceError('MAINTENANCE_WRITE_UNCONFIRMED',409);
+  const args=[...expected(raw[0]),...expected(raw[1]),...expected(raw[2]),nextMarket,nextSettlement,nextLedger!==raw[2]?nextLedger??'':'','unchecked','','unchecked',''] as string[],commitKeys=[...keys];
+  let script=MARKET_CAPACITY_CAS;
+  const configuration=continuousFreeBudgetConfiguration();
+  if(configuration){
+   args.push('');
+   const workspacePrefix=process.env.BAZAAR_WORKSPACE_PREFIX??prefix.replace('bazaar-market:','bazaar-workspace:');
+   if(workspacePrefix.split(':')[1]!==prefix.split(':')[1])throw new WorkspaceError('FREE_DEMO_STORAGE_UNAVAILABLE',503);
+   const indexKey=prefix+':maintenance-index:v1',oldIndex=await redis.get(indexKey),nextIndex=JSON.stringify(market.maintenance!.index);
+   if(oldIndex!==null&&(typeof oldIndex!=='string'||Buffer.byteLength(oldIndex)>512))throw new WorkspaceError('MAINTENANCE_UNAVAILABLE',503);
+   const indexKeyPosition=commitKeys.length+1,indexArg=args.length+1;commitKeys.push(indexKey);args.push(oldIndex===null?'missing':'present',oldIndex as string??'',nextIndex);
+   let beforeWrites=`local indexOld=redis.call('GET',KEYS[${indexKeyPosition}])\nif ARGV[${indexArg}]=='missing' then if indexOld then return 0 end else if not indexOld or indexOld~=ARGV[${indexArg+1}] then return 0 end end\n`,afterWrites=`redis.call('SET',KEYS[${indexKeyPosition}],ARGV[${indexArg+2}])\n`;
+   const storage=await prepareContinuousStorageCommit(redis,workspacePrefix,[
+    {key:keys[0],expectedRaw:raw[0] as string|null,nextRaw:nextMarket,reservedBytes:projected.marketRemaining},
+    {key:keys[1],expectedRaw:raw[1] as string|null,nextRaw:nextSettlement,reservedBytes:projected.settlementRemaining},
+    {key:keys[2],expectedRaw:raw[2] as string|null,nextRaw:nextLedger as string|null},
+    {key:indexKey,expectedRaw:oldIndex as string|null,nextRaw:nextIndex},
+   ]);
+   if(storage){const keyIndex=commitKeys.length+1,argIndex=args.length+1;commitKeys.push(...storage.keys);args.push(...storage.args);beforeWrites+=storage.appendScript(keyIndex,argIndex);afterWrites+=storage.writeScript(keyIndex);}
+   if(budgetReleases.length){const keyIndex=commitKeys.length+1,configArg=args.length+1;commitKeys.push(continuousFreeBudgetKey(workspacePrefix));args.push(JSON.stringify(configuration),JSON.stringify(budgetReleases));beforeWrites+=continuousFreeReleaseBatchCommitScript(keyIndex,configArg,configArg+1);afterWrites+=`redis.call('SET',KEYS[${keyIndex}],budgetNext)\n`;}
+   script=script.replace("if ARGV[7]~='' then",beforeWrites+"\nif ARGV[7]~='' then").replace('return 1',afterWrites+'return 1');
+  }
+  const result=await redis.eval(script,commitKeys,args);
+  if(result===-20)throw new WorkspaceError('FREE_DEMO_STORAGE_WRITE_UNCONFIRMED',409);
+  if(result===-21)throw new WorkspaceError('FREE_DEMO_STORAGE_UNINITIALIZED',503);
+  if(result===-22||result===-23)throw new WorkspaceError('FREE_DEMO_STORAGE_UNAVAILABLE',503);
+  if(result===-24)throw new WorkspaceError('FREE_DEMO_STORAGE_CAPACITY',503);
+  if(result===-10||result===-12)throw new WorkspaceError('FREE_DEMO_BUDGET_UNAVAILABLE',503);
+  if(result===-11)throw new WorkspaceError('FREE_DEMO_REQUEST_LIMIT',429,60);
+  if(result!==1)throw new WorkspaceError('MAINTENANCE_WRITE_UNCONFIRMED',409);
   raw=[nextMarket,nextSettlement,nextLedger];
+  releasedOperationIds.push(...budgetReleases.map(r=>r.operationId));budgetReleases.length=0;
  }
  const expired=market.orders.filter(o=>Date.parse(marketContentExpiresAt(o))<=now).slice(0,limit),removed:string[]=[],incidents:{operationId:string;code:string}[]=[];
  for(const order of expired){
+  const settlement=settlements.records.find(r=>r.operationId===order.operationId);
+  if(process.env.BAZAAR_FREE_DEMO_MODE==='continuous'&&order.phase==='awaiting-payment'&&!order.transactionHash&&!order.paymentVerifiedAt&&(!settlement||['challenged','rejected'].includes(settlement.phase)))budgetReleases.push(continuousFreeOperationRequest({operationId:order.operationId,principalHash:sha(order.buyerOwnerId),action:'release'}));
   const objectKeys=marketFileCleanupKeys(order,objects);
   if(objectKeys.length){
    if(!order.fileReservation)throw new WorkspaceError('INVALID_FILE_RESERVATION',503);
@@ -46,7 +81,7 @@ export async function pruneExpiredMarketContent({redis,prefix,objects,now=Date.n
    market.fileCleanup.push({operationId:order.operationId,buyerOwnerId:order.buyerOwnerId,maxBytes:order.fileReservation.maxBytes,objectKeys,notBefore:new Date(Date.parse(marketContentExpiresAt(order))+MARKET_FILE_CLEANUP_GRACE_MS).toISOString()});
   }
   market.archived??=[];
-  market.archived.push(marketRecoveryRecord(order,settlements.records.find(r=>r.operationId===order.operationId),now));
+  market.archived.push(marketRecoveryRecord(order,settlement,now));
   market.orders=market.orders.filter(o=>o.operationId!==order.operationId);
   settlements.records=settlements.records.filter(r=>r.operationId!==order.operationId);removed.push(order.operationId);
  }
@@ -70,7 +105,7 @@ export async function pruneExpiredMarketContent({redis,prefix,objects,now=Date.n
   else entry.firstDeletedAt=new Date(now).toISOString();
  }
  if(acknowledged)await commit();
- return {removed,incidents,cleanupReleased,cleanupPending:market.fileCleanup?.length??0,moreExpired:expired.length===limit,retentionDays:7,cleanupGraceMinutes:15,lifecycleBackstopRequired:true};
+ return {removed,incidents,cleanupReleased,cleanupPending:market.fileCleanup?.length??0,moreExpired:expired.length===limit,retentionDays:7,cleanupGraceMinutes:15,lifecycleBackstopRequired:true,...(process.env.BAZAAR_FREE_DEMO_MODE==='continuous'?{releasedOperationIds}: {})};
 }
 export function configuredMarketMaintenance(){
  const url=process.env.BAZAAR_WORKSPACE_REDIS_REST_URL,token=process.env.BAZAAR_WORKSPACE_REDIS_REST_TOKEN;

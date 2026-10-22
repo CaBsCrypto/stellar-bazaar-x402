@@ -3,6 +3,7 @@ import {randomBytes,randomUUID} from 'node:crypto';
 import {Account,Address,Keypair,Networks,Operation,TransactionBuilder,authorizeEntry,nativeToScVal,xdr} from '@stellar/stellar-sdk';
 import {encodePaymentSignatureHeader} from '@x402/core/http';
 import {demoConfiguration} from '../lib/demo-configuration.ts';
+import {purchaseAdmissionConfiguration} from '../lib/market-purchase-admission.ts';
 import {assertMarketPurchaseAdmission,createMarketOrder,readMarketOrder,listMarketOrders,sha,canonical} from '../lib/marketplace.ts';
 import {createMarketStore,setMarketStoreForTests} from '../lib/marketplace-store.ts';
 import {createMarketX402Store,setMarketX402StoreForTests} from '../lib/marketplace-x402-store.ts';
@@ -48,6 +49,29 @@ try{
  const challenge=createMarketX402Challenge(challenged,origin);
  await settlements.transact(s=>s.records.push({operationId:challenged.operationId,buyerOwnerId:buyer.ownerId,orderBinding:marketX402OrderBinding(challenged),challenge,phase:'challenged',createdAt:challenged.createdAt,updatedAt:challenged.updatedAt}));
  const tx=await transaction(challenged),signature=encodePaymentSignatureHeader({x402Version:2,resource:challenge.resource,accepted:challenge.accepts[0],payload:{transaction:tx.toXDR()}});
+ const otherOwner='ow_'+'c'.repeat(32),restricted=JSON.stringify([buyer.ownerId]);
+ configure({BAZAAR_MARKET_BUYER_ALLOWLIST_JSON:restricted});
+ assert.equal(demoConfiguration().features.purchases.reason,'BUYER_ADMISSION_RESTRICTED');
+ assert.equal(demoConfiguration(process.env,buyer.ownerId).features.purchases.enabled,true);
+ assert.equal(demoConfiguration(process.env,otherOwner).features.purchases.enabled,false);
+ assert.equal(purchaseAdmissionConfiguration(process.env,buyer.ownerId).allowed,true);
+ assert.equal(JSON.stringify(demoConfiguration()).includes(buyer.ownerId),false,'Public configuration never exposes cohort members');
+ assertMarketPurchaseAdmission(buyer);
+ assert.throws(()=>assertMarketPurchaseAdmission({ownerId:otherOwner}),e=>e.code==='BUYER_ADMISSION_RESTRICTED'&&e.status===503);
+ configure({BAZAAR_MARKET_BUYER_ALLOWLIST_JSON:JSON.stringify([otherOwner])});
+ await assert.rejects(createMarketOrder(buyer,intent(order())),e=>e.code==='BUYER_ADMISSION_RESTRICTED'&&e.status===503);
+ await assert.rejects(executeMarketX402Payment(buyer,pending.operationId,origin,undefined,deps),e=>e.code==='BUYER_ADMISSION_RESTRICTED'&&e.status===503);
+ await assert.rejects(executeMarketX402Payment(buyer,challenged.operationId,origin,signature,deps),e=>e.code==='BUYER_ADMISSION_RESTRICTED'&&e.status===503);
+ assert.equal((await createMarketOrder(buyer,intent(pending))).operationId,pending.operationId,'Admission restriction preserves saved order recovery');
+ assert.equal((await executeMarketX402Payment(buyer,challenged.operationId,origin,undefined,deps)).status,402,'Saved challenges remain readable without authorizing payment');
+ assert.equal((await settlements.transact(s=>s.records.find(r=>r.operationId===challenged.operationId))).payloadHash,undefined);
+ for(const raw of ['', 'null', '{}', '["wallet"]', JSON.stringify([buyer.ownerId,buyer.ownerId]), ' '.repeat(4097)]){
+  configure({BAZAAR_MARKET_BUYER_ALLOWLIST_JSON:raw});
+  assert.equal(demoConfiguration().features.purchases.reason,'PURCHASE_ADMISSION_CONFIGURATION_INCOMPLETE');
+  await assert.rejects(createMarketOrder(buyer,intent(order())),e=>e.code==='PURCHASE_ADMISSION_CONFIGURATION_INCOMPLETE'&&e.status===503);
+ }
+ configure({BAZAAR_MARKET_BUYER_ALLOWLIST_JSON:'[]'});assertMarketPurchaseAdmission();
+ configure();
  for(const patch of [{STELLAR_X402_FACILITATOR_API_KEY:undefined},{STELLAR_X402_FACILITATOR_URL:undefined},{STELLAR_X402_FACILITATOR_URL:'https://channels.openzeppelin.com/x402/mainnet'},{STELLAR_X402_FACILITATOR_API_KEY:'invalid\ncredential'},{STELLAR_X402_FACILITATOR_API_KEY:'x'.repeat(1025)},{STELLAR_X402_RPC_URL:'https://soroban.stellar.org'},{X402_ENABLE_LOCAL_PAYER:'true'}]){
   configure(patch);assert.equal(demoConfiguration().features.purchases.enabled,false);
   await assert.rejects(createMarketOrder(buyer,intent(order())),e=>e.code==='X402_CONFIGURATION_INCOMPLETE'&&e.status===503);
@@ -58,7 +82,18 @@ try{
   assert.equal((await createMarketOrder(buyer,intent(pending))).operationId,pending.operationId,'Existing order replay precedes new purchase admission');
   assert.equal((await executeMarketX402Payment(buyer,challenged.operationId,origin,undefined,deps)).status,402,'Existing immutable challenge remains recoverable');
  }
- configure({BAZAAR_ENABLE_MARKET_PURCHASES:'false',BAZAAR_X402_MARKETPLACE_ENABLED:'false',STELLAR_X402_FACILITATOR_API_KEY:undefined});
+ // A bounded Free demo must close fresh work before consuming authorization.
+ for(const until of ['2000-01-01T00:00:00.000Z','', 'not-a-date', '2026-02-30T00:00:00.000Z']){
+  configure({BAZAAR_FREE_DEMO_ADMISSION_UNTIL:until});
+  assert.equal(demoConfiguration().features.purchases.enabled,false);
+  await assert.rejects(createMarketOrder(buyer,intent(order())),e=>e.code==='PURCHASES_PAUSED'&&e.status===503);
+  await assert.rejects(executeMarketX402Payment(buyer,challenged.operationId,origin,signature,deps),e=>e.code==='PURCHASES_PAUSED'&&e.status===503);
+  assert.equal((await createMarketOrder(buyer,intent(pending))).operationId,pending.operationId);
+  assert.equal((await executeMarketX402Payment(buyer,challenged.operationId,origin,undefined,deps)).status,402);
+  const untouched=await settlements.transact(s=>s.records.find(r=>r.operationId===challenged.operationId));
+  assert.equal(untouched.phase,'challenged');assert.equal(untouched.payloadHash,undefined);
+ }
+ configure({BAZAAR_FREE_DEMO_ADMISSION_UNTIL:'2000-01-01T00:00:00.000Z',BAZAAR_ENABLE_MARKET_PURCHASES:'false',BAZAAR_X402_MARKETPLACE_ENABLED:'false',STELLAR_X402_FACILITATOR_API_KEY:undefined,BAZAAR_MARKET_BUYER_ALLOWLIST_JSON:JSON.stringify([otherOwner])});
  assert.equal((await createMarketOrder(buyer,intent(pending))).operationId,pending.operationId);assert.equal((await readMarketOrder(buyer,pending.operationId)).phase,'awaiting-payment');assert.equal((await listMarketOrders(buyer)).length,2);
  const proof=marketX402Authorization(tx.toXDR(),challenged),attemptId=randomUUID();
  await market.transact(s=>{const o=s.orders.find(v=>v.operationId===challenged.operationId);o.phase='payment-uncertain';o.settlementAttemptId=attemptId;o.transactionHash=proof.transactionHash;});
@@ -66,5 +101,5 @@ try{
  assert.equal((await reconcileMarketX402Payment(buyer,challenged.operationId,deps)).phase,'paid','Confirmed payment finalization survives disabled purchases and unavailable facilitator');
  assert.equal((await executeMarketX402Payment(buyer,challenged.operationId,origin,signature,deps)).status,202,'Confirmed proof replay survives admission closure');
  assert.equal(effects,0);
- console.log(JSON.stringify({status:'PASS',externalRequests:0,payments:0,checks:['effective hosted purchase config guards fresh order/challenge/proof','missing or malformed facilitator and non-Testnet RPC rejected','first authorization not consumed on unavailable configuration','existing order and immutable challenge remain recoverable','confirmed proof replay and reconciliation work with closed flags','no facilitator or ledger call']}));
+ console.log(JSON.stringify({status:'PASS',externalRequests:0,payments:0,checks:['effective hosted purchase config guards fresh order/challenge/proof','restricted admission admits only the fixed account and keeps members private','malformed admission policy fails closed','cohort cannot consume proof or call facilitator for another account','missing or malformed facilitator and non-Testnet RPC rejected','first authorization not consumed on unavailable configuration','existing order and immutable challenge remain recoverable','confirmed proof replay and reconciliation work with closed flags and cohort','no facilitator or ledger call']}));
 }finally{setMarketStoreForTests(undefined);setMarketX402StoreForTests(undefined);for(const key of Object.keys(process.env))if(!(key in prior))delete process.env[key];Object.assign(process.env,prior);}

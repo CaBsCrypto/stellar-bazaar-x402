@@ -8,6 +8,10 @@
     "node": "24.x"
   },
   "scripts": {
+    "test:service:share": "node --experimental-strip-types scripts/test-service-share.mjs",
+    "test:service:qr-decode": "node --experimental-strip-types scripts/test-service-share.mjs --decode",
+    "test:service:selection": "node --experimental-strip-types scripts/test-service-selection.mjs",
+    "test:market:search-ui": "node --experimental-strip-types scripts/test-market-catalog-search-ui.mjs",
     "test:market:seller-capacity": "node --experimental-strip-types scripts/test-market-seller-capacity.mjs",
     "test:demo:qr-boundary": "node --experimental-strip-types scripts/test-demo-qr-boundary.mjs",
     "test:seller:hosted": "node scripts/test-seller-hosted-tick.mjs",
@@ -117,7 +121,12 @@
     "test:market:visitor": "node scripts/test-market-visitor.mjs",
     "test:xlm:pilot": "node scripts/test-xlm-pilot.mjs && node scripts/test-testnet-transfer.mjs",
     "xlm:preflight": "node scripts/prepare-xlm-pilot.mjs",
-    "test:payments:shared": "node scripts/test-shared-settlement.mjs && node scripts/test-shared-http.mjs"
+    "test:payments:shared": "node scripts/test-shared-settlement.mjs && node scripts/test-shared-http.mjs",
+    "test:market:review": "node --experimental-strip-types scripts/test-market-review.mjs",
+    "test:market:review-ui": "node --experimental-strip-types scripts/test-market-review-ui.mjs",
+    "test:market:guardian-runner": "node --experimental-strip-types scripts/test-market-guardian.mjs",
+    "validate:continuous:local": "node scripts/validate-continuous-demo-local.mjs",
+    "prepare:continuous:source": "node scripts/prepare-functional-preview-source.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1127.0",
@@ -131,6 +140,7 @@
     "@x402/fetch": "2.24.0",
     "@x402/stellar": "2.24.0",
     "next": "16.3.1",
+    "qrcode": "1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "three": "^0.186.0",
@@ -138,6 +148,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.17.0",
+    "@types/qrcode": "1.5.6",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/three": "^0.186.0",

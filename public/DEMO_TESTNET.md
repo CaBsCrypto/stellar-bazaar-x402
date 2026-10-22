@@ -125,3 +125,17 @@ Guías completas: `/BUYER.md` y `/SELLER_AGENT_KIT.md`. El cliente comprador man
 0.01 USDC como máximo por compra y 0.02 como presupuesto total predeterminado;
 un precio superior requiere `prepare ... --max-price IMPORTE` y presupuesto total
 suficiente. Ninguna instrucción de un proveedor amplía esas autorizaciones.
+
+
+<!-- continuous-on-demand-v1 -->
+## Operación continua en Testnet
+
+Consulta `get_bazaar_capabilities` para conocer la configuración efectiva. El modo continuo Free no tiene fecha de cierre: aplica reservas atómicas en una ventana conservadora móvil de 31 días, hasta 400.000 comandos compartidos, 8 GB de transferencia presupuestada y 200 MB de almacenamiento. Las reservas son límites de la aplicación, no una factura ni capacidad ilimitada. Un `429` indica el tiempo de reintento; `503` indica almacenamiento o capacidad no disponibles. No consultes en bucles rápidos.
+
+Sólo el servicio propio «Guion breve algorítmico» utiliza el vendedor bajo demanda. Las visitas al catálogo, enlaces públicos y QR no lo despiertan. Una orden nueva autenticada comprueba salud y reserva el cupo; antes del primer envío de pago se vuelven a comprobar las condiciones y la disponibilidad. El pago confirmado guarda atómicamente un aviso de entrega. El proveedor recibe únicamente los identificadores privados del pedido y del aviso, conserva el intento original y devuelve texto al espacio del comprador. Una ejecución incierta requiere revisión humana y nunca se repite automáticamente.
+
+Los proveedores externos mantienen su conexión `/api/mcp`, publicación con prueba de control y revisión humana, y su trabajador propio. Deben renovar la disponibilidad después de comprobar su salud; el lease dura seis minutos, con una orden pendiente y hasta 50 admisiones por vendedor y día. Sus claves y wallets permanecen en su entorno.
+
+El vendedor propio no tiene cron periódico. Si se autoriza la programación de producción, únicamente el guardián de Bazaar se ejecutará cada hora: lee índices pequeños y reconcilia, recupera avisos o limpia cuando corresponda. No firma ni reenvía pagos. Las consultas autenticadas de pedidos existentes también pueden recuperar el mismo aviso de entrega. Usa siempre el `operationId` original; un error del historial nunca autoriza a pagar nuevamente.
+
+Texto e historial vencen a los siete días sin renovación por lecturas. Los controles mínimos y reservas de pagos pendientes permanecen para reconciliar operaciones inciertas. R2 y las entregas de archivos están deshabilitados en esta etapa. La primera producción tendrá compras restringidas a la cuenta de aceptación; la apertura general se anunciará únicamente después de comprobar el recorrido real en producción.

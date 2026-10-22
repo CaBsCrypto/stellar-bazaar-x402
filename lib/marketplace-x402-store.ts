@@ -14,14 +14,25 @@ export interface MarketX402Settlement {
   createdAt:string;updatedAt:string;attemptId?:string;payload?:PaymentPayload;
   payloadHash?:string;authorizationFingerprint?:string;outcome?:SettleResponse;
   transactionHash?:string;responseHash?:string;
+  lastFailure?:MarketX402PaymentFailure;
 }
+export const marketX402PaymentFailureSchema=z.object({
+ stage:z.enum(['verify','before-settle','settle','outcome-save','chain-confirm']),
+ code:z.enum(['FACILITATOR_HTTP_REJECTED','FACILITATOR_TIMEOUT','FACILITATOR_NETWORK_UNCONFIRMED','FACILITATOR_JSON_INVALID','FACILITATOR_RESPONSE_BOUND','FACILITATOR_REDIRECT_BLOCKED','PAYMENT_STATE_WRITE_UNCONFIRMED','PAYMENT_RUNTIME_UNCONFIRMED']),
+ httpStatus:z.number().int().min(100).max(599).optional(),
+ // This is bounded-fetch evidence, never proof of an on-chain submission.
+ // Absence means no transport evidence was available.
+ dispatchStarted:z.boolean().optional(),at:z.string().datetime(),
+}).strict().refine(value=>Buffer.byteLength(JSON.stringify(value),'utf8')<=256,'Payment diagnostic exceeds its fixed bound');
+export type MarketX402PaymentFailure=z.infer<typeof marketX402PaymentFailureSchema>;
+export const MARKET_X402_PAYMENT_FAILURE_MAX_BYTES=256;
 export type MarketX402State={version:1;records:MarketX402Settlement[]};
 export interface MarketX402Store{transact<T>(op:(state:MarketX402State)=>T,guard?:MarketCommitGuard):Promise<T>}
 const hash=z.string().regex(/^[a-f0-9]{64}$/);
 const recordSchema=z.object({operationId:z.string().uuid(),buyerOwnerId:z.string().min(1),orderBinding:hash,
  challenge:z.unknown(),phase:z.enum(['challenged','verifying','rejected','settling','uncertain','settled','confirmed']),
  createdAt:z.string().datetime(),updatedAt:z.string().datetime(),attemptId:z.string().uuid().optional(),
- payload:z.unknown().optional(),payloadHash:hash.optional(),authorizationFingerprint:hash.optional(),outcome:z.unknown().optional(),transactionHash:hash.optional(),responseHash:hash.optional()}).strict();
+ payload:z.unknown().optional(),payloadHash:hash.optional(),authorizationFingerprint:hash.optional(),outcome:z.unknown().optional(),transactionHash:hash.optional(),responseHash:hash.optional(),lastFailure:marketX402PaymentFailureSchema.optional()}).strict();
 const stateSchema=z.object({version:z.literal(1),records:z.array(recordSchema)}).strict();
 export function validateMarketX402State(raw:unknown):asserts raw is MarketX402State{
  const state=stateSchema.parse(raw);

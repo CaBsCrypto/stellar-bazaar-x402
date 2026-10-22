@@ -12,15 +12,25 @@ export function operationalPressure(used: number, assigned: number, newOperation
   return { percent, alert: percent >= OPERATIONAL_ALERT_PERCENT, paused: newOperation && percent >= OPERATIONAL_PAUSE_PERCENT, exhausted: used >= assigned };
 }
 
-export type OperationalRequestClass = { profile: OperationalProfile; newOperation: boolean; workload?:'metadata'; bootstrapCreation?:true };
+export type OperationalWorkload = 'metadata'|'observed-metadata'|'catalog'|'identity'|'orders'|'capacity'|'financial'|'order-create';
+export type OperationalRequestClass = { profile: OperationalProfile; newOperation: boolean; workload?:OperationalWorkload; bootstrapCreation?:true };
+const continuousMode=()=>process.env.BAZAAR_FREE_DEMO_MODE==='continuous';
+const finiteExampleMode=()=>['example-text-wire/v2','example-text-wire/v3'].includes(process.env.BAZAAR_EXAMPLE_TEXT_BUDGET_PROFILE??'');
 /** Conservative until a handler proves that an existing intent is being recovered. */
 export function operationalRequestClass(request?: Request): OperationalRequestClass {
   if (!request) return { profile: 'recovery', newOperation: false };
   const path = new URL(request.url).pathname, method = request.method.toUpperCase();
   if (['GET', 'HEAD', 'OPTIONS'].includes(method)) {
     if(path==='/api/mcp')return {profile:'public',newOperation:false,workload:'metadata'};
+    if(path==='/api/account/identity')return {profile:'recovery',newOperation:false,workload:'identity'};
+    if(continuousMode()&&finiteExampleMode()&&process.env.BAZAAR_ENABLE_MARKETPLACE==='true'&&(path==='/api/market/catalog'||['GET','HEAD'].includes(method)&&/^\/resources\/[a-z0-9][a-z0-9._-]{0,79}\/qr\.svg$/.test(path)))return {profile:'public',newOperation:false,workload:'catalog'};
+    if(continuousMode()&&finiteExampleMode()&&path==='/api/account/queries')return {profile:'recovery',newOperation:false,workload:'orders'};
+    if(path==='/api/market/orders')return {profile:'recovery',newOperation:false,workload:'orders'};
+    if(continuousMode()&&/^\/api\/market\/orders\/[a-f0-9-]{36}$/.test(path))return {profile:'recovery',newOperation:false,workload:'orders'};
     return { profile: ['/api/discovery/resources', '/api/discovery/search', '/api/market/catalog', '/api/mcp'].includes(path) ? 'public' : 'recovery', newOperation: false };
   }
+  if(continuousMode()&&method==='POST'&&/^\/api\/market\/orders\/[a-f0-9-]{36}\/x402$/.test(path))return {profile:'recovery',newOperation:false,workload:'financial'};
+  if(continuousMode()&&method==='POST'&&path==='/api/market/orders')return {profile:'authenticated',newOperation:true,workload:'order-create'};
   if (path === '/api/market/control' || path === '/api/market/operations-budget' || path === '/api/market/review' ||
       path === '/api/market/guardian' || path === '/api/account/wallet/complete' ||
       /^\/api\/market\/orders\/[^/]+\/x402$/.test(path) ||
@@ -45,7 +55,7 @@ export async function classifyOperationalRequest(request?: Request): Promise<Ope
   const initial = operationalRequestClass(request);
   if (!request || request.method !== 'POST') return initial;
   const path = new URL(request.url).pathname;
-  if (path !== '/api/mcp' && path !== '/api/workspaces' && !/^\/api\/market\/(orders\/[^/]+|services\/[^/]+|agent-permissions)$/.test(path)) return initial;
+  if (path !== '/api/mcp' && path !== '/api/workspaces' && path!=='/api/market/capacity' && !/^\/api\/market\/(orders\/[^/]+|services\/[^/]+|agent-permissions)$/.test(path)) return initial;
   const clone = request.clone(), reader = clone.body?.getReader();
   if (!reader) return initial;
   const chunks: Uint8Array[] = []; let size = 0;
@@ -59,15 +69,24 @@ export async function classifyOperationalRequest(request?: Request): Promise<Ope
         const name = body?.params?.name;
         if (typeof name !== 'string') return initial;
         if(name==='create_bazaar_workspace')return validBootstrapCreation(request,body.params.arguments)?{...initial,bootstrapCreation:true}:initial;
+        if(continuousMode()&&name==='create_market_order')return {profile:'authenticated',newOperation:true,workload:'order-create'};
         if (mcpNewWork.has(name)) return initial;
-        if(mcpMetadata.has(name))return {profile:'public',newOperation:false,workload:'metadata'};
+        if(continuousMode()&&finiteExampleMode()&&process.env.BAZAAR_ENABLE_MARKETPLACE==='true'&&(['list_market_services','list_services','search_services','get_service'].includes(name)||process.env.BAZAAR_EXAMPLE_TEXT_BUDGET_PROFILE==='example-text-wire/v3'&&name==='get_bazaar_skills'))return {profile:'public',newOperation:false,workload:'catalog'};
+        if(continuousMode()&&name==='get_service'&&request.headers.has('authorization'))return {profile:'public',newOperation:false,workload:'observed-metadata'};
+        if(name==='get_bazaar_identity')return {profile:'recovery',newOperation:false,workload:'identity'};
+        if(continuousMode()&&finiteExampleMode()&&name==='get_bazaar_query_history')return {profile:'recovery',newOperation:false,workload:'orders'};
+        if(name==='list_market_orders')return {profile:'recovery',newOperation:false,workload:'orders'};
+        if(continuousMode()&&['get_market_order','claim_market_order','deliver_market_order','fail_market_order','uncertain_market_order'].includes(name))return {profile:'recovery',newOperation:false,workload:'orders'};
+        if(name==='report_market_capacity')return {profile:'authenticated',newOperation:body.params?.arguments?.ready!==false,workload:'capacity'};
+        if(mcpMetadata.has(name))return {profile:'public',newOperation:false,workload:request.headers.has('authorization')&&name!=='validate_service_card'?'observed-metadata':'metadata'};
         if (publicOperationalMcpTools.has(name)) return { profile: 'public', newOperation: false };
         return mcpRecovery.has(name) ? { profile: 'recovery', newOperation: false } : initial;
       }
       return { profile: 'public', newOperation: false, workload:'metadata' };
     }
+    if(path==='/api/market/capacity')return {profile:'authenticated',newOperation:body.ready!==false,workload:'capacity'};
     if (path === '/api/market/agent-permissions' || /^\/api\/market\/services\//.test(path) ||
-        ['reconcile', 'claim', 'deliver', 'fail', 'execution-uncertain'].includes(body?.action)) return { profile: 'recovery', newOperation: false };
+        ['reconcile', 'claim', 'deliver', 'fail', 'execution-uncertain'].includes(body?.action)) return { profile: 'recovery', newOperation: false,...(continuousMode()&&/^\/api\/market\/orders\/[a-f0-9-]{36}$/.test(path)?body?.action==='reconcile'?{workload:'financial' as const}:['claim','deliver','fail','execution-uncertain'].includes(body?.action)?{workload:'orders' as const}:{}:{}) };
     return initial;
   } catch { return initial; }
 }

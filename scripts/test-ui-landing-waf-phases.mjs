@@ -1,0 +1,38 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {buildUiLandingWafPhases,requireUiLandingPhaseBaseline,UI_HOTFIX_SOURCE,UI_ASSETS_ONLY_HASH,UI_GUARDIAN_PATH} from './prepare-ui-landing-waf-phases.mjs';
+import {UI_LANDING_ASSETS} from './prepare-ui-landing-assets-waf.mjs';
+import {matchesWafGroups} from './prepare-continuous-production-waf-proposal.mjs';
+import {v2WafCanonical as canonical} from './prepare-on-demand-production-v3-waf.mjs';
+const baseline=JSON.parse(await readFile('.vercel/recovery-example-budget4-preview-bazaar-waf-baseline.json','utf8')).bazaarWaf,before=canonical(baseline),operatorIp=baseline.rules[0].conditionGroup[0].conditions.find(c=>c.type==='ip_address').value;
+const input={sourceDigest:UI_HOTFIX_SOURCE,operatorIp,stagedHostname:'stellar-bazaar-x402-20mv7ffks-cabscryptocontacto-6028s-projects.vercel.app'},plan=buildUiLandingWafPhases(baseline,input);
+const denied=(configuration,request)=>configuration.rules.some(rule=>rule.active&&rule.action?.mitigate?.action==='deny'&&matchesWafGroups(rule.conditionGroup,request));
+let checks=0,cases=0;const check=run=>{run();checks++;};
+const {assetsOnly,stagingCombined,finalCombined}=plan.phases,canonicalHost='bazaar.browns.studio';
+check(()=>assert.equal(canonical(baseline),before));
+check(()=>assert.equal(plan.summary.assetsOnlyHash,UI_ASSETS_ONLY_HASH));
+check(()=>assert.deepEqual(stagingCombined.expected.rules[0],assetsOnly.expected.rules[0]));
+check(()=>{const undo=structuredClone(finalCombined.expected.rules[0]);for(const index of [1,8,12,19])undo.conditionGroup[index]=structuredClone(assetsOnly.expected.rules[0].conditionGroup[index]);assert.deepEqual(undo,assetsOnly.expected.rules[0]);});
+check(()=>assert.equal(finalCombined.expected.rules[1].conditionGroup.length,4));
+check(()=>assert.deepEqual(requireUiLandingPhaseBaseline(baseline,plan,'assetsOnly'),assetsOnly.body));
+check(()=>assert.deepEqual(requireUiLandingPhaseBaseline(assetsOnly.expected,plan,'stagingCombined'),stagingCombined.body));
+check(()=>assert.deepEqual(requireUiLandingPhaseBaseline(stagingCombined.expected,plan,'finalCombined'),finalCombined.bodies));
+for(const host of [canonicalHost,...plan.summary.retiredImmutableHosts,input.stagedHostname,'unknown.invalid'])for(const method of ['GET','HEAD','POST','DELETE'])for(const environment of ['production','preview'])for(const ip_address of [operatorIp,'192.0.2.234'])for(const path of ['/','/api/mcp','/api/market/review','/api/market/orders','/demo-deliveries/unknown.png',UI_GUARDIAN_PATH,UI_GUARDIAN_PATH+'/extra',...UI_LANDING_ASSETS]){
+ const r={host,method,environment,ip_address,path},old=denied(assetsOnly.expected,r),staged=denied(stagingCombined.expected,r),final=denied(finalCombined.expected,r);
+ if(host!==input.stagedHostname)assert.equal(staged,old,'Staging must preserve other hosts');
+ else assert.equal(staged,!(environment==='production'&&ip_address===operatorIp),'Immutable staging must require existing operator and Production');
+ if(host===canonicalHost)assert.equal(final,old,'Final must preserve canonical perimeter');
+ else{const cron=host===input.stagedHostname&&environment==='production'&&method==='GET'&&path===UI_GUARDIAN_PATH;assert.equal(final,!cron,'Final only permits the exact existing scheduled guardian on new host');}cases++;
+}
+check(()=>assert.equal(denied(stagingCombined.expected,{host:input.stagedHostname,method:'GET',environment:'production',ip_address:operatorIp,path:'/'}),false));
+check(()=>assert.equal(denied(finalCombined.expected,{host:input.stagedHostname,method:'GET',environment:'production',ip_address:'192.0.2.234',path:UI_GUARDIAN_PATH}),false));
+check(()=>assert.equal(denied(assetsOnly.expected,{host:input.stagedHostname,method:'GET',environment:'production',ip_address:'192.0.2.234',path:UI_GUARDIAN_PATH}),true));
+check(()=>assert.throws(()=>buildUiLandingWafPhases(baseline,{...input,operatorIp:'192.0.2.199'})));
+check(()=>assert.throws(()=>buildUiLandingWafPhases(baseline,{...input,sourceDigest:'b6266def82f2962eae943c04a01f28f63f11c66279edb83da71c2709d91b875d'})));
+check(()=>assert.throws(()=>buildUiLandingWafPhases(baseline,{...input,stagedHostname:canonicalHost})));
+check(()=>assert.throws(()=>requireUiLandingPhaseBaseline(baseline,plan,'finalCombined')));
+check(()=>assert.throws(()=>requireUiLandingPhaseBaseline(finalCombined.expected,plan,'assetsOnly')));
+check(()=>{const tampered=structuredClone(plan);tampered.phases.assetsOnly.body.value.active=false;assert.throws(()=>requireUiLandingPhaseBaseline(baseline,tampered,'assetsOnly'));});
+const helperPath='scripts/prepare-ui-landing-waf-phases.mjs',helperSha256=createHash('sha256').update(await readFile(helperPath)).digest('hex');
+console.log(JSON.stringify({status:'PASS_LOCAL_UI_WAF_PHASES',checks,matrixCases:cases,helperSha256,sourceDigest:UI_HOTFIX_SOURCE,assetsOnlyHash:UI_ASSETS_ONLY_HASH,stagingCombinedHash:plan.summary.stagingCombinedHash,finalCombinedHash:plan.summary.finalCombinedHash,actualReadyHostname:input.stagedHostname,fullWafIntersectionProven:true,existingGuardianHostArraysRebased:4,cronScheduleChanged:false,ipPrinted:false,networkRequests:0,cloudWrites:0}));

@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { createOperationalBudgetStore, operationalCheckpointSchema } from '../lib/operational-budget.ts';
 const now=Date.now(),oldNow=Date.now,prefix='bazaar-workspace:pilot-'+'e'.repeat(32),data=new Map();
-const checkpoint={version:1,epoch:randomUUID(),observedAt:new Date(now).toISOString(),expiresAt:new Date(now+14*86400000).toISOString(),evidence:'synthetic-monthly-capacity',remaining:{requests:100000,redisRequests:495800,redisCommands:495800,outboundBytes:9991611392,inboundBytes:9991611392,externalRequests:0}};
+// Synthetic allocation verifies profile isolation, not a real provider plan.
+// Full registry/quota worst-case reservations intentionally exceed tiny usage.
+const checkpoint={version:1,epoch:randomUUID(),observedAt:new Date(now).toISOString(),expiresAt:new Date(now+14*86400000).toISOString(),evidence:'synthetic-profile-isolation-not-billing',remaining:{requests:100000,redisRequests:495800,redisCommands:495800,outboundBytes:1000000000000,inboundBytes:1000000000000,externalRequests:0}};
 const redis={async get(key){return data.get(key)??null;},async eval(_script,[key],[mode,old,next]){if(mode==='missing'?data.has(key):data.get(key)!==old)return 0;data.set(key,next);return 1;}};
 const store=createOperationalBudgetStore(redis,prefix,()=>checkpoint);
 try{

@@ -1,0 +1,65 @@
+// Offline review: synthetic credentials only; no native fetch, session read or DPAPI.
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {REPAIR,patchSecretOnce,selectGeneratedKey,environmentWhitelist,validateMetadataChange} from '../.vercel/facilitator-testnet-access-repair-secret-control.mjs';
+let checks=0,requests=0,sessionReads=0;
+const check=(value)=>{assert.ok(value);checks++;};
+const equal=(a,b)=>{assert.deepEqual(a,b);checks++;};
+const fakeKey='SYNTHETIC_TESTNET_KEY_ONLY_0123456789';
+const fakeSession='SYNTHETIC_VERCEL_SESSION_ONLY_0123456789';
+const ack={id:REPAIR.environmentVariableId,key:REPAIR.key,type:'sensitive',target:['production'],value:fakeKey};
+const sessionReader=()=>{sessionReads++;return {token:fakeSession};};
+const goodFetch=async(url,init)=>{
+ requests++;
+ equal(url,`https://api.vercel.com/v9/projects/${REPAIR.projectId}/env/${REPAIR.environmentVariableId}?teamId=${REPAIR.teamId}`);
+ equal(init.method,'PATCH');equal(init.redirect,'manual');
+ equal(Object.keys(init.headers).sort(),['Accept','Authorization','Content-Type']);
+ equal(init.headers.Authorization,'Bearer '+fakeSession);
+ equal(JSON.parse(init.body),{value:fakeKey,type:'sensitive',target:['production']});
+ check(init.signal instanceof AbortSignal);
+ return Response.json(ack);
+};
+const result=await patchSecretOnce(fakeKey,{fetcher:goodFetch,sessionReader});
+equal(result,{httpStatus:200,environmentVariableId:REPAIR.environmentVariableId,privateValuesInOutput:0,environmentWrites:1,mutationRequests:1});
+equal(requests,1);equal(sessionReads,1);
+check(!JSON.stringify(result).includes(fakeKey));check(!JSON.stringify(result).includes(fakeSession));
+async function rejected(fetcher,pattern=/READ_RECOVERY_ONLY/){let calls=0;await assert.rejects(()=>patchSecretOnce(fakeKey,{sessionReader,fetcher:async(...a)=>{calls++;return fetcher(...a);}}),pattern);checks++;equal(calls,1);}
+await rejected(async()=>{throw Error('Lost acknowledgement '+fakeKey+' '+fakeSession);});
+await rejected(async()=>Response.json({error:{message:fakeKey}},{status:429}));
+await rejected(async()=>Response.json({error:{message:fakeSession}},{status:500}));
+await rejected(async()=>new Response('',{status:307,headers:{Location:'https://foreign.invalid/'}}));
+await rejected(async()=>Response.json({...ack,id:REPAIR.previewId}));
+await rejected(async()=>Response.json({...ack,target:['preview']}));
+await rejected(async()=>Response.json({...ack,type:'plain'}));
+await rejected(async()=>Response.json({...ack,key:'FOREIGN_KEY'}));
+await rejected(async()=>Response.json({...ack,error:{message:fakeKey}}));
+await rejected(async()=>new Response('not-json '+fakeKey));
+await rejected(async()=>new Response('x'.repeat(65537)),/RESPONSE_TOO_LARGE_READ_RECOVERY_ONLY/);
+let before=0;
+await assert.rejects(()=>patchSecretOnce(fakeKey,{sessionReader:()=>({token:'bad\r\nsession'}),fetcher:async()=>{before++;}}),/EXISTING_VERCEL_AUTH_SESSION_REQUIRED/);checks++;equal(before,0);
+await assert.rejects(()=>patchSecretOnce('invalid',{sessionReader,fetcher:async()=>{before++;}}),/VALID_SINGLE_TESTNET_KEY_REQUIRED/);checks++;equal(before,0);
+const packet=(body,extra={})=>({purpose:'bazaar-facilitator-testnet-access-repair-v1',endpoint:REPAIR.endpoint,reviewSha256:REPAIR.reviewSha256,httpStatus:200,responseBase64:Buffer.from(JSON.stringify(body)).toString('base64'),...extra});
+for(const body of [fakeKey,{key:fakeKey},{api_key:fakeKey},{apiKey:fakeKey},{token:fakeKey}])equal(selectGeneratedKey(packet(body)),fakeKey);
+for(const body of [fakeKey,{key:fakeKey},{api_key:fakeKey},{apiKey:fakeKey},{token:fakeKey}])equal(selectGeneratedKey(packet(body,{httpStatus:201})),fakeKey);
+for(const status of [202,204,301,400,401,500]){assert.throws(()=>selectGeneratedKey(packet({key:fakeKey},{httpStatus:status})),/EXACT_ENCRYPTED_TESTNET_RESPONSE_REQUIRED/);checks++;}
+for(const p of [packet({key:fakeKey,token:fakeKey}),packet({unknown:fakeKey}),packet({key:'short'}),packet({key:fakeKey},{httpStatus:302}),packet({key:fakeKey},{endpoint:'https://channels.openzeppelin.com/mainnet/gen'})]){assert.throws(()=>selectGeneratedKey(p));checks++;}
+const row=(id,key,type,target,updatedAt)=>({id,key,type,target,gitBranch:null,customEnvironmentIds:[],updatedAt});
+const metadata={envs:[row(REPAIR.environmentVariableId,REPAIR.key,'sensitive',['production'],1000),row(REPAIR.previewId,REPAIR.key,'sensitive',['preview'],1000),row('OTHER_REFERENCE','OTHER_SECRET','sensitive',['production'],1000)]};
+let secretReads=0;
+for(const r of metadata.envs)Object.defineProperty(r,'value',{get(){secretReads++;throw Error('SECRET_ACCESS_FORBIDDEN');}});
+const normalized=environmentWhitelist(metadata);equal(secretReads,0);check(normalized.every(r=>!('value' in r)));
+const after={envs:normalized.map(r=>({...r,updatedAt:r.id===REPAIR.environmentVariableId?2000:r.updatedAt}))};
+const changed=validateMetadataChange(metadata,after);check(changed.nonTargetRowsUnchanged);check(changed.previewReferencesUnchanged);equal(secretReads,0);
+const previewChanged=structuredClone(after);previewChanged.envs.find(r=>r.id===REPAIR.previewId).updatedAt++;
+assert.throws(()=>validateMetadataChange(metadata,previewChanged),/NON_TARGET/);checks++;
+const idChanged=structuredClone(after);idChanged.envs.find(r=>r.id===REPAIR.environmentVariableId).id='NEW_UNAUTHORIZED_REFERENCE';
+assert.throws(()=>validateMetadataChange(metadata,idChanged));checks++;
+const shared=structuredClone(after);shared.envs.find(r=>r.id===REPAIR.environmentVariableId).target=['production','preview'];
+assert.throws(()=>validateMetadataChange(metadata,shared));checks++;
+const ps=await readFile(new URL('../.vercel/facilitator-testnet-access-repair-seal.ps1',import.meta.url),'utf8');
+check(ps.includes('[IO.FileSystemAclExtensions]::Create('));
+check(ps.includes('[IO.FileMode]::CreateNew'));check(ps.includes('[IO.FileShare]::None'));
+check(!ps.includes('Set-Acl'));check(!ps.includes('Set-Content'));
+const helper=await readFile(new URL('../.vercel/facilitator-testnet-access-repair-secret-control.mjs',import.meta.url));
+console.log(JSON.stringify({status:'PASS_OFFLINE_SINGLE_SECRET_REPAIR_INDEPENDENT',checks,realNetworkRequests:0,actualCredentialReads:0,dpapiCalls:0,plaintextFiles:0,realEnvironmentWrites:0,helperSha256:createHash('sha256').update(helper).digest('hex'),sealSha256:createHash('sha256').update(ps).digest('hex')}));

@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {summarizeSellerSales} from './review-seller-sale-summary.mjs';
+const sale=phase=>({perspective:'sale',phase,operationId:'PRIVATE_OPERATION_ID',input:{prompt:'PRIVATE_PROMPT'},payer:'PRIVATE_PAYER'});let checks=0;
+const empty=summarizeSellerSales([]);assert.equal(empty.terminalOnly,true);assert.equal(empty.saleOrders,0);checks++;
+const unpaid=summarizeSellerSales([sale('awaiting-payment')]);assert.equal(unpaid.phases['awaiting-payment'],1);assert.equal(unpaid.payment.noOrderPaymentMarkers,1);assert.equal(unpaid.unprovenAwaitingPayment,1);assert.equal(unpaid.definitivelyUnpaidSales,0);assert.equal(unpaid.guardRelaxationProven,false);assert.equal(unpaid.terminalOnly,false);checks++;
+const verified={transactionHash:'a'.repeat(64),paymentVerifiedAt:'2026-10-11T00:00:00.000Z'},paid=summarizeSellerSales([{...sale('paid'),...verified}]);assert.equal(paid.payment.verifiedOrderMarkers,1);assert.equal(paid.nonterminalSales,1);checks++;
+const uncertain=summarizeSellerSales(['payment-submitting','payment-uncertain','executing','execution-uncertain'].map(sale));assert.equal(uncertain.nonterminalSales,4);assert.equal(uncertain.payment.uncertainOrderMarkers,4);checks++;
+const ledgerHidden=summarizeSellerSales([{...sale('awaiting-payment'),settlementAttemptId:'PRIVATE_ATTEMPT'}]);assert.equal(ledgerHidden.payment.uncertainOrderMarkers,1);assert.equal(ledgerHidden.definitivelyUnpaidSales,0);checks++;
+const unknown=summarizeSellerSales(['settling','verifying','unknown'].map(sale));assert.equal(unknown.phases.unknown,3);assert.equal(unknown.nonterminalSales,3);checks++;
+const terminal=summarizeSellerSales(['delivered','delivery-failed','expired-unpaid'].map(phase=>({...sale(phase),...verified})));assert.equal(terminal.terminalOnly,true);assert.equal(terminal.payment.verifiedOrderMarkers,3);checks++;
+const malformed=summarizeSellerSales([{...sale('awaiting-payment'),transactionHash:'PRIVATE_BAD_HASH'}]);assert.equal(malformed.payment.malformedOrderPaymentMarkers,1);assert.equal(malformed.terminalOnly,false);checks++;
+for(const value of [null,{},Array.from({length:101},()=>sale('awaiting-payment'))])assert.throws(()=>summarizeSellerSales(value),/BOUNDED_SALE_LIST_REQUIRED/);assert.throws(()=>summarizeSellerSales([{perspective:'purchase'}]),/SALE_PERSPECTIVE_REQUIRED/);checks++;
+for(const result of [unpaid,paid,uncertain,ledgerHidden,unknown,terminal,malformed])for(const secret of ['PRIVATE_OPERATION_ID','PRIVATE_PROMPT','PRIVATE_PAYER','PRIVATE_ATTEMPT','PRIVATE_BAD_HASH'])assert.ok(!JSON.stringify(result).includes(secret));checks++;
+console.log(JSON.stringify({status:'PASS',checks,networkRequests:0,privateProfileReads:0,guardChanged:false,manualTicks:0,deployments:0,payments:0}));

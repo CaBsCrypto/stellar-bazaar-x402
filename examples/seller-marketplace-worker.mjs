@@ -80,12 +80,14 @@ export async function executeSellerIntent(intent,options){
   if(intent.phase==='prepared')await claimSellerIntent(intent,options);else if(intent.phase!=='claimed')throw Error('EXISTING_INTENT_REQUIRES_RECOVERY');
   bindSellerOrder(intent,await inspectSellerIntent(intent,options),['executing']);
   if(typeof options.adapter?.execute!=='function')throw Error('ADAPTER_REQUIRED');
+  if(options.reserveExecution)await options.reserveExecution(intent.operationId);
   intent.phase='provider-started';await persist(intent,options); // fsync must complete before effect.
   let output;
   try{output=await options.adapter.execute({operationId:intent.operationId,attemptId:intent.attemptId,input:structuredClone(intent.binding.input)});if(typeof output?.text!=='string'||!output.text.length||output.text.length>2000)throw Error('TEXT_LIMIT_2000');}
   catch{try{await uncertainSellerIntent(intent,options);}catch{}throw Error('EXECUTION_UNCERTAIN_DO_NOT_REEXECUTE');}
   // Failure to persist leaves provider-started durable. Never compensate by executing again.
   intent.text=output.text;intent.textHash=sha(output.text);intent.phase='generated';await persist(intent,options);
+  if(options.beforeDelivery)await options.beforeDelivery();
   return await deliverSellerIntent(intent,options);
  }finally{active.delete(key);}
 }
@@ -98,10 +100,10 @@ export async function failSellerIntent(intent,options,reason){
  const {order}=await sellerTool(options,'fail_market_order',{operationId:intent.operationId,attemptId:intent.attemptId,reason});bindSellerOrder(intent,{...order,perspective:order?.perspective??'sale'},['delivery-failed']);if(order.failure!==reason)throw Error('FAILURE_CHANGED');intent.phase='delivery-failed';await persist(intent,options);return order;
 }
 /** Opt-in bounded polling: at most ten polls, one execution at a time, no retries. */
-export async function watchSellerOrders({poll,processOrder,afterPage=async()=>{},polls=10,intervalMs=60000,sleep=ms=>new Promise(r=>setTimeout(r,ms))}){
+export async function watchSellerOrders({poll,processOrder,beforePoll=async()=>{},afterPage=async()=>{},polls=10,intervalMs=60000,sleep=ms=>new Promise(r=>setTimeout(r,ms))}){
  if(!Number.isInteger(polls)||polls<1||polls>10||intervalMs<60000)throw Error('INVALID_WATCH_BOUNDS');const seen=new Set();let executed=0;
  for(let i=0;i<polls;i++){
-  let orders;try{orders=await poll();}catch(error){if(error.httpStatus===429)return {polls:i+1,executed,stopped:'quota',retryAfter:error.retryAfter};throw error;}
+  let orders;try{await beforePoll();orders=await poll();}catch(error){if(error.httpStatus===429)return {polls:i+1,executed,stopped:'quota',retryAfter:error.retryAfter};throw error;}
   for(const order of orders){
    if(order.phase==='execution-uncertain')return {polls:i+1,executed,stopped:'uncertainty'};
    if(order.phase!=='paid'||seen.has(order.operationId))continue;seen.add(order.operationId);

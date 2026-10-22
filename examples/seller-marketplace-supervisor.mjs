@@ -2,24 +2,25 @@ import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {withSellerMcp,validateSellerConfiguration} from './marketplace-seller-mcp.mjs';
 import {createSellerHttpAdapter} from './seller-http-adapter.mjs';
+import {createSellerExecutionBudget,createSellerCapacityReporter} from './seller-marketplace-capacity.mjs';
 import {sellerCanonical,sellerHash} from './seller-service-card.mjs';
 import {createSellerIntent,executeSellerIntent,readSellerJournal,listSellerOrders,watchSellerOrders} from './seller-marketplace-worker.mjs';
 
 const maximumDuration=24*60*60*1000;
-const reasons=new Set(['session-bound','time-bound','request-bound','provider-bound','quota','uncertainty','unconfirmed','fault','owner-stop','clock','requires-review']);
+const reasons=new Set(['session-bound','time-bound','request-bound','provider-bound','health-bound','quota','uncertainty','unconfirmed','fault','owner-stop','clock','requires-review']);
 const integer=(value,min,max)=>Number.isSafeInteger(value)&&value>=min&&value<=max;
 function settings(input){
- const value={durationMs:input.durationMs??maximumDuration,maxSessions:input.maxSessions??144,maxMcpRequests:input.maxMcpRequests??3000,maxProviderRequests:input.maxProviderRequests??50,pollsPerSession:input.pollsPerSession??10,intervalMs:input.intervalMs??60000};
- if(!integer(value.durationMs,60000,maximumDuration)||!integer(value.maxSessions,1,1440)||!integer(value.maxMcpRequests,1,5000)||!integer(value.maxProviderRequests,1,200)||!integer(value.pollsPerSession,1,10)||!integer(value.intervalMs,60000,3600000))throw Error('SUPERVISOR_BOUNDS_REQUIRED');
+ const value={durationMs:input.durationMs??maximumDuration,maxSessions:input.maxSessions??144,maxMcpRequests:input.maxMcpRequests??3000,maxProviderRequests:input.maxProviderRequests??50,maxHealthRequests:input.maxHealthRequests??1500,pollsPerSession:input.pollsPerSession??10,intervalMs:input.intervalMs??60000};
+ if(!integer(value.durationMs,60000,maximumDuration)||!integer(value.maxSessions,1,1440)||!integer(value.maxMcpRequests,1,5000)||!integer(value.maxProviderRequests,1,200)||!integer(value.maxHealthRequests,1,5000)||!integer(value.pollsPerSession,1,10)||!integer(value.intervalMs,60000,300000))throw Error('SUPERVISOR_BOUNDS_REQUIRED');
  return value;
 }
 function validateState(state,configuration,bindingHash){
- const keys=['version','bindingHash','configuration','createdAt','deadlineAt','lastObservedAt','phase','reason','sessionsStarted','sessionsCompleted','mcpRequests','providerRequests','executed',...(state?.retryAfterSeconds!==undefined?['retryAfterSeconds']:[])].sort().join(',');
- if(!state||Object.keys(state).sort().join(',')!==keys||state.version!==1||state.bindingHash!==bindingHash||sellerCanonical(state.configuration)!==sellerCanonical(configuration)||!['bound','running','stopped'].includes(state.phase)||!integer(state.createdAt,0,Number.MAX_SAFE_INTEGER-configuration.durationMs)||state.deadlineAt!==state.createdAt+configuration.durationMs||!integer(state.lastObservedAt,state.createdAt,Number.MAX_SAFE_INTEGER)||!integer(state.sessionsStarted,0,configuration.maxSessions)||!integer(state.sessionsCompleted,0,state.sessionsStarted)||!integer(state.mcpRequests,0,configuration.maxMcpRequests)||!integer(state.providerRequests,0,configuration.maxProviderRequests)||!integer(state.executed,0,state.providerRequests)||state.phase==='running'&&state.sessionsStarted!==state.sessionsCompleted+1||state.phase==='bound'&&state.sessionsStarted!==state.sessionsCompleted||state.phase!=='stopped'&&state.reason!==null||state.phase==='stopped'&&!reasons.has(state.reason)||state.retryAfterSeconds!==undefined&&!integer(state.retryAfterSeconds,1,86400))throw Error('SUPERVISOR_STATE_REQUIRES_REVIEW');
+ const keys=['version','bindingHash','configuration','createdAt','deadlineAt','lastObservedAt','phase','reason','sessionsStarted','sessionsCompleted','mcpRequests','providerRequests','healthRequests','executed',...(state?.retryAfterSeconds!==undefined?['retryAfterSeconds']:[])].sort().join(',');
+ if(!state||Object.keys(state).sort().join(',')!==keys||state.version!==2||state.bindingHash!==bindingHash||sellerCanonical(state.configuration)!==sellerCanonical(configuration)||!['bound','running','stopped'].includes(state.phase)||!integer(state.createdAt,0,Number.MAX_SAFE_INTEGER-configuration.durationMs)||state.deadlineAt!==state.createdAt+configuration.durationMs||!integer(state.lastObservedAt,state.createdAt,Number.MAX_SAFE_INTEGER)||!integer(state.sessionsStarted,0,configuration.maxSessions)||!integer(state.sessionsCompleted,0,state.sessionsStarted)||!integer(state.mcpRequests,0,configuration.maxMcpRequests)||!integer(state.providerRequests,0,configuration.maxProviderRequests)||!integer(state.healthRequests,0,configuration.maxHealthRequests)||!integer(state.executed,0,state.providerRequests)||state.phase==='running'&&state.sessionsStarted!==state.sessionsCompleted+1||state.phase==='bound'&&state.sessionsStarted!==state.sessionsCompleted||state.phase!=='stopped'&&state.reason!==null||state.phase==='stopped'&&!reasons.has(state.reason)||state.retryAfterSeconds!==undefined&&!integer(state.retryAfterSeconds,1,86400))throw Error('SUPERVISOR_STATE_REQUIRES_REVIEW');
 }
 function retrySeconds(value){return typeof value==='string'&&/^[0-9]{1,5}$/.test(value)&&Number(value)>0&&Number(value)<=86400?Number(value):undefined;}
 function summary(state,reason=state.reason){
- return {version:1,status:'stopped',reason:reasons.has(reason)?reason:'fault',sessionsCompleted:state.sessionsCompleted,mcpRequests:state.mcpRequests,providerRequests:state.providerRequests,executed:state.executed,deadlineAt:state.deadlineAt,...(state.retryAfterSeconds?{retryAfterSeconds:state.retryAfterSeconds}:{}),needsOwner:true,machineMustRemainAwake:true};
+ return {version:2,status:'stopped',reason:reasons.has(reason)?reason:'fault',sessionsCompleted:state.sessionsCompleted,mcpRequests:state.mcpRequests,providerRequests:state.providerRequests,healthRequests:state.healthRequests,executed:state.executed,deadlineAt:state.deadlineAt,...(state.retryAfterSeconds?{retryAfterSeconds:state.retryAfterSeconds}:{}),needsOwner:true,machineMustRemainAwake:true};
 }
 function wait(ms,signal){
  return new Promise((done,reject)=>{
@@ -39,7 +40,7 @@ export async function runSellerSupervisor(input){
  const configuration=settings(input),{store,fetcher=fetch,now=Date.now,sleep=wait,onStatus=()=>{},onHeartbeat=()=>{},signal}=input;
  if(!store?.read||!store?.journal||!store?.acquireLock||typeof fetcher!=='function'||typeof now!=='function'||typeof sleep!=='function'||typeof onStatus!=='function'||typeof onHeartbeat!=='function'||signal!==undefined&&!(signal instanceof AbortSignal))throw Error('SUPERVISOR_CONFIGURATION_REQUIRED');
  const release=await store.acquireLock('seller.watch');
- let state,stopReason,stateTrusted=false,budgetTail=Promise.resolve();
+ let state,config,budget,stopReason,stateTrusted=false,budgetTail=Promise.resolve();
  const journal=store.journal('seller.supervisor');
  const persist=async()=>{await journal.append(structuredClone(state));};
  const clock=()=>{
@@ -54,8 +55,8 @@ export async function runSellerSupervisor(input){
  // A serialized durable budget prevents overlapping SDK requests from racing.
  const charge=kind=>{
   const next=budgetTail.then(async()=>{
-   clock();const key=kind==='mcp'?'mcpRequests':'providerRequests',limit=kind==='mcp'?configuration.maxMcpRequests:configuration.maxProviderRequests;
-   if(state[key]>=limit){stopReason=kind==='mcp'?'request-bound':'provider-bound';throw Error('SUPERVISOR_STOP');}
+   clock();const key=kind==='mcp'?'mcpRequests':kind==='health'?'healthRequests':'providerRequests',limit=kind==='mcp'?configuration.maxMcpRequests:kind==='health'?configuration.maxHealthRequests:configuration.maxProviderRequests;
+   if(state[key]>=limit){stopReason=kind==='mcp'?'request-bound':kind==='health'?'health-bound':'provider-bound';throw Error('SUPERVISOR_STOP');}
    state[key]++;await persist();
   });
   budgetTail=next;return next;
@@ -66,11 +67,11 @@ export async function runSellerSupervisor(input){
  };
  const heartbeat=async()=>{clock();await onHeartbeat({version:1,status:'running',observedAt:state.lastObservedAt,deadlineAt:state.deadlineAt,sessionsStarted:state.sessionsStarted,mcpRequests:state.mcpRequests,providerRequests:state.providerRequests,executed:state.executed,machineMustRemainAwake:true});};
  try{
-  const config=validateSellerConfiguration(await store.read('seller-config'));
+  config=validateSellerConfiguration(await store.read('seller-config'));
   if(!/^[a-zA-Z0-9_-]{43}$/.test(config.agentAccess??'')||!/^[a-zA-Z0-9_-]{43}$/.test(config.providerAccess??''))throw Error('SUPERVISOR_CONFIGURATION_REQUIRED');
   const bindingHash=sellerHash(sellerCanonical({bazaarOrigin:config.bazaarOrigin,ownerId:config.ownerId,agentId:config.agentId,cardHash:config.cardHash,allowedOrigins:config.allowedOrigins,agentAccessHash:sellerHash(config.agentAccess),providerAccessHash:sellerHash(config.providerAccess)}));
   state=await readSellerJournal(journal);
-  if(!state){const createdAt=now();if(!integer(createdAt,0,Number.MAX_SAFE_INTEGER-maximumDuration))throw Error('SUPERVISOR_CLOCK_REQUIRED');state={version:1,bindingHash,configuration,createdAt,deadlineAt:createdAt+configuration.durationMs,lastObservedAt:createdAt,phase:'bound',reason:null,sessionsStarted:0,sessionsCompleted:0,mcpRequests:0,providerRequests:0,executed:0};await journal.initialize(state);}
+  if(!state){const createdAt=now();if(!integer(createdAt,0,Number.MAX_SAFE_INTEGER-maximumDuration))throw Error('SUPERVISOR_CLOCK_REQUIRED');state={version:2,bindingHash,configuration,createdAt,deadlineAt:createdAt+configuration.durationMs,lastObservedAt:createdAt,phase:'bound',reason:null,sessionsStarted:0,sessionsCompleted:0,mcpRequests:0,providerRequests:0,healthRequests:0,executed:0};await journal.initialize(state);}
   validateState(state,configuration,bindingHash);
   stateTrusted=true;
   if(state.phase==='stopped'){const result=summary(state);await onStatus(result);return result;}
@@ -86,32 +87,35 @@ export async function runSellerSupervisor(input){
    if(response.status===429){stopReason='quota';const retry=retrySeconds(response.headers.get('retry-after'));if(retry)state.retryAfterSeconds=retry;}
    return response;
   };
-  const adapter=createSellerHttpAdapter({providerOrigin:config.card.url,route:config.card.routeTemplate,allowedOrigins:config.allowedOrigins,providerAccess:config.providerAccess,fetcher:(url,init)=>guardedFetch('provider',providerFetcher,url,init)});
+  const adapter=createSellerHttpAdapter({providerOrigin:config.card.url,route:config.card.routeTemplate,allowedOrigins:config.allowedOrigins,providerAccess:config.providerAccess,fetcher:(url,init)=>guardedFetch(init.method==='GET'?'health':'provider',providerFetcher,url,init)});
+  budget=createSellerExecutionBudget({store,ownerId:config.ownerId,now});
   for(;;){
    clock();
    if(state.sessionsStarted>=configuration.maxSessions){stopReason='session-bound';break;}
    if(state.mcpRequests>=configuration.maxMcpRequests){stopReason='request-bound';break;}
    if(state.providerRequests>=configuration.maxProviderRequests){stopReason='provider-bound';break;}
+   if(state.healthRequests>=configuration.maxHealthRequests){stopReason='health-bound';break;}
    state.phase='running';state.sessionsStarted++;await persist();
    await heartbeat();
    const sessionRequestLimit=Math.min(1000,configuration.maxMcpRequests-state.mcpRequests);
    const result=await withSellerMcp({agentAccess:config.agentAccess,origin:config.bazaarOrigin,maxRequests:sessionRequestLimit,fetcher:(url,init)=>guardedFetch('mcp',fetcher,url,init)},async transport=>{
+    const reporter=createSellerCapacityReporter({store,configuration:config,transport,adapter,budget,now});
     const scanJournal=store.journal('seller.scan');let scan=await readSellerJournal(scanJournal),nextCursor;
     if(scan&&(scan.version!==1||scan.cursor!==null&&typeof scan.cursor!=='string'))throw Error('INVALID_SCAN_STATE');
     if(!scan){scan={version:1,cursor:null};await scanJournal.initialize(scan);}
-    return watchSellerOrders({polls:configuration.pollsPerSession,intervalMs:configuration.intervalMs,sleep:pause,poll:async()=>{clock();const page=await listSellerOrders(transport,{cursor:scan.cursor??undefined});nextCursor=page.nextCursor;return page.orders.filter(order=>order.serviceId===config.card.id);},afterPage:async()=>{scan={version:1,cursor:nextCursor};await scanJournal.append(scan);await heartbeat();},processOrder:async order=>{
+    return watchSellerOrders({polls:configuration.pollsPerSession,intervalMs:configuration.intervalMs,sleep:pause,beforePoll:async()=>{clock();if(state.mcpRequests+13>configuration.maxMcpRequests){stopReason='request-bound';throw Error('SUPERVISOR_STOP');}await reporter.report({ready:state.providerRequests<configuration.maxProviderRequests&&state.healthRequests<configuration.maxHealthRequests});},poll:async()=>{clock();const page=await listSellerOrders(transport,{cursor:scan.cursor??undefined});nextCursor=page.nextCursor;return page.orders.filter(order=>order.serviceId===config.card.id);},afterPage:async()=>{scan={version:1,cursor:nextCursor};await scanJournal.append(scan);await heartbeat();},processOrder:async order=>{
      clock();if(state.providerRequests>=configuration.maxProviderRequests){stopReason='provider-bound';throw Error('SUPERVISOR_STOP');}
      // Reserve headroom for the five execution tools and transport overhead
      // before creating or claiming an intent, rather than cutting a paid order
      // between the provider response and its frozen delivery.
-     if(state.mcpRequests+7>configuration.maxMcpRequests||transport.requestCount()+7>sessionRequestLimit){stopReason='request-bound';throw Error('SUPERVISOR_STOP');}
+     if(state.mcpRequests+12>configuration.maxMcpRequests||transport.requestCount()+7>sessionRequestLimit){stopReason='request-bound';throw Error('SUPERVISOR_STOP');}
      const name='seller.'+order.operationId,operationRelease=await store.acquireLock(name);
      try{
       const operationJournal=store.journal(name);
       if(await readSellerJournal(operationJournal))throw Error('EXISTING_INTENT_REQUIRES_RECOVERY');
       const intent=createSellerIntent({operationId:order.operationId,cardHash:config.cardHash,serviceId:config.card.id,providerOrigin:config.card.url,providerRoute:config.card.routeTemplate,ownerId:config.ownerId,agentId:config.agentId});
       await operationJournal.initialize(intent);
-      await executeSellerIntent(intent,{...transport,adapter,persistIntent:value=>operationJournal.append(value)});
+      await executeSellerIntent(intent,{...transport,adapter,persistIntent:value=>operationJournal.append(value),reserveExecution:value=>budget.reserve(value),beforeDelivery:async()=>{if(state.providerRequests>=configuration.maxProviderRequests||state.healthRequests>=configuration.maxHealthRequests||state.mcpRequests+12>configuration.maxMcpRequests||await budget.usedToday()>=50)await reporter.stop();}});
       state.executed++;await persist();
      }finally{await operationRelease();}
     }});
@@ -131,6 +135,13 @@ export async function runSellerSupervisor(input){
   if(error.httpStatus===429){stopReason='quota';const retry=retrySeconds(error.retryAfter);if(retry)state.retryAfterSeconds=retry;}
   stopReason??=state.mcpRequests>=configuration.maxMcpRequests?'request-bound':'fault';
  }finally{
+  // A bounded control-only connection may withdraw readiness after a planned
+  // stop. It never probes health or executes and uses the reserved MCP budget.
+  let withdraw=false;if(stateTrusted&&budget){try{withdraw=(await readSellerJournal(store.journal('seller.capacity.'+config.card.id)))?.report.ready===true;}catch{stopReason??='fault';}}
+  if(withdraw&&state.phase!=='stopped'&&!['quota','clock','fault','requires-review'].includes(stopReason)&&state.mcpRequests+5<=configuration.maxMcpRequests){
+   try{await withSellerMcp({agentAccess:config.agentAccess,origin:config.bazaarOrigin,maxRequests:5,fetcher:async(url,init)=>{if(state.mcpRequests>=configuration.maxMcpRequests)throw Error('SUPERVISOR_STOP');state.mcpRequests++;await persist();return fetcher(url,{...init,signal:AbortSignal.timeout(10000)});}},async transport=>createSellerCapacityReporter({store,configuration:config,transport,budget,now}).stop());}
+   catch{stopReason??='fault';} // If withdrawal is uncertain, the lease still expires.
+  }
   // Owner inspection is required if any final journal or lock acknowledgement
   // fails. Never return a successful run or reconnect after that failure.
   if(stateTrusted&&state.phase!=='stopped'){state.phase='stopped';state.reason=stopReason??'fault';try{await persist();}catch{await release();throw Error('SUPERVISOR_STATE_UNCONFIRMED');}}
@@ -141,7 +152,7 @@ export async function runSellerSupervisor(input){
 
 function cliArguments(argv){
  const args=[...argv],directory=args.shift();if(!directory)throw Error('SUPERVISOR_ARGUMENTS_REQUIRED');
- const values={},names={'--hours':'durationMs','--max-sessions':'maxSessions','--max-mcp-requests':'maxMcpRequests','--max-provider-requests':'maxProviderRequests','--polls':'pollsPerSession'};let pipe=false;
+ const values={},names={'--hours':'durationMs','--max-sessions':'maxSessions','--max-mcp-requests':'maxMcpRequests','--max-provider-requests':'maxProviderRequests','--max-health-requests':'maxHealthRequests','--polls':'pollsPerSession'};let pipe=false;
  for(let i=0;i<args.length;i++){const name=args[i];if(name==='--secret-stdin'){if(pipe)throw Error('SUPERVISOR_ARGUMENTS_REQUIRED');pipe=true;continue;}const key=names[name],value=args[++i];if(!key||key in values||!/^\d+$/.test(value??''))throw Error('SUPERVISOR_ARGUMENTS_REQUIRED');values[key]=Number(value)*(key==='durationMs'?3600000:1);}
  return {directory,pipe,...settings(values)};
 }

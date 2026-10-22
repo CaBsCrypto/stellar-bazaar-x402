@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {randomUUID,createHash} from 'node:crypto';
+// Exercise the actual ingress ownership policy with injected private stores.
+const source=await readFile('lib/demo-http.ts','utf8');
+const begin=source.indexOf('async function operationBudgetCredit('),end=source.indexOf('\nexport function isNestedMcpRequest',begin);
+assert.ok(begin>=0&&end>begin);
+const policy=source.slice(begin,end).replace('request:Request,principal:WorkspacePrincipal|undefined','request,principal').replace('let id:string|undefined','let id').replace(/ as const/g,'').replace(" const {configuredMarketStore}=await import('./marketplace-store.ts');",'');
+let reads=0,state={orders:[],archived:[]};
+const sha=v=>createHash('sha256').update(v).digest('hex');
+const credit=new Function('configuredMarketStore','sha',policy+';return operationBudgetCredit;')(()=>({transact:async fn=>{reads++;return fn(state);}}),sha);
+const id=randomUUID(),buyer={role:'agent',ownerId:'ow_buyer'},seller={role:'agent',ownerId:'ow_seller'},other={role:'agent',ownerId:'ow_other'};
+const request=()=>new Request('https://bazaar.example/api/market/orders/'+id);
+state.archived=[{operationId:id,buyerOwnerId:buyer.ownerId,sellerOwnerId:seller.ownerId,paymentPhase:'uncertain'}];
+const expected={operationLookup:true,operationId:id,principalHash:sha(buyer.ownerId)};
+assert.deepEqual(await credit(request(),buyer),expected);
+assert.deepEqual(await credit(request(),seller),expected);
+assert.deepEqual(await credit(request(),other),{operationLookup:true});
+assert.equal(await credit(request(),{...buyer,role:'bootstrap'}),undefined);
+assert.equal(await credit(request(),undefined),undefined);
+const rpc=name=>new Request('https://bazaar.example/api/mcp',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({method:'tools/call',params:{name,arguments:{operationId:id}}})});
+assert.deepEqual(await credit(rpc('get_market_order'),buyer),expected);
+assert.equal(await credit(rpc('create_market_order'),buyer),undefined);
+state.orders=[{...state.archived[0]}];state.archived=[];assert.deepEqual(await credit(request(),buyer),expected);
+state.orders=[];assert.deepEqual(await credit(request(),buyer),{operationLookup:true});
+assert.equal(reads,6);
+console.log(JSON.stringify({status:'PASS_LOCAL_ARCHIVED_RECOVERY_CREDIT',checks:9,archivedBuyerAndSellerUseOriginalHold:true,foreignAndRecoveryCredentialsDenied:true,payments:0,networkRequests:0}));

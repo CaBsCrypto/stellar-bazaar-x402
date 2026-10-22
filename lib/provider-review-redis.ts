@@ -2,6 +2,9 @@ import { randomUUID } from "node:crypto";
 import { ReviewStoreError, type ProviderReviewStore, type ReviewState } from "./provider-review-store.ts";
 import type { ReviewRedis } from "./provider-review-runtime.ts";
 import { recordOperationalStorageBounds } from './acceptance-meter.ts';
+import {prepareContinuousStorageCommit} from './continuous-free-storage.ts';
+import {continuousFreeBudgetConfiguration} from './continuous-free-budget.ts';
+import {WorkspaceError} from './workspace-types.ts';
 
 export const REVIEW_ENVELOPE_MAX_BYTES = 1024 * 1024;
 
@@ -45,7 +48,18 @@ export function createRedisReviewStore<T>(redis: ReviewRedis, prefix: string,
     if (Buffer.byteLength(next) > REVIEW_ENVELOPE_MAX_BYTES) throw new ReviewStoreError("Review storage capacity exhausted.");
     recordOperationalStorageBounds({ review: Buffer.byteLength(next) + Buffer.byteLength(key) });
     // Never retry a callback or write: a rejected response may hide a committed SET.
-    const committed = await redis.eval(COMPARE_AND_SET, [key], [raw === null ? "missing" : "present", raw === null ? "" : raw as string, next]);
+    const keys=[key],args=[raw === null ? "missing" : "present", raw === null ? "" : raw as string, next];let script=COMPARE_AND_SET;
+    if(continuousFreeBudgetConfiguration()){
+      const workspacePrefix=process.env.BAZAAR_WORKSPACE_PREFIX??prefix.replace('bazaar-review:','bazaar-workspace:');
+      if(workspacePrefix.split(':')[1]!==prefix.split(':')[1])throw new WorkspaceError('FREE_DEMO_STORAGE_UNAVAILABLE',503);
+      const storage=await prepareContinuousStorageCommit(redis,workspacePrefix,[{key,expectedRaw:raw as string|null,nextRaw:next}]);
+      if(storage){script=script.replace("redis.call('SET',KEYS[1],ARGV[3])",storage.appendScript(2,4)+storage.writeScript(2)+"redis.call('SET',KEYS[1],ARGV[3])");keys.push(...storage.keys);args.push(...storage.args);}
+    }
+    const committed = await redis.eval(script,keys,args);
+    if(committed===-20)throw new WorkspaceError('FREE_DEMO_STORAGE_WRITE_UNCONFIRMED',409);
+    if(committed===-21)throw new WorkspaceError('FREE_DEMO_STORAGE_UNINITIALIZED',503);
+    if(committed===-22||committed===-23)throw new WorkspaceError('FREE_DEMO_STORAGE_UNAVAILABLE',503);
+    if(committed===-24)throw new WorkspaceError('FREE_DEMO_STORAGE_CAPACITY',503);
     if (committed !== 1) throw new ReviewStoreError("Review write conflicted or was not confirmed.");
     return detached;
   } };

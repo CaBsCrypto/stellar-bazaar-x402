@@ -1,0 +1,9 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {auditExampleHistoryUiForecast} from './recovery-example-history-ui-forecast-audit.mjs';
+let checks=0;const eq=(a,b)=>{assert.deepEqual(a,b);checks++;};
+const history=await readFile('components/HistoryEntry.tsx','utf8'),account=await readFile('components/DemoAccount.tsx','utf8'),market=await readFile('components/MarketplaceWorkspace.tsx','utf8');
+assert.match(history,/<DemoAccount key=\{access\} access=\{access\}/);checks++;assert.match(history,/<MarketplaceWorkspace[^>]*view="history"/);checks++;
+assert.match(account,/useEffect\(\(\)=>\(\)=>\{control\.current\?\.abort\(\);\},\[access\]\)/);checks++;assert.match(account,/setIdentity\(await api\('\/api\/account\/identity',signal\)\);setQueries\(\(await api\('\/api\/account\/queries',signal\)\)\.queries\)/);checks++;
+assert.match(market,/await loadOrders\(ctx, 0, 10, undefined\); if \(view === 'all'\)/);checks++;
+const result=auditExampleHistoryUiForecast();eq(result.additionalUiBytes,42467328);eq(result.additionalUiCommands,128);eq(result.requiredWithCompleteUiBytes,9915622912);eq(result.marginWithCompleteUi,-15622912);eq(result.sourceFlow.automaticOnMount[0].alreadyCoveredByPreviousForecast,true);eq(result.candidates.map(row=>row.candidateRequiredBytes),[9915622912,9893602816,9882592768]);eq(result.candidates.map(row=>row.remainingAfterSafety),[-24011520,-1991424,9018624]);eq(result.candidates.every(row=>row.selected===false),true);eq(result.networkRequests,0);eq(result.ledgerWrites,0);eq(result.limitsChanged,false);eq(result.payments,0);console.log(JSON.stringify({status:'PASS_OFFLINE_HISTORY_UI_SOURCE_AUDIT',checks,automaticReads:1,additionalButtonBytes:result.additionalUiBytes,completeUiRequiredBytes:result.requiredWithCompleteUiBytes,marginBytes:result.marginWithCompleteUi,networkRequests:0,ledgerWrites:0,payments:0}));

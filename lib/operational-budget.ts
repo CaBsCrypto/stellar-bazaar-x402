@@ -3,7 +3,7 @@ import { Redis } from '@upstash/redis';
 import { z } from 'zod';
 import { meteredRedis, setOperationalTransportProfile } from './acceptance-meter.ts';
 import { WorkspaceError } from './workspace-types.ts';
-import { operationalProfiles, OPERATIONAL_PROFILE_PERCENT, operationalPressure, type OperationalProfile, type OperationalRequestClass } from './operational-pressure.ts';
+import { operationalProfiles, OPERATIONAL_PROFILE_PERCENT, operationalPressure, type OperationalProfile, type OperationalRequestClass,type OperationalWorkload } from './operational-pressure.ts';
 import { operationalTransportEnvelope } from './operational-envelopes.ts';
 
 export const OPERATIONAL_LEDGER_MAX_BYTES = 65536;
@@ -25,7 +25,7 @@ export const operationalCheckpointSchema = z.object({
 export type OperationalCheckpoint = z.infer<typeof operationalCheckpointSchema>;
 type Ledger = { version: 1; revision: string; checkpoint: OperationalCheckpoint; assigned: Record<OperationalProfile, OperationalResources>; reserved: OperationalResources; used: Record<OperationalProfile, OperationalResources> };
 const zero = (): OperationalResources => Object.fromEntries(operationalResources.map(name => [name, 0])) as OperationalResources;
-export function operationalRequestEnvelope(profile: OperationalProfile, workload?:'metadata'): OperationalResources {
+export function operationalRequestEnvelope(profile: OperationalProfile, workload?:OperationalWorkload): OperationalResources {
   const limit = operationalTransportEnvelope(profile,workload);
   return { requests: 1, redisRequests: limit.redis, redisCommands: limit.commandsUpperBound, outboundBytes: limit.outboundPayloadBytes + limit.externalOutboundBytes + limit.dtoBytes,
     inboundBytes: limit.inboundPayloadBytes + limit.externalInboundBytes, externalRequests: limit.externalRequests };

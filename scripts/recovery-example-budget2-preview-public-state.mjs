@@ -1,0 +1,3 @@
+import {journalRead,originalJournalUnchanged,sha} from './recovery-example-budget2-preview-lib.mjs';
+const j=await journalRead();await originalJournalUnchanged();
+console.log(JSON.stringify({status:'READ_ONLY_PREVIEW_PHASE_METADATA',familyFingerprint:sha(j.family),phase:j.phase,deployments:Object.fromEntries(['provider','bazaar'].map(stage=>[stage,{phase:j.deployments?.[stage]?.phase,sourceDigest:j.deployments?.[stage]?.sourceDigest,deploymentId:j.deployments?.[stage]?.deploymentId,aliasRecorded:typeof j.deployments?.[stage]?.alias==='string'}])),networkRequests:0,credentialValuesReturned:0,productionPublished:false,payments:0}));

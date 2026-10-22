@@ -1,0 +1,14 @@
+// Pure source-path sizing derived from the conservative order control model.
+// No database, valid max-state fixture, quota write or payment is executed.
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {orderControlTypedBounds} from './recovery-example-order-control-typed-bounds.mjs';
+const MiB=1048576,r=orderControlTypedBounds(),key='synthetic:'+'k'.repeat(502),marketRead={rest:1,commands:1,out:Buffer.byteLength(JSON.stringify(['GET',key]))+4096,in:Buffer.byteLength(JSON.stringify({result:'\\'.repeat(524288)}))+4096},ownerRead=r.components.readOwner,o=r.paths.orderRead;
+// A control-only query read has no owned-operation market lookup and returns
+// owner queries via READ_WORKSPACE instead of fetching a market order.
+const result={rest:o.rest-2+ownerRead.rest,commands:o.commands-2+ownerRead.commands,out:o.out-2*marketRead.out+ownerRead.out,in:o.in-2*marketRead.in+ownerRead.in};result.combined=result.out+result.in;
+let checks=0;const eq=(a,b)=>{assert.deepEqual(a,b);checks++;},ok=v=>{assert.ok(v);checks++;};eq(result,{rest:10,commands:46,out:9251584,in:11053891,combined:20305475});ok(result.combined<20*MiB);ok(result.commands<64);
+const paths=['lib/demo-http.ts','lib/workspace-http.ts','lib/workspace-store.ts','lib/marketplace-mcp.ts','app/api/mcp/route.ts'],sources=await Promise.all(paths.map(path=>readFile(new URL('../'+path,import.meta.url),'utf8'))),[demo,http,workspace,mcp,observer]=sources;
+ok(demo.includes('queries:await configuredWorkspaceStore().forPrincipal(p).queries(p.ownerId)'));ok(http.includes('await configuredWorkspaceStore().consumeRequest'));ok(workspace.includes('async queries(ownerId:string) {return (await readOwner(ownerId)).document.queries??[];}'));const readOwner=workspace.slice(workspace.indexOf('const readOwner ='),workspace.indexOf('const mutateOwner ='));ok(readOwner.includes('backend.read(ownerId)'));ok(!readOwner.includes('commit('));ok(!readOwner.includes('backend.transact'));ok(mcp.includes("demoHandlers.history(request('/api/account/queries'))"));const observed=/const queryTools=new Set\(\[([^\]]+)\]\)/.exec(observer)?.[1];ok(observed&&!observed.includes("'get_bazaar_query_history'"));
+console.log(JSON.stringify({status:'PASS_ANALYTICAL_V2_PRIVATE_QUERY_HISTORY_BOUND',checks,nativeQueryHistory:result,guardBytes:20*MiB,commandCredit:64,marginBytes:20*MiB-result.combined,sourcePins:Object.fromEntries(paths.map((path,i)=>[path,createHash('sha256').update(sources[i]).digest('hex')])),networkRequests:0,redisLuaExecutions:0,financialHandlerInvocations:0,payments:0,assumptions:r.sourceBranchAssumptions,limitations:['Cap-times-two JSON strings are mathematical sizing inputs, not a valid maximum database fixture or production acceptance.','The 20-MiB guard may reject legacy/missing-index maintenance bootstrap; such paths retain their fallback or need separately demonstrated headroom.']}));

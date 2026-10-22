@@ -10,7 +10,12 @@ export function createSellerHttpAdapter({providerOrigin,route='/v1/marketplace-t
  const origin=sellerHttpsOrigin(providerOrigin);sellerRoute(route);
  if(!Array.isArray(allowedOrigins)||!allowedOrigins.includes(origin)||allowedOrigins.some(v=>sellerHttpsOrigin(v)!==v)||!/^[a-zA-Z0-9_-]{43}$/.test(providerAccess??'')||!Number.isInteger(timeoutMs)||timeoutMs<1||timeoutMs>30000)throw Error('PROVIDER_ALLOWLIST_CONFIGURATION_REQUIRED');
  const endpoint=new URL(route,origin).href;
- return {async execute({operationId,attemptId,input}){
+ return {async availability(){
+  const url=endpoint+'/availability',response=await fetcher(url,{method:'GET',headers:{authorization:'Bearer '+providerAccess},redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(timeoutMs)});
+  if(response.status===429)throw Object.assign(Error('PROVIDER_QUOTA_STOP'),{httpStatus:429,retryAfter:response.headers.get('retry-after')});
+  if(!response.ok||response.redirected||response.url&&response.url!==url)throw Error('PROVIDER_AVAILABILITY_UNCONFIRMED');
+  const body=await boundedResponse(response,4096);if(body.network!=='stellar:testnet'||typeof body.ready!=='boolean'||body.usedToday!==undefined&&(!Number.isInteger(body.usedToday)||body.usedToday<0||body.usedToday>50))throw Error('PROVIDER_AVAILABILITY_CHANGED');return {ready:body.ready,...(body.usedToday!==undefined?{usedToday:body.usedToday}:{})};
+ },async execute({operationId,attemptId,input}){
   const response=await fetcher(endpoint,{method:'POST',headers:{authorization:'Bearer '+providerAccess,'content-type':'application/json'},body:JSON.stringify({operationId,attemptId,input}),redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(timeoutMs)});
   if(!response.ok||response.redirected||response.url&&response.url!==endpoint)throw Error('PROVIDER_RESULT_UNCONFIRMED');
   const output=await boundedResponse(response,16384);

@@ -2,11 +2,13 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import type { Redis } from '@upstash/redis';
-import { classifyOperationalRequest, type OperationalRequestClass, type OperationalProfile } from './operational-pressure.ts';
+import { classifyOperationalRequest, type OperationalRequestClass, type OperationalProfile,type OperationalWorkload } from './operational-pressure.ts';
 import { operationalMetricTotals } from './operational-metrics.ts';
 import { operationalTransportEnvelope } from './operational-envelopes.ts';
+import {withExampleBudgetWireScope,meteredExampleBudgetRedis} from './example-budget-wire.ts';
+import {meteredFiniteGuardianRedis} from './guardian-finite-budget.ts';
 
-export type Counts = { redis: number; commandsUpperBound: number; outboundPayloadBytes: number; inboundPayloadBytes: number; workspaceStoredBytesUpperBound: number; marketStoredBytesUpperBound:number; reviewStoredBytesUpperBound:number; catalogStoredBytesUpperBound:number; settlementStoredBytesUpperBound:number; ledgerStoredBytesUpperBound?:number; storageObservation?:'prospective-upper-bound'; operationalProfile?:OperationalProfile; operationalWorkload?:'metadata'; operationalPendingClass?:OperationalRequestClass; operationalCredited?:boolean; operationalReserved?:boolean; external:Partial<Record<ExternalKind,number>>; externalOutboundPayloadBytes:number; externalInboundPayloadBytes:number; uncertain: boolean };
+export type Counts = { redis: number; commandsUpperBound: number; outboundPayloadBytes: number; inboundPayloadBytes: number; workspaceStoredBytesUpperBound: number; marketStoredBytesUpperBound:number; reviewStoredBytesUpperBound:number; catalogStoredBytesUpperBound:number; settlementStoredBytesUpperBound:number; ledgerStoredBytesUpperBound?:number; storageObservation?:'prospective-upper-bound'; operationalProfile?:OperationalProfile; operationalWorkload?:OperationalWorkload; operationalPendingClass?:OperationalRequestClass; operationalCredited?:boolean; operationalReserved?:boolean; external:Partial<Record<ExternalKind,number>>; externalOutboundPayloadBytes:number; externalInboundPayloadBytes:number; uncertain: boolean };
 export type ExternalKind='horizon'|'proof-dns'|'proof-http'|'provider'|'facilitator'|'rpc';
 export const OPERATIONAL_STORAGE_CAPS={workspace:12*1048576,market:512*1024,review:1048576,settlement:128*1024,ledger:64*1024} as const;
 const scope = new AsyncLocalStorage<Counts>();
@@ -42,7 +44,7 @@ function record(counts:Counts,source:'api'|'ssr'|'proxy',requests=1){const reque
 function storagePressure(counts:Counts) { return Object.fromEntries(Object.entries(OPERATIONAL_STORAGE_CAPS).map(([name,cap])=>{const bytes=counts[`${name as keyof typeof OPERATIONAL_STORAGE_CAPS}StoredBytesUpperBound`]??0;return [name,{bytes,cap,percent:Math.ceil(bytes*100/cap),alert:bytes*100>=cap*70}];})); }
 async function gate(kind: OperationalRequestClass) { if (operationalMeterEnabled()) { const counts=scope.getStore(); if(counts){counts.operationalProfile=kind.profile;counts.operationalWorkload=kind.workload;}const { operationalRequestGate } = await import('./operational-budget.ts'); await operationalRequestGate(kind);if(counts)counts.operationalReserved=true; } }
 /** An inner fresh-payment gate upgrades a recovered HTTP request to its payment transport bounds. */
-export function setOperationalTransportProfile(profile: OperationalProfile, workload?:'metadata') {
+export function setOperationalTransportProfile(profile: OperationalProfile, workload?:OperationalWorkload) {
   if(!operationalMeterEnabled())return;const counts=scope.getStore();if(counts){counts.operationalProfile=profile;counts.operationalWorkload=workload;}
 }
 /** Call only after authoritative credential and requested-role verification. No credential is recorded. */
@@ -76,7 +78,7 @@ export type ExternalPayloadEvidence=()=>{outboundBytes?:number;inboundBytes?:num
 export async function meteredExternal<T>(kind:ExternalKind,handler:()=>Promise<T>,outbound?:unknown,evidence?:ExternalPayloadEvidence):Promise<T>{
  const limits=currentLimits();
  if(!enabled())return handler();const counts=scope.getStore();if(!counts)throw Error('ACCEPTANCE_SCOPE_REQUIRED');
- const operational=operationalMeterEnabled()?operationalTransportEnvelope(counts.operationalProfile??'authenticated'):undefined;
+ const operational=operationalMeterEnabled()?operationalTransportEnvelope(counts.operationalProfile??'authenticated',counts.operationalWorkload):undefined;
  if(!(kind in counts.external)||(counts.external[kind]??0)>=8||operational&&(Object.values(counts.external).reduce((n,value)=>n+(value??0),0)>=operational.externalRequests||counts.operationalProfile==='recovery'&&kind==='facilitator'))throw Error(operational?'OPERATIONAL_EXTERNAL_BUDGET':'ACCEPTANCE_EXTERNAL_BUDGET');
  const checkedBytes=(value:number)=>{if(!Number.isSafeInteger(value)||value<0)throw Error('ACCEPTANCE_EXTERNAL_BYTE_EVIDENCE_INVALID');return value;};
  const before=evidence?.();const bytes=before?.outboundBytes===undefined?(outbound===undefined?0:Buffer.byteLength(JSON.stringify(outbound))):checkedBytes(before.outboundBytes);
@@ -93,6 +95,7 @@ export async function meteredExternal<T>(kind:ExternalKind,handler:()=>Promise<T
 /** Only payload counts, never credentials, keys or record contents, reach responses. */
 export function measuredHandler<A extends unknown[]>(handler: (...args: A) => Response | Promise<Response>, options: { source?: 'api'|'proxy'; budget?: boolean; classify?: (...args:A)=>OperationalRequestClass|Promise<OperationalRequestClass> } = {}) {
   return async (...args: A): Promise<Response> => {
+    return withExampleBudgetWireScope(async()=>{
     if (!enabled() || scope.getStore()) return handler(...args);
     const counts=fresh();
     return scope.run(counts, async () => {
@@ -135,6 +138,7 @@ export function measuredHandler<A extends unknown[]>(handler: (...args: A) => Re
       response.headers.set('X-Bazaar-Redis-Uncertain', String(counts.uncertain));
       return response;
     });
+    });
   };
 }
 
@@ -171,6 +175,8 @@ async function operationalRedisRequest(counts: Counts, request: Parameters<Redis
 }
 
 export function meteredRedis(redis: Redis): Redis {
+  meteredFiniteGuardianRedis(redis);
+  meteredExampleBudgetRedis(redis);
   redis.use(async (request, next) => {
     if (!enabled()) return next(request);
     const counts = scope.getStore();

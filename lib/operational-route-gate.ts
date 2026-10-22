@@ -1,6 +1,9 @@
 import { pilotRoutePolicy, publicBazaarApi } from './pilot-route-policy.ts';
 import { workspacePublicOrigin } from './workspace-public-origin.ts';
 import { publicOperationalMcpTools } from './operational-pressure.ts';
+import { assertMarketGuardianCronRequest, trustedMarketGuardianDeploymentOrigin } from './market-guardian-cron.ts';
+import { WorkspaceError } from './workspace-types.ts';
+import {marketOperatorDiagnosticKind,marketDiagnosticOperatorMatches,marketDiagnosticBodyless} from './market-operator-diagnostic-origin.ts';
 
 export type EarlyRouteResult = { code: string; status: number } | undefined;
 export function routeBodyLimit(path: string) {
@@ -22,12 +25,26 @@ export function earlyRouteGate(request: Request): EarlyRouteResult {
   if (authorization !== null && !/^Bearer [a-zA-Z0-9_-]{32,128}$/.test(authorization)) return { code: 'UNAUTHORIZED', status: 401 };
   if (!publicApi && path !== '/api/mcp' && !authorization) return { code: 'UNAUTHORIZED', status: 401 };
   if (!publicApi && path !== '/api/mcp' && process.env.BAZAAR_ENABLE_OPEN_WORKSPACES !== 'true') return { code: 'WORKSPACE_UNAVAILABLE', status: 503 };
+  const operatorDiagnostic=!!marketOperatorDiagnosticKind(request);
+  if(operatorDiagnostic&&!marketDiagnosticOperatorMatches(request))return {code:'UNAUTHORIZED',status:401};
   let expected: string | undefined;
-  try { expected = workspacePublicOrigin() ?? process.env.BAZAAR_WORKSPACE_LOCAL_ORIGIN; } catch { return { code: 'WORKSPACE_UNAVAILABLE', status: 503 }; }
+  if(!operatorDiagnostic)try { expected = workspacePublicOrigin() ?? process.env.BAZAAR_WORKSPACE_LOCAL_ORIGIN; } catch { return { code: 'WORKSPACE_UNAVAILABLE', status: 503 }; }
+  if (path === '/api/market/guardian/tick' && method === 'GET') {
+    // A scheduler uses the immutable deployment hostname, without browser Origin.
+    // Prove its existing operator credential before allowing that exact exception.
+    try { assertMarketGuardianCronRequest(request); } catch (error) {
+      return error instanceof WorkspaceError ? { code: error.code, status: error.status } : { code: 'INVALID_REQUEST', status: 400 };
+    }
+    if (!expected || url.origin !== expected && url.origin !== trustedMarketGuardianDeploymentOrigin()) return { code: 'INVALID_REQUEST', status: 400 };
+    return;
+  }
   const origin = request.headers.get('origin');
-  if (!expected || url.origin !== expected || origin && origin !== expected) return { code: 'INVALID_REQUEST', status: 400 };
+  if (!operatorDiagnostic&&(!expected || url.origin !== expected || origin && origin !== expected)) return { code: 'INVALID_REQUEST', status: 400 };
   if (url.search) {
-    if(path==='/api/activity'&&method==='GET') {
+    if(operatorDiagnostic){
+      // Exact operator GET/path/query and cryptographic proof already checked.
+      // Continue through the common size/body gates below, never return early.
+    } else if(path==='/api/activity'&&method==='GET') {
       const params=url.searchParams,allowed=['view','limit','cursor','taskId','agentId','from','to','status','operationId','download'];
       if([...params.keys()].some(key=>!allowed.includes(key)||params.getAll(key).length!==1))return {code:'INVALID_REQUEST',status:400};
       const limit=params.get('limit');if(limit!==null&&(!/^[1-9]\d?$/.test(limit)||Number(limit)>20))return {code:'INVALID_REQUEST',status:400};
@@ -40,15 +57,24 @@ export function earlyRouteGate(request: Request): EarlyRouteResult {
       if([...params.keys()].some(key=>!['limit','cursor'].includes(key)||params.getAll(key).length!==1)) return {code:'INVALID_REQUEST',status:400};
       const limit=params.get('limit');if(limit!==null&&(!/^[1-9]\d?$/.test(limit)||Number(limit)>20))return {code:'INVALID_REQUEST',status:400};
       const cursor=params.get('cursor');if(cursor!==null&&(!/^[a-zA-Z0-9_-]{1,2048}$/.test(cursor)||Buffer.byteLength(cursor)>2048))return {code:'INVALID_REQUEST',status:400};
+    } else if (path === '/api/market/review' && method === 'GET') {
+      const params=url.searchParams;
+      if([...params.keys()].some(key=>!['page','pageSize'].includes(key)||params.getAll(key).length!==1))return {code:'INVALID_REQUEST',status:400};
+      for(const [key,maximum] of [['page',10000],['pageSize',20]] as const) {
+        const value=params.get(key);
+        if(value!==null&&(!/^[1-9]\d*$/.test(value)||!Number.isSafeInteger(Number(value))||Number(value)>maximum))return {code:'INVALID_REQUEST',status:400};
+      }
     } else if (['/api/market/catalog','/api/market/orders','/api/market/services'].includes(path) && method === 'GET') {
-      const params=url.searchParams, allowed=path==='/api/market/services'?['limit','cursor','mineCursor']:['limit','cursor'];
+      const params=url.searchParams, allowed=path==='/api/market/services'?['limit','cursor','mineCursor']:path==='/api/market/catalog'?['limit','cursor','q']:['limit','cursor'];
       if ([...params.keys()].some(key=>!allowed.includes(key)||params.getAll(key).length!==1)) return {code:'INVALID_REQUEST',status:400};
       const limit=params.get('limit'); if(limit!==null&&(!/^[1-9]\d?$/.test(limit)||Number(limit)>20)) return {code:'INVALID_REQUEST',status:400};
+      const query=params.get('q');if(query!==null&&query.length>200)return {code:'INVALID_REQUEST',status:400};
       for(const key of ['cursor','mineCursor']) { const value=params.get(key); if(value!==null&&(!/^[a-zA-Z0-9_-]{1,512}$/.test(value)||Buffer.byteLength(value)>512)) return {code:'INVALID_REQUEST',status:400}; }
     } else if (!['/api/discovery/search', '/api/discovery/resources'].includes(path)) return { code: 'INVALID_REQUEST', status: 400 };
   }
   const contentLength = request.headers.get('content-length');
   if (contentLength !== null && (!/^\d{1,10}$/.test(contentLength) || Number(contentLength) > routeBodyLimit(path))) return { code: 'REQUEST_TOO_LARGE', status: 413 };
+  if(operatorDiagnostic&&!marketDiagnosticBodyless(request))return {code:'INVALID_REQUEST',status:400};
   if (['POST', 'PUT', 'PATCH'].includes(method) && request.headers.get('content-type')?.split(';')[0].trim() !== 'application/json') return { code: 'INVALID_CONTENT_TYPE', status: 415 };
 }
 

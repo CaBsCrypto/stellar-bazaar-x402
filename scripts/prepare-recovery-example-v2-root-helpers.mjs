@@ -1,0 +1,24 @@
+// Public local preparation only. Preserve every previous execution artifact.
+import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+const sha=v=>createHash('sha256').update(v).digest('hex');
+const put=async(path,value)=>writeFile(path,value,{flag:'wx'});
+let freeze=await readFile('scripts/prepare-recovery-example-optimized-source.mjs','utf8');
+freeze=freeze.replace("const finalWire=process.argv.length===3&&process.argv[2]==='--final-wire';","const finalWire=true;");
+freeze=freeze.replaceAll('recovery-example-optimized-bazaar-wire','recovery-example-budget2-bazaar');
+freeze=freeze.replace("'lib/example-provider-readiness-proof.ts'];","'lib/example-provider-readiness-proof.ts','lib/operational-pressure.ts','lib/example-budget-response-allocation.ts'];");
+freeze=freeze.replace("if(!finalWire&&process.argv.length!==2)","if(process.argv.length!==2)");
+await put('scripts/prepare-recovery-example-budget2-source.mjs',freeze);
+let build=await readFile('.vercel/recovery-example-optimized-build.mjs','utf8');
+build=build.replace("const finalWire=process.argv.length===3&&process.argv[2]==='--final-wire';","const finalWire=true;");
+build=build.replaceAll('recovery-example-optimized-bazaar-wire','recovery-example-budget2-bazaar').replaceAll('recovery-example-optimized-wire-build-offline','recovery-example-budget2-build-offline');
+await put('.vercel/recovery-example-budget2-build.mjs',build);
+let reader=await readFile('scripts/recovery-example-budget-old-holds-read.mjs','utf8');
+reader=reader.replaceAll('recovery-example-budget-old-holds-before','recovery-example-budget2-old-holds-before').replaceAll('recovery-example-budget-old-holds-after','recovery-example-budget2-old-holds-after');
+await put('scripts/recovery-example-budget2-old-holds-read.mjs',reader);
+let wrapper=await readFile('.vercel/recovery-example-budget-old-holds-private.ps1','utf8');
+wrapper=wrapper.replaceAll('scripts/recovery-example-budget-old-holds-read.mjs','scripts/recovery-example-budget2-old-holds-read.mjs');
+await put('.vercel/recovery-example-budget2-old-holds-private.ps1',wrapper);
+const ui={version:1,status:'OBSERVED_UPSTASH_FREE_UI',observedAt:new Date().toISOString(),url:'https://console.upstash.com/redis/1f90faef-48d7-49b3-916a-c378e13a8c23/usage?teamid=0',plan:'Free Tier',displayed:{commands:'47 mil / 500k per month',bandwidth:'74 MB / 10 GB',storage:'343 KB / 238 MB',cost:'$0.00'},maximumRoundedForGate:{commands:48000,bandwidthBytes:75000000,storageBytes:350000},limitations:['Rounded UI values can lag; refresh immediately before any production authorization/application.','Internal conservative reservations are distinct from actual Upstash billing.'],productionPublished:false,limitsChanged:false,payments:0};
+await put('docs/evidence/recovery-example-budget2-upstash-free-ui-2026-10-13.json',JSON.stringify(ui,null,2)+'\n');
+console.log(JSON.stringify({status:'PREPARED_NEW_ROOT_HELPERS',freezeSha256:sha(freeze),buildSha256:sha(build),oldHoldReaderSha256:sha(reader),oldHoldWrapperSha256:sha(wrapper),networkRequests:0,credentialReads:0,oldArtifactsChanged:false}));

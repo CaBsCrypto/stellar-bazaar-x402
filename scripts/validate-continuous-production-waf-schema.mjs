@@ -1,0 +1,25 @@
+// Read the public official OpenAPI only. No authenticated API or cloud writes.
+import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import Ajv from 'ajv';
+import {buildContinuousProductionWafRule} from './prepare-continuous-production-waf-proposal.mjs';
+const url='https://vercel.com/openapi.json';
+const response=await fetch(url,{signal:AbortSignal.timeout(20000)});
+if(!response.ok)throw Error('OFFICIAL_SCHEMA_READ_REQUIRED');
+const bytes=Buffer.from(await response.arrayBuffer());
+if(bytes.length>20000000)throw Error('OFFICIAL_SCHEMA_SIZE_LIMIT');
+const api=JSON.parse(bytes),operation=api.paths?.['/v1/security/firewall/config']?.patch;
+const variants=operation?.requestBody?.content?.['application/json']?.schema?.oneOf;
+const variant=variants?.find(schema=>schema.properties?.action?.enum?.includes('rules.insert'));
+if(!variant)throw Error('OFFICIAL_UPDATE_RULE_SCHEMA_REQUIRED');
+const group=variant.properties.value.properties.conditionGroup;
+const snapshot=JSON.parse(await readFile('docs/evidence/continuous-waf-baseline-2026-10-11.json','utf8'));
+const proposal=buildContinuousProductionWafRule({sourceRule:snapshot.sourceRule,configurationSha256:snapshot.configurationSha256,finalDeploymentHostname:'stellar-bazaar-x402-synthetic-cabscryptocontacto-6028s-projects.vercel.app'});
+const rule=proposal.rule;
+const value=Object.fromEntries(['name','description','active','conditionGroup','action'].map(key=>[key,rule[key]]));
+const validate=new Ajv({strict:false,allErrors:true}).compile(variant.properties.value);
+if(!validate(value))throw Error('PREPARED_WAF_RULE_SCHEMA_REJECTED');
+const sha=value=>createHash('sha256').update(value).digest('hex');
+const evidence={version:1,status:'OFFICIAL_OPENAPI_LOCAL_RULE_SCHEMA_PASS',observedAt:new Date().toISOString(),sourceUrl:url,operationId:operation.operationId,openapiSha256:sha(bytes),ruleSchemaSha256:sha(JSON.stringify(variant.properties.value)),schema:variant.properties.value,limits:{conditionGroups:group.maxItems,conditionsPerGroup:group.items.properties.conditions.maxItems,conditionValueArray:group.items.properties.conditions.items.properties.value.anyOf?.find(v=>v.type==='array')?.maxItems??group.items.properties.conditions.items.properties.value.oneOf?.find(v=>v.type==='array')?.maxItems},prepared:{conditionGroups:proposal.conditionGroups,maxConditions:Math.max(...rule.conditionGroup.map(g=>g.conditions.length)),baselineSha256:snapshot.configurationSha256,exactFinalHostnameBound:false,sanitizedOperatorIp:true},validation:{validator:'ajv',version:'8.20.0',preparedRule:true,updateRequestBody:false},schemaCaveat:{updateValueDocumentedType:variants.find(v=>v.properties?.action?.enum?.includes('rules.update'))?.properties?.value?.type,requiresAuthenticatedDraftReadbackBeforeActivation:true},remoteVercelAcceptance:false,cloudMutations:0,productionPublished:false,cronActivated:false};
+await writeFile('docs/evidence/continuous-waf-official-schema-2026-10-11.json',JSON.stringify(evidence,null,2)+'\n',{flag:'wx'});
+console.log(JSON.stringify({...evidence,schema:undefined}));

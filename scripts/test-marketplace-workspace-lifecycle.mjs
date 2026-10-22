@@ -53,6 +53,7 @@ function harness({view='all',access='synthetic-owner-a'}={}){
       if(name==='react')return hooks;
       if(name==='react/jsx-runtime')return{jsx,jsxs:jsx};
       if(name==='./MarketplaceWorkspace.module.css')return{default:{}};
+      if(name==='./ServiceShare')return{ServiceShare:'ServiceShare'};
       if(name==='../lib/private-read-queue')return{serializedPrivateRead};
       throw Error('UNEXPECTED_COMPONENT_MODULE');
     }
@@ -223,6 +224,16 @@ await scenario('withdrawal refreshes own services while retaining existing order
   await h.answer('/api/market/services/service-submission',{status:'withdrawn'},{method:'POST'});
   await h.answer('/api/market/services',{mine:[service('Servicio A','withdrawn')],paused:true});
   assert.equal(h.button('Retirar de nuevas compras').props.disabled,true);assert.match(h.text(),/Compra conservada/);h.clean();
+});
+await scenario('public sharing is shown only for approved current own services',async()=>{
+  const h=await populated({mine:[service('Approved','activated'),service('Review pending','submitted'),service('Withdrawn','withdrawn')]});
+  const shares=h.nodes().filter(n=>n.type==='ServiceShare');assert.equal(shares.length,1);
+  assert.deepEqual(Object.keys(shares[0].props).sort(),['serviceId','serviceName']);
+  assert.equal(shares[0].props.serviceId,'guionista-text');assert.equal(shares[0].props.serviceName,'Approved');
+  assert(!JSON.stringify(shares[0].props).includes(h.access()),'Sharing never receives the private credential');
+  h.switchAccess();assert.equal(h.nodes().filter(n=>n.type==='ServiceShare').length,0,'Old owner share is cleared with private state');
+  await h.answer('/api/market/orders',{orders:[]});await h.answer('/api/market/services',{mine:[],paused:false});
+  await h.answer('/api/market/agent-permissions',{permission:permission(false,2)});h.clean();
 });
 await scenario('pagination uses opaque cursor and owner change clears it',async()=>{
   const h=await populated({orders:[order()],nextCursor:'synthetic-opaque-cursor'});

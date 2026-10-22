@@ -19,13 +19,17 @@ import { reviewSharedConfigured } from "./provider-review-runtime";
 import { bazaarRoles, skillPackage } from "./bazaar-skills";
 import { MCP_VERSION, MCP_WRITES } from "./mcp-tool-contract";
 import {registerMarketplaceTools} from './marketplace-mcp';
-import {marketEnabled,marketCatalogPage,marketServiceSnapshot,marketServiceDto,sha} from './marketplace';
+import {marketEnabled,marketCatalogPage,marketServiceSnapshot,marketServiceDto,searchMarketServices,sha} from './marketplace';
 import {marketPage} from './market-pagination';
 import {workspaceRequestOrigin} from './workspace-http';
 import {workspacePublicOrigin} from './workspace-public-origin';
 import {USDC_TESTNET_PAYMENT_IDENTITY} from './payment-assets';
 import {marketFileCapabilities} from './market-file-delivery';
 import {demoConfiguration} from './demo-configuration';
+import {purchaseAdmissionConfiguration} from './market-purchase-admission.ts';
+import {freeDemoBudgetConfiguration} from './free-demo-budget.ts';
+import {continuousFreeBudgetConfiguration,CONTINUOUS_FREE_OPERATION_RESERVATION} from './continuous-free-budget.ts';
+import {requireWorkspacePrincipal} from './workspace-auth.ts';
 import {SELLER_LEASE_MS,SELLER_RESERVATION_MS,SELLER_DAILY_LIMIT,SELLER_PENDING_LIMIT} from './market-seller-capacity';
 export interface ProviderMcpHandlers {
   submit(body: unknown): Promise<McpHttpResult>;
@@ -95,16 +99,48 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
         "Capability, architecture, and policy card explaining how AI agents discover, pay, deliver, and validate services in Stellar Bazaar.",
       inputSchema: {},
     },
-    async () =>
-      result({
+    async () => {
+      const admission=purchaseAdmissionConfiguration(); let buyerOwnerId:string|undefined;
+      if(admission.mode==='restricted' && incoming?.headers.has('authorization')) {
+        try { const principal=await requireWorkspacePrincipal(incoming.headers.get('authorization')); if(principal.role==='human'||principal.role==='agent')buyerOwnerId=principal.ownerId; } catch { /* Invalid access grants no admission; public capabilities stay readable. */ }
+      }
+      const configuration=demoConfiguration(process.env,buyerOwnerId);
+      return result({
         ...pilotCapabilityCard,
         demo:{enabled:demoEnabled(),network:'stellar:testnet',guide:'/DEMO_TESTNET.md',instructions:demoInstructions,identityTool:'get_bazaar_identity',walletTools:['request_wallet_binding','complete_wallet_binding'],emailRequired:false,agentsPerAccount:1,walletsPerAccount:1,walletRequiredForNewOrders:false,queries:'bazaar-observed',queryHistoryTool:'get_bazaar_query_history',quotas:demoEnabled()?{registrationsPerDay:200,registrationsPerIpHour:200,authenticatedPerAccountMinute:60,ingressGlobalMinute:120,ingressPerIpMinute:120}:null},
         ...(marketEnabled()?{serviceStatusValues:['activated','awaiting-control-proof','pending-manual-review','withdrawn'],policy:{metadataUntrusted:true,arbitraryUrlsRejected:true,execution:'seller-external-agent'}}:{}),
-        historyConnection,
+        historyConnection: marketEnabled() ? {
+          version: 'bazaar.market-history-connection/v1', humanView: '/history',
+          queriesEndpoint: '/api/account/queries', purchasesEndpoint: '/api/market/orders',
+          guide: '/MARKETPLACE_PILOT.md', authentication: 'own workspace Authorization Bearer',
+          queryTool: 'get_bazaar_query_history', purchaseTools: ['get_market_order', 'list_market_orders', 'get_market_delivery'],
+          instructions: [
+            'Create your own account at /open and save its private recovery file. Human and agent accesses are separate; the operator does not assign them.',
+            'Open the private human link to /history; its fragment is removed before requests. Configure only your agent access in the MCP Authorization header.',
+            'Authenticated queries are Bazaar-observed. Orders preserve independently verified payment separately from seller-reported delivery.',
+            'Recover the original operationId after a lost response. Never repeat a payment or provider execution because history is unavailable.',
+            'Content expires after seven days. get_operation_history and /api/operations are a separate legacy agent-reported journal, not this account purchase history.',
+          ],
+        } : historyConnection,
         testnetFunding: { instructions: testnetFundingInstructions, automatic: false },
         writes: MCP_WRITES,
         skills: { tool: "get_bazaar_skills", roles: bazaarRoles },
-        effectiveFeatures:demoConfiguration().features,
+        effectiveFeatures:configuration.features,
+        freeDemo: {
+          mode:process.env.BAZAAR_FREE_DEMO_MODE==='continuous'?'continuous':'legacy-or-unbounded',
+          rollingWindowDays:continuousFreeBudgetConfiguration()?31:null,
+          conservativeTransferBytes:continuousFreeBudgetConfiguration()?.transferBytes??null,
+          applicationStorageBytes:continuousFreeBudgetConfiguration()?200_000_000:null,
+          pendingOperationReservation:continuousFreeBudgetConfiguration()?CONTINUOUS_FREE_OPERATION_RESERVATION:null,
+          pendingReservationsExpireWithHistory:false,
+          sellerMode:process.env.BAZAAR_TEXT_SELLER_MODE==='on-demand'?'owned-text-on-demand':'external-worker',
+          anonymousVisitsWakeSeller:false,
+          guardianSchedule:process.env.BAZAAR_FREE_DEMO_MODE==='continuous'?'hourly-if-activated':'check-deployment',
+          admissionWindow:configuration.freeDemoWindow,
+          sharedCommandReservations:freeDemoBudgetConfiguration()?.limits??null,
+          reservationIsProviderInvoice:false,
+          recoveryUsesOriginalIdentifiers:true,
+        },
         workspace: {
           creationTool: "create_bazaar_workspace", enabled:process.env.BAZAAR_ENABLE_OPEN_WORKSPACES==='true',
           humanView:marketEnabled()?"/history":"/agent-chat", guide:"/WORKSPACE_AGENT.md", agentRunsExternally:true,
@@ -112,7 +148,7 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           payments:marketEnabled()&&process.env.BAZAAR_X402_MARKETPLACE_ENABLED==='true'?'x402-stellar-exact-v2':'disabled', fileUploads:marketEnabled()&&marketFileCapabilities().enabled,
           fileDelivery:{...marketFileCapabilities(),tools:['prepare_market_delivery','confirm_market_delivery','get_market_delivery'],authentication:'workspace Authorization Bearer',uploads:'paid-claimed-orders-only',generalUploads:false,guide:'/storage'},
           retention:{days:7,fixedAt:'server registration time; orders at creation',readsExtendExpiry:false,expiredContentAccess:false,paymentRecovery:'minimal technical controls; never pay again only because history expired'},
-          marketplace: {enabled:marketEnabled(),catalog:'/api/market/catalog',orders:'/api/market/orders',submissionTool:'submit_market_service',submissionStatusTool:'get_market_submission',submissionPermission:{scope:'market:submit',endpoint:'/api/market/agent-permissions',grantRole:'human',generationBound:true},buyerTools:['list_market_services','get_bazaar_skills','create_market_order','get_market_order','get_market_delivery'],sellerTools:['report_market_capacity','list_market_orders','claim_market_order','prepare_market_delivery','confirm_market_delivery','deliver_market_order','fail_market_order','uncertain_market_order'],admission:{capacityTool:'report_market_capacity',capacityAuthentication:'owning workspace agent Authorization Bearer',leaseSeconds:SELLER_LEASE_MS/1000,reservationSeconds:SELLER_RESERVATION_MS/1000,pendingPerSeller:SELLER_PENDING_LIMIT,dailyPerSeller:SELLER_DAILY_LIMIT,checks:['order creation','before first payment authorization','before settlement'],unavailableStatus:503,deliveryGuarantee:false},feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
+          marketplace: {enabled:marketEnabled(),catalog:'/api/market/catalog',orders:'/api/market/orders',submissionTool:'submit_market_service',submissionStatusTool:'get_market_submission',submissionPermission:{scope:'market:submit',endpoint:'/api/market/agent-permissions',grantRole:'human',generationBound:true},buyerTools:['list_market_services','get_bazaar_skills','create_market_order','get_market_order','get_market_delivery'],sellerTools:['report_market_capacity','list_market_orders','claim_market_order','prepare_market_delivery','confirm_market_delivery','deliver_market_order','fail_market_order','uncertain_market_order'],admission:{mode:admission.mode,capacityTool:'report_market_capacity',capacityAuthentication:'owning workspace agent Authorization Bearer',leaseSeconds:SELLER_LEASE_MS/1000,reservationSeconds:SELLER_RESERVATION_MS/1000,pendingPerSeller:SELLER_PENDING_LIMIT,dailyPerSeller:SELLER_DAILY_LIMIT,checks:['order creation','before first payment authorization','before settlement'],unavailableStatus:503,deliveryGuarantee:false},feeBps:0,custody:false,execution:'seller-external-agent',guide:'/MARKETPLACE_PILOT.md'},
           storage:process.env.BAZAAR_WORKSPACE_BACKEND??'not-configured',
           creationAccess:"Save UUID, bootstrap/human/agent accesses privately before creation. Send hashes only; bootstrap uses Authorization. Server assigns owner.",
         },
@@ -127,9 +163,10 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           submissionEndpoint: marketEnabled()?'/api/market/services':"/api/provider-self-listing",
           submissionTool: marketEnabled()?'submit_market_service':"submit_provider_request",
           statusTool: marketEnabled()?'get_market_submission':"get_provider_request_status",
-          intakeEnabled: selfListingIntakeConfigured() && (publicProviderReviewConfigured() || (!process.env.VERCEL && (!!process.env.BAZAAR_PROVIDER_REVIEW_DIR || reviewSharedConfigured()))),
-          submissionStorage: reviewSharedConfigured()?"shared-redis":"local-file-pilot",
-          publicIntakeEnabled: selfListingIntakeConfigured() && publicProviderReviewConfigured(),
+          intakeEnabled: marketEnabled() ? configuration.features.serviceSubmission.enabled : selfListingIntakeConfigured() && (publicProviderReviewConfigured() || (!process.env.VERCEL && (!!process.env.BAZAAR_PROVIDER_REVIEW_DIR || reviewSharedConfigured()))),
+          ...(marketEnabled() ? {intakeReason: configuration.features.serviceSubmission.reason} : {}),
+          submissionStorage: marketEnabled() ? (configuration.checks.reviewRedisBackend&&configuration.checks.reviewRedisUrl&&configuration.checks.reviewRedisToken ? 'shared-redis' : 'unavailable') : reviewSharedConfigured()?"shared-redis":"local-file-pilot",
+          publicIntakeEnabled: marketEnabled() ? configuration.features.serviceSubmission.enabled : selfListingIntakeConfigured() && publicProviderReviewConfigured(),
           submissionAccess: marketEnabled()?'Save submission UUID and canonical card before POST. Use your workspace agent Bearer after the human grants market:submit; recover the same UUID with get_market_submission.':"Client saves a UUID and 32-byte token before POST; reuse the UUID and Authorization: Bearer token for recovery. Never put the token in a URL.",
           controlVerification: "authenticated-operator-dns-or-pinned-https",
           publicActivation: "separate-operator-action",
@@ -156,8 +193,9 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
           ],
         },
         paymentFlow: marketEnabled()?{protocol:'x402-stellar-exact-v2',asset:USDC_TESTNET_PAYMENT_IDENTITY,price:'provider-selected-positive-USDC-Testnet',atomicDecimals:7,maximumAtomic:'9223372036854775807',wallet:'external-local-signer',walletBindingRequired:false,automaticSigning:false}:paymentFlowCapability,
-        operationHistory: { tool: "get_operation_history", authentication: "HTTP Authorization Bearer", endpoint: "/api/operations", evidence: "agent-reported", paymentsInitiated: false, humanApprovalRequired: false },
-      }),
+        operationHistory: { tool: "get_operation_history", authentication: "HTTP Authorization Bearer", endpoint: "/api/operations", evidence: "agent-reported", paymentsInitiated: false, humanApprovalRequired: false, ...(marketEnabled() ? {kind: 'legacy-agent-reported', marketplaceHistory: false, accountHistoryTools: ['get_bazaar_query_history', 'get_market_order', 'list_market_orders']} : {}) },
+      });
+    },
   );
 
   server.registerTool(
@@ -193,16 +231,15 @@ export function createOnboardingMcpServer(readOperationHistory?: () => Promise<M
       description:
         "Deterministic bilingual lexical search over current service cards and verified pilot cards; no AI/reputation inference. Supports opaque cursor pagination via limit/cursor.",
       inputSchema: {
-        query: z.string().min(1),
+        query: z.string().trim().min(1).max(200),
         limit: z.number().int().min(1).max(20).optional(),
         cursor: z.string().optional(),
       },
     },
     async ({ query, limit, cursor }) => {
       if(marketEnabled())try{
-        const snapshot=await marketServiceSnapshot(),active=snapshot.records.filter(r=>r.active),ranked=rankServices(active.map(r=>toPaidService(r.service.card)),query),matches=new Map(ranked.map(r=>[r.service.id,r]));
-        const page=marketPage(active.filter(r=>matches.has(r.service.card.id)),{limit,cursor},`search:${sha(query)}`,r=>({createdAt:r.service.createdAt,id:r.service.submissionId}),r=>{const {card,...metadata}=marketServiceDto(r,false,marketOrigin()),match=matches.get(card.id)!;return {resource:card,...metadata,score:match.score,reasons:match.reasons};});
-        return result({query,ranking:{version:'lexical-v1',ai:false},results:page.items,nextCursor:page.nextCursor,partialResults:page.partialResults,dynamicRegistry:'available'});
+        const page=searchMarketServices(await marketServiceSnapshot(),query,{limit,cursor},marketOrigin());
+        return result({query:page.query,ranking:page.ranking,results:page.services.map(({card,...metadata})=>({resource:card,...metadata})),nextCursor:page.nextCursor,partialResults:page.partialResults,dynamicRegistry:'available'});
       }catch(error){return marketFailure(error);}
       const registry = await readDynamicServiceCards();
       const dynamicServices = registry.entries.map((d) => toPaidService(d.card));

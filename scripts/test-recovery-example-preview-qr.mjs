@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
+import {readFile,writeFile} from 'node:fs/promises';
+import QRCode from 'qrcode';
+import {Keypair} from '@stellar/stellar-sdk';
+import {captureExamplePreviewQr,decodeExampleQrLocally,EXAMPLE_QR_DESTINATION} from '../.vercel/recovery-example-preview-qr.mjs';
+import {exampleAcceptancePlan} from '../.vercel/recovery-example-preview-acceptance.mjs';
+import {createRecoveryExampleCard} from '../examples/recovery-example-text-service.mjs';
+import {EXAMPLE_PREVIEW as P,sha,zero} from './recovery-example-preview-lib.mjs';
+
+const source={bazaar:'8181954b49bcb0e9bbb5a75d65de60c14c5e50dece60d9cea6e7f3d2df16094e',provider:'bc3a348d63002a3625ea6ac0fa97312ddc2753439dec40b9e9180eefff78ea9f'};
+const actor=(letter,index)=>({agent:letter.repeat(43),human:String(index).repeat(43),receipt:{ownerId:'ow_'+String(index).repeat(32),agentId:'agent_'+String(index).repeat(32),generation:1}});
+const publication=createRecoveryExampleCard({providerOrigin:'https://'+P.providerAlias,destination:Keypair.fromRawEd25519Seed(Buffer.alloc(32,24)).publicKey()});
+const j={phase:'native-ready',family:'pilot-'+'a'.repeat(32),...publication,submissionId:randomUUID(),operationId:randomUUID(),seller:actor('s',1),buyer:actor('u',2),operator:'o'.repeat(43),workerToken:'w'.repeat(43),providerToken:'p'.repeat(43),storeKey:'k'.repeat(43),scopedToken:'q'.repeat(43),scopedNativeToken:'n'.repeat(43),bazaarProtection:'private-test-preview-bypass-only',providerProtection:'private-test-provider-bypass-only',acceptance:{completed:{run:{observedAt:new Date().toISOString()}}},deployments:Object.fromEntries(['bazaar','provider'].map(stage=>[stage,{phase:'ready',alias:stage==='bazaar'?P.bazaarAlias:P.providerAlias,deploymentId:'dpl_Synthetic'+stage,sourceDigest:source[stage],project:stage==='bazaar'?P.bazaarProject:P.providerProject,intentId:randomUUID()}]))};
+const plan=exampleAcceptancePlan(j),capture={status:'PASS_PROTECTED_RECOVERY_EXAMPLE_PREVIEW_RUN',planHash:plan.planHash,cardHash:j.cardHash,operationFingerprint:sha(j.operationId),deployments:plan.deployments,aliases:plan.aliases,source,creationRequestsThisRun:1,providerExecutions:0,paymentVerified:false,deliveryVerified:false,originalFinancialJournalUnchanged:true,...zero};
+const svg=await QRCode.toString(EXAMPLE_QR_DESTINATION,{type:'svg',errorCorrectionLevel:'M',margin:4,width:320});
+let checks=0;const decoded=await decodeExampleQrLocally(svg);assert.equal(decoded.independentlyDecoded,true);assert.equal(decoded.exactReencodingMatched,true);assert.equal(decoded.decodedDestination,EXAMPLE_QR_DESTINATION);assert.equal(decoded.decoder.opencvVersion,'4.13.0');checks+=4;
+for(const bad of ['<svg><script>secret</script></svg>',svg+'x',await QRCode.toString('https://bazaar.browns.studio/resources/bazaar-recovery-example-text-v1',{type:'svg',errorCorrectionLevel:'M',margin:4,width:320}),'<svg>'+ 'x'.repeat(100001)+'</svg>']){await assert.rejects(decodeExampleQrLocally(bad));checks++;}
+let requests=0,intents=0,savedSvg,receipt;
+const options={readJournal:async()=>j,checkOriginal:async()=>true,readCapture:async()=>Buffer.from(JSON.stringify(capture)),writeIntent:async()=>{intents++;},writeSvg:async(_path,bytes)=>{savedSvg=bytes;},writeReceipt:async(_path,value)=>{receipt=value;},fetcher:async(url,init)=>{requests++;assert.equal(url,EXAMPLE_QR_DESTINATION+'/qr.svg');assert.equal(init.method,'GET');assert.equal(init.body,undefined);assert.equal(init.redirect,'error');assert.equal(init.credentials,'omit');const headers=new Headers(init.headers);assert.equal(headers.has('authorization'),false);assert.equal(headers.has('cookie'),false);assert.equal(headers.get('x-vercel-protection-bypass'),j.bazaarProtection);return new Response(svg,{headers:{'content-type':'image/svg+xml; charset=utf-8'}});}};
+const evidence=await captureExamplePreviewQr(options);assert.equal(requests,1);assert.equal(intents,1);assert.equal(savedSvg.toString(),svg);assert.equal(receipt,evidence);assert.equal(evidence.httpRequests,1);assert.equal(evidence.providerExecutions,0);assert.equal(evidence.publicAnonymousAccessValidated,false);assert.equal(evidence.independentlyDecoded,true);checks+=8;
+await assert.rejects(captureExamplePreviewQr({...options,writeIntent:async()=>{throw Error('existing read intent');}}));assert.equal(requests,1);checks+=2;
+await assert.rejects(captureExamplePreviewQr({...options,readCapture:async()=>Buffer.from(JSON.stringify({...capture,paymentVerified:true}))}));assert.equal(requests,1);checks+=2;
+await assert.rejects(captureExamplePreviewQr({...options,fetcher:async()=>new Response('x'.repeat(100001),{headers:{'content-type':'image/svg+xml'}})}),/RESPONSE_BOUND/);checks++;
+await assert.rejects(captureExamplePreviewQr({...options,fetcher:async()=>new Response(j.bazaarProtection,{headers:{'content-type':'image/svg+xml'}})}),/PRIVATE_VALUE/);checks++;
+await assert.rejects(captureExamplePreviewQr({...options,fetcher:async()=>new Response(svg,{status:403,headers:{'content-type':'image/svg+xml'}})}),/READ_UNCONFIRMED/);checks++;
+const moduleBytes=await readFile('.vercel/recovery-example-preview-qr.mjs');
+const localEvidence={status:'PASS_LOCAL_EXAMPLE_PREVIEW_QR_CAPTURE_AND_INDEPENDENT_DECODE',recordedAt:new Date().toISOString(),moduleSha256:sha(moduleBytes),checks,nativeQrEncoder:'locked qrcode 1.5.4',independentDecoder:decoded.decoder,decodedDestination:EXAMPLE_QR_DESTINATION,fakeHttpRequests:1,externalRequests:0,credentialReads:0,realPreviewRead:false,newOrders:0,payments:0,productionWrites:0,limitations:['A native QR fixture was decoded with the real OpenCV installation. The hosted SVG still requires the separate single protected Preview read.']};
+await writeFile('docs/evidence/recovery-example-preview-qr-controller-local-2026-10-12.json',JSON.stringify(localEvidence,null,2)+'\n',{flag:'wx'});
+console.log(JSON.stringify({status:localEvidence.status,checks,independentDecoder:decoded.decoder.opencvVersion,externalRequests:0,payments:0}));

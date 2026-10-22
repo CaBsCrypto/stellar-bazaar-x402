@@ -3,17 +3,22 @@ import {z} from 'zod';
 import {WorkspaceError} from './workspace-types.ts';
 import {recordOperationalStorageBounds} from './acceptance-meter.ts';
 import {sha,canonical} from './marketplace-identity.ts';
-import {validateMarketState,type MarketRedis,type MarketOrder,type MarketState} from './marketplace-store.ts';
-import {validateMarketX402State,type MarketX402State,type MarketX402Settlement} from './marketplace-x402-store.ts';
+import {validateMarketState,recomputeMarketMaintenanceIndex,type MarketRedis,type MarketOrder,type MarketState} from './marketplace-store.ts';
+import {validateMarketX402State,MARKET_X402_PAYMENT_FAILURE_MAX_BYTES,type MarketX402State,type MarketX402Settlement} from './marketplace-x402-store.ts';
 import {deliveryStorage} from './delivery-contract.ts';
 import {MARKET_FILE_METADATA_BYTES,maximumMarketFileCleanupBytes,MARKET_FILE_CLEANUP_CAPACITY_BYTES} from './market-file-delivery-schema.ts';
 import {maximumMarketRecoveryBytes,MARKET_RECOVERY_CAPACITY_BYTES} from './market-retention-schema.ts';
 import {assertSellerReservation,commitSellerReservation,type SellerCapacity} from './market-seller-capacity.ts';
+import {continuousFreeBudgetConfiguration,continuousFreeBudgetKey,continuousFreeOperationRequest,continuousFreeOperationCommitScript,type ContinuousFreeOperation} from './continuous-free-budget.ts';
+import {prepareContinuousStorageCommit} from './continuous-free-storage.ts';
 
 export const MARKET_CAPACITY_BYTES=524288;
 export const SETTLEMENT_CAPACITY_BYTES=131072;
 export const RESERVATION_CAPACITY_BYTES=65536;
-export type MarketCommitGuard={keys:string[];values:(string|null)[];admissionExpiresAt?:number};
+// 32-KiB payment-signature header / 24-KiB transaction plus the immutable
+// challenge, attempt hashes and compact verified outcome fit before payment.
+export const CONTINUOUS_X402_SETTLEMENT_RESERVATION_BYTES=50000;
+export type MarketCommitGuard={keys:string[];values:(string|null)[];admissionExpiresAt?:number;continuousOperation?:ContinuousFreeOperation};
 /** A lease cannot admit a new payment beyond its UTC day or unpaid seat. */
 export function sellerAdmissionExpiresAt(capacity:SellerCapacity,order:MarketOrder){
  return Math.min(Date.parse(capacity.leaseExpiresAt),Date.parse(capacity.day+'T00:00:00.000Z')+86400000,...(order.sellerReservation&&!order.sellerReservation.committed?[Date.parse(order.sellerReservation.expiresAt)]:[]));
@@ -28,11 +33,11 @@ function binding(o:MarketOrder){return sha(canonical({operationId:o.operationId,
 /** Immutable card/input/payload bytes plus the widest allowed future fields. */
 export function maximumMarketRecordBytes(o:MarketOrder){
  const {fileDelivery:_delivery,...record}=o;
- const base=bytes({...record,phase:'delivered',updatedAt:date,settlementAttemptId:uuid,transactionHash:digest,paymentVerifiedAt:date,attemptId:uuid,agentId:'agent_'+digest.slice(0,32),executionUncertainty:widestText,failure:widestText,delivery:{text:widestText,sha256:digest,recordedAt:date,reference:'bazaar-order:'+o.operationId}});
+ const base=bytes({...record,...(o.budgetProfile?{exampleReadinessAttempts:2}:{}),...(o.executionMode==='on-demand'?{textWake:{version:1,wakeId:uuid,status:'needs-operator',createdAt:date,updatedAt:date,attempts:1000,retryAt:date,leaseExpiresAt:date,dispatchAttemptId:uuid}}:{}),phase:'delivered',updatedAt:date,settlementAttemptId:uuid,transactionHash:digest,paymentVerifiedAt:date,attemptId:uuid,agentId:'agent_'+digest.slice(0,32),executionUncertainty:widestText,failure:widestText,delivery:{text:widestText,sha256:digest,recordedAt:date,reference:'bazaar-order:'+o.operationId}});
  // File metadata and pending-to-available growth must fit before taking payment.
  return deliveryStorage(o.card.delivery).mode==='text'?base:base+MARKET_FILE_METADATA_BYTES+128;
 }
-export function maximumSettlementRecordBytes(r:MarketX402Settlement){return bytes({...r,phase:'confirmed',updatedAt:date,attemptId:uuid,payloadHash:digest,authorizationFingerprint:digest,transactionHash:digest,responseHash:digest,outcome:{success:true,network:'stellar:testnet',transaction:digest,payer:'G'+'A'.repeat(55)}});}
+export function maximumSettlementRecordBytes(r:MarketX402Settlement){const {lastFailure:_diagnostic,...record}=r;return bytes({...record,phase:'confirmed',updatedAt:date,attemptId:uuid,payloadHash:digest,authorizationFingerprint:digest,transactionHash:digest,responseHash:digest,outcome:{success:true,network:'stellar:testnet',transaction:digest,payer:'G'+'A'.repeat(55)}})+Buffer.byteLength(',"lastFailure":')+MARKET_X402_PAYMENT_FAILURE_MAX_BYTES;}
 function envelope<T>(raw:string|null,empty:T,cap:number):T{
  if(raw===null)return empty;
  if(typeof raw!=='string'||Buffer.byteLength(raw)>cap)throw new WorkspaceError('CAPACITY_STATE_UNAVAILABLE');
@@ -62,11 +67,11 @@ export function projectCapacity(marketRaw:string|null,settlementRaw:string|null,
  const entries=new Map(next.entries.map(e=>[e.operationId,e]));
  for(const id of entries.keys())if(!orders.has(id))entries.delete(id);
  // Admit file orders only while their complete future metadata still fits.
- for(const o of market.orders.filter(o=>deliveryStorage(o.card.delivery).mode!=='text')){
+ for(const o of market.orders.filter(o=>deliveryStorage(o.card.delivery).mode!=='text'||process.env.BAZAAR_FREE_DEMO_MODE==='continuous')){
   const r=records.get(o.operationId),terminal=['delivered','delivery-failed'].includes(o.phase)&&(!r||r.phase==='confirmed'||r.phase==='rejected');
   if(terminal){entries.delete(o.operationId);continue;}
   const old=entries.get(o.operationId);
-  if(!old)entries.set(o.operationId,{operationId:o.operationId,binding:binding(o),marketMaximumBytes:maximumMarketRecordBytes(o),settlementMaximumBytes:0});
+  if(!old)entries.set(o.operationId,{operationId:o.operationId,binding:binding(o),marketMaximumBytes:maximumMarketRecordBytes(o),settlementMaximumBytes:process.env.BAZAAR_FREE_DEMO_MODE==='continuous'&&o.paymentProtocol?CONTINUOUS_X402_SETTLEMENT_RESERVATION_BYTES:0});
  }
  // Older paid orders keep their completion capacity without changing historical records.
  for(const o of market.orders.filter(o=>!o.paymentProtocol&&o.phase!=='awaiting-payment')){
@@ -80,17 +85,21 @@ export function projectCapacity(marketRaw:string|null,settlementRaw:string|null,
   if(!o)throw new WorkspaceError('CAPACITY_STATE_UNAVAILABLE');
   const terminal=r.phase==='rejected'||(r.phase==='confirmed'&&['delivered','delivery-failed'].includes(o.phase));
   if(terminal){entries.delete(r.operationId);continue;}
-  if(r.phase==='challenged')continue;
+  if(r.phase==='challenged'){
+   const existing=entries.get(r.operationId);
+   if(existing&&existing.settlementMaximumBytes===0)existing.settlementMaximumBytes=bytes(r);
+   continue;
+  }
   if(!r.payload||!r.payloadHash||r.orderBinding!==binding(o))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
   const old=entries.get(r.operationId),wanted:Entry={operationId:r.operationId,binding:binding(o),marketMaximumBytes:maximumMarketRecordBytes(o),settlementMaximumBytes:maximumSettlementRecordBytes(r)};
-  const fileUpgrade=Boolean(old&&old.settlementMaximumBytes===0&&deliveryStorage(o.card.delivery).mode!=='text');
+  const fileUpgrade=Boolean(old&&(old.settlementMaximumBytes===0||r.phase==='verifying'&&old.settlementMaximumBytes===bytes({...r,phase:'challenged',attemptId:undefined,payload:undefined,payloadHash:undefined,authorizationFingerprint:undefined}))&&(deliveryStorage(o.card.delivery).mode!=='text'||process.env.BAZAAR_FREE_DEMO_MODE==='continuous'));
   if(old&&(old.binding!==wanted.binding||old.marketMaximumBytes<wanted.marketMaximumBytes||(!fileUpgrade&&old.settlementMaximumBytes<wanted.settlementMaximumBytes)))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
   if(!old||fileUpgrade)entries.set(r.operationId,wanted);
  }
  let marketRemaining=cleanupReserved+(market.sellerCapacities?.length??0)*32,settlementRemaining=0;
  for(const e of entries.values()){
   const o=orders.get(e.operationId),r=records.get(e.operationId);
-  if(!o||(!r&&e.settlementMaximumBytes!==0)||e.binding!==binding(o))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
+  if(!o||(!r&&e.settlementMaximumBytes!==0&&!(process.env.BAZAAR_FREE_DEMO_MODE==='continuous'&&o.paymentProtocol&&e.settlementMaximumBytes===CONTINUOUS_X402_SETTLEMENT_RESERVATION_BYTES))||e.binding!==binding(o))throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
   const marketGrowth=e.marketMaximumBytes-bytes(o),settlementGrowth=e.settlementMaximumBytes-(r?bytes(r):0);
   if(marketGrowth<0||settlementGrowth<0)throw new WorkspaceError('CAPACITY_BINDING_CHANGED',409);
   marketRemaining+=marketGrowth;settlementRemaining+=settlementGrowth;
@@ -142,6 +151,7 @@ export async function commitCapacityStore(redis:MarketRedis,prefix:string,kind:'
  const oldMarket=kind==='market'?expectedRaw:other as string|null,oldSettlement=kind==='settlement'?expectedRaw:other as string|null;
  let newMarket=kind==='market'?(nextRaw??oldMarket):oldMarket;const newSettlement=kind==='settlement'?(nextRaw??oldSettlement):oldSettlement;
  const before=snapshot(oldMarket,oldSettlement),after=snapshot(newMarket,newSettlement);let admissionExpiresAt=guard?.admissionExpiresAt;
+ const configuration=continuousFreeBudgetConfiguration();
  if(kind==='settlement'){
   let changed=false;
   for(const record of after.settlements.records){
@@ -154,6 +164,11 @@ export async function commitCapacityStore(redis:MarketRedis,prefix:string,kind:'
   }
   if(changed){validateMarketState(after.market);newMarket=JSON.stringify({version:1,revision:randomUUID(),state:after.market});}
  }
+ if(configuration){
+  const priorIndex=JSON.stringify(after.market.maintenance?.index);
+  const index=recomputeMarketMaintenanceIndex(after.market,after.settlements);
+  if(JSON.stringify(index)!==priorIndex){validateMarketState(after.market);newMarket=JSON.stringify({version:1,revision:randomUUID(),state:after.market});}
+ }
  const projected=projectCapacity(newMarket,newSettlement,storedLedger as string|null);
  recordOperationalStorageBounds({market:{committedBytes:projected.marketUsed,reservedBytes:projected.marketRemaining},settlement:{committedBytes:projected.settlementUsed,reservedBytes:projected.settlementRemaining}});
  const expected=(raw:string|null)=>[raw===null?'missing':'present',raw??''];
@@ -161,7 +176,46 @@ export async function commitCapacityStore(redis:MarketRedis,prefix:string,kind:'
  const args=[...expected(oldMarket),...expected(oldSettlement),...expected(storedLedger as string|null),newMarket!==oldMarket?(newMarket??''):'',kind==='settlement'?(nextRaw??''):'',projected.ledgerRaw!==storedLedger?(projected.ledgerRaw??''):''];
  for(let i=0;i<2;i++)args.push(...(guard&&i<guard.keys.length?expected(guard.values[i]):['unchecked','']));
  args.push(admissionExpiresAt===undefined?'':String(admissionExpiresAt));
- const result=await redis.eval(MARKET_CAPACITY_CAS,keys,args);
+ let script=MARKET_CAPACITY_CAS;
+ if(configuration){
+  const workspacePrefix=process.env.BAZAAR_WORKSPACE_PREFIX??prefix.replace('bazaar-market:','bazaar-workspace:');
+  if(workspacePrefix.split(':')[1]!==prefix.split(':')[1])throw new WorkspaceError('FREE_DEMO_STORAGE_UNAVAILABLE');
+  const addedOrders=after.market.orders.filter(o=>!before.market.orders.some(old=>old.operationId===o.operationId));
+  const operation=guard?.continuousOperation;
+  if(addedOrders.length>0&&(addedOrders.length!==1||!operation||operation.action!=='reserve'||operation.operationId!==addedOrders[0].operationId||operation.principalHash!==sha(addedOrders[0].buyerOwnerId)))throw new WorkspaceError('FREE_DEMO_OPERATION_RESERVATION_REQUIRED',503);
+  if(operation?.action==='release'){
+   const old=before.market.orders.find(o=>o.operationId===operation.operationId),next=after.market.orders.find(o=>o.operationId===operation.operationId);
+   if(!old||operation.principalHash!==sha(old.buyerOwnerId)||!next||!['delivered','delivery-failed'].includes(next.phase))throw new WorkspaceError('INVALID_COMMIT_GUARD');
+  }
+  const indexKey=prefix+':maintenance-index:v1',storedIndex=await redis.get(indexKey);
+  if(storedIndex!==null&&(typeof storedIndex!=='string'||Buffer.byteLength(storedIndex)>512))throw new WorkspaceError('MAINTENANCE_UNAVAILABLE');
+  const index=after.market.maintenance?.index;
+  if(!index)throw new WorkspaceError('MAINTENANCE_UNAVAILABLE');
+  const indexRaw=JSON.stringify(index);if(Buffer.byteLength(indexRaw)>512)throw new WorkspaceError('MAINTENANCE_UNAVAILABLE');
+  const storage=await prepareContinuousStorageCommit(redis,workspacePrefix,[
+   {key:marketKey,expectedRaw:oldMarket,nextRaw:newMarket,reservedBytes:projected.marketRemaining},
+   {key:settlementKey,expectedRaw:oldSettlement,nextRaw:newSettlement,reservedBytes:projected.settlementRemaining},
+   {key:ledgerKey,expectedRaw:storedLedger as string|null,nextRaw:projected.ledgerRaw},
+   {key:indexKey,expectedRaw:storedIndex as string|null,nextRaw:indexRaw},
+  ]);
+  let beforeWrites='',afterWrites='';
+  const indexKeyPosition=keys.length+1,indexArg=args.length+1;keys.push(indexKey);args.push(storedIndex===null?'missing':'present',storedIndex as string??'',indexRaw);
+  beforeWrites+=`local indexOld=redis.call('GET',KEYS[${indexKeyPosition}])\nif ARGV[${indexArg}]=='missing' then if indexOld then return 0 end else if not indexOld or indexOld~=ARGV[${indexArg+1}] then return 0 end end\n`;
+  afterWrites+=`redis.call('SET',KEYS[${indexKeyPosition}],ARGV[${indexArg+2}])\n`;
+  if(storage){const keyIndex=keys.length+1,argIndex=args.length+1;keys.push(...storage.keys);args.push(...storage.args);beforeWrites+=storage.appendScript(keyIndex,argIndex);afterWrites+=storage.writeScript(keyIndex);}
+  if(operation){
+   const keyIndex=keys.length+1,configArg=args.length+1;keys.push(continuousFreeBudgetKey(workspacePrefix));args.push(JSON.stringify(configuration),JSON.stringify(continuousFreeOperationRequest(operation,addedOrders[0])));
+   beforeWrites+=continuousFreeOperationCommitScript(keyIndex,configArg,configArg+1);afterWrites+=`redis.call('SET',KEYS[${keyIndex}],budgetNext)\n`;
+  }
+  script=script.replace("if ARGV[7]~='' then",beforeWrites+"\nif ARGV[7]~='' then").replace('return 1',afterWrites+'return 1');
+ }
+ const result=await redis.eval(script,keys,args);
+ if(result===-11)throw new WorkspaceError('FREE_DEMO_REQUEST_LIMIT',429,60);
+ if(result===-10||result===-12)throw new WorkspaceError('FREE_DEMO_BUDGET_UNAVAILABLE');
+ if(result===-20)throw new WorkspaceError('FREE_DEMO_STORAGE_WRITE_UNCONFIRMED',409);
+ if(result===-21)throw new WorkspaceError('FREE_DEMO_STORAGE_UNINITIALIZED');
+ if(result===-22||result===-23)throw new WorkspaceError('FREE_DEMO_STORAGE_UNAVAILABLE');
+ if(result===-24)throw new WorkspaceError('FREE_DEMO_STORAGE_CAPACITY');
  if(result===-1)throw new WorkspaceError('SELLER_UNAVAILABLE',503,60);
  if(result!==1)throw new WorkspaceError('CAPACITY_WRITE_UNCONFIRMED',409);
  return projected;

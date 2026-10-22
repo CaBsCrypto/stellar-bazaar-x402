@@ -1,4 +1,16 @@
-# Revisión del candidato de texto antes de publicar
+# Revisión de la demo de texto
+
+**Estado verificado a las 06:00 UTC del 11 de octubre:** producción publicada, registro público de cuentas y conexión de agentes abiertos. **Guion breve algorítmico** está revisado, activado y visible; compras y archivos privados siguen cerrados. Bazaar READY `dpl_GoDxiF8tYxB2bbHfs4BfGobia1T8`, proveedor READY `dpl_4hJwMXCu25MiRWtXFfQG8CKk3ify`; mismo código candidato `service-discovery-51e4f167f50f2f0d`, sin cron ni pagos nuevos. [Estado y límites actuales](SERVICE_DISCOVERY_VALIDATION.md).
+
+El [alta de una cuenta sintética en producción](evidence/text-production-onboarding-2026-10-11.json) y sus roles humano/agente por HTTP y MCP pasaron, guardando accesos sólo en DPAPI. La [revisión y activación del servicio](evidence/text-service-production-activation-2026-10-11.json) comprobó control del endpoint. La [aceptación de ficha, catálogo, conexión y QR](evidence/service-discovery-production-service-acceptance-2026-10-11.json) pasó 35 comprobaciones anónimas en 13 peticiones, incluida decodificación independiente del QR y capacidades con altas abiertas y compras cerradas. Se comprobó en navegador [el alta](evidence/text-production-onboarding-browser-2026-10-11.png) y [la ficha](evidence/text-production-service-browser-2026-10-11.png).
+
+La [prueba manual del vendedor alojado sin pedidos](evidence/text-service-production-readiness-2026-10-11.json) pasó: 44 solicitudes Redis del trabajador y seis MCP, sin generaciones, órdenes ni pagos. Su señal de capacidad duraba seis minutos y vencía a las 06:06:38 UTC; sin programación no hay renovación continua. Al vencer bloquea nuevas órdenes, además del cierre independiente de compras. Esta prueba de disponibilidad no valida una entrega pagada ni el historial de una compra en producción.
+
+La aceptación pública y el alta se hicieron desde la máquina del operador. El lector web externo no pudo acceder a la ficha y no aportó estado HTTP: queda pendiente comprobar ese recorrido desde otra red. El trabajador alojado autenticó MCP desde otro host sin bypass, pero eso no demuestra alta anónima externa. Para completar la compra faltan una transacción autorizada, entrega y recuperación privada de producción; cualquier pago nuevo o cron requiere aprobación separada.
+
+## Evidencia histórica de preparación y despliegue cerrado
+
+El candidato de descubrimiento pasó 34 suites locales, compilación y 35 comprobaciones en Preview antes de publicarse. La [entrega inicial aplicada](release/service-discovery-production-handoff-2026-10-11.json) conserva su configuración y procedencia. Los siguientes apartados documentan fases anteriores: sus referencias a catálogo vacío, altas cerradas, proveedor deshabilitado o producción pendiente no describen el estado verificado arriba. Sus pruebas tampoco sustituyen una compra del candidato actual.
 
 Candidato final de código: `aedf2feecd35c4cbff70c7eb42913ed1e521b513`. MCP `1.1.0`, 35 herramientas, una conexión `/api/mcp`. Código y configuración preparados; producción y cron siguen sin publicarse o activarse por este trabajo. No se hicieron compras, firmas ni ejecuciones nuevas del proveedor. [Configuración vigente para revisión](release/text-production-release-2026-10-11.json).
 

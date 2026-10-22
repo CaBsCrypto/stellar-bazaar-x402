@@ -13,28 +13,38 @@ import type {ServiceCard} from './types.ts';
 import {isCanonicalUsdcTestnet} from './payment-assets.ts';
 import {deliveryStorage} from './delivery-contract.ts';
 import {reserveMarketFilesInState,assertMarketFileDeliveryReady} from './market-file-delivery.ts';
+import {continuousExampleBudgetMarker} from './continuous-free-budget.ts';
 import {marketContentExpiresAt} from './market-file-delivery-schema.ts';
 import {marketIntentHash,marketRecoveryRecord,type MarketRecovery} from './market-retention-schema.ts';
 import {configuredMarketX402Store} from './marketplace-x402-store.ts';
 import {demoConfiguration} from './demo-configuration.ts';
+import {purchaseAdmissionConfiguration} from './market-purchase-admission.ts';
+import {freeDemoWindow} from './free-demo-window.ts';
 import {probeMarketStorage} from './market-storage-probe.ts';
 import { creditOperationalPrincipal } from './acceptance-meter.ts';
+import {isOnDemandTextService,ensureMarketTextReadiness} from './market-text-seller-runtime.ts';
 
 import {sha,canonical,orderMemo} from './marketplace-identity.ts';
 import {configuredWorkspaceStore} from './workspace-store.ts';
 import {marketSubmissionGuard} from './market-permissions.ts';
 import {marketPage,type MarketPageInput} from './market-pagination.ts';
 import {marketplacePurchaseDescriptor} from './marketplace-discovery.ts';
+import {marketSearchQuery,rankMarketRecords} from './market-search.ts';
 import {sellerCapacityReportSchema,reportCapacityInState,reserveSellerCapacity,assertSellerReservation,sellerCapacityDto} from './market-seller-capacity.ts';
 export {sha,canonical} from './marketplace-identity.ts';
 export const marketEnabled=()=>process.env.BAZAAR_ENABLE_MARKETPLACE==='true';
 export function assertMarketEnabled(){if(!marketEnabled())throw new WorkspaceError('MARKET_DISABLED',503);if(process.env.VERCEL==='1'&&!demoConfiguration().features.catalogue.enabled)throw new WorkspaceError('MARKET_CONFIGURATION_INCOMPLETE',503);}
 /** Fresh admission only. Existing order/payment recovery must precede this guard. */
-export function assertMarketPurchaseAdmission(){
+export function assertMarketPurchaseAdmission(p?:Pick<WorkspacePrincipal,'ownerId'>){
  if(process.env.BAZAAR_X402_MARKETPLACE_ENABLED!=='true')throw new WorkspaceError('X402_PAYMENTS_DISABLED',503);
  if(process.env.BAZAAR_ENABLE_MARKET_PURCHASES!=='true')throw new WorkspaceError('PURCHASES_PAUSED',503);
- if(process.env.VERCEL==='1'&&!demoConfiguration().features.purchases.enabled)throw new WorkspaceError('X402_CONFIGURATION_INCOMPLETE',503);
+ if(!freeDemoWindow().admissionOpen)throw new WorkspaceError('PURCHASES_PAUSED',503);
+ const admission=purchaseAdmissionConfiguration(process.env,p?.ownerId);
+ if(!admission.configured)throw new WorkspaceError('PURCHASE_ADMISSION_CONFIGURATION_INCOMPLETE',503);
+ if(!admission.allowed)throw new WorkspaceError('BUYER_ADMISSION_RESTRICTED',503);
+ if(process.env.VERCEL==='1'&&!demoConfiguration(process.env,p?.ownerId).features.purchases.enabled)throw new WorkspaceError('X402_CONFIGURATION_INCOMPLETE',503);
 }
+export function assertMarketDeliveryAdmission(card:ServiceCard){if(deliveryStorage(card.delivery).mode!=='text'&&process.env.BAZAAR_MARKET_FILES_ENABLED!=='true')throw new WorkspaceError('FILE_STORAGE_DISABLED',503);}
 export const newServiceSchema=z.object({submissionId:z.string().uuid(),card:z.unknown(),controlProof:z.object({method:z.enum(['dns-txt','http-well-known']),domain:z.string().max(253)}).strict()}).strict();
 export const newOrderSchema=z.object({operationId:z.string().uuid(),serviceId:z.string().min(1).max(100),cardHash:z.string().regex(/^[a-f0-9]{64}$/),payer:z.string().regex(/^G[A-Z2-7]{55}$/),input:z.record(z.string(),z.union([z.string().max(2000),z.number().finite(),z.boolean()])),paymentProtocol:z.literal('x402-stellar-exact-v2')}).strict();
 export const orderActionSchema=z.discriminatedUnion('action',[
@@ -59,6 +69,7 @@ export async function submitMarketService(p:WorkspacePrincipal,input:z.infer<typ
  newServiceSchema.parse(input);const guard=await marketSubmissionGuard(p),card=marketCard(input.card),cardHash=computeCanonicalServiceCardHash(card),token=submissionToken(input.submissionId,p.ownerId);
  // Persist ownership before entering the existing review queue. Explicit replay uses the same intent.
  await configuredMarketStore().transact(s=>{if(s.paused)throw new WorkspaceError('MARKET_PAUSED');const old=s.services.find(v=>v.submissionId===input.submissionId);if(old){if(old.ownerId!==p.ownerId||old.cardHash!==cardHash)throw new WorkspaceError('SUBMISSION_CONFLICT',409);return;}
+ if(!freeDemoWindow().admissionOpen)throw new WorkspaceError('ADMISSIONS_PAUSED',503);
  if(s.services.some(v=>v.card.id===card.id))throw new WorkspaceError('SERVICE_CONFLICT',409);
  s.services.push({submissionId:input.submissionId,ownerId:p.ownerId,cardHash,card,withdrawn:false,createdAt:new Date().toISOString()});},guard);
  const result=await submitProviderDraft(card,input.controlProof,{submissionId:input.submissionId,submissionToken:token});
@@ -76,13 +87,23 @@ export async function marketServiceSnapshot() {
  const records=snapshot.services.map(service=>{const review=byId.get(service.submissionId);if(review&&computeCanonicalServiceCardHash(review.card)!==service.cardHash)throw new WorkspaceError('REVIEW_MISMATCH');let purchasable=false;try{marketCard(service.card);purchasable=true;}catch{}return {service,review,active:purchasable&&!service.withdrawn&&review?.status==='activated'&&owners.has(service.ownerId),availability:snapshot.availability[service.submissionId]};});
  return {records,paused:snapshot.paused};
 }
-export function marketServiceDto({service,review,availability}:ServiceSnapshot,owner=false,origin?:string){return {submissionId:service.submissionId,card:service.card,cardHash:service.cardHash,execution:'seller-mcp-task' as const,status:service.withdrawn?'withdrawn':review?.status??'submission-unconfirmed',...(availability?{availability}:{}),...(owner&&review?{control:review.control,...(review.review?{review:{decision:review.review.decision,reasons:review.review.reasons,reviewedAt:review.review.reviewedAt}}:{})}:{}),...(origin&&service.card.payment.marketplace?{purchase:marketplacePurchaseDescriptor(service.card,origin)}:{})};}
+export function marketServiceDto({service,review,availability}:ServiceSnapshot,owner=false,origin?:string){let onDemand=false;try{onDemand=isOnDemandTextService(service);}catch{}return {submissionId:service.submissionId,card:service.card,cardHash:service.cardHash,execution:'seller-mcp-task' as const,status:service.withdrawn?'withdrawn':review?.status??'submission-unconfirmed',...(availability?{availability:{...availability,...(onDemand?{mode:'on-demand' as const,...(!availability.ready&&availability.reason!=='SELLER_CAPACITY_EXHAUSTED'?{reason:'CHECK_ON_ORDER'}:{})}:{})}}:{}),...(owner&&review?{control:review.control,...(review.review?{review:{decision:review.review.decision,reasons:review.review.reasons,reviewedAt:review.review.reviewedAt}}:{})}:{}),...(origin&&service.card.payment.marketplace?{purchase:marketplacePurchaseDescriptor(service.card,origin)}:{})};}
 const serviceAnchor=({service}:ServiceSnapshot)=>({createdAt:service.createdAt,id:service.submissionId});
 export function pageMarketServices(snapshot:Awaited<ReturnType<typeof marketServiceSnapshot>>,options:MarketPageInput,origin:string,ownerId?:string,maxBytes?:number){
  const page=marketPage(snapshot.records.filter(r=>ownerId?r.service.ownerId===ownerId:r.active),options,ownerId?`mine:${ownerId}`:'catalog',serviceAnchor,r=>marketServiceDto(r,!!ownerId,origin),maxBytes);
  return {services:page.items,nextCursor:page.nextCursor,partialResults:page.partialResults};
 }
-export async function marketCatalogPage(options:MarketPageInput,origin:string){const snapshot=await marketServiceSnapshot();return {...pageMarketServices(snapshot,options,origin),paused:snapshot.paused};}
+export function searchMarketServices(snapshot:Awaited<ReturnType<typeof marketServiceSnapshot>>,query:string,options:MarketPageInput,origin:string){
+ const normalized=marketSearchQuery(query);if(!normalized)throw new WorkspaceError('INVALID_REQUEST',400);
+ const {records,matches}=rankMarketRecords(snapshot.records,normalized);
+ const page=marketPage(records,options,`search:${sha(normalized)}`,serviceAnchor,r=>{const match=matches.get(r.service.card.id)!;return {...marketServiceDto(r,false,origin),score:match.score,reasons:match.reasons};});
+ return {query:normalized,ranking:{version:'lexical-v1' as const,ai:false},services:page.items,nextCursor:page.nextCursor,partialResults:page.partialResults};
+}
+export async function marketCatalogPage(options:MarketPageInput,origin:string,query?:string){
+ const snapshot=await marketServiceSnapshot(),normalized=marketSearchQuery(query);let purchasesEnabled=false;
+ try{assertMarketPurchaseAdmission();purchasesEnabled=true;}catch{}
+ return {...(normalized?searchMarketServices(snapshot,normalized,options,origin):pageMarketServices(snapshot,options,origin)),paused:snapshot.paused,purchasesEnabled,purchaseAdmission:purchaseAdmissionConfiguration().mode};
+}
 export async function marketServices(ownerId?:string){const snapshot=await marketServiceSnapshot();return snapshot.records.filter(r=>ownerId?r.service.ownerId===ownerId:r.active).map(r=>marketServiceDto(r,!!ownerId));}
 export async function readMarketSubmission(p:WorkspacePrincipal,id:string,origin:string){
  if(p.role!=='human'&&p.role!=='agent')throw new WorkspaceError('FORBIDDEN',403);
@@ -99,11 +120,16 @@ export async function reportMarketCapacity(p:WorkspacePrincipal,input:z.infer<ty
 }
 /** Revalidate the current seller generation and protect it in the payment CAS. */
 export async function sellerPaymentGuard(order:MarketOrder,p?:WorkspacePrincipal){
+ assertMarketDeliveryAdmission(order.card);
  const c=await configuredMarketStore().transact(s=>assertSellerReservation(s,s.orders.find(o=>o.operationId===order.operationId)??order));
  try{const store=configuredWorkspaceStore(),seller=(await store.walletIdentity({role:'agent',ownerId:c.ownerId,workspaceId:c.workspaceId,agentId:c.agentId,generation:c.generation})).guard;
   if(!seller)throw new WorkspaceError('SELLER_AUTHORIZATION_UNAVAILABLE',503);
-  if(p){const buyer=(await store.walletIdentity(p)).guard;if(!buyer||seller.keys.length!==buyer.keys.length||seller.keys.some((key,i)=>key!==buyer.keys[i]||seller.values[i]!==buyer.values[i]))throw new WorkspaceError('AUTHORIZATION_SNAPSHOT_CHANGED',503);}
-  return seller;}
+  // Both identities are generation-bound by the shared registry snapshot. The
+  // additional market:submit permission key is owner-specific and does not
+  // authorize a payment; buyer and seller permission documents must differ.
+  if(!seller.keys[0]||seller.values.length!==seller.keys.length)throw new WorkspaceError('SELLER_AUTHORIZATION_UNAVAILABLE',503);
+  if(p){const buyer=(await store.walletIdentity(p)).guard;if(!buyer||buyer.keys[0]!==seller.keys[0]||buyer.values[0]!==seller.values[0])throw new WorkspaceError('AUTHORIZATION_SNAPSHOT_CHANGED',503);}
+  return {keys:seller.keys.slice(0,1),values:seller.values.slice(0,1)};}
  catch(error){if(error instanceof WorkspaceError&&['UNAUTHORIZED','FORBIDDEN'].includes(error.code))throw new WorkspaceError('SELLER_UNAVAILABLE',503,60);throw error;}
 }
 function validateInput(c:ServiceCard,input:Record<string,unknown>){if(Object.keys(input).some(k=>!c.input.some(v=>v.name===k))||c.input.some(v=>v.required&&!(v.name in input)||v.name in input&&typeof input[v.name]!==v.type))throw new WorkspaceError('INVALID_SERVICE_INPUT',400);}
@@ -122,19 +148,26 @@ export async function createMarketOrder(p:WorkspacePrincipal,input:z.infer<typeo
  if(prior){authorizeOrder(prior,p);if(prior.buyerOwnerId!==p.ownerId||marketIntentHash(prior)!==marketIntentHash(input))throw new WorkspaceError('OPERATION_CONFLICT',409);assertMarketContentLive(prior);return prior;}
  const archived=await readMarketRecovery(p,input.operationId);
  if(archived){if(archived.buyerOwnerId!==p.ownerId||archived.intentHash!==marketIntentHash(input))throw new WorkspaceError('OPERATION_CONFLICT',409);throw new WorkspaceError('ORDER_CONTENT_EXPIRED',410);}
- assertMarketPurchaseAdmission();
- const walletSnapshot=demoEnabled()?await configuredWorkspaceStore().walletIdentity(p):undefined;
- // Wallet binding is optional. Keep the generation snapshot guard so revocation
- // or rotation between authentication and the durable order commit still wins.
+ assertMarketPurchaseAdmission(p);
  const service=await configuredMarketStore().transact(s=>s.services.find(v=>v.card.id===input.serviceId&&!v.withdrawn));
  if(!service||service.cardHash!==input.cardHash||(await reviewed(service))?.status!=='activated')throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);
  if(service.card.payment.marketplace?.protocol!==input.paymentProtocol)throw new WorkspaceError('PAYMENT_PROTOCOL_MISMATCH',409);
  if(!await configuredWorkspaceStore().isOwnerActive(service.ownerId))throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);
  marketCard(service.card); // Legacy records remain readable, but cannot start another legacy payment.
  if(service.ownerId===p.ownerId)throw new WorkspaceError('SELF_PURCHASE_DISABLED',409);validateInput(service.card,input.input);
+ assertMarketDeliveryAdmission(service.card);
+ const onDemand=isOnDemandTextService(service);
+ const prepareOrder=():MarketOrder=>{const now=new Date().toISOString();return {...input,...(onDemand?{executionMode:'on-demand' as const}:{}),...(input.paymentProtocol?{inputHash:sha(canonical(input.input))}:{}),buyerOwnerId:p.ownerId,sellerOwnerId:service.ownerId,card:service.card,destination:service.card.payment.destination,amount:service.card.payment.amount,settlement:{...service.card.payment.identity!},memoHash:orderMemo(p.ownerId,input.operationId,input.cardHash,input.input),phase:'awaiting-payment',createdAt:now,updatedAt:now};};
+ const preparedOrder=prepareOrder(),budgetMarker=continuousExampleBudgetMarker(preparedOrder);if(budgetMarker)preparedOrder.budgetProfile=budgetMarker;
+ if(onDemand)await ensureMarketTextReadiness(service,budgetMarker?preparedOrder:undefined);
  if(deliveryStorage(service.card.delivery).mode==='bazaar'){const probe=await probeMarketStorage();if(!probe.reachable)throw new WorkspaceError(probe.code,503);}
- const now=new Date().toISOString(),order:MarketOrder={...input,...(input.paymentProtocol?{inputHash:sha(canonical(input.input))}:{}),buyerOwnerId:p.ownerId,sellerOwnerId:service.ownerId,card:service.card,destination:service.card.payment.destination,amount:service.card.payment.amount,settlement:{...service.card.payment.identity!},memoHash:orderMemo(p.ownerId,input.operationId,input.cardHash,input.input),phase:'awaiting-payment',createdAt:now,updatedAt:now};
- return configuredMarketStore().transact(s=>{assertMarketPurchaseAdmission();if(s.paused)throw new WorkspaceError('MARKET_PAUSED',503);if(s.orders.some(v=>v.operationId===input.operationId)||s.archived?.some(v=>v.operationId===input.operationId))throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.services.find(v=>v.submissionId===service.submissionId)?.withdrawn)throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);reserveSellerCapacity(s,order);reserveMarketFilesInState(order,s);s.orders.push(order);return order;},walletSnapshot?.guard);
+ // Readiness makes authenticated MCP calls which update the shared registry's
+ // quotas. Capture its generation guard after those calls, immediately before
+ // committing the order. Revocation still fails this read or the atomic guard.
+ const walletSnapshot=demoEnabled()?await configuredWorkspaceStore().walletIdentity(p):undefined;
+ const order=budgetMarker?preparedOrder:prepareOrder();
+ const guard=process.env.BAZAAR_FREE_DEMO_MODE==='continuous'?{keys:walletSnapshot?.guard?.keys??[],values:walletSnapshot?.guard?.values??[],continuousOperation:{operationId:order.operationId,principalHash:sha(p.ownerId),action:'reserve' as const}}:walletSnapshot?.guard;
+ return configuredMarketStore().transact(s=>{assertMarketPurchaseAdmission(p);if(s.paused)throw new WorkspaceError('MARKET_PAUSED',503);if(s.orders.some(v=>v.operationId===input.operationId)||s.archived?.some(v=>v.operationId===input.operationId))throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.services.find(v=>v.submissionId===service.submissionId)?.withdrawn)throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);reserveSellerCapacity(s,order);reserveMarketFilesInState(order,s);s.orders.push(order);return order;},guard);
 }
 export async function readMarketOrder(p:WorkspacePrincipal,id:string){return configuredMarketStore().transact(s=>{const o=s.orders.find(v=>v.operationId===id);if(!o){const r=s.archived?.find(r=>r.operationId===id);if(r&&(r.buyerOwnerId===p.ownerId||r.sellerOwnerId===p.ownerId))throw new WorkspaceError('ORDER_CONTENT_EXPIRED',410);throw new WorkspaceError('NOT_FOUND',404);}authorizeOrder(o,p);assertMarketContentLive(o);return o;});}
 export async function listMarketOrders(p:WorkspacePrincipal){return configuredMarketStore().transact(s=>s.orders.filter(o=>(o.buyerOwnerId===p.ownerId||o.sellerOwnerId===p.ownerId)&&Date.parse(marketContentExpiresAt(o))>Date.now()).map(o=>({...o,expiresAt:marketContentExpiresAt(o),perspective:o.buyerOwnerId===p.ownerId?'purchase':'sale'})));}
@@ -142,6 +175,8 @@ export async function listMarketOrdersPage(p:WorkspacePrincipal,options:MarketPa
 export async function sellerOrderAction(p:WorkspacePrincipal,id:string,action:Extract<z.infer<typeof orderActionSchema>,{attemptId:string}>){
  if(p.role!=='agent')throw new WorkspaceError('FORBIDDEN',403);
  const guard=demoEnabled()?(await configuredWorkspaceStore().walletIdentity(p)).guard:undefined;
+ const snapshot=process.env.BAZAAR_FREE_DEMO_MODE==='continuous'&&['deliver','fail'].includes(action.action)?await configuredMarketStore().transact(s=>s.orders.find(o=>o.operationId===id&&o.sellerOwnerId===p.ownerId)):undefined;
+ const commitGuard=snapshot?{keys:guard?.keys??[],values:guard?.values??[],continuousOperation:{operationId:id,principalHash:sha(snapshot.buyerOwnerId),action:'release' as const}}:guard;
  return configuredMarketStore().transact(s=>{const o=s.orders.find(v=>v.operationId===id&&v.sellerOwnerId===p.ownerId);if(!o)throw new WorkspaceError('NOT_FOUND',404);
  assertMarketContentLive(o);
  if(action.action==='claim') {if(o.attemptId){if(o.attemptId!==action.attemptId||o.agentId!==p.agentId)throw new WorkspaceError('CLAIM_CONFLICT',409);return o;}if(o.phase!=='paid')throw new WorkspaceError('PAYMENT_REQUIRED',409);o.attemptId=action.attemptId;o.agentId=p.agentId;o.phase='executing';}
@@ -149,6 +184,6 @@ export async function sellerOrderAction(p:WorkspacePrincipal,id:string,action:Ex
  if(action.action==='deliver'){assertMarketFileDeliveryReady(o,action.manifestHash);if(deliveryStorage(o.card.delivery).mode!=='text'&&action.manifestHash!==o.fileDelivery?.manifestHash)throw new WorkspaceError('FILE_MANIFEST_REQUIRED',409);if(o.delivery){if(o.delivery.text!==action.text)throw new WorkspaceError('DELIVERY_CONFLICT',409);return o;}if(!['executing','execution-uncertain'].includes(o.phase))throw new WorkspaceError('INVALID_TRANSITION',409);o.delivery={text:action.text,sha256:sha(action.text),recordedAt:new Date().toISOString(),reference:`bazaar-order:${o.operationId}`};o.phase='delivered';}
  else if(action.action==='execution-uncertain'){if(o.phase==='execution-uncertain'&&o.executionUncertainty===action.reason)return o;if(o.phase!=='executing')throw new WorkspaceError('INVALID_TRANSITION',409);o.executionUncertainty=action.reason;o.phase='execution-uncertain';}
  else {if(o.phase==='delivery-failed'&&o.failure===action.reason)return o;if(!['executing','execution-uncertain'].includes(o.phase))throw new WorkspaceError('INVALID_TRANSITION',409);o.failure=action.reason;o.phase='delivery-failed';}}
- o.updatedAt=new Date().toISOString();return o;},guard);
+ o.updatedAt=new Date().toISOString();if(o.textWake){if(['delivered','delivery-failed'].includes(o.phase))o.textWake.status='completed';else if(o.phase==='execution-uncertain')o.textWake.status='needs-operator';o.textWake.updatedAt=o.updatedAt;}return o;},commitGuard);
 }
 export async function marketOperator(authorization:string|null){const expected=process.env.BAZAAR_MARKET_OPERATOR_HASH,match=/^Bearer ([a-zA-Z0-9_-]{43})$/.exec(authorization??'');if(!expected||!match||!/^[a-f0-9]{64}$/.test(expected)||!timingSafeEqual(Buffer.from(sha(match[1]),'hex'),Buffer.from(expected,'hex')))throw new WorkspaceError('UNAUTHORIZED',401);await creditOperationalPrincipal();}

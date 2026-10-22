@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {readFile,writeFile} from 'node:fs/promises';
+import {createHash} from 'node:crypto';
+import {buildUiLandingAssetsWaf,UI_LANDING_WAF_BASELINE_HASH,UI_LANDING_ASSETS,UI_LANDING_PUBLIC_RULE} from './prepare-ui-landing-assets-waf.mjs';
+import {matchesWafGroups} from './prepare-continuous-production-waf-proposal.mjs';
+import {v2WafCanonical as canonical} from './prepare-on-demand-production-v3-waf.mjs';
+const baseline=JSON.parse(await readFile('.vercel/recovery-example-budget4-preview-bazaar-waf-baseline.json','utf8')).bazaarWaf,before=canonical(baseline),plan=buildUiLandingAssetsWaf(baseline);
+let checks=0,cases=0;
+const check=run=>{run();checks++;};
+const denied=(configuration,request)=>configuration.rules.some(rule=>rule.active&&rule.action?.mitigate?.action==='deny'&&matchesWafGroups(rule.conditionGroup,request));
+check(()=>assert.equal(canonical(baseline),before));
+check(()=>assert.equal(plan.summary.baselineHash,UI_LANDING_WAF_BASELINE_HASH));
+check(()=>assert.equal(plan.summary.changedRegexValues,8));
+check(()=>assert.equal(plan.body.id,UI_LANDING_PUBLIC_RULE));
+check(()=>assert.deepEqual(plan.expected.rules[1],baseline.rules[1]));
+check(()=>assert.equal(plan.expected.rules[0].conditionGroup.length,22));
+check(()=>assert.deepEqual(plan.expected.rules[0].action,baseline.rules[0].action));
+check(()=>assert.deepEqual(plan.expected.rules[0].conditionGroup[10],baseline.rules[0].conditionGroup[10]));
+check(()=>assert.deepEqual(plan.expected.rules[0].conditionGroup[21],baseline.rules[0].conditionGroup[21]));
+const paths=['/','/demo','/open','/catalogo','/history','/api/mcp','/api/market/catalog','/api/market/orders','/api/market/review','/api/market/control','/api/market/guardian/tick','/api/discovery/resources','/api/deliveries/uploads','/bazaar-qr.svg','/_next/static/chunks/page.js','/unknown','/deliverables/private.png','/demo-deliveries/unknown.png','/demo-deliveries/video.mp4','/demo-deliveries/afiche-orbita.png/extra','/demo-deliveries/../afiche-orbita.png','/demo-deliveries/%2e%2e/afiche-orbita.png','/demo-deliveries/%61fiche-orbita.png',...UI_LANDING_ASSETS];
+const publicHosts=baseline.rules[0].conditionGroup[8].conditions.find(c=>c.type==='host'&&c.op==='inc'&&c.value.includes('bazaar.browns.studio')).value;
+for(const host of [...publicHosts,'unknown.invalid'])for(const environment of ['production','preview'])for(const method of ['GET','HEAD','POST','PUT','PATCH','DELETE','OPTIONS'])for(const path of paths){
+ const request={host,environment,method,path,ip_address:'192.0.2.234'};
+ const newlyAllowed=UI_LANDING_ASSETS.includes(path)&&['GET','HEAD'].includes(method)&&!denied(baseline,{...request,path:'/'});
+ assert.equal(denied(plan.expected,request),denied(baseline,request)&&!newlyAllowed,'Exact asset/method/existing scope mismatch');cases++;
+}
+check(()=>{for(const path of UI_LANDING_ASSETS)for(const method of ['GET','HEAD'])assert.equal(denied(plan.expected,{host:'bazaar.browns.studio',environment:'production',method,path,ip_address:'192.0.2.234'}),false);});
+check(()=>{for(const change of [c=>c.firewallEnabled=false,c=>c.rules[0].active=false,c=>c.rules[0].conditionGroup[10].conditions.push({type:'path',op:'re',value:'^'}),c=>c.rules[1].conditionGroup[0].conditions[0].value.push('unknown.invalid'),c=>c.rules.reverse()]){const mutated=structuredClone(baseline);change(mutated);assert.throws(()=>buildUiLandingAssetsWaf(mutated));}});
+check(()=>assert.throws(()=>buildUiLandingAssetsWaf(plan.expected)));
+const helperPath='scripts/prepare-ui-landing-assets-waf.mjs',helperSha256=createHash('sha256').update(await readFile(helperPath)).digest('hex');
+const evidence={...plan.summary,status:'PASS_LOCAL_EXACT_UI_ASSET_WAF',checks,matrixCases:cases,helperPath,helperSha256,sourceCandidate:'40e9459b6906a085982a869c7633d055360cfa71048512113fa22379db861ca5',networkRequests:0,secretReads:0,ipValuesReturned:0,cloudWrites:0,productionPublished:false,limitsChanged:false,cronChanged:false,payments:0,limitations:['Pure predicate and structural-diff validation; fresh unchanged real WAF and reviewed publication authorization are required before application. Request body remains private and is not included in this evidence.']};
+if(process.argv[2]==='--write-evidence')await writeFile('docs/evidence/ui-landing-assets-waf-local-2026-10-13.json',JSON.stringify(evidence,null,2)+'\n',{flag:'wx'});
+console.log(JSON.stringify({status:evidence.status,checks,matrixCases:cases,helperSha256,changedRegexValues:plan.summary.changedRegexValues,baselineHash:plan.summary.baselineHash,expectedHash:plan.summary.expectedHash,networkRequests:0,cloudWrites:0}));

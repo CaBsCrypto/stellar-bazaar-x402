@@ -3,6 +3,7 @@ import {useEffect, useRef, useState} from 'react';
 import type {ServiceCard} from '../lib/types';
 import type {MarketOrder} from '../lib/marketplace-store';
 import {serializedPrivateRead} from '../lib/private-read-queue';
+import {ServiceShare} from './ServiceShare';
 import styles from './MarketplaceWorkspace.module.css';
 
 type Service = {submissionId: string; card: ServiceCard; cardHash: string; status: string; control?: {expectedRecord: string; domain: string; verificationPath?: string}};
@@ -156,7 +157,7 @@ export default function MarketplaceWorkspace({access, onLock, view='all'}: {acce
       </>}
       <h3>Mis servicios</h3>{paused && <p role='status'>Nuevas publicaciones y compras pausadas. La lectura y recuperación del historial siguen disponibles.</p>}<p>Tu agente envía la ficha por MCP con <code>submit_market_service</code> y guarda antes su intención. Puedes consultar aquí el estado y la prueba de control.</p>
       {!busy && !mine.length && <p>No hay servicios propios en esta página.</p>}
-      {mine.map(service => <article key={service.submissionId}><h4>{service.card.name}</h4><p>Estado: {service.status}</p><p>Referencia: <code>{service.submissionId}</code></p>{service.control && <details><summary>Prueba de control del endpoint</summary><p>Publica este contenido exacto en {service.control.domain}{service.control.verificationPath}:</p><pre>{service.control.expectedRecord}</pre></details>}{permission && <button disabled={busy || service.status === 'withdrawn'} onClick={() => void run(async ctx => { await api(ctx, `/api/market/services/${service.submissionId}`, {action: 'withdraw'}); await loadMine(ctx); })}>Retirar de nuevas compras</button>}</article>)}
+      {mine.map(service => <article key={service.submissionId}><h4>{service.card.name}</h4><p>Estado: {service.status}</p><p>Referencia: <code>{service.submissionId}</code></p>{service.status === 'activated' && <ServiceShare serviceId={service.card.id} serviceName={service.card.name}/>} {service.control && <details><summary>Prueba de control del endpoint</summary><p>Publica este contenido exacto en {service.control.domain}{service.control.verificationPath}:</p><pre>{service.control.expectedRecord}</pre></details>}{permission && <button disabled={busy || service.status === 'withdrawn'} onClick={() => void run(async ctx => { await api(ctx, `/api/market/services/${service.submissionId}`, {action: 'withdraw'}); await loadMine(ctx); })}>Retirar de nuevas compras</button>}</article>)}
       <Pager name='mis servicios' limit={mineLimit} page={minePage} next={mineNext} busy={busy} onLimit={n => { mineCursors.current = [undefined]; void run(ctx => loadMine(ctx, 0, n, undefined)); }} onPage={direction => { const page = minePage + direction; if (direction > 0) mineCursors.current[page] = mineNext; void run(ctx => loadMine(ctx, page)); }}/>
     </>}
   </section>;

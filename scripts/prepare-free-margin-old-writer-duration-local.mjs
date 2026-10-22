@@ -1,0 +1,7 @@
+// Local sibling of the reviewed duration reader. No real metadata calls.
+import {readFile,writeFile} from 'node:fs/promises';
+let s=await readFile('.vercel/payment-recovery-acceptance-old-writer-duration.mjs','utf8');
+s=s.replaceAll('dpl_6N8TLwUSssWffGGC1PW4qFRVrmwk','dpl_2kx2wwhZHpXSXeDQc96qCc83H3tY').replaceAll('d558ae14b168fa99d10c37b9045c434b400f0c7b8abec1371248578bebe5705d','3c3fe5ad3dc886e770c5aec1e1cee2762686558036c3bf55ec310899a35173ed').replaceAll('34abf017e578885638f780831a53f6d7ac4f6a299acd73a57d51e857849068d4','057ae2f98ee9b958f0b741bfee396d9b9f32221aa528e442f72b0393dbd4f77a').replaceAll('payment-recovery-acceptance-old-writer-duration','free-margin-repair-production-old-writer-duration').replaceAll('OLD_6N','OLD_G8').replaceAll('inspectRecoveryOldWriterDurations','inspectMarginOldWriterDurations').replaceAll('readRecoveryOldWriterDurations','readMarginOldWriterDurations');
+await writeFile('.vercel/free-margin-repair-production-old-writer-duration.mjs',s,{flag:'wx'});
+let t=await readFile('scripts/test-payment-recovery-old-writer-duration.mjs','utf8');t=t.replaceAll('../.vercel/payment-recovery-acceptance-old-writer-duration.mjs','../.vercel/free-margin-repair-production-old-writer-duration.mjs').replaceAll('inspectRecoveryOldWriterDurations','inspectMarginOldWriterDurations').replaceAll('readRecoveryOldWriterDurations','readMarginOldWriterDurations').replaceAll('OLD_6N','OLD_G8').replace('actual6NMetadataPending:true','actualG8MetadataPending:true');
+await writeFile('scripts/test-free-margin-old-writer-duration.mjs',t,{flag:'wx'});

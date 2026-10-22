@@ -12,6 +12,13 @@ async function inputBody(request){const reader=request.body?.getReader();if(!rea
 export function createSellerRuntime({adapter,store,providerAccess,route='/v1/marketplace-text',maxRequests=100,now=Date.now}){
  if(typeof adapter?.execute!=='function'||!store?.journal||!store?.acquireLock||!/^[a-zA-Z0-9_-]{43}$/.test(providerAccess??'')||!Number.isInteger(maxRequests)||maxRequests<1||maxRequests>1000||typeof now!=='function')throw Error('RUNTIME_CONFIGURATION_REQUIRED');sellerRoute(route);let requests=0,minute;
  return async request=>{
+  if(new URL(request.url).pathname===route+'/availability'&&request.method==='GET'){
+   if(!authorized(request,providerAccess))return response(401,{error:'UNAUTHORIZED'});
+   try{if(typeof adapter.availability!=='function')return response(503,{ready:false,network:'stellar:testnet',error:'ADAPTER_AVAILABILITY_REQUIRED'});
+    const status=await adapter.availability();if(status?.ready!==true||status.usedToday!==undefined&&(!Number.isInteger(status.usedToday)||status.usedToday<0||status.usedToday>50))return response(503,{ready:false,network:'stellar:testnet'});
+    await store.read('seller-config');return response(200,{ready:true,network:'stellar:testnet',...(status.usedToday!==undefined?{usedToday:status.usedToday}:{})});
+   }catch{return response(503,{ready:false,network:'stellar:testnet'});}
+  }
   if(new URL(request.url).pathname!==route||request.method!=='POST')return response(404,{error:'NOT_FOUND'});
   if(!authorized(request,providerAccess))return response(401,{error:'UNAUTHORIZED'});
   const current=Math.floor(now()/60000);if(current!==minute){minute=current;requests=0;}

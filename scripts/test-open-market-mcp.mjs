@@ -18,6 +18,7 @@ import { USDC_TESTNET_PAYMENT_IDENTITY } from '../lib/payment-assets.ts';
 import { marketPage, MARKET_DTO_BYTES } from '../lib/market-pagination.ts';
 import { MCP_TOOLS, MCP_WRITES } from '../lib/mcp-tool-contract.ts';
 import { orderMemo } from '../lib/marketplace-identity.ts';
+import { earlyRouteGate } from '../lib/operational-route-gate.ts';
 
 // Next handles extensionless TypeScript imports; this local harness provides the same resolution.
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) { if (specifier.startsWith('.') && !extname(specifier)) return next(specifier + '.ts', context); throw error; } } });
@@ -88,6 +89,21 @@ try {
   assert.ok(catalog.nextCursor); assert.ok(Buffer.byteLength(JSON.stringify(catalog))<=MARKET_DTO_BYTES);
   for(const service of catalog.services){assert.equal(service.status,'activated');assert.equal(service.cardHash,computeCanonicalServiceCardHash(service.card));assert.equal(service.purchase.protocol,'x402-stellar-exact-v2');assert.equal(service.purchase.orderCreateUrl,'https://market.example/api/market/orders');assert.equal('ownerId' in service,false);assert.equal('control' in service,false);assert.equal('mine' in service,false);}
   const catalog2=await (await marketHandlers.catalog(request('/api/market/catalog?cursor='+catalog.nextCursor))).json();assert.equal(catalog2.services.length,10);assert.equal(new Set([...catalog.services,...catalog2.services].map(s=>s.submissionId)).size,20);
+  // HTTP searches the complete active snapshot, including cards outside its first page.
+  const outsideFirstPage=state.services.find(s=>!catalog.services.some(v=>v.card.id===s.card.id));assert.ok(outsideFirstPage);
+  const searched=await (await marketHandlers.catalog(request('/api/market/catalog?q='+encodeURIComponent(outsideFirstPage.card.id.split('-').at(-1))))).json();
+  assert.ok(searched.services.some(s=>s.card.id===outsideFirstPage.card.id));
+  const searchFirst=await (await marketHandlers.catalog(request('/api/market/catalog?q=text&limit=5'))).json();assert.equal(searchFirst.services.length,5);assert.ok(searchFirst.nextCursor);
+  assert.equal(earlyRouteGate(request('/api/market/catalog?q=text&limit=5')),undefined,'Public route boundary admits bounded catalog search');
+  for(const suffix of ['?q=text&q=another','?q='+('x'.repeat(201))])assert.equal(earlyRouteGate(request('/api/market/catalog'+suffix))?.status,400);
+  assert.equal(earlyRouteGate(request('/api/market/orders?q=text',buyer.agent))?.status,400,'Only catalog accepts q');
+  const searchSecond=await (await marketHandlers.catalog(request('/api/market/catalog?q=text&limit=5&cursor='+searchFirst.nextCursor))).json();
+  assert.equal(new Set([...searchFirst.services,...searchSecond.services].map(s=>s.card.id)).size,10);
+  for(const suffix of ['?q=missing-unfindable-term','?q=%20%20']){const result=await (await marketHandlers.catalog(request('/api/market/catalog'+suffix))).json();assert.equal(result.services.length,suffix.includes('missing')?0:10);}
+  for(const suffix of ['?q=text&q=another','?q='+('x'.repeat(201)),'?q=testnet&cursor='+searchFirst.nextCursor,'?cursor='+searchFirst.nextCursor])assert.equal((await marketHandlers.catalog(request('/api/market/catalog'+suffix))).status,400);
+  for(const service of searchFirst.services){assert.equal('control' in service,false);assert.equal('ownerId' in service,false);assert.equal(service.cardHash,computeCanonicalServiceCardHash(service.card));}
+  assert.equal(searchFirst.purchasesEnabled,true);
+  process.env.BAZAAR_ENABLE_MARKET_PURCHASES='false';assert.equal((await (await marketHandlers.catalog(request('/api/market/catalog?q=text'))).json()).purchasesEnabled,false);process.env.BAZAAR_ENABLE_MARKET_PURCHASES='true';
   for(const query of ['?limit=21','?limit=0','?cursor=wrong','?ownerId='+human.ownerId,'?limit=10&limit=20'])assert.equal((await marketHandlers.catalog(request('/api/market/catalog'+query))).status,400);
   const privateList=await (await marketHandlers.services(request('/api/market/services',seller.agent))).json();assert.equal(privateList.mine.length,10);assert.ok(privateList.mineNextCursor);assert.ok(privateList.mine.every(s=>'control' in s));
   const mine2=await (await marketHandlers.services(request('/api/market/services?mineCursor='+privateList.mineNextCursor,seller.agent))).json();assert.equal(new Set([...privateList.mine,...mine2.mine].map(s=>s.submissionId)).size,20);
@@ -129,6 +145,8 @@ try {
   const inspected=await tool('get_service',{id:first.card.id});assert.deepEqual(inspected.resource,first.card);assert.equal(inspected.cardHash,purchase.cardHash);assert.equal(inspected.purchase.protocol,'x402-stellar-exact-v2');
   let skills=await tool('get_bazaar_skills');const providerSkills=[...skills.providerSkills];while(skills.nextCursor){skills=await tool('get_bazaar_skills',{cursor:skills.nextCursor});providerSkills.push(...skills.providerSkills);}assert.equal(providerSkills.length,1);assert.equal(providerSkills[0].serviceId,first.card.id);assert.equal(providerSkills[0].cardHash,purchase.cardHash);assert.equal(providerSkills[0].version,'1.0.0');assert.equal(providerSkills[0].readPrice,'free');assert.equal(providerSkills[0].instructionsTrusted,false);
   const found=await tool('search_services',{query:'text',limit:5});assert.equal(found.results.length,5);assert.ok(found.nextCursor);assert.ok(found.results.every(r=>r.status==='activated'&&r.cardHash===computeCanonicalServiceCardHash(r.resource)));
+  assert.deepEqual(found.results.map(r=>r.resource.id),searchFirst.services.map(r=>r.card.id),'HTTP and MCP search share the active cards and stable ordering');
+  assert.equal(found.nextCursor,searchFirst.nextCursor);
   assert.equal((await tool('get_service',{id:'swap-risk-quote'})).code,'RESOURCE_NOT_FOUND');
   const capabilities=await tool('get_bazaar_capabilities');assert.equal(capabilities.workspace.payments,'x402-stellar-exact-v2');assert.equal(capabilities.architecture.settlementIdentity.issuer,USDC_TESTNET_PAYMENT_IDENTITY.issuer);assert.equal(JSON.stringify(capabilities).includes('native-XLM-testnet-direct'),false);
   const externalProviderInstructions=client.getInstructions();

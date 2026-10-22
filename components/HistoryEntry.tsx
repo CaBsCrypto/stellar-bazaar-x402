@@ -9,6 +9,8 @@ import {Button} from "./ui";
 import DemoAccount from './DemoAccount';
 import MarketplaceWorkspace from './MarketplaceWorkspace';
 import {parsePilotAccess} from '../lib/pilot-access';
+import {serviceSelectionHref} from '@/lib/service-selection';
+import {SelectedServiceContext} from './SelectedServiceContext';
 const OperationHistory=dynamic(()=>import("./OperationHistory").then(module=>module.OperationHistory),{loading:()=> <p role="status" className="shell">Abriendo tus operaciones…</p>});
 function capsuleToken(raw:string):string {
  if(new TextEncoder().encode(raw).byteLength>4096)throw Error("INVALID_ACCESS_CAPSULE");
@@ -20,7 +22,7 @@ function capsuleToken(raw:string):string {
  if(capsule.version!==1||capsule.kind!=="bazaar-private-read-access"||typeof capsule.token!=="string"||!/^[A-Za-z0-9_-]{43}$/.test(capsule.token))throw Error("INVALID_ACCESS_CAPSULE");
  return capsule.token;
 }
-export function HistoryEntry({marketEnabled=false,demoEnabled=false}:{marketEnabled?:boolean;demoEnabled?:boolean}={}){
+export function HistoryEntry({marketEnabled=false,demoEnabled=false,serviceId}:{marketEnabled?:boolean;demoEnabled?:boolean;serviceId?:string}={}){
  const [mode,setMode]=useState<"checking"|"demo"|"private"|"locked">("checking");
  const [view,setView]=useState<"market"|"operations">("market");
  const [access,setAccess]=useState("");const [manual,setManual]=useState("");
@@ -48,9 +50,9 @@ export function HistoryEntry({marketEnabled=false,demoEnabled=false}:{marketEnab
  if(mode==="private"){
   if(!marketEnabled)return <OperationHistory key={access} initialAccess={access} onLocked={leave} onExploreDemo={explore}/>;
   if(view==="operations")return <><div className="shell ui-page">{views}</div><OperationHistory key={access} initialAccess={access} onLocked={leave} onExploreDemo={explore}/></>;
-  return <><Navbar prefetch={false}/><main className="operation-history shell"><Breadcrumbs prefetch={false} items={[{label:"Mi espacio privado"}]}/><h1>Mi espacio privado</h1><p><a href="/storage">Archivos, privacidad y plazo del historial</a></p>{demoEnabled&&<DemoAccount key={access} access={access}/>}{views}<MarketplaceWorkspace key={`market-${access}`} access={access} onLock={leave} view="history"/></main><Footer prefetch={false}/></>;
+  return <><Navbar prefetch={false}/><main className="operation-history shell"><Breadcrumbs prefetch={false} items={[{label:"Mi espacio privado"}]}/><h1>Mi espacio privado</h1><SelectedServiceContext serviceId={serviceId} connect/><p><a href="/storage">Archivos, privacidad y plazo del historial</a></p>{demoEnabled&&<DemoAccount key={access} access={access}/>}{views}<MarketplaceWorkspace key={`market-${access}`} access={access} onLock={leave} view="history"/></main><Footer prefetch={false}/></>;
  }
  const form=<details className="history-manual"><summary>Tengo mi archivo o acceso privado</summary><form onSubmit={e=>{e.preventDefault();invalidateCapsule();if(/^[A-Za-z0-9_-]{43}$/.test(manual.trim())){setAccess(manual.trim());setManual("");setView("market");setMode("private");}else setCapsuleError('El acceso no es válido.');}}><label htmlFor="manual-history-access">Acceso privado</label><input id="manual-history-access" type="password" autoComplete="off" value={manual} onChange={e=>{invalidateCapsule();setManual(e.target.value);}}/><Button type="submit" disabled={!manual.trim()}>Abrir mi espacio</Button><label htmlFor="history-access-capsule">Restaurar mi archivo de recuperación</label><input id="history-access-capsule" type="file" accept="application/json,.json" onChange={restoreCapsule} aria-invalid={!!capsuleError} aria-describedby={`history-capsule-help${capsuleError?" history-capsule-error":""}`}/><p id="history-capsule-help">El archivo raíz recupera el acceso humano de este origen. También puedes usar una cápsula de lectura. El acceso permanece sólo en memoria.</p>{capsuleReading&&<p role="status">Leyendo el archivo…</p>}{capsuleError&&<p id="history-capsule-error" role="alert">{capsuleError}</p>}</form></details>;
- if(mode==="locked")return <><Navbar prefetch={false}/><main className="shell ui-page"><h1>Abre tu espacio privado</h1><p><a href="/storage">Archivos, privacidad y plazo del historial</a></p><p>Recupera tu archivo privado o abre el enlace de acceso que conservaste para consultar tus compras, ventas y servicios.</p>{marketEnabled?<a className='ui-button ui-button--primary' href='/open'>Crear o recuperar mi espacio</a>:<Button onClick={explore}>Explorar demostración</Button>}{form}</main><Footer prefetch={false}/></>;
+ if(mode==="locked")return <><Navbar prefetch={false}/><main className="shell ui-page"><h1>Abre tu espacio privado</h1><SelectedServiceContext serviceId={serviceId} connect/><p><a href="/storage">Archivos, privacidad y plazo del historial</a></p><p>Recupera tu archivo privado o abre el enlace de acceso que conservaste para consultar tus compras, ventas y servicios.</p>{marketEnabled?<a className='ui-button ui-button--primary' href={serviceSelectionHref('/open', serviceId)}>Crear o recuperar mi espacio</a>:<Button onClick={explore}>Explorar demostración</Button>}{form}</main><Footer prefetch={false}/></>;
  return <DeliverableReview accessEntry={form}/>;
 }

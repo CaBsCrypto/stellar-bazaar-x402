@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {captureExampleBudgetCommandCatalog} from './prepare-example-budget-command-catalog.mjs';
+import {deriveExampleCatalogControlTypedBounds} from './recovery-example-catalog-control-typed-bounds.mjs';
+const report=deriveExampleCatalogControlTypedBounds(await captureExampleBudgetCommandCatalog());let checks=0;const eq=(actual,expected)=>{assert.deepEqual(actual,expected);checks++;};
+eq(report.paths.anonymous.total.restRequests,7);eq(report.paths.anonymous.total.commandsUpper,25);eq(report.paths.authenticatedObserved.total.restRequests,16);eq(report.paths.authenticatedObserved.total.commandsUpper,68);eq(report.paths.anonymousWithLegacyIndexBootstrap.total.restRequests,11);eq(report.paths.anonymousWithLegacyIndexBootstrap.total.commandsUpper,42);eq(report.paths.authenticatedObservedWithLegacyIndexBootstrap.total.restRequests,20);eq(report.paths.authenticatedObservedWithLegacyIndexBootstrap.total.commandsUpper,85);
+for(const [path,mib]of Object.entries({anonymous:12,authenticatedObserved:32,anonymousWithLegacyIndexBootstrap:16,authenticatedObservedWithLegacyIndexBootstrap:36})){assert.ok(report.paths[path].total.combinedUpperBytes<mib*1048576);checks++;}
+const source=await readFile(new URL('../lib/mcp-onboarding-server.ts',import.meta.url),'utf8');
+for(const tool of ['list_services','search_services','get_service']){const start=source.indexOf('"'+tool+'"'),end=source.indexOf('server.registerTool(',start+1),block=source.slice(start,end<0?undefined:end);assert.ok(block.includes('if(marketEnabled())try'));assert.ok(block.indexOf('if(marketEnabled())try')<block.indexOf('readDynamicServiceCards()'));assert.ok(block.includes('marketCatalogPage')||block.includes('marketServiceSnapshot'));checks+=3;}
+const http=await readFile(new URL('../lib/marketplace-http.ts',import.meta.url),'utf8');assert.ok(http.includes("request.headers.has('authorization')&&!isNestedMcpRequest(request)"));checks++;assert.ok(http.includes('recordQuery(principal.ownerId'));checks++;
+eq(report.eligibleSourceBranches.dynamicFallbackExcluded,true);eq(report.eligibleSourceBranches.quotaBypass,false);eq(report.eligibleSourceBranches.authorizationHeaderAbsentForAnonymous,true);
+console.log(JSON.stringify({status:'PASS_LOCAL_MARKETPLACE_CATALOG_SOURCE_BOUNDS',checks,totals:Object.fromEntries(Object.entries(report.paths).map(([name,value])=>[name,value.total])),networkRequests:0,ledgerWrites:0,financialHandlerCalls:0,payments:0,runtimeProfileSelected:false}));

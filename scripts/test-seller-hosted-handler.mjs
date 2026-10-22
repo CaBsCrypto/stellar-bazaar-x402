@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {createHostedSellerHandler} from '../examples/seller-hosted-handler.mjs';
+import {HOSTED_SELLER_LIMITS} from '../examples/seller-hosted-tick.mjs';
 import {createSellerCard} from '../examples/seller-service-card.mjs';
 
 const card=createSellerCard({id:'synthetic-hosted-text',name:'Synthetic worker fixture',description:'Offline acceptance',providerName:'Synthetic provider',providerOrigin:'https://synthetic-provider.vercel.app',destination:'GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C',amount:'0.01'});
@@ -18,6 +19,7 @@ for(const [path,extra]of [['/api/bazaar/seller/tick?operationId=synthetic',{}],[
 }
 assert.equal(runs,0);assert.equal(fetches,0);
 const idle=await handler(request());assert.equal(idle.status,200);const body=await idle.json();assert.equal(body.reason,'idle');assert.equal(body.productionScheduler,false);assert.equal(body.paymentSubmissions,0);assert.equal(idle.headers.get('cache-control'),'no-store');assert.ok(!JSON.stringify(body).includes('PRIVATE_SYNTHETIC'));assert.equal(runs,1);checks++;
+assert.deepEqual(body.limits,HOSTED_SELLER_LIMITS);assert.equal(body.limits.dailyMcpRequests-body.limits.admissionMcpRequests,body.limits.recoveryMcpRequests);checks++;
 const disabled=await createHostedSellerHandler({...environment,BAZAAR_HOSTED_SELLER_ENABLED:'false'},dependencies)(request());assert.equal((await disabled.json()).reason,'disabled');assert.equal(runs,1);checks++;
 for(const patch of [{BAZAAR_HOSTED_SELLER_KEY:'bad'},{BAZAAR_HOSTED_SELLER_PREFIX:'bazaar-seller:production-'+'d'.repeat(32)},{BAZAAR_HOSTED_SELLER_CONFIG:'{}'},{BAZAAR_HOSTED_SELLER_REDIS_REST_URL:'https://evil.example'},{VERCEL_ENV:'production',BAZAAR_HOSTED_SELLER_PREFIX:'bazaar-seller:production-'+'d'.repeat(32)}]){
  const result=await createHostedSellerHandler({...environment,...patch},dependencies)(request());assert.equal(result.status,503);assert.equal((await result.json()).error,'WORKER_UNAVAILABLE');checks++;

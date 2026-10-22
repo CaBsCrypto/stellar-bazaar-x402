@@ -6,6 +6,7 @@ import {createSellerCard,sellerHash,sellerCanonical} from './seller-service-card
 import {withSellerMcp,validateSellerConfiguration,sellerSetupConfiguration,sellerBazaarOrigin} from './seller-mcp-transport.mjs';
 export {withSellerMcp,validateSellerConfiguration,sellerSetupConfiguration,sellerBazaarOrigin,SELLER_BAZAAR_ORIGIN,SELLER_BAZAAR_ENDPOINT} from './seller-mcp-transport.mjs';
 import {createSellerHttpAdapter} from './seller-http-adapter.mjs';
+import {createSellerExecutionBudget,createSellerCapacityReporter} from './seller-marketplace-capacity.mjs';
 import {createSellerIntent,validateSellerIntent,sellerUuid,sellerTool,listSellerOrders,listSellerServices,inspectSellerIntent,claimSellerIntent,executeSellerIntent,deliverSellerIntent,failSellerIntent,recoverSellerIntent,uncertainSellerIntent,watchSellerOrders,readSellerJournal} from './seller-marketplace-worker.mjs';
 
 async function publicJson(path){const raw=await readFile(path);if(raw.length>65536)throw Error('CONFIG_TOO_LARGE');return JSON.parse(raw.toString('utf8'));}
@@ -23,7 +24,7 @@ async function main(){
  if(command==='card'){
   if(!directory||!argument)throw Error('Use: card <public-definition.json> <new-card.json>');const result=createSellerCard(await publicJson(directory));await writeFile(argument,JSON.stringify(result,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({cardHash:result.cardHash,serviceId:result.card.id}));return;
  }
- if(!['setup','list','services','submit','submission','prepare','inspect','claim','execute','deliver','fail','recover','uncertain','watch'].includes(command)||!directory)throw Error('INVALID_COMMAND');
+ if(!['setup','list','services','submit','submission','prepare','inspect','claim','execute','deliver','fail','recover','uncertain','watch','capacity','unavailable'].includes(command)||!directory)throw Error('INVALID_COMMAND');
  const {readPrivateInput}=await import('./buyer-private-input.mjs');const {openPortableSecretStore}=await import('./buyer-portable-secret-store.mjs');
  let secret,password;
  if(pipe){const raw=await readPrivateInput({allowPipe:true});try{secret=JSON.parse(raw.toString('utf8'));password=Buffer.from(secret.password??'');delete secret.password;}finally{raw.fill(0);}}
@@ -62,9 +63,12 @@ async function main(){
    // Optional protection belongs to the participant, through an explicitly trusted module.
    if(config.providerFetchModule){const own=await import(pathToFileURL(resolve(config.providerFetchModule)).href);fetcher=await own.createFetch({configuration:config.providerProtection});}
    const adapter=createSellerHttpAdapter({providerOrigin:config.card.url,route:config.card.routeTemplate,allowedOrigins:config.allowedOrigins,providerAccess:config.providerAccess,fetcher});
+   const budget=createSellerExecutionBudget({store,ownerId:config.ownerId});
+   const reporter=createSellerCapacityReporter({store,configuration:config,transport,adapter,budget});
+   if(['capacity','unavailable'].includes(command)){const capacity=command==='capacity'?await reporter.report():await reporter.stop();console.log(JSON.stringify({ready:capacity.ready,leaseExpiresAt:capacity.leaseExpiresAt,reportedUsed:capacity.reportedUsed}));return;}
    const action=async(operationId,selected)=>{
     if(!sellerUuid.test(operationId??''))throw Error('OPERATION_ID_REQUIRED');const name='seller.'+operationId;const release=await store.acquireLock(name);
-    try{const journal=store.journal(name);const intent=validateSellerIntent(await journal.read());const options={...transport,adapter,persistIntent:value=>journal.append(value)};
+    try{const journal=store.journal(name);const intent=validateSellerIntent(await journal.read());const options={...transport,adapter,persistIntent:value=>journal.append(value),reserveExecution:value=>budget.reserve(value),beforeDelivery:async()=>{if(await budget.usedToday()>=50||command==='watch'&&transport.requestCount()+12>100)await reporter.stop();}};
      if(intent.ownerId!==config.ownerId||intent.agentId!==config.agentId||intent.cardHash!==config.cardHash)throw Error('INTENT_CONFIGURATION_CHANGED');
      const result=selected==='claim'?await claimSellerIntent(intent,options):selected==='execute'?await executeSellerIntent(intent,options):selected==='deliver'?await deliverSellerIntent(intent,options):selected==='fail'?await failSellerIntent(intent,options,reason):selected==='recover'?await recoverSellerIntent(intent,options):await uncertainSellerIntent(intent,options,reason);
      return publicSummary({...result,localPhase:intent.phase});
@@ -75,7 +79,8 @@ async function main(){
      const scanJournal=store.journal('seller.scan');let scan=await readSellerJournal(scanJournal),nextCursor;
      if(scan&&(scan.version!==1||scan.cursor!==null&&typeof scan.cursor!=='string'))throw Error('INVALID_SCAN_STATE');
      if(!scan){scan={version:1,cursor:null};await scanJournal.initialize(scan);}
-     const result=await watchSellerOrders({polls:Number(argument??10),poll:async()=>{const page=await listSellerOrders(transport,{cursor:scan.cursor??undefined});nextCursor=page.nextCursor;return page.orders.filter(v=>v.serviceId===config.card.id);},afterPage:async()=>{scan={version:1,cursor:nextCursor};await scanJournal.append(scan);},processOrder:async order=>{const name='seller.'+order.operationId;if(await readSellerJournal(store.journal(name)))throw Error('EXISTING_INTENT_REQUIRES_RECOVERY');await prepare(order.operationId);await action(order.operationId,'execute');},sleep:ms=>new Promise(r=>setTimeout(r,ms))});console.log(JSON.stringify({...result,nextCursor:scan.cursor,mcpRequests:transport.requestCount()}));
+     let result;try{result=await watchSellerOrders({polls:Number(argument??10),beforePoll:async()=>{if(transport.requestCount()+12>100)throw Error('SELLER_REQUEST_BOUND');await reporter.report();},poll:async()=>{const page=await listSellerOrders(transport,{cursor:scan.cursor??undefined});nextCursor=page.nextCursor;return page.orders.filter(v=>v.serviceId===config.card.id);},afterPage:async()=>{scan={version:1,cursor:nextCursor};await scanJournal.append(scan);},processOrder:async order=>{if(transport.requestCount()+9>100)throw Error('SELLER_REQUEST_BOUND');const name='seller.'+order.operationId;if(await readSellerJournal(store.journal(name)))throw Error('EXISTING_INTENT_REQUIRES_RECOVERY');await prepare(order.operationId);await action(order.operationId,'execute');},sleep:ms=>new Promise(r=>setTimeout(r,ms))});}
+     finally{await reporter.stop();}console.log(JSON.stringify({...result,nextCursor:scan.cursor,mcpRequests:transport.requestCount()}));
     }finally{await watchRelease();}return;
    }
    console.log(JSON.stringify(await action(argument,command)));

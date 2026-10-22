@@ -5,6 +5,8 @@ import { createPilotAccess, parsePilotAccess, pilotHash, type PilotAccess } from
 import { CopyText } from './ui/CopyText';
 import { useBazaarOrigin } from './useBazaarOrigin';
 import styles from './PilotOnboarding.module.css';
+import { serviceSelectionHref } from '@/lib/service-selection';
+import { SelectedServiceContext } from './SelectedServiceContext';
 
 type Receipt = { workspaceId: string; creationId: string; generation: number; revoked: boolean };
 function download(name: string, body: unknown) {
@@ -12,7 +14,7 @@ function download(name: string, body: unknown) {
   const link = document.createElement('a'); link.href = url; link.download = name; link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export default function PilotOnboarding({ enabled = true, paused = false }: { enabled?: boolean; paused?: boolean }) {
+export default function PilotOnboarding({ enabled = true, paused = false, serviceId }: { enabled?: boolean; paused?: boolean; serviceId?: string }) {
   const origin = useBazaarOrigin(), publicConfig = { mcpServers: { bazaar: { type: 'http', url: `${origin}/api/mcp` } } };
   const [access, setAccess] = useState<PilotAccess | null>(null), [downloaded, setDownloaded] = useState(false), [saved, setSaved] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null), [busy, setBusy] = useState(false), [uncertain, setUncertain] = useState(false), [restored, setRestored] = useState(false);
@@ -64,9 +66,10 @@ export default function PilotOnboarding({ enabled = true, paused = false }: { en
     finally { clearTimeout(timeout); if (current === generation.current) { pending.current = null; setBusy(false); } }
   }
   return <main className={styles.page}>
-    <nav className={styles.nav} aria-label='Navegación de alta'><a href='/'>Bazaar</a><a href='/history'>Recuperar mi espacio</a></nav>
+    <nav className={styles.nav} aria-label='Navegación de alta'><a href='/'>Bazaar</a><a href={serviceSelectionHref('/history', serviceId)}>Recuperar mi espacio</a></nav>
     <header><h1>Un espacio para tu agente.</h1><p>Conecta el agente que utilizas, ofrece servicios y conserva tus compras y ventas. Alta abierta, sin correo. Tu agente corre en tu infraestructura.</p></header>
-    <section aria-labelledby='open-mcp-heading'><h2 id='open-mcp-heading'>Conecta por MCP</h2><p>El catálogo es público. Copia esta URL en cualquier cliente compatible con MCP por HTTP.</p><CopyText text={`${origin}/api/mcp`} label='URL MCP' rows={2} compact/><button type='button' onClick={() => download('bazaar-mcp-publico.json', publicConfig)}>Descargar configuración MCP pública</button><p><a href='/hub'>Instrucciones para comprar o publicar con tu agente</a></p></section>
+    <SelectedServiceContext serviceId={serviceId}/>
+    <section aria-labelledby='open-mcp-heading'><h2 id='open-mcp-heading'>Conecta por MCP</h2><p>El catálogo es público. Copia esta URL en cualquier cliente compatible con MCP por HTTP.</p><CopyText text={`${origin}/api/mcp`} label='URL MCP' rows={2} compact/><button type='button' onClick={() => download('bazaar-mcp-publico.json', publicConfig)}>Descargar configuración MCP pública</button><p><a href={serviceSelectionHref('/hub', serviceId)}>Instrucciones para comprar o publicar con tu agente</a></p></section>
     <section className={styles.flow} aria-labelledby='open-access-heading'>
       <h2 id='open-access-heading'>Tu acceso privado</h2>
       {(!enabled || serverPaused) && <p role='status'>Nuevas altas pausadas. El catálogo y la recuperación de espacios existentes siguen disponibles.</p>}
@@ -79,7 +82,7 @@ export default function PilotOnboarding({ enabled = true, paused = false }: { en
         {(uncertain || restored || serverPaused) && !receipt && <button type='button' disabled={!saved || !downloaded || busy} onClick={() => void create(true)}>Recuperar el mismo intento</button>}
         {receipt && <div className={styles.ready}><h3>Importa el acceso de tu agente</h3><p>La configuración contiene sólo el acceso de agente. Le permite trabajar en tu espacio; para enviar servicios debes concederle el permiso desde Mis servicios.</p>
           <button type='button' onClick={() => download('bazaar-mcp-agente.json', { mcpServers: { bazaar: { type:'http',url:`${access.origin}/api/mcp`,headers:{Authorization:`Bearer ${access.agent}`} } } })}>Descargar configuración privada del agente</button>
-          <p>Tu acceso humano permite revisar pedidos y administrar el permiso de publicación.</p><a className={styles.open} href={`${access.origin}/history#token=${encodeURIComponent(access.human)}`} referrerPolicy='no-referrer'>Abrir mi espacio privado</a><p>Tu enlace permite leer el espacio. El acceso se retira de la URL al entrar y permanece sólo en memoria.</p></div>}
+          <p>Tu acceso humano permite revisar pedidos y administrar el permiso de publicación.</p><a className={styles.open} href={`${access.origin}${serviceSelectionHref('/history', serviceId)}#token=${encodeURIComponent(access.human)}`} referrerPolicy='no-referrer'>Abrir mi espacio privado</a><p>Tu enlace permite leer el espacio. El acceso se retira de la URL al entrar y permanece sólo en memoria.</p></div>}
         <button type='button' className={styles.lock} onClick={lock}>Bloquear y retirar este acceso</button>
       </>}
       <p role='status' aria-live='polite' className={styles.notice}>{busy ? 'Procesando el acceso… ' : ''}{notice}</p>

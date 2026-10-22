@@ -1,0 +1,54 @@
+import assert from 'node:assert/strict';
+import {randomUUID,createHash} from 'node:crypto';
+import {readFile} from 'node:fs/promises';
+import {Keypair} from '@stellar/stellar-sdk';
+import {runHostedSellerTick} from '../examples/seller-hosted-tick.mjs';
+import {createSellerCard,sellerCanonical,sellerHash} from '../examples/seller-service-card.mjs';
+
+// Actual targeted hosted worker and MCP SDK; all transport, storage and paid
+// state below are synthetic in-memory fixtures. This never invokes x402.
+const now=Date.parse('2026-10-13T12:00:00Z'),publication=createSellerCard({id:'bazaar-recovery-example-text-v1',name:'Synthetic recovery example',description:'Offline finite wake regression',providerName:'Synthetic provider',providerOrigin:'https://provider.example',route:'/v1/bazaar-recovery-example',destination:Keypair.fromRawEd25519Seed(Buffer.alloc(32,3)).publicKey(),input:[{name:'note',type:'string',required:true}]}),config={...publication,ownerId:'ow_synthetic_seller',agentId:'agent_synthetic',bazaarOrigin:'https://bazaar.example',allowedOrigins:[publication.card.url],controlProof:{method:'http-well-known',domain:'provider.example'},agentAccess:'a'.repeat(43),providerAccess:'p'.repeat(43)};
+const orderTools=new Set(['get_market_order','claim_market_order','deliver_market_order','uncertain_market_order']);
+function memoryStore(){const values=new Map(),locks=new Set();return {values,read:async key=>structuredClone(values.get(key)),write:async(key,value)=>values.set(key,structuredClone(value)),async assertLocks(){assert.ok(locks.has('seller.hosted'));},async acquireLock(key){assert.ok(!locks.has(key));locks.add(key);return async()=>locks.delete(key);},journal(key){return {async read(){if(!values.has(key))throw Object.assign(Error('missing'),{code:'ENOENT'});return structuredClone(values.get(key));},async initialize(value){assert.ok(!values.has(key));values.set(key,structuredClone(value));},async append(value){assert.ok(values.has(key));values.set(key,structuredClone(value));}};}};}
+function fixture(plan={}){
+ const operationId=randomUUID(),wakeId=randomUUID(),input={note:'Synthetic note'},store=memoryStore(),order={operationId,serviceId:config.card.id,cardHash:config.cardHash,card:structuredClone(config.card),sellerOwnerId:config.ownerId,buyerOwnerId:'ow_synthetic_buyer',perspective:'sale',phase:'paid',input,inputHash:sellerHash(sellerCanonical(input)),paymentProtocol:'x402-stellar-exact-v2',amount:config.card.payment.amount,destination:config.card.payment.destination,settlement:config.card.payment.identity,transactionHash:'b'.repeat(64),paymentVerifiedAt:new Date(now-1000).toISOString(),createdAt:new Date(now).toISOString(),expiresAt:new Date(now+7*86400000).toISOString(),executionMode:'on-demand',textWake:{version:1,wakeId,status:'dispatching'}};
+ let tick=-1,executions=0;const perTick=[],reasons=[];
+ async function packetReply(packet){
+  if(packet.method==='initialize')return Response.json({jsonrpc:'2.0',id:packet.id,result:{protocolVersion:packet.params.protocolVersion,capabilities:{tools:{}},serverInfo:{name:'offline-fixture',version:'1'}}});
+  if(packet.method==='notifications/initialized')return new Response(null,{status:202});
+  assert.equal(packet.method,'tools/call');const {name,arguments:args}=packet.params;
+  if(orderTools.has(name))perTick[tick].push(name);
+  if(name==='get_bazaar_identity')return tool({ownerId:config.ownerId,agentId:config.agentId,generation:1,network:'stellar:testnet'},packet.id);
+  if(name==='report_market_capacity')return tool({ready:args.ready,leaseExpiresAt:new Date(now+360000).toISOString()},packet.id);
+  assert.ok(orderTools.has(name));assert.equal(args.operationId,operationId);
+  const failure=plan[tick];
+  if(failure?.before===name||failure?.beforeOrderIndex===perTick[tick].length)return tool({ok:false,error:{code:'SYNTHETIC_ACTION_REJECTED'}},packet.id,true);
+  if(name==='claim_market_order'){assert.equal(order.phase,'paid');order.phase='executing';order.attemptId=args.attemptId;order.agentId=config.agentId;}
+  if(name==='deliver_market_order'){assert.ok(['executing','delivered'].includes(order.phase));assert.equal(args.attemptId,order.attemptId);order.phase='delivered';order.delivery={text:args.text,sha256:sellerHash(args.text),reference:'bazaar-order:'+operationId};}
+  if(name==='uncertain_market_order'){assert.ok(['executing','execution-uncertain'].includes(order.phase));order.phase='execution-uncertain';}
+  if(failure?.after===name||failure?.afterOrderIndex===perTick[tick].length)throw Error('SYNTHETIC_ACK_LOSS');
+  return tool({order:structuredClone(order)},packet.id);
+ }
+ const tool=(body,id,isError=false)=>Response.json({jsonrpc:'2.0',id,result:{content:[{type:'text',text:JSON.stringify(body)}],isError}});
+ const options={enabled:true,config,store,now:()=>now+tick*1000,executionMode:'on-demand',requestMode:'deliver',operationId,wakeId,fetcher:async(url,init)=>{assert.equal(String(url),'https://bazaar.example/api/mcp');if(init.method==='GET')return new Response(null,{status:405});if(init.method==='DELETE')return new Response(null,{status:405});return packetReply(JSON.parse(init.body));},providerFetcher:async(url,init)=>{if(init.method==='GET')return Response.json({ready:true,network:'stellar:testnet'});assert.equal(String(url),'https://provider.example/v1/bazaar-recovery-example');assert.equal(store.values.get('seller.'+operationId).phase,'provider-started');executions++;if(plan[tick]?.providerLoss)throw Error('SYNTHETIC_PROVIDER_RESPONSE_LOSS');const packet=JSON.parse(init.body),text='Synthetic frozen result';return Response.json({operationId,attemptId:packet.attemptId,contentType:'text/plain',text,textHash:sellerHash(text)});}};
+ return {order,store,perTick,reasons,get executions(){return executions;},async run(){tick++;perTick.push([]);const result=await runHostedSellerTick(options);reasons.push(result.reason);assert.equal(result.providerRequests<=1,true);return result;}};
+}
+let assertions=0;const eq=(a,b)=>{assert.deepEqual(a,b);assertions++;},cases=[];
+async function runCase(name,plan,expected,executions){const f=fixture(plan);for(let i=0;i<3;i++)await f.run();eq(f.perTick.map(v=>v.length),expected);eq(f.executions,executions);assert.ok(f.executions<=1);assertions++;assert.ok(f.perTick.flat().length<=14);assertions++;cases.push({name,orderCallsByWake:expected,totalOrderCalls:expected.reduce((a,b)=>a+b,0),readCalls:f.perTick.flat().filter(v=>v==='get_market_order').length,writeCalls:f.perTick.flat().filter(v=>v!=='get_market_order').length,providerExecutions:f.executions,reasons:f.reasons});return f;}
+const rejected=await runCase('two claims rejected before commit then one complete execution',{0:{before:'claim_market_order'},1:{before:'claim_market_order'}},[3,4,7],1);eq(rejected.order.phase,'delivered');eq(rejected.perTick[2],['get_market_order','get_market_order','get_market_order','claim_market_order','get_market_order','get_market_order','deliver_market_order']);
+const lostClaim=await runCase('claim commit ACK lost then recover same attempt',{0:{after:'claim_market_order'}},[3,5,1],1);eq(lostClaim.order.phase,'delivered');eq(lostClaim.perTick.flat().filter(v=>v==='claim_market_order').length,1);
+const rejectedDelivery=await runCase('frozen delivery rejected twice then delivered without execution',{0:{before:'deliver_market_order'},1:{before:'deliver_market_order'}},[6,3,3],1);eq(rejectedDelivery.order.phase,'delivered');
+const lostDelivery=await runCase('delivery commit ACK lost then recover original frozen output',{0:{after:'deliver_market_order'}},[6,3,1],1);eq(lostDelivery.order.phase,'delivered');
+const uncertain=await runCase('provider response uncertain then terminal operator incident',{0:{providerLoss:true}},[5,1,1],1);eq(uncertain.order.phase,'execution-uncertain');eq(uncertain.perTick.flat().filter(v=>v==='uncertain_market_order').length,1);
+const uncertainReports=await runCase('uncertainty report rejected twice preserves no-reexecution',{0:{providerLoss:true,before:'uncertain_market_order'},1:{before:'uncertain_market_order'}},[5,2,2],1);eq(uncertainReports.order.phase,'execution-uncertain');
+// Exhaust all before-action and after-ack fault positions on the first two
+// wakes. The third recovers from their actual durable fixture state. This is
+// an SDK/worker regression matrix; native Redis/Lua effects are separately
+// tested and not claimed as simulated by this transport fixture.
+const faults=[undefined,...Array.from({length:7},(_,i)=>({beforeOrderIndex:i+1})),...Array.from({length:7},(_,i)=>({afterOrderIndex:i+1})),{providerLoss:true}];
+const faultMatrix={cases:0,maximumOrderCalls:0,maximumReadCalls:0,maximumWriteCalls:0,maximumProviderExecutions:0};
+for(const first of faults)for(const second of faults){const f=fixture({0:first,1:second});for(let i=0;i<3;i++)await f.run();const calls=f.perTick.flat(),read=calls.filter(v=>v==='get_market_order').length,write=calls.length-read;assert.ok(calls.length<=14);assert.ok(read<=10);assert.ok(write<=4);assert.ok(f.executions<=1);assertions+=4;faultMatrix.cases++;faultMatrix.maximumOrderCalls=Math.max(faultMatrix.maximumOrderCalls,calls.length);faultMatrix.maximumReadCalls=Math.max(faultMatrix.maximumReadCalls,read);faultMatrix.maximumWriteCalls=Math.max(faultMatrix.maximumWriteCalls,write);faultMatrix.maximumProviderExecutions=Math.max(faultMatrix.maximumProviderExecutions,f.executions);}
+// The no-reexecution invariant comes from durable provider-started before the
+// adapter, not from an optimistic transport response or from fixture counters.
+const worker=await readFile(new URL('../examples/seller-marketplace-worker.mjs',import.meta.url),'utf8'),hosted=await readFile(new URL('../examples/seller-hosted-tick.mjs',import.meta.url),'utf8');assert.ok(worker.indexOf("intent.phase='provider-started';await persist")<worker.indexOf('options.adapter.execute({'));assertions++;assert.ok(hosted.includes("if(['provider-started','uncertain-report-started','execution-uncertain'].includes(intent.phase))"));assertions++;assert.ok(hosted.includes("if(intent.phase==='claim-started')await recoverSellerIntent(intent,options)"));assertions++;
+console.log(JSON.stringify({status:'PASS_FINITE_THREE_TARGETED_WAKE_ORDER_CALLS',assertions,maximumOrderCalls:14,maximumSellerReadCalls:10,maximumSellerWriteCalls:4,conservativeSuggestedOrderCallSlots:15,cases,faultMatrix,sourcePins:{worker:createHash('sha256').update(worker).digest('hex'),hosted:createHash('sha256').update(hosted).digest('hex')},networkRequests:0,cloudWrites:0,redisCommands:0,paymentHandlerInvocations:0,payments:0,walletSignatures:0,facilitatorRequests:0,rpcRequests:0,productionChanged:false,scope:'Actual hosted tick and seller worker plus SDK on synthetic in-memory paid orders. Automatic dispatcher must retain its independently enforced maximum of three wake attempts; manual ticks beyond that limit are not funded by this bound.'}));
