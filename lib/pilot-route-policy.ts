@@ -1,3 +1,4 @@
+import {splitReadonlyIngress} from './split-ingress-policy.ts';
 // An exposure boundary, not authorization. Native handlers still verify owners.
 export function routeBoundaryEnabled() {
   return process.env.BAZAAR_ROUTE_BOUNDARY === 'true' || process.env.BAZAAR_WORKSPACE_ADMISSION === 'invite-only';
@@ -24,6 +25,7 @@ export function pilotRoutePolicy(path: string, method: string): 'allow' | 'redir
     if (method === 'POST' && ['/api/account/wallet/challenge','/api/account/wallet/complete'].includes(path)) return 'allow';
   }
   if (process.env.BAZAAR_ENABLE_MARKETPLACE === 'true') {
+    if(path.startsWith('/api/market/split-v1'))return splitReadonlyIngress(path,method)?'allow':'deny';
     if (['/api/discovery/resources','/api/discovery/search'].includes(path)) return 'deny';
     if (['GET','HEAD'].includes(method) && path === '/') return 'allow';
     // Fixed, public illustration files; this does not expose stored buyer deliveries.

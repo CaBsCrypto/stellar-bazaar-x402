@@ -8,24 +8,29 @@ import {WorkspaceError} from './workspace-types.ts';
 import {reserveContinuousFreeBackground} from './continuous-free-budget.ts';
 import {CONTINUOUS_CONTROL_BUDGET,continuousTextNativeBudgetLimits,withContinuousTextNativeBudget,withContinuousTextReadinessBudget} from './continuous-control-budget.ts';
 import {isCompactWorkspaceTransport} from './quota-registry-patch.ts';
+import {multisellerRuntimeBinding,type SellerIdentity} from './multiseller-pilot.ts';
 
 type Environment=Readonly<Record<string,string|undefined>>;
-type Binding={serviceId:string;cardHash:string;ownerFingerprint:string;url:string;token:string;protection?:string};
+type Binding={serviceId:string;cardHash:string;ownerFingerprint:string;url:string;token:string;protection?:string;profile?:'multiseller-v2'};
+const serviceIdentity=(service:Pick<MarketService,'ownerId'|'cardHash'|'card'>):SellerIdentity=>({serviceId:service.card.id,cardHash:service.cardHash,sellerOwnerId:service.ownerId});
+const orderIdentity=(order:MarketOrder):SellerIdentity=>({serviceId:order.serviceId,cardHash:order.cardHash,sellerOwnerId:order.sellerOwnerId});
 const services=new Set(['guionista-bazaar-production-text-v1','guionista-bazaar-pilot-text-funded-v1']);
 /** Only this reviewed first-party service gets an automatic wake. Endpoints and
  * credentials are server configuration, never card metadata or MCP arguments. */
-export function textSellerConfiguration(environment:Environment=process.env):Binding|undefined{
+export function textSellerConfiguration(environment:Environment=process.env,identity?:SellerIdentity):Binding|undefined{
+ if(identity){const binding=multisellerRuntimeBinding(identity,environment);if(binding)return binding;if(identity.serviceId!==environment.BAZAAR_TEXT_SELLER_SERVICE_ID)return;}
  if(environment.BAZAAR_TEXT_SELLER_MODE===undefined)return undefined;
  try{
   if(environment.BAZAAR_TEXT_SELLER_MODE!=='on-demand'||environment.BAZAAR_FREE_DEMO_MODE!=='continuous')throw Error();
   const serviceId=environment.BAZAAR_TEXT_SELLER_SERVICE_ID!,cardHash=environment.BAZAAR_TEXT_SELLER_CARD_HASH!,ownerFingerprint=environment.BAZAAR_TEXT_SELLER_OWNER_FINGERPRINT!,url=environment.BAZAAR_TEXT_SELLER_WAKE_URL!,token=environment.BAZAAR_TEXT_SELLER_WAKE_TOKEN!,protection=environment.BAZAAR_TEXT_SELLER_WAKE_PROTECTION;
   const endpoint=new URL(url),preview=environment.VERCEL_ENV==='preview';
   if(!services.has(serviceId)||!/^[a-f0-9]{64}$/.test(cardHash)||!/^[a-f0-9]{64}$/.test(ownerFingerprint)||!/^[a-zA-Z0-9_-]{43}$/.test(token)||endpoint.protocol!=='https:'||endpoint.username||endpoint.password||endpoint.port||endpoint.search||endpoint.hash||endpoint.pathname!=='/api/bazaar/seller/tick'||!/^ai-video-scriptwriter(?:-[a-z0-9]+)?(?:-cabscryptocontacto-6028s-projects)?\.vercel\.app$/.test(endpoint.hostname)||!preview&&endpoint.hostname!=='ai-video-scriptwriter.vercel.app'||protection&&(!preview||protection.length>1024||/[\r\n]/.test(protection)))throw Error();
+  if(identity&&(identity.cardHash!==cardHash||sha(identity.sellerOwnerId)!==ownerFingerprint))throw Error();
   return {serviceId,cardHash,ownerFingerprint,url:endpoint.href,token,...(protection?{protection}:{})};
  }catch{throw new WorkspaceError('TEXT_SELLER_CONFIGURATION_INCOMPLETE',503);}
 }
 export function isOnDemandTextService(service:Pick<MarketService,'ownerId'|'cardHash'|'card'>){
- const binding=textSellerConfiguration();if(!binding)return false;
+ const binding=textSellerConfiguration(process.env,serviceIdentity(service));if(!binding)return false;
  if(service.card.id!==binding.serviceId)return false;
  if(service.cardHash!==binding.cardHash||sha(service.ownerId)!==binding.ownerFingerprint||service.card.delivery?.result.contentType!=='text/plain')throw new WorkspaceError('TEXT_SELLER_BINDING_MISMATCH',503);
  return true;
@@ -36,7 +41,7 @@ export function queueMarketTextWake(state:MarketState,order:MarketOrder,now=Date
  if(order.textWake)return;
  const at=new Date(now).toISOString();order.textWake={version:1,wakeId:randomUUID(),status:'pending',createdAt:at,updatedAt:at,attempts:0};
 }
-type RuntimeDependencies={store:()=>MarketStore;fetch:typeof fetch;now:()=>number;reserve:typeof reserveContinuousFreeBackground;binding:()=>Binding|undefined};
+type RuntimeDependencies={store:()=>MarketStore;fetch:typeof fetch;now:()=>number;reserve:typeof reserveContinuousFreeBackground;binding:(identity?:SellerIdentity)=>Binding|undefined};
 export const COMPACT_TEXT_REDIS_WIRE_PROFILE='bazaar-text-redis-wire/v1';
 export const COMPACT_TEXT_PROVIDER_WIRE_MAX_BYTES=16*1048576;
 export const COMPACT_TEXT_PROVIDER_READINESS_WIRE_MAX_BYTES=8*1048576;
@@ -76,14 +81,14 @@ async function requireInitializedTextIndex(store:MarketStore,legacy:boolean){
  const index=await store.maintenanceIndex();if(!index.initialized||!index.index)throw new WorkspaceError('TEXT_SELLER_MAINTENANCE_REQUIRED',503,60);
 }
 export function createMarketTextSellerRuntime(overrides:Partial<RuntimeDependencies>={}){
- const deps:RuntimeDependencies={store:configuredMarketStore,fetch:globalThis.fetch,now:Date.now,reserve:reserveContinuousFreeBackground,binding:textSellerConfiguration,...overrides};
+ const deps:RuntimeDependencies={store:configuredMarketStore,fetch:globalThis.fetch,now:Date.now,reserve:reserveContinuousFreeBackground,binding:identity=>textSellerConfiguration(process.env,identity),...overrides};
  return {
   async readiness(service:Pick<MarketService,'ownerId'|'cardHash'|'card'>,order?:MarketOrder,force=false){
    const storage=order&&order.operationId!=='31c97193-be74-4b9d-b0a3-f3890b0a41e8'?await import('./market-order-storage.ts'):undefined;
    const guarded=Boolean(order&&storage?.marketPerOrderStorageEnabled(order.operationId)&&storage.perOrderOperationId(order.operationId));
    const assertCapability=()=>{if(guarded)storage!.assertMarketOrderFinancialStorage(order!.operationId);};assertCapability();
    const compact=compactTextTransport(),legacy=order?.operationId==='31c97193-be74-4b9d-b0a3-f3890b0a41e8';return nativeTextScope(compact,async()=>{
-   const binding=deps.binding();if(!binding||service.card.id!==binding.serviceId)return false;
+   const binding=deps.binding(serviceIdentity(service));if(!binding||service.card.id!==binding.serviceId)return false;
    if(service.cardHash!==binding.cardHash||sha(service.ownerId)!==binding.ownerFingerprint)throw new WorkspaceError('TEXT_SELLER_BINDING_MISMATCH',503);
    const store=deps.store();
    await requireInitializedTextIndex(store,legacy);
@@ -102,9 +107,8 @@ export function createMarketTextSellerRuntime(overrides:Partial<RuntimeDependenc
   },
   async dispatch(operationId:string){
    const compact=compactTextTransport(),legacy=operationId==='31c97193-be74-4b9d-b0a3-f3890b0a41e8';return nativeTextScope(compact,async()=>{
-   const binding=deps.binding();if(!binding)throw new WorkspaceError('TEXT_SELLER_CONFIGURATION_INCOMPLETE',503);
    const store=deps.store();await requireInitializedTextIndex(store,legacy);const snapshot=await store.transact(s=>s.orders.find(o=>o.operationId===operationId));
-   if(!snapshot)throw new WorkspaceError('NOT_FOUND',404);boundOrder(snapshot,binding);
+   if(!snapshot)throw new WorkspaceError('NOT_FOUND',404);const binding=deps.binding(orderIdentity(snapshot));if(!binding)throw new WorkspaceError('TEXT_SELLER_CONFIGURATION_INCOMPLETE',503);boundOrder(snapshot,binding);
    if(!snapshot.textWake||['delivered','delivery-failed','execution-uncertain'].includes(snapshot.phase)||Date.parse(marketContentExpiresAt(snapshot))<=deps.now())return {dispatched:false,reason:'terminal-or-expired'};
    if(!['paid','executing'].includes(snapshot.phase)||!snapshot.paymentVerifiedAt)throw new WorkspaceError('PAYMENT_REQUIRED',409);
    const wake=snapshot.textWake,now=deps.now();

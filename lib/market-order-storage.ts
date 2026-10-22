@@ -9,6 +9,8 @@ import type {MarketCommitGuard} from './marketplace-capacity.ts';
 import {assertPerOrderStorageProfile,continuousPerOrderStorage} from './per-order-storage-profile.ts';
 import {meteredRedis} from './acceptance-meter.ts';
 import {isPerOrderPaymentEnabled} from './per-order-payment-profile.ts';
+import {configuredMultisellerPolicy} from './multiseller-pilot.ts';
+import type {MarketOrderAdmission} from './market-order-repository.ts';
 
 /** The unresolved incident is permanently addressed through its existing
  * storage path. This prototype never copies, rekeys or mutates that operation. */
@@ -56,6 +58,17 @@ export function combineMarketOrderGuards(...guards:(MarketCommitGuard|undefined)
  if(entries.size>8)throw new WorkspaceError('INVALID_COMMIT_GUARD',503);
  return {keys:[...entries.keys()],values:[...entries.values()],...(expiresAt===undefined?{}:{admissionExpiresAt:expiresAt}),...(continuousOperation?{continuousOperation}:{})};
 }
+/** Buyer summaries are owner-scoped, not seller-scoped. Their revision is part
+ * of order creation's CAS, so concurrent cross-service purchases share one
+ * quota. Historical/removed seller bindings still consume that buyer's quota. */
+export function mergePerOrderAdmissionSummaries(catalogue:MarketState,pending:MarketOrderAdmission[],buyer:MarketOrderAdmission[],sellerOwnerId:string,buyerOwnerId:string,environment:Environment=process.env){
+ const p=configuredMultisellerPolicy(environment),state:MarketState=structuredClone(catalogue),ids=new Set([...state.orders,...(state.archived??[])].map(o=>o.operationId));
+ const expected=(record:MarketOrderAdmission)=>p?p.sellers.some(s=>s.sellerOwnerId===record.sellerOwnerId&&s.cardHash===record.cardHash&&(!record.phase||s.serviceId===record.serviceId))||record.sellerOwnerId===sellerOwnerId&&record.cardHash===environment.BAZAAR_TEXT_SELLER_CARD_HASH&&(!record.phase||record.serviceId===environment.BAZAAR_TEXT_SELLER_SERVICE_ID):record.cardHash===environment.BAZAAR_TEXT_SELLER_CARD_HASH&&(!record.phase||record.serviceId===environment.BAZAAR_TEXT_SELLER_SERVICE_ID);
+ for(const record of pending)if(record.sellerOwnerId!==sellerOwnerId||!expected(record))throw new WorkspaceError('PER_ORDER_ADMISSION_UNAVAILABLE',503);
+ for(const record of buyer)if(p?record.buyerOwnerId!==buyerOwnerId:record.sellerOwnerId!==sellerOwnerId||!expected(record))throw new WorkspaceError('PER_ORDER_ADMISSION_UNAVAILABLE',503);
+ for(const record of [...pending,...buyer])if(!ids.has(record.operationId)){ids.add(record.operationId);if(record.phase)state.orders.push(record as unknown as MarketOrder);else{state.archived??=[];state.archived.push(record as unknown as NonNullable<MarketState['archived']>[number]);}}
+ return state;
+}
 /** A bounded pending index, rather than retained seller history, is combined
  * with the legacy seats. Its revision is compared in the atomic order create. */
 export async function perOrderAdmissionSnapshot(buyerOwnerId:string,sellerOwnerId:string){
@@ -67,18 +80,7 @@ export async function perOrderAdmissionSnapshot(buyerOwnerId:string,sellerOwnerI
    process.env.BAZAAR_PUBLIC_BUYER_ADMISSION_JSON===undefined?Promise.resolve(undefined):repository.admissionSnapshot(buyerOwnerId,'buyer',{limit:50}),
   ]);
   if(pending.nextCursor||buyer?.nextCursor)throw new WorkspaceError('PER_ORDER_ADMISSION_WINDOW_CAPACITY',503);
-  const state:MarketState=structuredClone(catalogue.state),ids=new Set([...state.orders,...(state.archived??[])].map(order=>order.operationId));
-  // This temporary view is used exclusively by the existing pure pending,
-  // seller-seat and buyer-quota predicates. Summaries never enter persistence,
-  // validation, a payment path, a history response or an execution callback.
-  // Read all50 buyer summaries conservatively: archivedAt can be newer than
-  // createdAt, so the newest creation alone cannot prove an empty quota window.
-  for(const record of [...pending.records,...(buyer?.records??[])])if(!ids.has(record.operationId)){
-   if(record.sellerOwnerId!==sellerOwnerId||record.cardHash!==process.env.BAZAAR_TEXT_SELLER_CARD_HASH||record.phase&&record.serviceId!==process.env.BAZAAR_TEXT_SELLER_SERVICE_ID)throw new WorkspaceError('PER_ORDER_ADMISSION_UNAVAILABLE',503);
-   ids.add(record.operationId);
-   if(record.phase)state.orders.push(record as unknown as MarketOrder);
-   else {state.archived??=[];state.archived.push(record as unknown as NonNullable<MarketState['archived']>[number]);}
-  }
+  const state=mergePerOrderAdmissionSummaries(catalogue.state,pending.records,buyer?.records??[],sellerOwnerId,buyerOwnerId);
   return {state,guard:combineMarketOrderGuards(catalogue.guard,pending.guard,buyer?.guard)};
  }
  const [catalogue,pending,buyer]=await Promise.all([

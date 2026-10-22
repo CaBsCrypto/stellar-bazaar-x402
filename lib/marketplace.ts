@@ -25,6 +25,7 @@ import { creditOperationalPrincipal } from './acceptance-meter.ts';
 import {isOnDemandTextService,ensureMarketTextReadiness} from './market-text-seller-runtime.ts';
 import {assertExternalBuyerPilotPurchase} from './external-buyer-pilot.ts';
 import {assertCompactV2NewOrderInput} from './free-plan-transport-profile.ts';
+import {assertMultisellerSubmission,assertMultisellerWallet} from './multiseller-pilot.ts';
 import {assertPublicBuyerPurchase,assertPublicBuyerOrderQuota,assertNewPublicBuyerOperationId} from './public-buyer-admission.ts';
 
 import {sha,canonical,orderMemo} from './marketplace-identity.ts';
@@ -74,7 +75,7 @@ export function marketCard(raw:unknown):ServiceCard {
 export async function submitMarketService(p:WorkspacePrincipal,input:z.infer<typeof newServiceSchema>){
  newServiceSchema.parse(input);const guard=await marketSubmissionGuard(p),card=marketCard(input.card),cardHash=computeCanonicalServiceCardHash(card),token=submissionToken(input.submissionId,p.ownerId);
  // Persist ownership before entering the existing review queue. Explicit replay uses the same intent.
- await configuredMarketStore().transact(s=>{if(s.paused)throw new WorkspaceError('MARKET_PAUSED');const old=s.services.find(v=>v.submissionId===input.submissionId);if(old){if(old.ownerId!==p.ownerId||old.cardHash!==cardHash)throw new WorkspaceError('SUBMISSION_CONFLICT',409);return;}
+ await configuredMarketStore().transact(s=>{if(s.paused)throw new WorkspaceError('MARKET_PAUSED');assertMultisellerSubmission(s,p.ownerId,card,input.submissionId);const old=s.services.find(v=>v.submissionId===input.submissionId);if(old){if(old.ownerId!==p.ownerId||old.cardHash!==cardHash)throw new WorkspaceError('SUBMISSION_CONFLICT',409);return;}
  if(!freeDemoWindow().admissionOpen)throw new WorkspaceError('ADMISSIONS_PAUSED',503);
  if(s.services.some(v=>v.card.id===card.id))throw new WorkspaceError('SERVICE_CONFLICT',409);
  s.services.push({submissionId:input.submissionId,ownerId:p.ownerId,cardHash,card,withdrawn:false,createdAt:new Date().toISOString()});},guard);
@@ -128,6 +129,7 @@ export async function reportMarketCapacity(p:WorkspacePrincipal,input:z.infer<ty
  sellerCapacityReportSchema.parse(input);if(p.role!=='agent')throw new WorkspaceError('FORBIDDEN',403);
  const snapshot=await configuredWorkspaceStore().walletIdentity(p),service=await configuredMarketStore().transact(s=>s.services.find(v=>v.card.id===input.serviceId&&v.ownerId===p.ownerId&&v.cardHash===input.cardHash&&!v.withdrawn));
  if(!service||(await reviewed(service))?.status!=='activated')throw new WorkspaceError('SERVICE_NOT_ACTIVE',409);
+ assertMultisellerWallet({serviceId:service.card.id,cardHash:service.cardHash,sellerOwnerId:service.ownerId},snapshot.identity.wallet);
  return configuredMarketStore().transact(s=>{const c=reportCapacityInState(s,p,input);return {reportId:c.reportId,receivedAt:c.receivedAt,leaseExpiresAt:c.leaseExpiresAt,...sellerCapacityDto(s,input.serviceId,input.cardHash)};},snapshot.guard);
 }
 /** Revalidate the current seller generation and protect it in the payment CAS. */
@@ -155,7 +157,8 @@ export async function sellerPaymentGuard(order:MarketOrder,p?:WorkspacePrincipal
   for(const capacity of state.sellerCapacities??[])if(capacity.ownerId===order.sellerOwnerId&&capacity.day===day)capacity.admittedUsed+=committed;
   const capacity=assertSellerReservation(state,order),expiresAt=Math.min(sellerAdmissionExpiresAt(capacity,order),admissionExpiresAt??Infinity);
   try{
-   const store=configuredWorkspaceStore(),seller=(await store.walletIdentity({role:'agent',ownerId:capacity.ownerId,workspaceId:capacity.workspaceId,agentId:capacity.agentId,generation:capacity.generation})).guard;
+   const store=configuredWorkspaceStore(),sellerSnapshot=await store.walletIdentity({role:'agent',ownerId:capacity.ownerId,workspaceId:capacity.workspaceId,agentId:capacity.agentId,generation:capacity.generation}),seller=sellerSnapshot.guard;
+   assertMultisellerWallet({serviceId:order.serviceId,cardHash:order.cardHash,sellerOwnerId:order.sellerOwnerId},sellerSnapshot.identity.wallet);
    if(!seller||!seller.keys[0]||seller.keys.length!==seller.values.length)throw new WorkspaceError('SELLER_AUTHORIZATION_UNAVAILABLE',503);
    if(p){if(p.ownerId!==order.buyerOwnerId)throw new WorkspaceError('FORBIDDEN',403);const buyer=(await store.walletIdentity(p)).guard;if(!buyer||buyer.keys[0]!==seller.keys[0]||buyer.values[0]!==seller.values[0])throw new WorkspaceError('AUTHORIZATION_SNAPSHOT_CHANGED',503);}
    return combineMarketOrderGuards(snapshot.guard,history.guard,{keys:seller.keys.slice(0,1),values:seller.values.slice(0,1),admissionExpiresAt:expiresAt});

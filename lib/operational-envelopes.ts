@@ -1,3 +1,4 @@
+import {splitWorkloadEnvelope} from './split-ingress-policy.ts';
 import type { OperationalProfile,OperationalWorkload } from './operational-pressure.ts';
 import {hasPerOrderProductionPaymentCapability} from './per-order-payment-profile.ts';
 export const OPERATIONAL_TRANSPORT_ENVELOPES = {
@@ -39,6 +40,7 @@ export const OPERATIONAL_CONTROL_ENVELOPES={
   'observed-metadata':{redis:40,commandsUpperBound:212,outboundPayloadBytes:76*1048576,inboundPayloadBytes:48*1048576,dtoBytes:128*1024,externalRequests:0,externalOutboundBytes:0,externalInboundBytes:0},
 } as const;
 export function operationalTransportEnvelope(profile: OperationalProfile, workload?:OperationalWorkload) {
+ const split=splitWorkloadEnvelope(workload);if(split)return split;
  if(profile==='authenticated'&&workload==='financial'&&hasPerOrderProductionPaymentCapability())return PER_ORDER_PRODUCTION_FINANCIAL_ENVELOPE;
  if(profile==='public'&&workload==='metadata')return OPERATIONAL_METADATA_ENVELOPE;
  if(profile==='public'&&workload==='observed-metadata')return OPERATIONAL_CONTROL_ENVELOPES['observed-metadata'];

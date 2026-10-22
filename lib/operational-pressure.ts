@@ -1,3 +1,4 @@
+import {splitReadonlyIngress,type SplitWorkload} from './split-ingress-policy.ts';
 import {createWorkspaceSchema} from './workspace-types.ts';
 import {compactTransportV2} from './free-plan-transport-profile.ts';
 export const operationalProfiles = ['public', 'authenticated', 'recovery'] as const;
@@ -13,7 +14,7 @@ export function operationalPressure(used: number, assigned: number, newOperation
   return { percent, alert: percent >= OPERATIONAL_ALERT_PERCENT, paused: newOperation && percent >= OPERATIONAL_PAUSE_PERCENT, exhausted: used >= assigned };
 }
 
-export type OperationalWorkload = 'metadata'|'observed-metadata'|'catalog'|'identity'|'orders'|'private-history'|'seller-control'|'capacity'|'financial'|'order-create'|'wallet-binding';
+export type OperationalWorkload = 'metadata'|'observed-metadata'|'catalog'|'identity'|'orders'|'private-history'|'seller-control'|'capacity'|'financial'|'order-create'|'wallet-binding'|SplitWorkload;
 export type OperationalRequestClass = { profile: OperationalProfile; newOperation: boolean; workload?:OperationalWorkload; bootstrapCreation?:true };
 const continuousMode=()=>process.env.BAZAAR_FREE_DEMO_MODE==='continuous';
 const nativeWorkspaceHistory=()=>process.env.BAZAAR_WORKSPACE_BACKEND==='redis'&&process.env.BAZAAR_ENABLE_OPEN_WORKSPACES==='true';
@@ -21,6 +22,7 @@ const nativeWorkspaceHistory=()=>process.env.BAZAAR_WORKSPACE_BACKEND==='redis'&
 export function operationalRequestClass(request?: Request): OperationalRequestClass {
   if (!request) return { profile: 'recovery', newOperation: false };
   const path = new URL(request.url).pathname, method = request.method.toUpperCase();
+  const split=splitReadonlyIngress(path,method);if(split)return {profile:split.profile,newOperation:split.newOperation,workload:split.workload};
   // Exact native POST routes only. The route's measuredHandler establishes a
   // hard Redis/response scope before credentials, ingress or owner quota work.
   // Without that scope continuousFreeReservation keeps its legacy fallback.

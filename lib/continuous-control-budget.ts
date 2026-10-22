@@ -1,3 +1,4 @@
+import {SPLIT_READ_PIPELINE_LIMITS,splitReadonlyIngress} from './split-ingress-policy.ts';
 import {finitePilotProfile,FINITE_PILOT_ID} from './finite-pilot-budget.ts';
 import {pilotReviewProfile,withPilotReviewBudget} from './pilot-review-transport.ts';
 import {AsyncLocalStorage} from 'node:async_hooks';
@@ -11,6 +12,7 @@ import {compactTransportV2,freePlanTransportProfile} from './free-plan-transport
 import {continuousPerOrderStorage} from './per-order-storage-profile.ts';
 import {isPerOrderPaymentSimulation,isPerOrderPaymentEnabled,perOrderProductionPaymentsConfigured} from './per-order-payment-profile.ts';
 import {marketPageFromRequest,marketPageSchema} from './market-pagination.ts';
+import {starterActionForRequest,withPublicStarterAction} from './public-registration-profile.ts';
 
 const MiB=1048576,KiB=1024;
 export const CONTINUOUS_CONTROL_BUDGET=Object.freeze({
@@ -35,6 +37,7 @@ export const CONTINUOUS_CONTROL_BUDGET=Object.freeze({
  compactV2PrivateHistory:Object.freeze({commands:160,wireBytes:3*MiB}),
  compactV2ObservedMetadata:Object.freeze({commands:160,wireBytes:3*MiB}),
  compactV2Identity:Object.freeze({commands:160,wireBytes:1.5*MiB}),
+ publicIdentityProjection:Object.freeze({commands:64,wireBytes:1.25*MiB}),
  // Native wallet controls retain their original admission/recovery profiles.
  // Both scopes include credential proofs, budget/owner quotas and wallet CAS;
  // completion additionally includes its bounded challenge/document reads.
@@ -79,7 +82,7 @@ export const CONTINUOUS_CONTROL_BUDGET=Object.freeze({
 });
 type Limit={readonly commands:number;readonly wireBytes:number};
 type Observation={commands:number;outboundBytes:number;inboundBytes:number;requests:number};
-type Context={kind?:OperationalRequestClass;authenticated:boolean;nativeText:boolean;nativeReadiness:boolean;compactRegistry:boolean;financialOperationId?:string;perOrderOperationId?:string;perOrderProfile?:'batch-v1';responseBytes:number;httpAllowanceBytes:number;limit:Limit;observation:Observation;failed:boolean};
+type Context={boundRequest?:Request;identityProjection?:boolean;kind?:OperationalRequestClass;authenticated:boolean;nativeText:boolean;nativeReadiness:boolean;compactRegistry:boolean;financialOperationId?:string;perOrderOperationId?:string;perOrderProfile?:'batch-v1';responseBytes:number;httpAllowanceBytes:number;limit:Limit;observation:Observation;failed:boolean};
 const scope=new AsyncLocalStorage<Context>();
 /** The injected offline provider represents another process with its own HTTP
  * accounting. A public argument or production environment cannot grant this
@@ -189,14 +192,17 @@ export async function withContinuousControlBudget<T>(kind:OperationalRequestClas
  if(scope.getStore())return handler();
  const financial=financialOperation(kind,options.request);
  const walletPath=options.request?new URL(options.request.url).pathname:undefined;
+ const split=options.request?splitReadonlyIngress(walletPath!,options.request.method):undefined;
+ const nativeSplit=split&&kind.profile===split.profile&&kind.newOperation===false&&kind.workload===split.workload&&isCompactWorkspaceTransport()&&compactTransportV2()?split:undefined;
+ if(kind.workload?.startsWith('split-')&&!nativeSplit)throw failure();
  const nativeWallet=kind.workload==='wallet-binding'&&!kind.bootstrapCreation&&isCompactWorkspaceTransport()&&compactTransportV2()&&options.request?.method==='POST'&&(
   walletPath==='/api/account/wallet/challenge'&&kind.profile==='authenticated'&&kind.newOperation||
   walletPath==='/api/account/wallet/complete'&&kind.profile==='recovery'&&!kind.newOperation);
  // A fabricated internal kind cannot install this cheaper scope for another
  // route, method, profile, MCP invocation or a call without a native request.
  if(kind.workload==='wallet-binding'&&!nativeWallet)return handler();
- if(!financial&&!nativeWallet&&!limitFor(kind,authenticated)&&!kind.bootstrapCreation&&!(kind.profile==='authenticated'&&kind.newOperation&&kind.workload==='order-create'))return handler();
- const compactRegistry=isCompactWorkspaceTransport(),read=await orderReadShape(kind,options.request),selected=financial?financial.limit:limitFor(kind,authenticated,compactRegistry,read.singleOrder,read.firstHistoryPage);
+ if(!financial&&!nativeWallet&&!nativeSplit&&!limitFor(kind,authenticated)&&!kind.bootstrapCreation&&!(kind.profile==='authenticated'&&kind.newOperation&&kind.workload==='order-create'))return handler();
+ const compactRegistry=isCompactWorkspaceTransport(),read=await orderReadShape(kind,options.request),starterAction=await starterActionForRequest(kind,options.request),selected=nativeSplit?nativeSplit.control:financial?financial.limit:limitFor(kind,authenticated,compactRegistry,read.singleOrder,read.firstHistoryPage);
  let limit=selected===CONTINUOUS_CONTROL_BUDGET.perOrderV1OrderCreate&&!await nativeOrderCreate(options.request)?CONTINUOUS_CONTROL_BUDGET.perOrderV1LegacyOrderCreate:selected;if(!limit)return handler();
  const boundedReview=pilotReviewProfile()&&(kind.workload==='capacity'||limit===CONTINUOUS_CONTROL_BUDGET.perOrderV1OrderCreate||!!financial);
  if(boundedReview&&limit===CONTINUOUS_CONTROL_BUDGET.perOrderV1OrderCreate)limit=CONTINUOUS_CONTROL_BUDGET.pilotOrderCreate;
@@ -207,9 +213,9 @@ export async function withContinuousControlBudget<T>(kind:OperationalRequestClas
  // response metadata each32KiB, body1KiB, response32KiB, plus complete's sole
  // fixed Horizon account response64KiB (8-second, redirect-error reader).
  // Horizon remains an explicit allowance, not a measuredExternal observation.
- return withPilotReviewBudget(boundedReview,()=>scope.run({...fresh(kind,authenticated,limit,false,compactRegistry),...(nativeWallet?{responseBytes:32*KiB}:{}),...(identityHttp?{responseBytes:32*KiB,httpAllowanceBytes:160*KiB}:{}),...(financial?{financialOperationId:financial.id}:{})},async()=>{
+ return withPublicStarterAction(options.request,starterAction,()=>withPilotReviewBudget(boundedReview,()=>scope.run({...fresh(kind,authenticated,limit,false,compactRegistry),boundRequest:options.request,...(nativeWallet?{responseBytes:32*KiB}:{}),...(nativeSplit?{responseBytes:16*KiB,httpAllowanceBytes:128*KiB}:{}),...(identityHttp?{responseBytes:32*KiB,httpAllowanceBytes:160*KiB}:{}),...(financial?{financialOperationId:financial.id}:{})},async()=>{
   try{return await boundedResult(handler);}catch(error){scope.getStore()!.failed=true;throw error;}
- }));
+ })));
 }
 /** Native background text work has an independent fresh Redis scope. It never
  * inherits a caller's read allowance or activates a financial cheap class. */
@@ -243,6 +249,9 @@ export function continuousControlBudgetReservation(kind:OperationalRequestClass&
  }
  return {commands:context.limit.commands,transferBytes:context.limit.wireBytes+context.httpAllowanceBytes};
 }
+/** A native request-auth proof selects the smaller endpoint-specific scope
+ * before its budget debit. Existing usage remains fully counted. */
+export async function adoptProjectedIdentityControlBudget(request:Request){const c=scope.getStore();if(!c)return false;if(c.boundRequest!==request||c.failed||c.identityProjection||c.kind?.profile!=='recovery'||c.kind.workload!=='identity'||!c.compactRegistry||!compactTransportV2()||!pilotReviewProfile())throw failure();const {takeProjectedIdentityBudgetProof}=await import('./workspace-http.ts');const proof=takeProjectedIdentityBudgetProof(request);if(!['human','agent'].includes(proof.principal.role))throw failure();const selected=CONTINUOUS_CONTROL_BUDGET.publicIdentityProjection;if(c.observation.commands>selected.commands||c.observation.requests>9||c.observation.outboundBytes+c.observation.inboundBytes>selected.wireBytes)throw failure();c.limit=selected;c.identityProjection=true;return true;}
 export function continuousControlBudgetObservation(){const context=scope.getStore();return context?{...context.observation,authenticated:context.authenticated,nativeText:context.nativeText,nativeReadiness:context.nativeReadiness,compactRegistry:context.compactRegistry,commandLimit:context.limit.commands,wireLimit:context.limit.wireBytes,responseLimit:context.responseBytes,httpAllowanceBytes:context.httpAllowanceBytes}:undefined;}
 type Middleware=Parameters<Redis['use']>[0];
 /** Reserve exact native maximum wire allocations before dispatch, including
@@ -251,8 +260,10 @@ export async function continuousControlRedisRequest(request:Parameters<Middlewar
  const context=scope.getStore();if(!context)return next(request);
  if(context.failed)throw failure();
  try{
-  const descriptor=await nativeRedisDescriptor(request.body),outbound=Buffer.byteLength(JSON.stringify(request.body));
+  const native=await nativeRedisDescriptor(request.body),splitRead=['split-context','split-terms','split-history'].includes(context.kind?.workload??''),descriptor=splitRead?{...native,responseBytes:native.responseBytes*(native.keys[0]?.startsWith('bazaar:split:v1:')?1:3)}:native,outbound=Buffer.byteLength(JSON.stringify(request.body));
   const observation=context.observation;
+  const readPhase=context.kind?.workload?.slice(6) as keyof typeof SPLIT_READ_PIPELINE_LIMITS|undefined,readLimit=splitRead&&readPhase?SPLIT_READ_PIPELINE_LIMITS[readPhase]:undefined;
+  if(readLimit&&observation.requests>=readLimit.requests||context.identityProjection&&observation.requests>=9)throw failure();
   if(context.compactRegistry&&descriptor.registryMaximumBytes!==undefined&&descriptor.registryMaximumBytes!==workspaceRegistryTransportMaximum())throw failure();
   if(context.failed||observation.commands+descriptor.commands>context.limit.commands||observation.outboundBytes+observation.inboundBytes+outbound+descriptor.responseBytes>context.limit.wireBytes)throw failure();
   observation.commands+=descriptor.commands;observation.outboundBytes+=outbound;observation.inboundBytes+=descriptor.responseBytes;observation.requests++;
@@ -267,3 +278,6 @@ export function continuousControlBudgetRedis(redis:Redis):Redis{if(!wrapped.has(
 /** Internal native proof only. HTTP/MCP arguments cannot set this context. */
 export function continuousPerOrderResourceProfile(id:string){const c=scope.getStore();return c?.perOrderOperationId===id?c.perOrderProfile:undefined;}
 export function adoptContinuousPerOrderNativeProfile(id:string,profile:unknown){const c=scope.getStore();if(!c?.nativeText||profile!=='batch-v1'||id==='31c97193-be74-4b9d-b0a3-f3890b0a41e8'||!/^([a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12})$/.test(id))return;const limit=id===FINITE_PILOT_ID&&finitePilotProfile()?{...CONTINUOUS_CONTROL_BUDGET.perOrderBatchNativeText,commands:128,wireBytes:1.875*MiB}:CONTINUOUS_CONTROL_BUDGET.perOrderBatchNativeText;if(c.observation.outboundBytes+c.observation.inboundBytes>limit.wireBytes||c.observation.commands>limit.commands)throw failure();c.limit=limit;c.perOrderOperationId=id;c.perOrderProfile='batch-v1';}
+
+/** Native private reads admit no external service traffic, even with the optional meter disabled. */
+export function assertContinuousExternalAllowed(){if(scope.getStore()?.kind?.workload?.startsWith('split-'))throw new WorkspaceError('SPLIT_READ_EXTERNAL_FORBIDDEN',503);}

@@ -10,8 +10,8 @@
     {
       "path": ".env.example",
       "mode": "100644",
-      "bytes": 4506,
-      "sha256": "4735d679122cfc8aa13ddfc33bc2af59175514d076a4490bbac592cf5fb929da"
+      "bytes": 4831,
+      "sha256": "384d1af4aafeb67058174788877633bff269fb2ebf3bea05749c06ede414df0f"
     },
     {
       "path": ".gitattributes",
@@ -70,8 +70,8 @@
     {
       "path": "ORIGEN-MIGRACION.json",
       "mode": "100644",
-      "bytes": 890,
-      "sha256": "b12509d2cc399af79335cb3ddf0e9553723ac9865f1a066f2419734da3b8dd0a"
+      "bytes": 857,
+      "sha256": "32751b21dae6cc5939ffe59ed5a4cd874bb51fd0ca6ff54a72fc500c4cbfb6ea"
     },
     {
       "path": "PROMPT-RECEPTOR.md",
@@ -82,8 +82,8 @@
     {
       "path": "README-MIGRACION.md",
       "mode": "100644",
-      "bytes": 20827,
-      "sha256": "a82fcdde83c656d4b81766d547b7c4930dabdf6605dd2cbb72fb4e4d6a605280"
+      "bytes": 20793,
+      "sha256": "eaba4b55f9097d07222b596445f03b5030a74bb9be49995e12e7cfc3ac865255"
     },
     {
       "path": "README.es.md",
@@ -396,6 +396,18 @@
       "mode": "100644",
       "bytes": 329,
       "sha256": "d8d8b0faef60fe599e5cd98ca25c144ffc185c37c3c98d004cd4fbb63bab7372"
+    },
+    {
+      "path": "app/api/market/split-v1/[...segments]/route.ts",
+      "mode": "100644",
+      "bytes": 1982,
+      "sha256": "79f48cb4b3f64d675f57a3395e97aec3c396fce03675558d61c3bd4ae569a5f6"
+    },
+    {
+      "path": "app/api/market/split-v1/treasury-binding/route.ts",
+      "mode": "100644",
+      "bytes": 391,
+      "sha256": "777150a1fbe0947a2642f24c94a0e81af0e1dffd4f8736222e2c4faae4c166f9"
     },
     {
       "path": "app/api/mcp/route.ts",
@@ -1122,6 +1134,36 @@
       "mode": "100644",
       "bytes": 1483,
       "sha256": "8ea2678f25911a78d1dc4451ae20bc97a1620ccf794ec53802afea5f3b5ba559"
+    },
+    {
+      "path": "contracts/bazaar-split-v1/Cargo.lock",
+      "mode": "100644",
+      "bytes": 40846,
+      "sha256": "bca594cfdffcb3f13694d2fd1df15c87020c278af95d5d55a63ba53003fa06e3"
+    },
+    {
+      "path": "contracts/bazaar-split-v1/Cargo.toml",
+      "mode": "100644",
+      "bytes": 418,
+      "sha256": "f245344f0b59e40cb4f5d1e358c397de9499716cad328d3ed912af0823684e21"
+    },
+    {
+      "path": "contracts/bazaar-split-v1/router.wasm",
+      "mode": "100644",
+      "bytes": 18951,
+      "sha256": "37f5a0488ef4d605b54a2a7ffd0f31bbe49313f2796ec7d3ac0bf1817e9c1b28"
+    },
+    {
+      "path": "contracts/bazaar-split-v1/src/lib.rs",
+      "mode": "100644",
+      "bytes": 4979,
+      "sha256": "4a4143d09eb3f65d7a324f494cb17e20796a4a7cb4e9ee7fefdb129aa9a40786"
+    },
+    {
+      "path": "contracts/bazaar-split-v1/src/test.rs",
+      "mode": "100644",
+      "bytes": 14885,
+      "sha256": "5b6439cf846bf5c494a837d3ca240f07a78df1d8871a08657c79820f60a748a1"
     },
     {
       "path": "contracts/fee-split-router/Cargo.lock",
@@ -4540,8 +4582,8 @@
     {
       "path": "lib/acceptance-meter.ts",
       "mode": "100644",
-      "bytes": 30245,
-      "sha256": "6a2343bb3b1249bf6e75c3c4f08c3e00eeb71cf7f778f948bf595611f250fb87"
+      "bytes": 30311,
+      "sha256": "3551c80ebaa09f69335057662a5fcab58120d2bc09e54fd30c8b22600a38bad0"
     },
     {
       "path": "lib/activity-client.ts",
@@ -4612,8 +4654,8 @@
     {
       "path": "lib/catalog-budget.ts",
       "mode": "100644",
-      "bytes": 19398,
-      "sha256": "9db027e460038e61e1037214771179a824ad92740cdb1a266a0ac305e8cccb6c"
+      "bytes": 20074,
+      "sha256": "0de1bda38633e110910335ab007bf1d77fa1023e22237b9a5842acae41bd6cfe"
     },
     {
       "path": "lib/catalog.ts",
@@ -4628,16 +4670,340 @@
       "sha256": "dea421e515c73b8b3fb4a1b4394076b00b4ccb902e34ca04c634a3591576ee38"
     },
     {
+      "path": "lib/commission/v1/channels-adapter/adapter.d.mts",
+      "mode": "100644",
+      "bytes": 3188,
+      "sha256": "58ff8a4fa7094ae9109315c2525ab63e444231a5633c7f2b05258035eea37ffa"
+    },
+    {
+      "path": "lib/commission/v1/channels-adapter/adapter.mjs",
+      "mode": "100644",
+      "bytes": 14883,
+      "sha256": "2af5f71dfb0e4a37ae017e19ddb672b3653fa2d1d7928812d43498ced03d09f3"
+    },
+    {
+      "path": "lib/commission/v1/channels-adapter/channels-transport.d.mts",
+      "mode": "100644",
+      "bytes": 449,
+      "sha256": "4f985bff4fa46072c7a9d69f3e67a8dc441723aa0feb5b629ec13a5a0a7eb086"
+    },
+    {
+      "path": "lib/commission/v1/channels-adapter/channels-transport.mjs",
+      "mode": "100644",
+      "bytes": 3716,
+      "sha256": "d8c5931d52fce3d4b3ea2b2f8a12e3e54038d5afeefa58219b339057e6bbe28e"
+    },
+    {
+      "path": "lib/commission/v1/channels-adapter/ledger-envelope.d.mts",
+      "mode": "100644",
+      "bytes": 710,
+      "sha256": "781d62e93dbf72af069afaa7240acfc6715b37a99b9b621a12ae02a1af5e1f6a"
+    },
+    {
+      "path": "lib/commission/v1/channels-adapter/ledger-envelope.mjs",
+      "mode": "100644",
+      "bytes": 3198,
+      "sha256": "59c4fa4986cc96dddfe6efee117e6922f3cc2c4df22e9b3502081974b2e30a73"
+    },
+    {
+      "path": "lib/commission/v1/channels-adapter/redis-journal.d.mts",
+      "mode": "100644",
+      "bytes": 1288,
+      "sha256": "fa9054da339d440569248a4b3cd63074936326d98675dee5af6ddadeb2c85088"
+    },
+    {
+      "path": "lib/commission/v1/channels-adapter/redis-journal.mjs",
+      "mode": "100644",
+      "bytes": 5774,
+      "sha256": "3372e359903dc5b7b2eb1792866de20e7f42f8c872839b5e89f1331fe9fef461"
+    },
+    {
+      "path": "lib/commission/v1/conformance-history/discovery.mjs",
+      "mode": "100644",
+      "bytes": 1446,
+      "sha256": "0e5feccd9e8df0bda1402fc50b861d64f03177579f34f21e09b76ded95a5eab2"
+    },
+    {
+      "path": "lib/commission/v1/conformance-history/history-record.mjs",
+      "mode": "100644",
+      "bytes": 1652,
+      "sha256": "1094aa0befd356c0f599340a733849e854aa22dbd45a5236e97ea6e6742e2584"
+    },
+    {
+      "path": "lib/commission/v1/conformance-history/independent-client.mjs",
+      "mode": "100644",
+      "bytes": 5347,
+      "sha256": "83223bb788d1f7861249f9e13493402f4f85f5647a4d3159909b7f0a4a54c3a3"
+    },
+    {
+      "path": "lib/commission/v1/conformance-history/measured-budget.mjs",
+      "mode": "100644",
+      "bytes": 4212,
+      "sha256": "4216ce66331a44e44867221b6fe88fb0ec1bd8f7959cfa121e63176cba604d06"
+    },
+    {
+      "path": "lib/commission/v1/conformance-history/private-history.mjs",
+      "mode": "100644",
+      "bytes": 7186,
+      "sha256": "68f6ff1da0076aa7740765181a0bed2c4b1b4de79109b0890a65125cbe59081f"
+    },
+    {
+      "path": "lib/commission/v1/index.ts",
+      "mode": "100644",
+      "bytes": 780,
+      "sha256": "6e34a1290aeef23bd8dd84d8947791d66de5c2673072e46577eee8c0ad164afa"
+    },
+    {
+      "path": "lib/commission/v1/native/adapter-costs.d.mts",
+      "mode": "100644",
+      "bytes": 2658,
+      "sha256": "013d1c61653281747a8b4f76a4d21e9c6db34b926b10ccc2a04369a3c5cc4a0d"
+    },
+    {
+      "path": "lib/commission/v1/native/adapter-costs.mjs",
+      "mode": "100644",
+      "bytes": 7424,
+      "sha256": "2e003e35f8803aa906164d26710835510da27fbc1f599c19d42bbec9c0d65d58"
+    },
+    {
+      "path": "lib/commission/v1/native/adapters-authorization.d.mts",
+      "mode": "100644",
+      "bytes": 3721,
+      "sha256": "9b88283ec3391174a84d6066fab1ebf1a55f83c0e8406cb199b8494175bc1223"
+    },
+    {
+      "path": "lib/commission/v1/native/adapters-authorization.mjs",
+      "mode": "100644",
+      "bytes": 22832,
+      "sha256": "93c492188387d35c13ee3b5da328730fd5153b74dbd9e2aa67fdbc899a284e09"
+    },
+    {
+      "path": "lib/commission/v1/native/admission.d.mts",
+      "mode": "100644",
+      "bytes": 1578,
+      "sha256": "3449cf2f6ec0a1218bb3da948d1caa3fa88680ef6e9934004d85510e638a268d"
+    },
+    {
+      "path": "lib/commission/v1/native/admission.mjs",
+      "mode": "100644",
+      "bytes": 28886,
+      "sha256": "fbea70c0f4fc4751a237cbe503986c4237fd9147e962624426d306332d8ae28c"
+    },
+    {
+      "path": "lib/commission/v1/native/composition.ts",
+      "mode": "100644",
+      "bytes": 6815,
+      "sha256": "d0bde71d4cb96c76fcb01a49b6d6b0c6afd8feb814359171372286417a12e718"
+    },
+    {
+      "path": "lib/commission/v1/native/contract-context.d.mts",
+      "mode": "100644",
+      "bytes": 2454,
+      "sha256": "ec7155b9c845d10ce1e6eaf487d0a7343360c65d770da38372e214437c43a331"
+    },
+    {
+      "path": "lib/commission/v1/native/contract-context.mjs",
+      "mode": "100644",
+      "bytes": 10210,
+      "sha256": "4e62596827024e97a006862a28f60c8c8043e0f0f0caed806378a0eabd646e8a"
+    },
+    {
+      "path": "lib/commission/v1/native/cost-bound.mjs",
+      "mode": "100644",
+      "bytes": 2737,
+      "sha256": "7b38e4bca1a19016c92e691eb1913e75a7aaace6c30bca19a409151807cea5b9"
+    },
+    {
+      "path": "lib/commission/v1/native/dependency-factories.d.mts",
+      "mode": "100644",
+      "bytes": 2045,
+      "sha256": "23e8deef0af98019de7e0cfb73082bd2dea683b5c915202c05203d9365b8d841"
+    },
+    {
+      "path": "lib/commission/v1/native/dependency-factories.mjs",
+      "mode": "100644",
+      "bytes": 5366,
+      "sha256": "fc1767aee46a87c0c77de53caefb91f926c96cc2b6cccde950aa249906c52412"
+    },
+    {
+      "path": "lib/commission/v1/native/http.d.mts",
+      "mode": "100644",
+      "bytes": 887,
+      "sha256": "c1844192ef781c08c706dc4cc81c45c87c33d153f46e7ea87b4f8ad87fc4a7cc"
+    },
+    {
+      "path": "lib/commission/v1/native/http.mjs",
+      "mode": "100644",
+      "bytes": 20115,
+      "sha256": "621fd108325bf45d3a78d713395ec16cc4e19ff5f52945c185c70c323071e972"
+    },
+    {
+      "path": "lib/commission/v1/native/lifecycle-budget-v2.d.mts",
+      "mode": "100644",
+      "bytes": 2974,
+      "sha256": "a020c6e69c3d47ef4b5672ae8fa678c73d2c03178c07de5c9e4321e679d9e384"
+    },
+    {
+      "path": "lib/commission/v1/native/lifecycle-budget-v2.mjs",
+      "mode": "100644",
+      "bytes": 18090,
+      "sha256": "8ecc124b7925d480806757253f4face1e1052e30774ecd4be0273f09c5941127"
+    },
+    {
+      "path": "lib/commission/v1/native/read-cost-certificate.d.mts",
+      "mode": "100644",
+      "bytes": 745,
+      "sha256": "b0b25e675f30e9f24732f2409254f774329d64d541479b9a0dee568634e7b6fd"
+    },
+    {
+      "path": "lib/commission/v1/native/read-cost-certificate.mjs",
+      "mode": "100644",
+      "bytes": 4945,
+      "sha256": "aeb78e083766e33dc7325fab41ad858a566afe6ca37e6fe7972ce62140b0a340"
+    },
+    {
+      "path": "lib/commission/v1/native/readonly-auth.ts",
+      "mode": "100644",
+      "bytes": 1173,
+      "sha256": "c4f09d4b97cdab7e23254126b1c9b2043cb96da1eebdc7d70d9f238a63eb0728"
+    },
+    {
+      "path": "lib/commission/v1/native/readonly-transport.d.mts",
+      "mode": "100644",
+      "bytes": 146,
+      "sha256": "086ff5235e1284d05da242aaed4a5affea858c93ef739510a6d47addc4febb66"
+    },
+    {
+      "path": "lib/commission/v1/native/readonly-transport.mjs",
+      "mode": "100644",
+      "bytes": 1053,
+      "sha256": "cf2d28408b6f5878373197083359b070e1240f5e54f207d83ed0ac6c3e625c8a"
+    },
+    {
+      "path": "lib/commission/v1/native/runtime.ts",
+      "mode": "100644",
+      "bytes": 1198,
+      "sha256": "401eccc76c4e34144c0883a71f60615e1ea265f3b6fe275c4abfd468c0526838"
+    },
+    {
+      "path": "lib/commission/v1/native/stage-accounting.d.mts",
+      "mode": "100644",
+      "bytes": 7132,
+      "sha256": "a017e2b022c41d075fd0fa1f2e035c5cc9d98c5a22589c8f1176e1a508d05a20"
+    },
+    {
+      "path": "lib/commission/v1/native/stage-accounting.mjs",
+      "mode": "100644",
+      "bytes": 26698,
+      "sha256": "bb55610fbf8d95591c27e84067ee04c2926e201c909926d5553b98ed2a9ba08b"
+    },
+    {
+      "path": "lib/commission/v1/native/store.d.mts",
+      "mode": "100644",
+      "bytes": 493,
+      "sha256": "e749c9ff9a6eb5c3cca994cc786bf4f9576dbf927cd2cb399fccbdee9b75f9a5"
+    },
+    {
+      "path": "lib/commission/v1/native/store.mjs",
+      "mode": "100644",
+      "bytes": 9674,
+      "sha256": "202c00fb1ef0ca92b9bf21f495e94ebc45ae5e5cfe78a8c12fa07ea7979d41ea"
+    },
+    {
+      "path": "lib/commission/v1/native/treasury-account-reader.d.mts",
+      "mode": "100644",
+      "bytes": 511,
+      "sha256": "f625b848844d334348eef68b75ed5504727ec52ee35ead8b66ac3b2f60b850b6"
+    },
+    {
+      "path": "lib/commission/v1/native/treasury-account-reader.mjs",
+      "mode": "100644",
+      "bytes": 3756,
+      "sha256": "3fc7230cc12d5c155d09940d6b49b4f1ae75eb6346b095fb3692e76d79a63f76"
+    },
+    {
+      "path": "lib/commission/v1/native/treasury-binding.d.mts",
+      "mode": "100644",
+      "bytes": 1367,
+      "sha256": "3c97acbd4b440a592ca5c079d5ccc96abd671af345ddce674a8d352bb220d544"
+    },
+    {
+      "path": "lib/commission/v1/native/treasury-binding.mjs",
+      "mode": "100644",
+      "bytes": 8933,
+      "sha256": "f089956eaa73df558bf3d8ced6ddafadbfe0235a3eb1647ca6e4b88cd028216f"
+    },
+    {
+      "path": "lib/commission/v1/native/treasury-composition.ts",
+      "mode": "100644",
+      "bytes": 2373,
+      "sha256": "cf8e6f0ad3a9fc56e293d71a030c326512b160bb7be192196bde0ec5fb878375"
+    },
+    {
+      "path": "lib/commission/v1/native/treasury-http.d.mts",
+      "mode": "100644",
+      "bytes": 371,
+      "sha256": "f2bf7b851a59ba9fc8c5da51aa17653f03b8dc8806e5be15fd13d6551bf4415e"
+    },
+    {
+      "path": "lib/commission/v1/native/treasury-http.mjs",
+      "mode": "100644",
+      "bytes": 4452,
+      "sha256": "6fd190e7b01576503dfbf22331d925a242401abbf7c157a5efa2cd398b05e6a7"
+    },
+    {
+      "path": "lib/commission/v1/native/treasury-runtime.ts",
+      "mode": "100644",
+      "bytes": 1531,
+      "sha256": "e25b02ee43436e6487bfd3c3214055c2b72f4a55d8327e185d2c47636907de53"
+    },
+    {
+      "path": "lib/commission/v1/native/unsigned-challenge.d.mts",
+      "mode": "100644",
+      "bytes": 883,
+      "sha256": "5948c04c45b3cda8aa28d3b7604c3828d7af033cbef076c8bd5d602df7fa04dc"
+    },
+    {
+      "path": "lib/commission/v1/native/unsigned-challenge.mjs",
+      "mode": "100644",
+      "bytes": 7229,
+      "sha256": "cbb238fc6288e7d407060e40a61137cf125123f156d12dfa2720fc83c4bcc7c5"
+    },
+    {
+      "path": "lib/commission/v1/policy-router/fee-split-policy-v1.d.mts",
+      "mode": "100644",
+      "bytes": 2210,
+      "sha256": "276f4f6f55d4c9efcaec5fb0b0e6b28b65818ef33aafbcb9d86ef830e7059c29"
+    },
+    {
+      "path": "lib/commission/v1/policy-router/fee-split-policy-v1.mjs",
+      "mode": "100644",
+      "bytes": 8317,
+      "sha256": "54158fd6bc9515783364eec96da1be8e8e617e3499d56e9f89f375f76e32df9a"
+    },
+    {
+      "path": "lib/commission/v1/rpc-reader/reader.d.mts",
+      "mode": "100644",
+      "bytes": 2723,
+      "sha256": "3feed5f596c19bed0e354977668d582250a6a36200fb1b45c6f0b0b91bbd2e7e"
+    },
+    {
+      "path": "lib/commission/v1/rpc-reader/reader.mjs",
+      "mode": "100644",
+      "bytes": 13496,
+      "sha256": "19cbb893874c520c17be57b9530c99250ad77333371412c837ed839289c1a01a"
+    },
+    {
       "path": "lib/continuous-control-budget.ts",
       "mode": "100644",
-      "bytes": 27284,
-      "sha256": "79b868fb9d88a578fed3dfe45d6eb189bcd6b434ea5cccd0a2f70837ba6108f9"
+      "bytes": 29989,
+      "sha256": "affa4b959e96eae626396475a3be1592c67a040fb32375b3553ef505f32887df"
     },
     {
       "path": "lib/continuous-free-budget.ts",
       "mode": "100644",
-      "bytes": 26367,
-      "sha256": "6d3071d9f22a1d7ec3823353681630a634470d038a85cddb3d458051ee1c9d6e"
+      "bytes": 26476,
+      "sha256": "0a6af91e7aca65c46dd7a8ef9c08528e21e5c0ccd49b05ff950d335bf54e87a9"
     },
     {
       "path": "lib/continuous-free-storage.ts",
@@ -4714,8 +5080,8 @@
     {
       "path": "lib/demo-http.ts",
       "mode": "100644",
-      "bytes": 8397,
-      "sha256": "fb9d094123ed32964bb5af32f5ae4db5cf990da5fabe9838044fc48ad3c7595d"
+      "bytes": 10152,
+      "sha256": "db0f2bd3f6405b3d1ae9721b3260c8f7da0ac80239691563c90feaad5a29e7ae"
     },
     {
       "path": "lib/demo-instructions.ts",
@@ -4858,8 +5224,8 @@
     {
       "path": "lib/market-order-storage.ts",
       "mode": "100644",
-      "bytes": 10571,
-      "sha256": "5d961e7156e17b5e69030bea6408918451d4b4ca70d61982edf60c3b42e53c76"
+      "bytes": 11619,
+      "sha256": "1d50af93f4ff88a14fed2503fa58ae6d7b9064880d158675e332bd4005b2bbfa"
     },
     {
       "path": "lib/market-pagination.ts",
@@ -4906,8 +5272,8 @@
     {
       "path": "lib/market-runtime-configuration.ts",
       "mode": "100644",
-      "bytes": 5535,
-      "sha256": "e32f2e76cdc7dc4390c910f0cab9485dce247cf0032668c00e09678b4e798b05"
+      "bytes": 6684,
+      "sha256": "086230cec422252544c4edae0235ee109fd1e14479d10d06ef25221df06845c8"
     },
     {
       "path": "lib/market-search.ts",
@@ -4954,8 +5320,8 @@
     {
       "path": "lib/market-text-seller-runtime.ts",
       "mode": "100644",
-      "bytes": 15649,
-      "sha256": "5eb27b4a1d2656e153cd911c564e3a984d10cbd6bed57b12f7bfe45b2d4935cb"
+      "bytes": 16539,
+      "sha256": "83e62e81f58c8c5cae7641611c6b399142b3190a9b54215f249075750bf49003"
     },
     {
       "path": "lib/market-visitor.ts",
@@ -5020,8 +5386,8 @@
     {
       "path": "lib/marketplace.ts",
       "mode": "100644",
-      "bytes": 35423,
-      "sha256": "45454de42b935f46fb6acb1bd58328bfc113d43903dd1dbda49c45c7f8434b86"
+      "bytes": 35893,
+      "sha256": "3bb75d54bbf65a74819ec5c34b553800d8ab9efbe5963503ee58ba9678a5dc44"
     },
     {
       "path": "lib/mcp-onboarding-server.ts",
@@ -5046,6 +5412,12 @@
       "mode": "100644",
       "bytes": 2244,
       "sha256": "fe51ef6444dd210db19f544c94077c3ce3fbb83a2dc36db8daa4510882b6e458"
+    },
+    {
+      "path": "lib/multiseller-pilot.ts",
+      "mode": "100644",
+      "bytes": 7052,
+      "sha256": "56fb351842d899ec89017d9da390a8e347e0dab4ab821aa3855ef30c6ed24083"
     },
     {
       "path": "lib/operation-history-auth.ts",
@@ -5086,8 +5458,8 @@
     {
       "path": "lib/operational-envelopes.ts",
       "mode": "100644",
-      "bytes": 4893,
-      "sha256": "bdf8d7d0450d09cbc629f2cdc57ad2d8c9c54bc78d9e127e37ff4fb67146aee5"
+      "bytes": 5026,
+      "sha256": "103ea0b6c17f6cafcd39895912af7d1f702b510463cf84af99327dfcf37085bc"
     },
     {
       "path": "lib/operational-metrics.ts",
@@ -5098,14 +5470,14 @@
     {
       "path": "lib/operational-pressure.ts",
       "mode": "100644",
-      "bytes": 10271,
-      "sha256": "14e426f50a0b3aa3d007a477cdafb11de627658c26f8f8f8034982f7bf818fbf"
+      "bytes": 10513,
+      "sha256": "c96afc719b4871c7183a8a3fb870ff8dedce25268b8362d2b294ea09c7b17a38"
     },
     {
       "path": "lib/operational-route-gate.ts",
       "mode": "100644",
-      "bytes": 9932,
-      "sha256": "f73f26a61fff61497b53d8ea838ff8c654b090e4cc0dee852df2853f0c676376"
+      "bytes": 10184,
+      "sha256": "cbd5cc036a3bc53ceecbd1958c5c8202202c1ae719024178886c35745c7f4080"
     },
     {
       "path": "lib/paid-delivery-envelope.ts",
@@ -5146,14 +5518,14 @@
     {
       "path": "lib/per-order-production-provider.ts",
       "mode": "100644",
-      "bytes": 7968,
-      "sha256": "15670b0736efdacbd14e55eac456b3b3d003cf5ce58fee67afdef3f3ca943b06"
+      "bytes": 8810,
+      "sha256": "9b0ab1c86f7653bd598c57111b12709fc16ffbfda1610fbd69a41c181ae6f21d"
     },
     {
       "path": "lib/per-order-seller-readiness.ts",
       "mode": "100644",
-      "bytes": 9571,
-      "sha256": "3f2ac37e25f6ae5c8aec9270cdc23dff22428473c35dd45a5bf7d5876a33c45b"
+      "bytes": 9774,
+      "sha256": "27a8ff2b63935fb2123af5968a6404c3628ed5102ca5275fc09dd3fb0e45664f"
     },
     {
       "path": "lib/per-order-storage-profile.ts",
@@ -5164,8 +5536,8 @@
     {
       "path": "lib/per-order-text-runtime.ts",
       "mode": "100644",
-      "bytes": 10339,
-      "sha256": "763629715e7a2aabef7cebb58213e25707d83559115e3fc2921e792af6cf19d6"
+      "bytes": 10661,
+      "sha256": "fa073335139368244a8879e58989167ba23c7b51b171f84449afc59f6126cc13"
     },
     {
       "path": "lib/per-order-transport-budget.ts",
@@ -5176,8 +5548,8 @@
     {
       "path": "lib/per-order-x402.ts",
       "mode": "100644",
-      "bytes": 16402,
-      "sha256": "c037141d23a119b1a8106f29a8cb421f28e9f9b8bce84305dbb188dacbfa65d9"
+      "bytes": 16672,
+      "sha256": "16265c9fd1a58247d97b44dfbd67d3e7cabd0fb973ff1696a1152447800b396a"
     },
     {
       "path": "lib/pilot-access.ts",
@@ -5212,8 +5584,8 @@
     {
       "path": "lib/pilot-route-policy.ts",
       "mode": "100644",
-      "bytes": 6250,
-      "sha256": "d260d758a9433a64013b4e7cba553f3e917487f3b97824981f6f03baa940401e"
+      "bytes": 6418,
+      "sha256": "901bc0e9b385916d6cc759c60e13b2e9d75837bc6bfc94373514df130b555858"
     },
     {
       "path": "lib/pilot-settlement.ts",
@@ -5326,8 +5698,8 @@
     {
       "path": "lib/public-buyer-admission.ts",
       "mode": "100644",
-      "bytes": 9076,
-      "sha256": "b9d9d6ff55df6e646b2ce5f93d7b6c08bf7bc4abfbb9a1e32e3039c05087b2e1"
+      "bytes": 9942,
+      "sha256": "ccc4d6f8d0257c65438a28d483a480f131d043a6d79da65e50717d975f06a2f2"
     },
     {
       "path": "lib/public-catalogue-snapshot.json",
@@ -5350,8 +5722,14 @@
     {
       "path": "lib/public-registration-budget.ts",
       "mode": "100644",
-      "bytes": 6266,
-      "sha256": "783a7da3a70458d16eecb007108e3e78c34c573f77bacc508fc5ba58b37a6466"
+      "bytes": 8965,
+      "sha256": "a5f1bb87422b393ba63c97257a4eced58db9c7244e0d62ee9f3c0da55466df57"
+    },
+    {
+      "path": "lib/public-registration-profile.ts",
+      "mode": "100644",
+      "bytes": 4859,
+      "sha256": "53a7189d3f3a3b7326f2923dc1095aacc422b1354c3b3d590273cfa259632475"
     },
     {
       "path": "lib/quota-registry-patch.ts",
@@ -5424,6 +5802,30 @@
       "mode": "100644",
       "bytes": 1986,
       "sha256": "391d325f817df2fdb56f4b5737b0bb231e04d46ca4c25a706e7a4136e4ef45b5"
+    },
+    {
+      "path": "lib/split-ingress-policy.ts",
+      "mode": "100644",
+      "bytes": 5077,
+      "sha256": "64c022ad11ef41ee120c377c7cf9e04475e1d0c6750379ba9aaad1bd67b42f72"
+    },
+    {
+      "path": "lib/split-profile-publication.ts",
+      "mode": "100644",
+      "bytes": 447,
+      "sha256": "5b6e6fe5f16491ae696257f3554bc8ce337968ec9a5e9cba19098c9a8da5eaa0"
+    },
+    {
+      "path": "lib/split-read-wire-bounds.d.mts",
+      "mode": "100644",
+      "bytes": 511,
+      "sha256": "1b97787745e5f28468109e6b22c996c2a766340c307f32844caa9f6448e0ad29"
+    },
+    {
+      "path": "lib/split-read-wire-bounds.mjs",
+      "mode": "100644",
+      "bytes": 1196,
+      "sha256": "46960169a44c99da39819eabbb92ff74653f4b7c1e10aa7f12111a156ffe2891"
     },
     {
       "path": "lib/swap-risk.ts",
@@ -5590,8 +5992,8 @@
     {
       "path": "lib/workspace-http.ts",
       "mode": "100644",
-      "bytes": 8759,
-      "sha256": "99722d17640676dce972c340e109af5d608d2dc8c2803008a24d0e67ee79425c"
+      "bytes": 13139,
+      "sha256": "a012fa94cb31e4fc14ba10e7bd6363b2715e082eed7d612e69ee0ae53e03b468"
     },
     {
       "path": "lib/workspace-public-origin.ts",
@@ -5602,8 +6004,8 @@
     {
       "path": "lib/workspace-store.ts",
       "mode": "100644",
-      "bytes": 91540,
-      "sha256": "f69859769b82f192e6ddb542c790443a06789553bbe231503ee539c74242d319"
+      "bytes": 98806,
+      "sha256": "d341457734ea36c07c53c4f2b943456b53581fb3753183d733903e6db8dfca95"
     },
     {
       "path": "lib/workspace-types.ts",
@@ -5814,6 +6216,12 @@
       "mode": "100644",
       "bytes": 204,
       "sha256": "289023084d6f9f89b4331e5decd267f6a996b124fc5bb2437cd96a50939ca854"
+    },
+    {
+      "path": "public/payment-profiles/bazaar-split-exact-v1.json",
+      "mode": "100644",
+      "bytes": 1310,
+      "sha256": "e58768bad0d70e7dea7aa5fae74fd2a80b1179610fb0e15add7cfbe404274745"
     },
     {
       "path": "scripts/agent-human-chat.mjs",

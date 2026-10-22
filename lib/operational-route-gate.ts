@@ -1,3 +1,4 @@
+import {splitReadonlyIngress,splitHistoryQueryValid} from './split-ingress-policy.ts';
 import { pilotRoutePolicy, publicBazaarApi } from './pilot-route-policy.ts';
 import { workspacePublicOrigin } from './workspace-public-origin.ts';
 import { publicOperationalMcpTools } from './operational-pressure.ts';
@@ -48,6 +49,8 @@ export function earlyRouteGate(request: Request): EarlyRouteResult {
     if(operatorDiagnostic){
       // Exact operator GET/path/query and cryptographic proof already checked.
       // Continue through the common size/body gates below, never return early.
+    } else if(splitReadonlyIngress(path,method)?.action==='history'){
+      if(!splitHistoryQueryValid(url.searchParams))return {code:'INVALID_REQUEST',status:400};
     } else if(path==='/api/activity'&&method==='GET') {
       const params=url.searchParams,allowed=['view','limit','cursor','taskId','agentId','from','to','status','operationId','download'];
       if([...params.keys()].some(key=>!allowed.includes(key)||params.getAll(key).length!==1))return {code:'INVALID_REQUEST',status:400};

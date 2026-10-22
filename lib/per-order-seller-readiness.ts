@@ -20,10 +20,10 @@ const unavailable=()=>new WorkspaceError('SELLER_UNAVAILABLE',503,60);
 const unconfirmed=()=>new WorkspaceError('SELLER_READINESS_RENEWAL_UNCONFIRMED',503,60);
 /** The new signed flow gives readiness its own bounded background accounting.
  * This fetch exists only inside the reviewed factory, never in HTTP arguments. */
-function observedReadinessFetch(operationId:string):typeof fetch{
+function observedReadinessFetch(operationId:string,order:MarketOrder):typeof fetch{
  return async(input,init)=>{
   const assertEnabled=()=>{if(!isPerOrderPaymentEnabled(operationId)||perOrderPaymentCapabilityKind(operationId)!=='production')throw new WorkspaceError('PER_ORDER_PAYMENTS_NOT_ENABLED',503);};assertEnabled();
-  const binding=textSellerConfiguration(),target=String(input instanceof Request?input.url:input);if(!binding||target!==binding.url||init?.method!=='POST'||init.redirect!=='error'||typeof init.body!=='string'||Buffer.byteLength(init.body)>256)throw unavailable();
+  const binding=textSellerConfiguration(process.env,{serviceId:order.serviceId,cardHash:order.cardHash,sellerOwnerId:order.sellerOwnerId}),target=String(input instanceof Request?input.url:input);if(!binding||target!==binding.url||init?.method!=='POST'||init.redirect!=='error'||typeof init.body!=='string'||Buffer.byteLength(init.body)>256)throw unavailable();
   const body=JSON.parse(init.body);if(body.mode!=='readiness'||Object.keys(body).sort().join(',')!=='budgetProfile,mode'||body.budgetProfile!=='bazaar-text-redis-wire/v2')throw unavailable();
   const outgoing=Buffer.byteLength(init.body)+Buffer.byteLength(JSON.stringify([...new Headers(init.headers)]));let incoming=0;
   return meteredExternal('provider',async()=>{
@@ -76,7 +76,7 @@ export async function ensurePerOrderSellerPaymentReadiness(order:MarketOrder,p:W
  // Any unknown marker acknowledgement exits above, before charging background
  // budget or contacting the provider. There is deliberately no retry loop.
  assertEnabled();
- if(perOrderPaymentCapabilityKind(id)==='production')await withPerOrderProductionBackgroundMeter(id,()=>createMarketTextSellerRuntime({fetch:observedReadinessFetch(id)}).readiness(service,order,true));
+ if(perOrderPaymentCapabilityKind(id)==='production')await withPerOrderProductionBackgroundMeter(id,()=>createMarketTextSellerRuntime({fetch:observedReadinessFetch(id,order)}).readiness(service,order,true));
  else await ensureMarketTextReadiness(service,order,true);
  assertEnabled();
 }

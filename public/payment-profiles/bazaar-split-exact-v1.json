@@ -1,0 +1,47 @@
+{
+  "version": "bazaar.payment-discovery/v1",
+  "profile": "bazaar-split-exact-v1",
+  "status": "local-candidate",
+  "enabled": false,
+  "published": false,
+  "standardExactCompatible": false,
+  "network": "stellar:testnet",
+  "asset": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA",
+  "decimals": 7,
+  "fee": {
+    "bps": 150,
+    "includedInGross": true,
+    "treasury": "GATWLYZ5KF4H4YEPBINI6DARECUCI5CIN5ZEOF7YN7XYJ22Z5TLRXZ2X",
+    "rounding": "reject"
+  },
+  "allocation": {
+    "grossAtomic": "100000",
+    "sellerNetAtomic": "98500",
+    "commissionAtomic": "1500"
+  },
+  "storage": {
+    "namespace": "bazaar:split:v1:orders",
+    "orderVersion": "bazaar.split-order/v1",
+    "legacyMigration": false
+  },
+  "capabilities": {
+    "discover": "offline-fixture",
+    "order": false,
+    "sign": false,
+    "settle": false,
+    "history": "offline-owner-scoped-fixture"
+  },
+  "activationRequires": [
+    "reviewed-contract-wasm",
+    "testnet-contract-deployment-authorization",
+    "seller-net-acceptance",
+    "treasury-control-and-usdc-eligibility",
+    "channels-compatibility-and-fee-limit",
+    "reviewed-server-integration",
+    "current-complete-budget",
+    "buyer-quota",
+    "seller-capacity",
+    "coordinated-publication-authorization",
+    "specific-pilot-authorization"
+  ]
+}

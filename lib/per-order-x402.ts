@@ -55,11 +55,11 @@ async function markUncertain(repo:MarketOrderRepository,id:string,p:WorkspacePri
  });
 }
 function validOutcome(outcome:SettleResponse,order:MarketOrder){return outcome?.network==='stellar:testnet'&&outcome.payer===order.payer&&typeof outcome.transaction==='string'&&/^[a-f0-9]{64}$/.test(outcome.transaction);}
-async function providerReady(id:string,deps:PerOrderX402Dependencies){
+async function providerReady(id:string,order:MarketOrder,deps:PerOrderX402Dependencies){
  assertPerOrderPaymentCapability(id,deps);
  if(perOrderPaymentCapabilityKind(id)!=='production')return;
  const provider=await import('./per-order-production-provider.ts');
- assertPerOrderPaymentCapability(id,deps);await provider.assertPerOrderProductionProviderReady(id);assertPerOrderPaymentCapability(id,deps);
+ assertPerOrderPaymentCapability(id,deps);await provider.assertPerOrderProductionProviderReady(id,{serviceId:order.serviceId,cardHash:order.cardHash,sellerOwnerId:order.sellerOwnerId});assertPerOrderPaymentCapability(id,deps);
 }
 async function quoteGuard(order:MarketOrder,p:WorkspacePrincipal,budgetProfile?:'batch-v1'){
  const expiry=Date.parse(order.sellerReservation?.expiresAt??'');
@@ -123,14 +123,14 @@ export async function executePerOrderX402Payment(p:WorkspacePrincipal,id:string,
   if(record.phase==='confirmed'){const paid=await finalize(repo,id,p,record,deps);return paidResponse(paid.order,paid.settlement,origin);}
   throw new WorkspaceError(record.phase==='rejected'?'X402_PAYMENT_REJECTED':'X402_PAYMENT_OUTCOME_UNCERTAIN',record.phase==='rejected'?402:409);
  }
- assertMarketPurchaseAdmission(p);await providerReady(id,deps);await ensurePerOrderSellerPaymentReadiness(order,p,await quoteGuard(order,p,envelope.budgetProfile),envelope.budgetProfile);const paymentGuard=await sellerPaymentGuard(order,p);await operationalRequestGate({profile:'authenticated',newOperation:true,workload:'financial'});const attemptId=randomUUID();
+ assertMarketPurchaseAdmission(p);await providerReady(id,order,deps);await ensurePerOrderSellerPaymentReadiness(order,p,await quoteGuard(order,p,envelope.budgetProfile),envelope.budgetProfile);const paymentGuard=await sellerPaymentGuard(order,p);await operationalRequestGate({profile:'authenticated',newOperation:true,workload:'financial'});const attemptId=randomUUID();
  // The proof, permanent nonce claim and submitting order are accepted together.
  const verifying=await repo.transact(id,current=>{const native=orderIn(current,p),r=current.settlement;if(!r)throw new WorkspaceError('OPERATION_CONFLICT',409);assertRecordBinding(r,native);assertMarketPurchaseAdmission(p);if(r.phase!=='challenged'||r.payloadHash||native.phase!=='awaiting-payment')throw new WorkspaceError('OPERATION_CONFLICT',409);Object.assign(r,proof,{attemptId,phase:'verifying',updatedAt:new Date().toISOString()});native.phase='payment-submitting';native.settlementAttemptId=attemptId;native.updatedAt=r.updatedAt;if(native.sellerReservation)native.sellerReservation.committed=true;return {order:native,settlement:r};},{guard:paymentGuard});record=verifying.settlement;order=verifying.order;
  let verified;assertPerOrderPaymentCapability(id,deps);
  try{verified=await deps.facilitator.verify(proof.payload,record.challenge.accepts[0]);}
  catch{await reject(repo,id,p,record);throw new WorkspaceError('X402_PAYMENT_REJECTED',402);}
  if(verified?.isValid!==true||verified.payer!==order.payer){await reject(repo,id,p,record);throw new WorkspaceError('X402_PAYMENT_REJECTED',402);}
- let guard:MarketCommitGuard;try{assertMarketPurchaseAdmission(p);await providerReady(id,deps);guard=await sellerPaymentGuard(order,p);}catch(error){await reject(repo,id,p,record);throw error;}
+ let guard:MarketCommitGuard;try{assertMarketPurchaseAdmission(p);await providerReady(id,order,deps);guard=await sellerPaymentGuard(order,p);}catch(error){await reject(repo,id,p,record);throw error;}
  const wallStart=Date.now(),monotonicStart=performance.now();
  const settling=await change(repo,id,p,record,(_order,r)=>{if(r.phase!=='verifying')throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='settling';},guard);record=settling.settlement;order=settling.order;
  const admissionNow=Math.max(Date.now(),wallStart+Math.max(0,performance.now()-monotonicStart));

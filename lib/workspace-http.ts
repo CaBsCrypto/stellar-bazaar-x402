@@ -59,6 +59,29 @@ export async function authenticateWorkspaceRequest(request: Request, role?: Work
   await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.generation, principal.role === "bootstrap" ? workspaceBearerHash(request.headers.get("authorization")) : undefined,boundedPublicControl);
   return principal;
 }
+// These one-use receipts are request-local output, never a reusable identity
+// guard or a source of operation credit. Only the native quota CAS can mint one.
+const identityRequests=new WeakSet<Request>();
+const identityBudgetProofs=new WeakMap<Request,{principal:Readonly<import('./workspace-types.ts').WorkspacePrincipal>;tokenHash:string;expiresAtMs:number}>();
+const identityBudgetAdmissions=new WeakMap<Request,{principal:Readonly<import('./workspace-types.ts').WorkspacePrincipal>;tokenHash:string;expiresAtMs:number}>();
+const identityReceipts=new WeakMap<Request,{identity:unknown;tokenHash:string;expiresAtMs:number}>();
+export function projectedPublicIdentityRequest(request:Request){const u=new URL(request.url);return request.method==='GET'&&u.origin===workspacePublicOrigin()&&u.pathname==='/api/account/identity'&&!u.search&&!u.hash&&process.env.BAZAAR_WORKSPACE_BACKEND==='redis'&&process.env.BAZAAR_FREE_DEMO_MODE==='continuous'&&process.env.BAZAAR_FREE_PLAN_TRANSPORT_PROFILE==='compact-registry-v2'&&process.env.BAZAAR_PILOT_REVIEW_TRANSPORT==='bounded-v1';}
+/** Resolves real native credentials; no caller-supplied principal can mint the
+ * private request proof consumed by the smaller transport budget. */
+export async function requireWorkspaceIngressPrincipal(request:Request,role?:WorkspaceRole){const principal=await requireWorkspacePrincipal(request.headers.get('authorization'),role);if(projectedPublicIdentityRequest(request)&&['human','agent'].includes(principal.role))identityBudgetProofs.set(request,{principal:Object.freeze({...principal}),tokenHash:workspaceBearerHash(request.headers.get('authorization')),expiresAtMs:Date.now()+5000});return principal;}
+export function takeProjectedIdentityBudgetProof(request:Request){const proof=identityBudgetProofs.get(request);identityBudgetProofs.delete(request);if(!proof||!projectedPublicIdentityRequest(request)||request.signal.aborted||Date.now()>=proof.expiresAtMs||proof.tokenHash!==workspaceBearerHash(request.headers.get('authorization')))throw new WorkspaceError('IDENTITY_BUDGET_PROOF_REQUIRED',503);identityBudgetAdmissions.set(request,proof);return proof;}
+export async function prepareProjectedPublicIdentity(request:Request){
+ if(!projectedPublicIdentityRequest(request)||identityRequests.has(request)||request.signal.aborted)throw new WorkspaceError('IDENTITY_REQUEST_SCOPE',409);
+ identityRequests.add(request);const expiresAtMs=Date.now()+5000;
+ await demoIngress(request);assertWorkspaceRequest(request);
+ const hash=workspaceBearerHash(request.headers.get('authorization')),admission=identityBudgetAdmissions.get(request);let principal,identity;
+ try{principal=await requireWorkspacePrincipal(request.headers.get('authorization'));}
+ catch(e){if(!(e instanceof WorkspaceError)||e.code!=='FORBIDDEN'||admission)throw e;principal=await requireWorkspacePrincipal(request.headers.get('authorization'),'bootstrap');await configuredWorkspaceStore().consumeRequest(principal.ownerId,principal.generation,hash);identity=(await configuredWorkspaceStore().walletIdentity(principal)).identity;}
+ if(identity===undefined){if(admission&&(Date.now()>=admission.expiresAtMs||admission.tokenHash!==hash||['role','ownerId','workspaceId','agentId','generation'].some(k=>principal[k as keyof typeof principal]!==admission.principal[k as keyof typeof admission.principal])))throw new WorkspaceError('IDENTITY_BUDGET_PRINCIPAL_CHANGED',401);assertTreasuryControlRequest(principal,request);const boundedPublicControl=await publicControlRequest(request)||!hasAcceptedOperationCredit(request,principal.ownerId);identity=await configuredWorkspaceStore().consumeIdentityRequest(principal,hash,boundedPublicControl);}
+ if(request.signal.aborted||Date.now()>=expiresAtMs||hash!==workspaceBearerHash(request.headers.get('authorization')))throw new WorkspaceError('IDENTITY_REQUEST_UNCONFIRMED',503);
+ identityReceipts.set(request,{identity,tokenHash:hash,expiresAtMs});
+}
+export function takeProjectedPublicIdentity(request:Request){const receipt=identityReceipts.get(request);identityReceipts.delete(request);if(!receipt||!projectedPublicIdentityRequest(request)||request.signal.aborted||Date.now()>=receipt.expiresAtMs||receipt.tokenHash!==workspaceBearerHash(request.headers.get('authorization')))throw new WorkspaceError('IDENTITY_REQUEST_RECEIPT_REQUIRED',409);return receipt.identity;}
 export function trustedIp(request: Request) {
   if (process.env.VERCEL === "1") { const ip = request.headers.get("x-vercel-forwarded-for")?.split(",")[0].trim(); if (ip && isIP(ip)) return ip; }
   return ["127.0.0.1", "localhost", "[::1]"].includes(new URL(request.url).hostname) ? "loopback" : "untrusted";

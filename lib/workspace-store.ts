@@ -14,7 +14,7 @@ import { workspaceGlobalRequestLimits } from "./workspace-admission.ts";
 import {prepareContinuousStorageCommit} from './continuous-free-storage.ts';
 import {prepareQuotaRegistryPatch,QUOTA_REGISTRY_PATCH_LUA,workspaceRegistryTransportMaximum,COMPACT_WORKSPACE_REGISTRY_MAX_BYTES,COMPACT_WORKSPACE_REGISTRY_V2_MAX_BYTES,isCompactWorkspaceTransport} from './quota-registry-patch.ts';
 import {assertTreasuryControlRegistration,treasuryControlRegistrationPool,consumeTreasuryControl} from './treasury-control-workspace.ts';
-import {publicRegistrationPool,appendPublicRegistrationGuard,publicRegistrationBudgetKey,consumePublicOwnerControl} from './public-registration-budget.ts';
+import {publicRegistrationPool,appendPublicRegistrationGuard,publicRegistrationBudgetKey,consumePublicOwnerControl,recordPublicStarterRegistration} from './public-registration-budget.ts';
 
 import {demoEnabled,walletBindingSchema,walletChallengeSchema,walletMessage,verifyWalletProof,walletAddressSchema,type WalletChallenge} from "./demo-wallet.ts";
 
@@ -44,8 +44,43 @@ export interface WorkspaceRedis { eval(script: string, keys: string[], args: str
 export const READ_CONTINUOUS_WORKSPACE_STORAGE_LUA=`return redis.call('GET',KEYS[1])`;
 export const READ_WORKSPACE_LUA = `return {redis.call('GET', KEYS[1]) or '', redis.call('GET', KEYS[2]) or '', redis.call('GET', KEYS[3]) or ''}`;
 export const READ_COMPACT_WORKSPACE_LUA = `local registry=redis.call('GET',KEYS[1]) or '';if #registry>131072 then return -26 end;return {registry,redis.call('GET',KEYS[2]) or '',redis.call('GET',KEYS[3]) or ''}`;
-export const READ_COMPACT_V2_WORKSPACE_LUA=`local registry=redis.call('GET',KEYS[1]) or '';if #registry>32768 then return -26 end;local document=redis.call('GET',KEYS[2]) or '';if #document>131072 then return -26 end;local marker=redis.call('GET',KEYS[3]) or '';if #marker>512 then return -26 end;return {registry,document,marker}`;
-export const READ_COMPACT_V2_REGISTRY_LUA=`local registry=redis.call('GET',KEYS[1]) or '';if #registry>32768 then return -26 end;if redis.call('GET',KEYS[2]) then return -26 end;local marker=redis.call('GET',KEYS[3]) or '';if #marker>512 then return -26 end;return {registry,'',marker}`;
+
+// Validate only UTF-8 and encoded transport size. Raw JSON is never parsed,
+// normalized or rewritten here; native schema and exact CAS checks stay intact.
+// Redis Lua cjson can treat strings as opaque bytes, so invalid UTF-8 must be
+// rejected before estimating the provider JSON wire representation.
+export const COMPACT_V2_JSON_WIRE_GUARD_LUA=`local function wire_utf8(raw)
+ local i=1
+ while i<=#raw do
+  local a=string.byte(raw,i)
+  if a<128 then i=i+1
+  else
+   local b=string.byte(raw,i+1);local c=string.byte(raw,i+2);local d=string.byte(raw,i+3)
+   if a>=194 and a<=223 then
+    if not b or b<128 or b>191 then return false end;i=i+2
+   elseif a>=224 and a<=239 then
+    if not b or not c or c<128 or c>191 then return false end
+    if a==224 then if b<160 or b>191 then return false end
+    elseif a==237 then if b<128 or b>159 then return false end
+    elseif b<128 or b>191 then return false end;i=i+3
+   elseif a>=240 and a<=244 then
+    if not b or not c or not d or c<128 or c>191 or d<128 or d>191 then return false end
+    if a==240 then if b<144 or b>191 then return false end
+    elseif a==244 then if b<128 or b>143 then return false end
+    elseif b<128 or b>191 then return false end;i=i+4
+   else return false end
+  end
+ end
+ return true
+end
+local function wire_fits(raw,maximum)
+ if #raw>maximum or not wire_utf8(raw) then return false end
+ local ok,encoded=pcall(cjson.encode,raw)
+ return ok and type(encoded)=='string' and #encoded<=2*maximum+2
+end
+`;
+export const READ_COMPACT_V2_WORKSPACE_LUA=COMPACT_V2_JSON_WIRE_GUARD_LUA+`local registry=redis.call('GET',KEYS[1]) or '';if #registry>32768 then return -26 end;local document=redis.call('GET',KEYS[2]) or '';if #document>131072 then return -26 end;local marker=redis.call('GET',KEYS[3]) or '';if #marker>512 then return -26 end;if not wire_fits(registry,32768) or not wire_fits(document,131072) or not wire_fits(marker,512) then return -26 end;return {registry,document,marker}`;
+export const READ_COMPACT_V2_REGISTRY_LUA=COMPACT_V2_JSON_WIRE_GUARD_LUA+`local registry=redis.call('GET',KEYS[1]) or '';if #registry>32768 then return -26 end;if redis.call('GET',KEYS[2]) then return -26 end;local marker=redis.call('GET',KEYS[3]) or '';if #marker>512 then return -26 end;if not wire_fits(registry,32768) or not wire_fits(marker,512) then return -26 end;return {registry,'',marker}`;
 export const COMMIT_WORKSPACE_LUA = `
 local registry = redis.call('GET', KEYS[1]) or ''
 local document = redis.call('GET', KEYS[2]) or ''
@@ -63,6 +98,28 @@ export const COMMIT_COMPACT_CONTINUOUS_WORKSPACE_LUA = COMMIT_CONTINUOUS_WORKSPA
 export const COMMIT_COMPACT_CONTINUOUS_WORKSPACE_QUOTA_LUA = COMMIT_CONTINUOUS_WORKSPACE_QUOTA_LUA.replace(QUOTA_REGISTRY_PATCH_LUA,()=>"if #registry>131072 then return -26 end\n"+QUOTA_REGISTRY_PATCH_LUA).replace("if not quotaRegistryNext then return -25 end",()=>"if not quotaRegistryNext then return -25 end\nif #quotaRegistryNext>131072 then return -26 end");
 export const COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_LUA=COMMIT_COMPACT_CONTINUOUS_WORKSPACE_LUA.replaceAll('131072','32768').replace('if #registry>32768 or #ARGV[4]>32768','if #document>131072 or #ARGV[5]>131072 or #registry>32768 or #ARGV[4]>32768');
 export const COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_QUOTA_LUA=COMMIT_COMPACT_CONTINUOUS_WORKSPACE_QUOTA_LUA.replaceAll('131072','32768').replace('if #registry>32768 then','if #document>131072 or #ARGV[5]>131072 or #registry>32768 then');
+/** Public identity only: full native raw compare, quotas and storage remain the
+ * linearization point. No owner document, permission guard or reusable authority
+ * is returned; financial walletIdentity reads retain their original path. */
+export function projectedIdentityCommitScript(storage:{appendScript(k:number,a:number):string;writeScript(k:number):string},compact=true){
+ const check=`
+local clock=redis.call('TIME');local identityNow=tonumber(clock[1])*1000+math.floor(tonumber(clock[2])/1000)
+local ok,proof=pcall(cjson.decode,ARGV[9]);if not ok or type(proof)~='table' or proof.role~='agent' and proof.role~='human' or type(proof.expiresAtMs)~='number' or proof.expiresAtMs%1~=0 or proof.expiresAtMs<=identityNow or proof.expiresAtMs>identityNow+5000 then return -29 end
+local current=cjson.decode(quotaRegistryNext);local identity=nil
+for _,m in ipairs(current.workspaces or {})do
+ if m.ownerId==proof.ownerId and m.workspaceId==proof.workspaceId and m.agentId==proof.agentId and m.generation==proof.generation and m.revoked==false and ((proof.role=='agent' and m.agentHash==proof.tokenHash) or (proof.role=='human' and m.humanHash==proof.tokenHash)) and not (m.purpose=='treasury-controls' and proof.role=='agent') then
+  if identity then return -29 end
+  identity={ownerId=m.ownerId,workspaceId=m.workspaceId,agentId=m.agentId,generation=m.generation,role=proof.role,wallet=m.wallet or cjson.null,network='stellar:testnet',emailRequired=false};if m.purpose then identity.purpose=m.purpose end
+ end
+end
+if not identity then return -29 end
+local identityRaw=cjson.encode(identity);if #identityRaw>2048 then return -29 end
+`;
+ const base=compact?COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_QUOTA_LUA:COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_LUA,write=compact?"redis.call('SET', KEYS[1], quotaRegistryNext)":"redis.call('SET', KEYS[1], ARGV[4])";
+ return "-- public-identity-quota-projection-v1:"+(compact?"patch":"full")+"\nif #KEYS~=5 or #ARGV~=9 or #ARGV[9]>1024 or ARGV[5]~='' then return -29 end\n"+base.replace(write,()=>(compact?"":"local quotaRegistryNext=ARGV[4]\n")+check+storage.appendScript(5,7)+storage.writeScript(5)+write).replace(/return 1\s*$/, "return {1,identityRaw}");
+}
+type IdentityQuotaProof=Pick<WorkspacePrincipal,'ownerId'|'workspaceId'|'agentId'|'generation'|'role'>&{tokenHash:string;expiresAtMs:number};
+function publicIdentity(meta:Meta,role:WorkspaceRole){return {...(meta.purpose?{purpose:meta.purpose}:{}),ownerId:meta.ownerId,workspaceId:meta.workspaceId,agentId:meta.agentId,generation:meta.generation,role,wallet:meta.wallet??null,network:'stellar:testnet' as const,emailRequired:false};}
 export const READ_WORKSPACE_MAINTENANCE_LUA = `local clock=redis.call('TIME');return {redis.call('GET',KEYS[1]) or '',clock[1],clock[2]}`;
 const maintenanceIndexSchema=z.object({version:z.literal(1),registryRevision:uuid,initialized:z.boolean(),nextExpiryAt:z.number().int().nonnegative().nullable()}).strict();
 export type WorkspaceMaintenanceIndex={initialized:boolean;nextExpiryAt:number|null;observedAt:number;needsBootstrap:boolean};
@@ -222,10 +279,10 @@ function enforceUnpaid(input: OperationHistoryInput) {
 type Snapshot = { registryRaw: string; documentRaw: string; marker: string };
 export type MarketCommitGuard = { keys: string[]; values: (string | null)[] };
 type PermissionSnapshot = Snapshot & { permissionRaw: string | null; guard?: MarketCommitGuard };
-interface Backend { read(ownerId?: string): Promise<Snapshot>; maintenanceIndex():Promise<WorkspaceMaintenanceIndex>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string) => Promise<void>) => Promise<T>): Promise<T>; readPermission(ownerId: string): Promise<PermissionSnapshot>; transactPermission<T>(ownerId: string, callback: (snapshot: PermissionSnapshot, commit: (permission: string) => Promise<void>) => Promise<T>): Promise<T> }
+interface Backend { identityProjection?:boolean; read(ownerId?: string): Promise<Snapshot>; maintenanceIndex():Promise<WorkspaceMaintenanceIndex>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string,identityProof?:IdentityQuotaProof) => Promise<unknown>) => Promise<T>): Promise<T>; readPermission(ownerId: string): Promise<PermissionSnapshot>; transactPermission<T>(ownerId: string, callback: (snapshot: PermissionSnapshot, commit: (permission: string) => Promise<void>) => Promise<T>): Promise<T> }
 export const READ_MARKET_PERMISSION_LUA = `return {redis.call('GET', KEYS[1]) or '', redis.call('GET', KEYS[2]) or '', redis.call('GET', KEYS[3]) or '', redis.call('GET', KEYS[4]) or ''}`;
 export const READ_COMPACT_MARKET_PERMISSION_LUA = `local registry=redis.call('GET',KEYS[1]) or '';if #registry>131072 then return -26 end;return {registry,redis.call('GET',KEYS[2]) or '',redis.call('GET',KEYS[3]) or '',redis.call('GET',KEYS[4]) or ''}`;
-export const READ_COMPACT_V2_MARKET_PERMISSION_LUA=`local registry=redis.call('GET',KEYS[1]) or '';if #registry>32768 then return -26 end;local document=redis.call('GET',KEYS[2]) or '';if #document>131072 then return -26 end;local marker=redis.call('GET',KEYS[3]) or '';if #marker>512 then return -26 end;local permission=redis.call('GET',KEYS[4]) or '';if #permission>4096 then return -26 end;return {registry,document,marker,permission}`;
+export const READ_COMPACT_V2_MARKET_PERMISSION_LUA=COMPACT_V2_JSON_WIRE_GUARD_LUA+`local registry=redis.call('GET',KEYS[1]) or '';if #registry>32768 then return -26 end;local document=redis.call('GET',KEYS[2]) or '';if #document>131072 then return -26 end;local marker=redis.call('GET',KEYS[3]) or '';if #marker>512 then return -26 end;local permission=redis.call('GET',KEYS[4]) or '';if #permission>4096 then return -26 end;if not wire_fits(registry,32768) or not wire_fits(document,131072) or not wire_fits(marker,512) or not wire_fits(permission,4096) then return -26 end;return {registry,document,marker,permission}`;
 export const COMMIT_MARKET_PERMISSION_LUA = `
 if (redis.call('GET',KEYS[1]) or '') ~= ARGV[1] then return 0 end
 if (redis.call('GET',KEYS[2]) or '') ~= ARGV[2] then return 0 end
@@ -269,7 +326,7 @@ function redisBackend(redis: WorkspaceRedis, prefix: string, allowedOwners?: rea
     if (!Array.isArray(result) || result.length !== 4 || !result.every(v => typeof v === 'string')) throw unavailable();
     return { registryRaw: result[0], documentRaw: result[1], marker: result[2], permissionRaw: result[3] || null, guard: { keys: [allKeys[0], allKeys[3]], values: [result[0], result[3] || null] } };
   };
-  return { read, readPermission, maintenanceIndex, async transactPermission(ownerId, callback) {
+  return { identityProjection:true, read, readPermission, maintenanceIndex, async transactPermission(ownerId, callback) {
     const snapshot = await readPermission(ownerId);
     return callback(snapshot, async permission => {
       const baseKeys=permissionKeys(ownerId),baseArgs=[snapshot.registryRaw, snapshot.documentRaw, snapshot.marker, snapshot.permissionRaw ?? '', permission];
@@ -286,7 +343,7 @@ function redisBackend(redis: WorkspaceRedis, prefix: string, allowedOwners?: rea
     });
   }, async transact(ownerId, callback) {
     const snapshot = await read(ownerId);
-    return callback(snapshot, async (registry, document) => {
+    return callback(snapshot, async (registry, document, identityProof) => {
       if(bytes(registry)>workspaceRegistryTransportMaximum())throw new WorkspaceError('WORKSPACE_CAPACITY',503);
       const args=[snapshot.registryRaw, snapshot.documentRaw, snapshot.marker, registry, document];
       const continuous=continuousWorkspaceMode();
@@ -305,9 +362,15 @@ function redisBackend(redis: WorkspaceRedis, prefix: string, allowedOwners?: rea
       }
       if(continuous&&document&&!snapshot.documentRaw){
         const old=validateRegistry(snapshot.registryRaw,snapshot.marker,{ownerIds:[],hashes:[]},false),next=registrySchema.parse(JSON.parse(registry)),created=next.workspaces.find(m=>m.ownerId===ownerId&&!old.workspaces.some(v=>v.ownerId===m.ownerId));
-        if(created){const pool=created.purpose==='treasury-controls'?treasuryControlRegistrationPool(created.creationId,created.ownerId):publicRegistrationPool(old.workspaces.filter(w=>w.purpose!=='treasury-controls'),created.creationId,created.ownerId);if(pool){const keyIndex=commitKeys.length+1,argIndex=args.length+1;script=appendPublicRegistrationGuard(script,keyIndex,argIndex,argIndex+1);commitKeys.push(publicRegistrationBudgetKey(prefix));args.push(JSON.stringify(pool.configuration),JSON.stringify(pool.request));}}
+        if(created){const pool=created.purpose==='treasury-controls'?treasuryControlRegistrationPool(created.creationId,created.ownerId):publicRegistrationPool(old.workspaces.filter(w=>w.purpose!=='treasury-controls'),created.creationId,created.ownerId,process.env,Date.now(),old.creationWindows);if(pool){const keyIndex=commitKeys.length+1,argIndex=args.length+1;script=appendPublicRegistrationGuard(script,keyIndex,argIndex,argIndex+1);commitKeys.push(publicRegistrationBudgetKey(prefix));args.push(JSON.stringify(pool.configuration),JSON.stringify(pool.request));}}
+      }
+      if(identityProof){
+        if(!continuous||!v2||document||commitKeys.length!==5||args.length!==8)throw unavailable('identity-native-profile');
+        const nativeStorage=await prepareContinuousStorageCommit(storageRedis,prefix,[]);if(!nativeStorage)throw unavailable('identity-native-storage');
+        script=projectedIdentityCommitScript(nativeStorage,compact!==undefined);args.push(JSON.stringify(identityProof));
       }
       const result = await redis.eval(script, commitKeys, args);
+      if(identityProof&&Array.isArray(result)&&result.length===2&&result[0]===1&&typeof result[1]==='string'&&bytes(result[1])<=2048)return JSON.parse(result[1]);
       if (result === 0) throw new RedisCompareConflict();
       if (result === -20) throw new WorkspaceError('FREE_DEMO_STORAGE_CONFLICT',409);
       if (result === -21) throw new WorkspaceError('FREE_DEMO_STORAGE_UNINITIALIZED',503);
@@ -409,6 +472,35 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     if(bytes(raw)>workspaceRegistryTransportMaximum()||registry.workspaces.reduce((n,m)=>n+m.documentBytes,bytes(raw))>WORKSPACE_LIMITS.globalBytes)throw new WorkspaceError("WORKSPACE_CAPACITY",503);
     readRegistry(raw,"workspace-v1",reservations());await commit(raw,"");return value;
   }));
+  const consumeOwnerRequest=(ownerId:string,generation:number,bootstrapHash?:string,publicControl=true,identityProof?:IdentityQuotaProof)=>safe(async()=>{
+
+      const globalLimits = workspaceGlobalRequestLimits();
+      // Acceptance v2 budgets one quota CAS; contention stops before any action.
+      // Outside that measured sprint, only a definite CAS0 permits counter retry.
+      // Every attempt reads and validates current identity, document and quota.
+      const attempts = continuousWorkspaceMode() || process.env.BAZAAR_ACCEPTANCE_METER === 'true' && process.env.BAZAAR_ACCEPTANCE_X402 === 'true' ? 1 : 8;
+      for (let attempt = 0; attempt < attempts; attempt++) {
+        try { const identity=await backend.transact(ownerId, async (s, commit) => {
+          const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
+          if (!meta) throw new WorkspaceError("UNAUTHORIZED", 401);
+          const administration = bootstrapHash !== undefined && bootstrapHash === meta.bootstrapHash;
+          if ((bootstrapHash !== undefined && !administration) || (!administration && (meta.generation !== generation || meta.revoked))) throw new WorkspaceError("UNAUTHORIZED", 401);
+          validateDocument(s.documentRaw, meta);
+          if(identityProof){if(meta.purpose==='treasury-controls'&&identityProof.role==='agent')throw new WorkspaceError('TREASURY_CONTROL_SCOPE',403);const p=identityProof;if(meta.workspaceId!==p.workspaceId||meta.agentId!==p.agentId||meta.generation!==p.generation||meta.revoked||(p.role!=='human'&&p.role!=='agent')||(p.role==='human'?meta.humanHash:meta.agentHash)!==p.tokenHash||(meta.purpose==='treasury-controls'&&p.role==='agent'))throw new WorkspaceError('UNAUTHORIZED',401);}
+          const now = Date.now();
+          registry.creationWindows=registry.creationWindows.filter(w=>w.until>now);
+          if(meta.purpose==='treasury-controls'&&!administration)consumeTreasuryControl(registry.creationWindows,meta,now);
+          else if(publicControl&&!administration)consumePublicOwnerControl(registry.creationWindows,meta,process.env,now);
+          consumeGlobalQuota(registry, now, globalLimits);
+          registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
+          if (!w) { w = { ownerId, count: 0, until: now + 60000 }; registry.requestWindows.push(w); }
+          if (w.count >= (demoEnabled()?WORKSPACE_LIMITS.demoRequestsPerMinute:WORKSPACE_LIMITS.requestsPerMinute)) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429,Math.max(1,Math.ceil((w.until-now)/1000)));
+          w.count++; registry.revision = randomUUID(); const reg = JSON.stringify(registry); readRegistry(reg, "workspace-v1", reservations()); const projected=await commit(reg, "",identityProof);if(identityProof){if(canonicalOperationJson(projected)!==canonicalOperationJson(publicIdentity(meta,identityProof.role))||Date.now()>=identityProof.expiresAtMs)throw unavailable('identity-projection-unconfirmed');return projected;}
+        }); return identity; }
+        catch (e) { if (!(e instanceof RedisCompareConflict)) throw e; }
+      }
+      throw unavailable("quota-contention");
+  });
   const store = {
     async maintenanceIndex():Promise<WorkspaceMaintenanceIndex>{return safe(async()=>{
       if(principal)throw new WorkspaceError('FORBIDDEN',403);
@@ -608,6 +700,9 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         const d = emptyDocument(ownerId), raw = JSON.stringify(d);
         const meta: Meta = { ...(purpose==='treasury-controls'?{purpose}:{}), creationId: input.creationId, workspaceId: randomUUID(), ownerId, agentId: "agent_" + randomUUID().replaceAll("-", ""), bootstrapHash, initialHumanHash: input.humanAccessHash, initialAgentHash: input.agentAccessHash, humanHash: input.humanAccessHash, agentHash: input.agentAccessHash, retiredHashes: [], accessIntents: [], generation: 1, revoked: false, createdAt: new Date(Date.now()).toISOString(), documentRevision: d.revision, documentBytes: bytes(raw) };
         if(continuousWorkspaceMode())meta.nextContentExpiryAt=documentNextExpiryAt(d);
+        // An existing quota-window row keeps the opt-in marker readable by old
+        // releases. It never expires or resets when access/policy changes.
+        if(purpose==='market')recordPublicStarterRegistration(registry.creationWindows,ownerId);
         registry.workspaces.push(meta); registry.revision = randomUUID(); const reg = JSON.stringify(registry); readRegistry(reg, "workspace-v1", legacy); await commit(reg, raw); return { record: receipt(meta), created: true };
       }); } catch (e) {
         if (!(e instanceof RedisCompareConflict)) throw e;
@@ -649,33 +744,12 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       } else { meta.retiredHashes.push(meta.humanHash!, meta.agentHash!); meta.humanHash = null; meta.agentHash = null; meta.revoked = true; }
       meta.generation++; meta.accessIntents.push({ expectedGeneration: input.expectedGeneration, digest: intentDigest, generation: meta.generation, revoked: meta.revoked }); registry.revision = randomUUID(); const reg = JSON.stringify(registry); if (bytes(reg) > workspaceRegistryTransportMaximum()) throw new WorkspaceError("WORKSPACE_CAPACITY", 409); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, ""); return { record: receipt(meta), current: { generation: meta.generation, revoked: meta.revoked }, created: true };
     }); }); },
-    async consumeRequest(ownerId: string, generation: number, bootstrapHash?: string,publicControl=true) { return safe(async () => {
-      const globalLimits = workspaceGlobalRequestLimits();
-      // Acceptance v2 budgets one quota CAS; contention stops before any action.
-      // Outside that measured sprint, only a definite CAS0 permits counter retry.
-      // Every attempt reads and validates current identity, document and quota.
-      const attempts = continuousWorkspaceMode() || process.env.BAZAAR_ACCEPTANCE_METER === 'true' && process.env.BAZAAR_ACCEPTANCE_X402 === 'true' ? 1 : 8;
-      for (let attempt = 0; attempt < attempts; attempt++) {
-        try { await backend.transact(ownerId, async (s, commit) => {
-          const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
-          if (!meta) throw new WorkspaceError("UNAUTHORIZED", 401);
-          const administration = bootstrapHash !== undefined && bootstrapHash === meta.bootstrapHash;
-          if ((bootstrapHash !== undefined && !administration) || (!administration && (meta.generation !== generation || meta.revoked))) throw new WorkspaceError("UNAUTHORIZED", 401);
-          validateDocument(s.documentRaw, meta);
-          const now = Date.now();
-          registry.creationWindows=registry.creationWindows.filter(w=>w.until>now);
-          if(meta.purpose==='treasury-controls'&&!administration)consumeTreasuryControl(registry.creationWindows,meta,now);
-          else if(publicControl&&!administration)consumePublicOwnerControl(registry.creationWindows,meta,process.env,now);
-          consumeGlobalQuota(registry, now, globalLimits);
-          registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
-          if (!w) { w = { ownerId, count: 0, until: now + 60000 }; registry.requestWindows.push(w); }
-          if (w.count >= (demoEnabled()?WORKSPACE_LIMITS.demoRequestsPerMinute:WORKSPACE_LIMITS.requestsPerMinute)) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429,Math.max(1,Math.ceil((w.until-now)/1000)));
-          w.count++; registry.revision = randomUUID(); const reg = JSON.stringify(registry); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, "");
-        }); return; }
-        catch (e) { if (!(e instanceof RedisCompareConflict)) throw e; }
-      }
-      throw unavailable("quota-contention");
-    }); },
+    async consumeRequest(ownerId:string,generation:number,bootstrapHash?:string,publicControl=true){await consumeOwnerRequest(ownerId,generation,bootstrapHash,publicControl);},
+    async consumeIdentityRequest(p:WorkspacePrincipal,tokenHash:string,publicControl=true){
+      if(!backend.identityProjection||!continuousWorkspaceMode()||workspaceRegistryTransportMaximum()!==COMPACT_WORKSPACE_REGISTRY_V2_MAX_BYTES||!['human','agent'].includes(p.role)||!workspaceHashSchema.safeParse(tokenHash).success)throw unavailable('identity-projection-profile');
+      const proof:IdentityQuotaProof={ownerId:p.ownerId,workspaceId:p.workspaceId,agentId:p.agentId,generation:p.generation,role:p.role,tokenHash,expiresAtMs:Date.now()+5000};
+      return consumeOwnerRequest(p.ownerId,p.generation,undefined,publicControl,proof);
+    },
     async listConversations(ownerId: string): Promise<WorkspaceConversation[]> { const { document: d } = await readOwner(ownerId); return d.conversations.map(v => ({ ...v.record, tasks: d.tasks.filter(t => t.record.conversationId === v.record.conversationId).map(t => t.record) })); },
     async getConversation(ownerId: string, id: string): Promise<WorkspaceConversation | null> { workspaceIdentifierSchema.parse(id); const { document: d } = await readOwner(ownerId); const c = d.conversations.find(v => v.record.conversationId === id)?.record; return c ? { ...c, tasks: d.tasks.filter(t => t.record.conversationId === id).map(t => t.record) } : null; },
     async createConversation(ownerId: string, input: { conversationId: string; title: string }) {

@@ -6,7 +6,7 @@ import { classifyOperationalRequest, type OperationalRequestClass, type Operatio
 import { operationalMetricTotals } from './operational-metrics.ts';
 import { operationalTransportEnvelope } from './operational-envelopes.ts';
 import {withCatalogBudget,catalogBudgetRedis,catalogBudgetObservation} from './catalog-budget.ts';
-import {withContinuousControlBudget,continuousControlBudgetRedis,continuousControlBudgetObservation} from './continuous-control-budget.ts';
+import {assertContinuousExternalAllowed,withContinuousControlBudget,continuousControlBudgetRedis,continuousControlBudgetObservation} from './continuous-control-budget.ts';
 import {guardianBudgetRedis,guardianBudgetObservation} from './guardian-budget.ts';
 import {isPerOrderPaymentEnabled,perOrderPaymentCapabilityKind} from './per-order-payment-profile.ts';
 
@@ -92,7 +92,7 @@ export async function measuredRead<T>(handler:()=>T|Promise<T>):Promise<T>{
 export type ExternalPayloadEvidence=()=>{outboundBytes?:number;inboundBytes?:number};
 /** One bounded transport invocation. A transport can supply exact raw body bytes, including a partial failed read. */
 export async function meteredExternal<T>(kind:ExternalKind,handler:()=>Promise<T>,outbound?:unknown,evidence?:ExternalPayloadEvidence):Promise<T>{
- const limits=currentLimits();
+ assertContinuousExternalAllowed();const limits=currentLimits();
  if(!enabled())return handler();const counts=scope.getStore();if(!counts)throw Error('ACCEPTANCE_SCOPE_REQUIRED');
  const operational=operationalMeterEnabled()?operationalTransportEnvelope(counts.operationalProfile??'authenticated',counts.operationalWorkload):undefined;
  if(!(kind in counts.external)||(counts.external[kind]??0)>=8||operational&&(Object.values(counts.external).reduce((n,value)=>n+(value??0),0)>=operational.externalRequests||counts.operationalProfile==='recovery'&&kind==='facilitator'))throw Error(operational?'OPERATIONAL_EXTERNAL_BUDGET':'ACCEPTANCE_EXTERNAL_BUDGET');

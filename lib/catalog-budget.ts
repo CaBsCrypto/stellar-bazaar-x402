@@ -69,6 +69,8 @@ async function scripts(){
    {script:workspace.COMMIT_COMPACT_CONTINUOUS_WORKSPACE_QUOTA_LUA.replace("redis.call('SET', KEYS[1], quotaRegistryNext)",patch.appendScript(5,7)+patch.writeScript(5)+"redis.call('SET', KEYS[1], quotaRegistryNext)"),keyCount:5,argCount:8,commands:10,responseBytes:8192,keyKinds:[...commitKeys,'continuous-free-storage:v1']},
    {script:workspace.COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_LUA,keyCount:4,argCount:6,commands:8,responseBytes:8192,keyKinds:commitKeys},
    {script:workspace.COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_LUA.replace("redis.call('SET', KEYS[1], ARGV[4])",patch.appendScript(5,7)+patch.writeScript(5)+"redis.call('SET', KEYS[1], ARGV[4])"),keyCount:5,argCount:8,commands:10,responseBytes:8192,keyKinds:[...commitKeys,'continuous-free-storage:v1']},
+   {script:workspace.projectedIdentityCommitScript(patch),keyCount:5,argCount:9,commands:11,responseBytes:8192,keyKinds:[...commitKeys,'continuous-free-storage:v1']},
+   {script:workspace.projectedIdentityCommitScript(patch,false),keyCount:5,argCount:9,commands:11,responseBytes:8192,keyKinds:[...commitKeys,'continuous-free-storage:v1']},
    {script:workspace.COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_QUOTA_LUA,keyCount:4,argCount:6,commands:8,responseBytes:8192,keyKinds:commitKeys},
    {script:workspace.COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_QUOTA_LUA.replace("redis.call('SET', KEYS[1], quotaRegistryNext)",patch.appendScript(5,7)+patch.writeScript(5)+"redis.call('SET', KEYS[1], quotaRegistryNext)"),keyCount:5,argCount:8,commands:10,responseBytes:8192,keyKinds:[...commitKeys,'continuous-free-storage:v1']},
   ];
@@ -136,6 +138,7 @@ export async function nativeRedisDescriptor(body:unknown):Promise<NativeRedisDes
  if(!/^bazaar-workspace:(?:pilot-[a-f0-9]{32}|isolated-[a-f0-9]{32}|local-test|preview|production)$/.test(prefix??''))throw failure();
  if(!Array.isArray(body)||typeof body[0]!=='string')throw failure();
  const perOrder=await (await import('./per-order-transport-budget.ts')).perOrderNativeRedisDescriptor(body);if(perOrder)return perOrder;
+ const split=await (await import('./commission/v1/native/readonly-transport.mjs')).splitReadonlyRedisDescriptor(body,prefix!);if(split)return split;
  const command=body[0].toLowerCase();
  if(command==='eval'&&body[1]===PILOT_REVIEW_READ_LUA){
   const key='bazaar-review:'+prefix!.slice('bazaar-workspace:'.length)+':state';

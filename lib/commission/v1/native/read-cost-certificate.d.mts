@@ -1,0 +1,9 @@
+export const READ_ARGUMENT_BOUNDS:Readonly<Record<string,number>>;
+export const READ_MAXIMUM_OUTBOUND_BYTES:number;
+export const READ_MAXIMUM_INBOUND_BYTES:Readonly<Record<string,number>>;
+export const READ_CERTIFIED_CONFIGURATION:Readonly<Record<string,unknown>>;
+export const READ_CALL_PLAN:Readonly<Record<string,number>>;
+export const READ_COST_DIGEST:string;
+export function readCostStages():Array<Record<string,number|string>>;
+export function createReadCostCertificate(input:Record<string,unknown>):Record<string,unknown>;
+export function validateReadCostCertificate(value:unknown,input:Record<string,unknown>):{structuralBoundsValid:true;physicalUsageMeasured:false;productionAdmissionCertified:false;financialExecutionCertified:false};

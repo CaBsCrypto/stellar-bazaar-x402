@@ -1,6 +1,7 @@
 import {demoEnabled,walletChallengeInput,walletProofInput,verifyWalletProof,assertSingleSigner,readTestnetWalletAccount} from './demo-wallet.ts';
-import {authenticateWorkspaceRequest,assertWorkspaceRequest,parseWorkspaceBody,workspaceFailure,workspaceHeaders,workspaceRequestOrigin,trustedIp} from './workspace-http.ts';
+import {authenticateWorkspaceRequest,assertWorkspaceRequest,parseWorkspaceBody,workspaceFailure,workspaceHeaders,workspaceRequestOrigin,trustedIp,projectedPublicIdentityRequest,prepareProjectedPublicIdentity,takeProjectedPublicIdentity,requireWorkspaceIngressPrincipal} from './workspace-http.ts';
 import {requireWorkspacePrincipal} from './workspace-auth.ts';
+import {adoptProjectedIdentityControlBudget} from './continuous-control-budget.ts';
 import {configuredWorkspaceStore} from './workspace-store.ts';
 import {WorkspaceError,type WorkspacePrincipal} from './workspace-types.ts';
 import {sha} from './marketplace-identity.ts';
@@ -11,6 +12,21 @@ const admitting=new WeakMap<Request,Promise<void>>();
 const mcpNested=new WeakSet<Request>();
 const acceptedOperationCredits=new WeakMap<Request,{operationId:string;ownerId:string}>();
 const nativeOrderId=(request:Request)=>/^\/api\/market\/orders\/([a-f0-9-]{36})(?:\/x402|\/deliveries(?:\/confirm)?)?$/.exec(new URL(request.url).pathname)?.[1];
+/** New-profile credits require a native owner/generation/order CAS claim. A
+ * caller UUID is only replay identification, never a source of capacity. The
+ * surrounding operational/control gates still deny these financial routes. */
+async function splitStageCredit(request:Request,principal:WorkspacePrincipal|undefined){
+ const id=/^\/api\/market\/split-v1\/orders\/([a-f0-9-]{36})(?:\/(?:challenge|settle|reconcile|delivery))?$/.exec(new URL(request.url).pathname)?.[1];
+ if(!id)return false;
+ if(principal?.role!=='agent')throw new WorkspaceError('FORBIDDEN',403);
+ const claimId=request.headers.get('X-Bazaar-Stage-Claim');
+ if(!claimId)throw new WorkspaceError('SPLIT_STAGE_CLAIM_REQUIRED',409);
+ const {configuredNativeSplitComponents}=await import('./commission/v1/native/composition.ts');
+ const result=await configuredNativeSplitComponents().stageAccounting.claim({principal,request,operationId:id,claimId});
+ if(result.status==='unmanaged')return false;
+ if(result.status!=='claimed'||result.mayExecuteHandler!==true)throw new WorkspaceError('SPLIT_STAGE_REPLAY_NO_EXECUTION',409);
+ return true;
+}
 export function hasAcceptedOperationCredit(request:Request,ownerId:string){return admitted.has(request)&&acceptedOperationCredits.get(request)?.ownerId===ownerId;}
 /** Tool arguments only identify a candidate. Actual authenticated ownership is
  * proved before a request may spend an operation's protected recovery hold. */
@@ -53,9 +69,11 @@ export async function demoIngress(request:Request){
     const freeBudget=freeDemoBudgetConfiguration();
     if(freeBudget){
       let principal:WorkspacePrincipal|undefined;
-      const kind=await classifyFreeDemoRequest(request,async()=>{principal=await requireWorkspacePrincipal(request.headers.get('authorization'),/^\/api\/workspaces\/[^/]+\/access$/.test(new URL(request.url).pathname)?'bootstrap':undefined);assertTreasuryControlRequest(principal,request);return principal;});
-      const credit=freeBudget.mode==='continuous'&&kind.profile==='recovery'?await operationBudgetCredit(request,principal):undefined;
-      await configuredFreeDemoBudgetStore(freeBudget).reserve({...kind,...credit});
+      const kind=await classifyFreeDemoRequest(request,async()=>{principal=await requireWorkspaceIngressPrincipal(request,/^\/api\/workspaces\/[^/]+\/access$/.test(new URL(request.url).pathname)?'bootstrap':undefined);assertTreasuryControlRequest(principal,request);return principal;});
+      if(freeBudget.mode==='continuous'&&principal&&['human','agent'].includes(principal.role)&&projectedPublicIdentityRequest(request))await adoptProjectedIdentityControlBudget(request);
+      const staged=freeBudget.mode==='continuous'?await splitStageCredit(request,principal):false;
+      if(!staged){const credit=freeBudget.mode==='continuous'&&kind.profile==='recovery'?await operationBudgetCredit(request,principal):undefined;
+       await configuredFreeDemoBudgetStore(freeBudget).reserve({...kind,...credit});}
     }
     await configuredWorkspaceStore().consumeIngress(trustedIp(request));admitted.add(request);
   })();
@@ -72,7 +90,7 @@ async function walletPrincipal(request:Request){
 }
 const json=(value:unknown)=>Response.json(value,{headers:workspaceHeaders});
 export const demoHandlers={
-  async identity(request:Request){try{const p=await walletPrincipal(request);return json((await configuredWorkspaceStore().walletIdentity(p)).identity);}catch(e){return workspaceFailure(e);}},
+  async identity(request:Request){try{if(projectedPublicIdentityRequest(request)){await prepareProjectedPublicIdentity(request);return json(takeProjectedPublicIdentity(request));}const p=await walletPrincipal(request);return json((await configuredWorkspaceStore().walletIdentity(p)).identity);}catch(e){return workspaceFailure(e);}},
   async challenge(request:Request){try{const p=await walletPrincipal(request),input=await parseWorkspaceBody(request,walletChallengeInput,1024);return json(await configuredWorkspaceStore().walletChallenge(p,input.wallet,workspaceRequestOrigin(request)));}catch(e){return workspaceFailure(e);}},
   async complete(request:Request){try{
     const p=await walletPrincipal(request),input=await parseWorkspaceBody(request,walletProofInput,1024),store=configuredWorkspaceStore(),origin=workspaceRequestOrigin(request);

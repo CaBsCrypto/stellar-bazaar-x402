@@ -1,25 +1,29 @@
 import {WorkspaceError} from './workspace-types.ts';
 import {textSellerConfiguration} from './market-text-seller-runtime.ts';
 import {isPerOrderPaymentEnabled,perOrderPaymentCapabilityKind} from './per-order-payment-profile.ts';
+import {configuredMultisellerPolicy,multisellerRuntimeBinding,type SellerIdentity} from './multiseller-pilot.ts';
+import {createHash} from 'node:crypto';
 import {meteredExternal} from './acceptance-meter.ts';
 
 type Environment=Readonly<Record<string,string|undefined>>;
 export const PER_ORDER_PROVIDER_PROTOCOL='bazaar.per-order-provider/v1';
 export const PER_ORDER_PROVIDER_URL='https://ai-video-scriptwriter.vercel.app/api/bazaar/seller/tick';
 export const PER_ORDER_PROVIDER_BOUNDS=Object.freeze({requestBytes:768,responseBytes:8192,responseHeaderBytes:4096,timeoutMs:45000,retries:0,redirects:0,redisWireBytes:3*1048576,redisCommands:1000});
-type Configuration=Readonly<{url:typeof PER_ORDER_PROVIDER_URL;token:string;serviceId:string;cardHash:string;ownerFingerprint:string}>;
+type Configuration=Readonly<{url:string;token:string;serviceId:string;cardHash:string;ownerFingerprint:string;protection?:string;profile?:'multiseller-v2'}>;
 export type PerOrderProviderDispatch={operationId:string;wakeId:string;dispatchAttemptId:string;executionAttemptId:string;mode?:'deliver'|'recover-known-result'};
 const uuid=/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/;
 const original='31c97193-be74-4b9d-b0a3-f3890b0a41e8';
 const unavailable=()=>new WorkspaceError('PER_ORDER_PROVIDER_UNAVAILABLE',503,60);
-export function readPerOrderProductionProviderConfiguration(environment:Environment=process.env):Configuration|undefined{
+export function readPerOrderProductionProviderConfiguration(environment:Environment=process.env,identity?:SellerIdentity):Configuration|undefined{
  const mode=environment.BAZAAR_PER_ORDER_PROVIDER_PROTOCOL;if(mode===undefined||mode==='disabled')return undefined;
  if(mode!==PER_ORDER_PROVIDER_PROTOCOL||environment.NODE_ENV!=='production'||environment.VERCEL!=='1'||environment.VERCEL_ENV!=='production')throw unavailable();
- const binding=textSellerConfiguration(environment);if(!binding||binding.url!==PER_ORDER_PROVIDER_URL||binding.protection)throw unavailable();
- return Object.freeze({url:PER_ORDER_PROVIDER_URL,token:binding.token,serviceId:binding.serviceId,cardHash:binding.cardHash,ownerFingerprint:binding.ownerFingerprint});
+ const binding=textSellerConfiguration(environment,identity);if(!binding||binding.profile!=='multiseller-v2'&&(binding.url!==PER_ORDER_PROVIDER_URL||binding.protection))throw unavailable();
+ return Object.freeze({...binding});
 }
 function assertOperation(operationId:string){if(operationId===original||!uuid.test(operationId)||!isPerOrderPaymentEnabled(operationId)||perOrderPaymentCapabilityKind(operationId)!=='production')throw unavailable();}
-function assertConfiguration(config:Configuration){if(!config||Object.keys(config).sort().join(',')!=='cardHash,ownerFingerprint,serviceId,token,url'||config.url!==PER_ORDER_PROVIDER_URL||!/^[A-Za-z0-9_-]{43}$/.test(config.token)||!/^[a-f0-9]{64}$/.test(config.cardHash)||!/^[a-f0-9]{64}$/.test(config.ownerFingerprint)||!['guionista-bazaar-production-text-v1','guionista-bazaar-pilot-text-funded-v1'].includes(config.serviceId))throw unavailable();}
+function assertConfiguration(config:Configuration){
+ if(config?.profile==='multiseller-v2'){try{const p=configuredMultisellerPolicy(),s=p?.sellers.find(s=>s.serviceId===config.serviceId&&s.cardHash===config.cardHash&&createHash('sha256').update(s.sellerOwnerId).digest('hex')===config.ownerFingerprint),expected=s&&multisellerRuntimeBinding({serviceId:s.serviceId,cardHash:s.cardHash,sellerOwnerId:s.sellerOwnerId});if(!expected||JSON.stringify(Object.entries(config).sort())!==JSON.stringify(Object.entries(expected).sort()))throw Error();return;}catch{throw unavailable();}}
+ if(!config||Object.keys(config).sort().join(',')!=='cardHash,ownerFingerprint,serviceId,token,url'||config.url!==PER_ORDER_PROVIDER_URL||!/^[A-Za-z0-9_-]{43}$/.test(config.token)||!/^[a-f0-9]{64}$/.test(config.cardHash)||!/^[a-f0-9]{64}$/.test(config.ownerFingerprint)||!['guionista-bazaar-production-text-v1','guionista-bazaar-pilot-text-funded-v1'].includes(config.serviceId))throw unavailable();}
 /** A private, pinned and bounded HTTP client. The optional transport is accepted
  * only by an offline test; it cannot be supplied by a deployed caller. */
 export function createPerOrderProductionProvider(config:Configuration,options:{fetcher?:typeof fetch}={}){
@@ -28,7 +32,7 @@ export function createPerOrderProductionProvider(config:Configuration,options:{f
  const fetcher=options.fetcher??globalThis.fetch,configuration=Object.freeze({...config});
  async function request(operationId:string,body?:PerOrderProviderDispatch){
   assertOperation(operationId);
-  const method=body?'POST':'GET',headers:Record<string,string>={authorization:'Bearer '+configuration.token,accept:'application/json','X-Bazaar-Provider-Protocol':PER_ORDER_PROVIDER_PROTOCOL,...(body?{'content-type':'application/json'}:{})};
+  const method=body?'POST':'GET',headers:Record<string,string>={authorization:'Bearer '+configuration.token,accept:'application/json',...(configuration.protection?{'x-vercel-protection-bypass':configuration.protection}:{}),'X-Bazaar-Provider-Protocol':PER_ORDER_PROVIDER_PROTOCOL,...(body?{'content-type':'application/json'}:{})};
   const encoded=body?JSON.stringify({protocol:PER_ORDER_PROVIDER_PROTOCOL,mode:body.mode??'deliver',operationId,wakeId:body.wakeId,dispatchAttemptId:body.dispatchAttemptId,executionAttemptId:body.executionAttemptId,budgetProfile:'bazaar-text-redis-wire/v2'}):undefined;
   if(encoded&&Buffer.byteLength(encoded)>PER_ORDER_PROVIDER_BOUNDS.requestBytes)throw unavailable();
   let incoming=0;const outgoing=Buffer.byteLength(encoded??'')+Buffer.byteLength(JSON.stringify(headers));
@@ -55,7 +59,7 @@ export function createPerOrderProductionProvider(config:Configuration,options:{f
   },
  });
 }
-export async function assertPerOrderProductionProviderReady(operationId:string){
- assertOperation(operationId);const configuration=readPerOrderProductionProviderConfiguration();if(!configuration)throw unavailable();
+export async function assertPerOrderProductionProviderReady(operationId:string,identity?:SellerIdentity){
+ assertOperation(operationId);const configuration=readPerOrderProductionProviderConfiguration(process.env,identity);if(!configuration)throw unavailable();
  await createPerOrderProductionProvider(configuration).ready(operationId);
 }
