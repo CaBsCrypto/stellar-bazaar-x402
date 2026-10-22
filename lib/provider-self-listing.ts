@@ -6,6 +6,7 @@ import type { ServiceCard, ValidationOutcome } from "./types.ts";
 import { parseServiceCardShape } from "./service-card-schema.ts";
 import { creditOperationalPrincipal } from './acceptance-meter.ts';
 import { validateCardRules, validateCardShape } from "./service-ingest.ts";
+import {freeDemoWindow} from './free-demo-window.ts';
 
 export const SELF_LISTING_VERSION = "bazaar.provider-submission/v1" as const;
 const SUBMISSION_TTL_MS = 24 * 60 * 60 * 1000;
@@ -107,7 +108,7 @@ async function safe<T>(op:()=>Promise<SelfListingResult<T>>):Promise<SelfListing
 const clone = <T>(value: T): T => structuredClone(value);
 
 export function selfListingIntakeConfigured() {
-  return process.env.BAZAAR_ENABLE_SELF_LISTING_INTAKE === "true";
+  return process.env.BAZAAR_ENABLE_SELF_LISTING_INTAKE === "true" && freeDemoWindow().admissionOpen;
 }
 
 function normalizeDomain(raw: unknown): string | null {

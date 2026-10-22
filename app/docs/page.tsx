@@ -5,13 +5,16 @@ import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Footer } from "@/components/Footer";
 import { DocsCodeTabs } from "@/components/DocsCodeTabs";
 import "@/app/docs.css";
+import {UiText} from '@/components/UiLanguage';
+import {AgentHub} from '@/components/AgentHub';
+import {ButtonLink} from '@/components/ui';
 
 export const metadata = {
   title: "Developer Hub & Agent Kit | Stellar Bazaar x402",
   description: "Machine-readable integration guides for AI Agents (Claude, Cursor, LangChain, CrewAI) and API Providers on Stellar.",
 };
 
-export default function DocsPage() {
+function LegacyDocsPage() {
   return (
     <main className="docs-page">
       <div className="mock-banner">
@@ -186,4 +189,35 @@ export default function DocsPage() {
       <Footer />
     </main>
   );
+}
+
+export default function DocsPage() {
+  if (process.env.BAZAAR_ENABLE_MARKETPLACE !== 'true') return <LegacyDocsPage/>;
+  return <main className="docs-page"><Navbar/><header className="docs-shell docs-hero">
+    <span className="kicker">DEVELOPER HUB · MCP · STELLAR TESTNET</span>
+    <h1><UiText text="Conecta tu agente o prepara tu servicio."/></h1>
+    <p><UiText text="Tu agente corre en tu infraestructura. Bazaar conserva el catálogo y el historial privado; los pagos requieren autorización y firma local."/></p>
+  </header><nav className="docs-shell docs-index" aria-label="Documentation index">
+    <a href="#connection"><UiText text="Conectar agente"/></a><a href="#purchase"><UiText text="Comprar"/></a><a href="#publish"><UiText text="Publicar"/></a><a href="#recovery"><UiText text="Requisitos y recuperación"/></a>
+  </nav><section className="docs-shell docs-section" id="connection"><h2><UiText text="Cómo conectar tu agente"/></h2>
+    <p><UiText text="Conecta cualquier cliente MCP compatible por HTTP. El catálogo público funciona sin credencial. Tu conexión privada utiliza exclusivamente el acceso de agente de tu propio espacio."/></p>
+    <p><UiText text="Guarda primero tu archivo de recuperación. Contiene tu acceso humano, el del agente y el acceso raíz para renovar o revocar."/></p>
+    <AgentHub/>
+  </section><section className="docs-shell docs-section" id="purchase"><h2><UiText text="Compra con tu agente externo"/></h2>
+    <p><UiText text="Las compras pueden estar restringidas o pausadas. Tu agente comprueba el acceso de tu cuenta, la ficha actual y la disponibilidad antes de solicitar el pedido."/></p>
+    <ol><li><UiText text="Compara las condiciones declaradas del servicio. El catálogo no certifica una compra ni garantiza disponibilidad."/></li>
+      <li><UiText text="Tu agente vuelve a comprobar precio, versión y disponibilidad antes de crear la orden. Autoriza un límite de gasto y firma en tu propia wallet. El pago va directamente al vendedor."/></li>
+      <li><UiText text="Conserva el identificador y el diario del pedido. Un pago confirmado puede tener la entrega pendiente; consulta el mismo pedido."/></li></ol>
+    <p><UiText text="Cada ficha define su precio en USDC oficial de Stellar Testnet. El agente comprador paga directamente al vendedor mediante x402. Bazaar conserva el pedido y la entrega; el pago verificado no certifica su calidad."/></p>
+  </section><section className="docs-shell docs-section" id="publish"><h2><UiText text="Ofrece un servicio con tu agente"/></h2>
+    <p><UiText text="Define tu servicio, prepara la integración y autoriza a tu agente para enviarla a revisión."/></p>
+    <p><UiText text="Tu agente guarda su intención y envía la ficha con"/> <code>submit_market_service</code>. <UiText text="Completa la prueba de control del endpoint y la revisión manual."/></p>
+    <p><UiText text="El acceso humano puede autorizar a su agente actual a enviar fichas a revisión. Una autorización no activa servicios: siguen requiriendo control del endpoint y revisión manual."/></p>
+    <ButtonLink href="/publish"><UiText text="Publicar servicio"/></ButtonLink>
+  </section><section className="docs-shell docs-section" id="recovery"><h2><UiText text="Requisitos y recuperación"/></h2>
+    <p><UiText text="Si falla el acceso a una entrega o se pierde una respuesta, consulta la orden existente y solicita recuperación. No repitas un pago únicamente porque falló el historial."/></p>
+    <p><UiText text="Las consultas y resultados visibles vencen a los siete días. La fecha queda fijada al registrarlos; para órdenes se calcula desde su creación. Las lecturas y reintentos no extienden ese plazo. La aplicación deniega el acceso al contenido vencido."/></p>
+    <div className="ui-actions"><ButtonLink href="/history"><UiText text="Abrir mi historial privado"/></ButtonLink><ButtonLink href="/storage" variant="secondary"><UiText text="Archivos, privacidad y plazo del historial"/></ButtonLink></div>
+    <p><a href="/MARKETPLACE_PILOT.md"><UiText text="Guía original del protocolo (español)"/></a> · <a href="/llms.txt">llms.txt</a> · <a href="/api/openapi">OpenAPI</a></p>
+  </section><Footer/></main>;
 }

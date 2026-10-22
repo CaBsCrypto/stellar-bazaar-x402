@@ -4,7 +4,7 @@ import {decodePaymentSignatureHeader,encodePaymentRequiredHeader,encodePaymentRe
 import type {PaymentPayload,PaymentRequired,PaymentRequirements,SettleResponse,VerifyResponse} from '@x402/core/types';
 import {z} from 'zod';
 import {canonical,sha} from './marketplace-identity.ts';
-import {configuredMarketStore,type MarketOrder} from './marketplace-store.ts';
+import {configuredMarketStore,type MarketOrder,type MarketStore} from './marketplace-store.ts';
 import {readMarketOrder,readMarketRecovery,assertMarketEnabled,assertMarketPurchaseAdmission,sellerPaymentGuard} from './marketplace.ts';
 import {sellerAdmissionExpiresAt,type MarketCommitGuard} from './marketplace-capacity.ts';
 import {assertSellerReservation} from './market-seller-capacity.ts';
@@ -12,9 +12,13 @@ import {isCanonicalUsdcTestnet} from './payment-assets.ts';
 import {decimalToAtomic} from './operation-history-client.ts';
 import {WorkspaceError,type WorkspacePrincipal} from './workspace-types.ts';
 import {authenticateWorkspaceRequest,parseWorkspaceBody,workspaceFailure,workspaceHeaders,workspaceRequestOrigin} from './workspace-http.ts';
-import {configuredMarketX402Store,type MarketX402Settlement,type MarketX402Store} from './marketplace-x402-store.ts';
+import {configuredMarketX402Store,marketX402PaymentFailureSchema,type MarketX402PaymentFailure,type MarketX402Settlement,type MarketX402Store} from './marketplace-x402-store.ts';
 import {meteredExternal} from './acceptance-meter.ts';
 import {operationalRequestGate} from './operational-budget.ts';
+import {configuredWorkspaceStore} from './workspace-store.ts';
+import {assertMarketOrderFinancialStorage,marketPerOrderStorageEnabled} from './market-order-storage.ts';
+import type {MarketRecovery} from './market-retention-schema.ts';
+import {isPerOrderPaymentEnabled,perOrderPaymentDependencies,perOrderProductionPaymentsConfigured,withPerOrderX402Production} from './per-order-payment-profile.ts';
 
 export const MARKET_X402_PROTOCOL='x402-stellar-exact-v2' as const;
 export const MARKET_X402_FACILITATOR='https://channels.openzeppelin.com/x402/testnet';
@@ -24,35 +28,55 @@ export interface MarketX402Facilitator{
  verify(payload:PaymentPayload,requirements:PaymentRequirements):Promise<VerifyResponse>;
  settle(payload:PaymentPayload,requirements:PaymentRequirements):Promise<SettleResponse>;
 }
-export interface MarketX402Rpc{transaction(transactionHash:string):Promise<{status:string;envelopeXdr?:string}>}
+export type MarketX402Transaction={status:string;envelopeXdr?:string;resultXdr?:string;ledger?:number};
+export interface MarketX402Rpc{transaction(transactionHash:string):Promise<MarketX402Transaction>}
 export interface MarketX402Dependencies{store:MarketX402Store;facilitator:MarketX402Facilitator;rpc:MarketX402Rpc}
+type TransportFailure=Pick<MarketX402PaymentFailure,'code'|'httpStatus'|'dispatchStarted'>;
+function transportFailure(error:unknown,evidence:TransportFailure){
+ const failure=error instanceof WorkspaceError?error:new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+ Object.defineProperty(failure,'paymentFailure',{value:Object.freeze(evidence),enumerable:false});return failure;
+}
+function safePaymentFailure(error:unknown,stage:MarketX402PaymentFailure['stage']):MarketX402PaymentFailure{
+ const evidence=error&&typeof error==='object'&&'paymentFailure' in error?error.paymentFailure:undefined;
+ const code=error instanceof WorkspaceError&&['CAPACITY_WRITE_UNCONFIRMED','OPERATION_CONFLICT','CAPACITY_BINDING_CHANGED','X402_SETTLEMENT_UNAVAILABLE','X402_SETTLEMENT_CAPACITY'].includes(error.code)?'PAYMENT_STATE_WRITE_UNCONFIRMED':'PAYMENT_RUNTIME_UNCONFIRMED';
+ const parsed=marketX402PaymentFailureSchema.safeParse({code,...(evidence&&typeof evidence==='object'?evidence:{}),stage,at:new Date().toISOString()});
+ return parsed.success?parsed.data:{stage,code,at:new Date().toISOString()};
+}
 
 /** An exact-host transport invocation. No SDK redirect, retry or polling defaults. */
 async function boundedJson(kind:'facilitator'|'rpc',url:string,body:unknown,headers:Record<string,string>,fetcher:typeof fetch){
  const raw=JSON.stringify(body);if(Buffer.byteLength(raw)>65536)throw new WorkspaceError('X402_REQUEST_TOO_LARGE',413);
  let incoming=0;const outgoing=Buffer.byteLength(raw)+Object.entries(headers).reduce((n,[k,v])=>n+Buffer.byteLength(k+': '+v+'\r\n'),0);
- return meteredExternal(kind,async()=>{
+ let dispatchStarted=false,httpStatus:number|undefined;
+ const failure=(code:TransportFailure['code'],error:WorkspaceError)=>kind==='facilitator'?transportFailure(error,{code,dispatchStarted,...(httpStatus!==undefined?{httpStatus}:{})}):error;
+ try{return await meteredExternal(kind,async()=>{
+  dispatchStarted=true;
   const response=await fetcher(url,{method:'POST',headers,body:raw,redirect:'error',credentials:'omit',cache:'no-store',signal:AbortSignal.timeout(10000)});
-  if(response.redirected||(response.url&&response.url!==new URL(url).href))throw new WorkspaceError('X402_TRANSPORT_UNCONFIRMED',409);
+  httpStatus=response.status;
+  if(response.redirected||(response.url&&response.url!==new URL(url).href))throw failure('FACILITATOR_REDIRECT_BLOCKED',new WorkspaceError('X402_TRANSPORT_UNCONFIRMED',409));
   const parts:Uint8Array[]=[];for(const[k,v]of response.headers)incoming+=Buffer.byteLength(k+': '+v+'\r\n');
-  const reader=response.body?.getReader();if(!reader)throw new WorkspaceError('X402_TRANSPORT_UNCONFIRMED',409);
-  try{if(incoming>maximumResponseBytes){await reader.cancel();throw new WorkspaceError('X402_RESPONSE_TOO_LARGE',409);}for(;;){const part=await reader.read();if(part.done)break;incoming+=part.value.byteLength;if(incoming>maximumResponseBytes){await reader.cancel();throw new WorkspaceError('X402_RESPONSE_TOO_LARGE',409);}parts.push(part.value);}}finally{reader.releaseLock();}
-  if(!response.ok)throw new WorkspaceError('X402_TRANSPORT_UNCONFIRMED',409);
-  try{return JSON.parse(Buffer.concat(parts).toString('utf8')) as unknown;}catch{throw new WorkspaceError('X402_RESPONSE_INVALID',409);}
- },{origin:new URL(url).origin,path:new URL(url).pathname,method:'POST'},()=>({outboundBytes:outgoing,inboundBytes:incoming}));
+  const reader=response.body?.getReader();if(!reader)throw failure('FACILITATOR_JSON_INVALID',new WorkspaceError('X402_TRANSPORT_UNCONFIRMED',409));
+  try{if(incoming>maximumResponseBytes){await reader.cancel();throw failure('FACILITATOR_RESPONSE_BOUND',new WorkspaceError('X402_RESPONSE_TOO_LARGE',409));}for(;;){const part=await reader.read();if(part.done)break;incoming+=part.value.byteLength;if(incoming>maximumResponseBytes){await reader.cancel();throw failure('FACILITATOR_RESPONSE_BOUND',new WorkspaceError('X402_RESPONSE_TOO_LARGE',409));}parts.push(part.value);}}finally{reader.releaseLock();}
+  if(!response.ok)throw failure('FACILITATOR_HTTP_REJECTED',new WorkspaceError('X402_TRANSPORT_UNCONFIRMED',409));
+  try{return JSON.parse(Buffer.concat(parts).toString('utf8')) as unknown;}catch{throw failure('FACILITATOR_JSON_INVALID',new WorkspaceError('X402_RESPONSE_INVALID',409));}
+ },{origin:new URL(url).origin,path:new URL(url).pathname,method:'POST'},()=>({outboundBytes:outgoing,inboundBytes:incoming}));}catch(error){
+  if(kind!=='facilitator'||error&&typeof error==='object'&&'paymentFailure' in error)throw error;
+  const name=error&&typeof error==='object'&&'name' in error?error.name:undefined;
+  throw failure(name==='AbortError'||name==='TimeoutError'?'FACILITATOR_TIMEOUT':'FACILITATOR_NETWORK_UNCONFIRMED',error instanceof WorkspaceError?error:new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409));
+ }
 }
 export function createMarketX402Facilitator({apiKey,url=MARKET_X402_FACILITATOR,fetcher=fetch}:{apiKey:string;url?:string;fetcher?:typeof fetch}):MarketX402Facilitator{
  if(url!==MARKET_X402_FACILITATOR||!apiKey||apiKey.length>1024||/[\r\n]/.test(apiKey))throw new WorkspaceError('X402_FACILITATOR_CONFIGURATION_REQUIRED');
  const send=async(action:'verify'|'settle',payload:PaymentPayload,requirements:PaymentRequirements)=>boundedJson('facilitator',url+'/'+action,{x402Version:2,paymentPayload:payload,paymentRequirements:requirements},{'content-type':'application/json',authorization:'Bearer '+apiKey},fetcher);
- return {verify:async(p,r)=>{const result=await send('verify',p,r) as VerifyResponse;if(!result||typeof result.isValid!=='boolean')throw new WorkspaceError('X402_RESPONSE_INVALID',409);return result;},settle:async(p,r)=>{const result=await send('settle',p,r) as SettleResponse;if(!result||typeof result.success!=='boolean')throw new WorkspaceError('X402_RESPONSE_INVALID',409);return result;}};
+ return {verify:async(p,r)=>{const result=await send('verify',p,r) as VerifyResponse;if(!result||typeof result.isValid!=='boolean')throw transportFailure(new WorkspaceError('X402_RESPONSE_INVALID',409),{code:'FACILITATOR_JSON_INVALID',dispatchStarted:true});return result;},settle:async(p,r)=>{const result=await send('settle',p,r) as SettleResponse;if(!result||typeof result.success!=='boolean')throw transportFailure(new WorkspaceError('X402_RESPONSE_INVALID',409),{code:'FACILITATOR_JSON_INVALID',dispatchStarted:true});return result;}};
 }
 export function createMarketX402Rpc({url=MARKET_X402_RPC,fetcher=fetch}:{url?:string;fetcher?:typeof fetch}={}):MarketX402Rpc{
  if(url!==MARKET_X402_RPC)throw new WorkspaceError('X402_RPC_CONFIGURATION_REQUIRED');
  return {async transaction(transactionHash){
   if(!/^[a-f0-9]{64}$/.test(transactionHash))throw new WorkspaceError('INVALID_TRANSACTION',400);
-  const response=await boundedJson('rpc',url,{jsonrpc:'2.0',id:'market-x402-read',method:'getTransaction',params:{hash:transactionHash}},{'content-type':'application/json'},fetcher) as {jsonrpc?:string;id?:string;error?:unknown;result?:{status?:string;envelopeXdr?:string}};
+  const response=await boundedJson('rpc',url,{jsonrpc:'2.0',id:'market-x402-read',method:'getTransaction',params:{hash:transactionHash}},{'content-type':'application/json'},fetcher) as {jsonrpc?:string;id?:string;error?:unknown;result?:MarketX402Transaction};
   if(response.jsonrpc!=='2.0'||response.id!=='market-x402-read'||response.error||typeof response.result?.status!=='string')throw new WorkspaceError('X402_RPC_RESPONSE_INVALID',409);
-  return {status:response.result.status,envelopeXdr:response.result.envelopeXdr};
+  return {status:response.result.status,envelopeXdr:response.result.envelopeXdr,...(response.result.resultXdr!==undefined?{resultXdr:response.result.resultXdr}:{}),...(response.result.ledger!==undefined?{ledger:response.result.ledger}:{})};
  }};
 }
 let injected:Partial<MarketX402Dependencies>|undefined;
@@ -63,7 +87,30 @@ function dependencies():MarketX402Dependencies{return {
   verify:(p,r)=>createMarketX402Facilitator({apiKey:process.env.STELLAR_X402_FACILITATOR_API_KEY?.trim()??'',url:process.env.STELLAR_X402_FACILITATOR_URL??MARKET_X402_FACILITATOR}).verify(p,r),
   settle:(p,r)=>createMarketX402Facilitator({apiKey:process.env.STELLAR_X402_FACILITATOR_API_KEY?.trim()??'',url:process.env.STELLAR_X402_FACILITATOR_URL??MARKET_X402_FACILITATOR}).settle(p,r)},
  rpc:injected?.rpc??{transaction:hash=>createMarketX402Rpc({url:process.env.STELLAR_X402_RPC_URL??MARKET_X402_RPC}).transaction(hash)}};}
-function buyer(p:WorkspacePrincipal,o:MarketOrder){if(!['human','agent'].includes(p.role)||p.ownerId!==o.buyerOwnerId)throw new WorkspaceError('FORBIDDEN',403);if(o.paymentProtocol!==MARKET_X402_PROTOCOL||!isCanonicalUsdcTestnet(o.settlement)||o.inputHash!==sha(canonical(o.input)))throw new WorkspaceError('PAYMENT_PROTOCOL_MISMATCH',409);}
+/** Operator incident inspection only. Verify is a read-only facilitator method;
+ * it cannot prove a previous settlement was not submitted. No record is changed,
+ * no authorization is created, and no path from here calls settle or the RPC. */
+export async function inspectMarketPaymentVerification(operationId:string,deps:{store?:MarketX402Store;facilitator?:MarketX402Facilitator;marketStore?:MarketStore;now?:()=>number}={}){
+ assertMarketOrderFinancialStorage(operationId);
+ if(typeof operationId!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/i.test(operationId))throw new WorkspaceError('INVALID_REQUEST',400);
+ const store=deps.store??dependencies().store,market=deps.marketStore??configuredMarketStore();
+ const order=await market.transact(s=>s.orders.find(o=>o.operationId===operationId));
+ const record=await store.transact(s=>s.records.find(r=>r.operationId===operationId));
+ if(!order||!record||order.operationId!==operationId||record.operationId!==operationId)throw new WorkspaceError('NOT_FOUND',404);
+ assertRecordBinding(record,order);
+ if(!['verifying','settling','uncertain'].includes(record.phase)||!record.payload||!record.payloadHash||!record.authorizationFingerprint||!record.attemptId||record.transactionHash||record.outcome||order.transactionHash||order.paymentVerifiedAt)throw new WorkspaceError('X402_DIAGNOSTIC_UNAVAILABLE',409);
+ const payload=structuredClone(record.payload),requirements=structuredClone(record.challenge.accepts[0]);
+ if(sha(canonical(payload))!==record.payloadHash||payload.x402Version!==2||canonical(payload.accepted)!==canonical(requirements)||canonical(payload.resource)!==canonical(record.challenge.resource)||!payload.payload||Object.keys(payload.payload).sort().join(',')!=='transaction'||typeof payload.payload.transaction!=='string'||marketX402Authorization(payload.payload.transaction,order).fingerprint!==record.authorizationFingerprint)throw new WorkspaceError('X402_SETTLEMENT_BINDING_MISMATCH',409);
+ const base={stage:'verify' as const,verificationOnly:true,paymentOutcomeConfirmed:false,stateWrites:0,settlementCalls:0,newPayments:0,signatures:0};
+ try{
+  const verified=await (deps.facilitator??dependencies().facilitator).verify(payload,requirements);
+  const observedAt=new Date((deps.now??Date.now)()).toISOString();
+  if(!verified||typeof verified.isValid!=='boolean')return {...base,code:'FACILITATOR_JSON_INVALID',observedAt};
+  const payerMatches=verified.payer===order.payer;
+  return {...base,code:verified.isValid&&payerMatches?'FACILITATOR_VERIFY_VALID':'FACILITATOR_VERIFY_REJECTED',isValid:verified.isValid,payerMatches,observedAt};
+ }catch(error){const failure=safePaymentFailure(error,'verify');return {...base,code:failure.code,...(failure.httpStatus===undefined?{}:{httpStatus:failure.httpStatus}),...(failure.dispatchStarted===undefined?{}:{dispatchStarted:failure.dispatchStarted}),observedAt:new Date((deps.now??Date.now)()).toISOString()};}
+}
+export function buyer(p:WorkspacePrincipal,o:MarketOrder){if(!['human','agent'].includes(p.role)||p.ownerId!==o.buyerOwnerId)throw new WorkspaceError('FORBIDDEN',403);if(o.paymentProtocol!==MARKET_X402_PROTOCOL||!isCanonicalUsdcTestnet(o.settlement)||o.inputHash!==sha(canonical(o.input)))throw new WorkspaceError('PAYMENT_PROTOCOL_MISMATCH',409);}
 export function marketX402OrderBinding(o:MarketOrder){return sha(canonical({operationId:o.operationId,owner:o.buyerOwnerId,protocol:o.paymentProtocol,cardHash:o.cardHash,inputHash:o.inputHash,payer:o.payer,destination:o.destination,amount:o.amount,settlement:o.settlement}));}
 export function createMarketX402Challenge(o:MarketOrder,origin:string):PaymentRequired{
  const base=new URL(origin);if(base.origin!==origin||base.username||base.password||base.search||base.hash||!(base.protocol==='https:'||base.protocol==='http:'&&['127.0.0.1','localhost'].includes(base.hostname)))throw new WorkspaceError('INVALID_REQUEST',400);
@@ -91,7 +138,7 @@ export function marketX402Authorization(xdrString:string,o:Pick<MarketOrder,'set
   return {fingerprint:sha(canonical({network:'stellar:testnet',payer:o.payer,nonce:credentials.nonce().toString()})),transactionHash:envelope.hash().toString('hex')};
  }catch{throw new WorkspaceError('X402_AUTHORIZATION_MISMATCH',402);}
 }
-function parseProof(signature:string,record:MarketX402Settlement,o:MarketOrder){
+export function parseProof(signature:string,record:MarketX402Settlement,o:MarketOrder){
  try{
   if(!signature||Buffer.byteLength(signature)>maximumHeaderBytes)throw Error();
   const payload=decodePaymentSignatureHeader(signature);
@@ -100,7 +147,7 @@ function parseProof(signature:string,record:MarketX402Settlement,o:MarketOrder){
   return {payload,payloadHash:sha(canonical(payload)),authorizationFingerprint:authorization.fingerprint};
  }catch(e){if(e instanceof WorkspaceError)throw e;throw new WorkspaceError('X402_PAYMENT_REQUIREMENTS_MISMATCH',402);}
 }
-function assertRecordBinding(record:MarketX402Settlement,o:MarketOrder){
+export function assertRecordBinding(record:MarketX402Settlement,o:MarketOrder){
  try{if(record.buyerOwnerId!==o.buyerOwnerId||record.orderBinding!==marketX402OrderBinding(o)||canonical(record.challenge)!==canonical(createMarketX402Challenge(o,new URL(record.challenge.resource.url).origin)))throw Error();}catch{throw new WorkspaceError('X402_SETTLEMENT_BINDING_MISMATCH',409);}
 }
 async function boundRecord(store:MarketX402Store,o:MarketOrder){const record=await store.transact(s=>s.records.find(r=>r.operationId===o.operationId));if(!record)throw new WorkspaceError('X402_SETTLEMENT_BINDING_MISMATCH',409);assertRecordBinding(record,o);return record;}
@@ -108,11 +155,14 @@ async function updateRecord(store:MarketX402Store,o:MarketOrder,attemptId:string
 async function releaseRejectedSeat(o:MarketOrder,attemptId:string){await configuredMarketStore().transact(s=>{const current=s.orders.find(v=>v.operationId===o.operationId);if(!current||current.settlementAttemptId&&current.settlementAttemptId!==attemptId||current.paymentVerifiedAt||current.transactionHash)throw new WorkspaceError('OPERATION_CONFLICT',409);if(current.sellerReservation){current.sellerReservation.committed=false;current.sellerReservation.expiresAt=new Date().toISOString();}if(current.phase==='payment-submitting')current.phase='awaiting-payment';});}
 /** A delayed settling acknowledgement does not authorize a late submission. */
 async function assertBeforeSettlement(p:WorkspacePrincipal,o:MarketOrder){
+ assertMarketPurchaseAdmission(p);
+ if(o.executionMode==='on-demand')await ensureMarketTextReadiness({ownerId:o.sellerOwnerId,cardHash:o.cardHash,card:o.card},o,true);
  const store=configuredMarketStore(),guard=await sellerPaymentGuard(o,p);
- const expiresAt=await store.transact(s=>{const current=s.orders.find(v=>v.operationId===o.operationId);if(!current)throw new WorkspaceError('SELLER_UNAVAILABLE',503);return sellerAdmissionExpiresAt(assertSellerReservation(s,current),current);});
+ const expiresAt=Math.min(guard.admissionExpiresAt??Infinity,await store.transact(s=>{const current=s.orders.find(v=>v.operationId===o.operationId);if(!current)throw new WorkspaceError('SELLER_UNAVAILABLE',503);return sellerAdmissionExpiresAt(assertSellerReservation(s,current),current);}));
  // Re-read availability and atomically compare the account generation again.
  // Redis checks this deadline using TIME even if the client clock is stalled.
  await store.transact(s=>{const current=s.orders.find(v=>v.operationId===o.operationId);if(!current)throw new WorkspaceError('SELLER_UNAVAILABLE',503);assertSellerReservation(s,current);},{...guard,admissionExpiresAt:expiresAt});
+ assertMarketPurchaseAdmission(p);
  return expiresAt;
 }
 /** A settling call can finish after seven-day maintenance erased its content.
@@ -127,10 +177,14 @@ async function retainArchivedOutcome(o:MarketOrder,record:MarketX402Settlement,o
  });
 }
 async function markOrder(o:MarketOrder,attemptId:string,uncertain=false,transactionHash?:string){return configuredMarketStore().transact(s=>{const r=s.orders.find(v=>v.operationId===o.operationId);if(!r||marketX402OrderBinding(r)!==marketX402OrderBinding(o)||r.settlementAttemptId&&r.settlementAttemptId!==attemptId||transactionHash&&r.transactionHash&&r.transactionHash!==transactionHash)throw new WorkspaceError('OPERATION_CONFLICT',409);if(!uncertain&&s.paused)throw new WorkspaceError('MARKET_PAUSED',503);if(r.phase==='awaiting-payment'||['payment-submitting','payment-uncertain'].includes(r.phase)){r.settlementAttemptId=attemptId;r.phase=uncertain?'payment-uncertain':'payment-submitting';if(transactionHash)r.transactionHash=transactionHash;r.updatedAt=new Date().toISOString();}return r;});}
-async function markUncertain(deps:MarketX402Dependencies,o:MarketOrder,record:MarketX402Settlement){
+async function markUncertain(deps:MarketX402Dependencies,o:MarketOrder,record:MarketX402Settlement,lastFailure?:MarketX402PaymentFailure){
  if(!record.attemptId)return;
- try{await updateRecord(deps.store,o,record.attemptId,r=>{if(!['confirmed','settled','rejected'].includes(r.phase))r.phase='uncertain';});}catch{}
+ let phaseAcknowledged=false;
+ // Preserve the original uncertainty write independently of optional diagnostics.
+ // Neither a missing diagnostic nor its lost acknowledgement authorizes replay.
+ try{await updateRecord(deps.store,o,record.attemptId,r=>{if(!['confirmed','settled','rejected'].includes(r.phase))r.phase='uncertain';});phaseAcknowledged=true;}catch{}
  try{await markOrder(o,record.attemptId,true,record.transactionHash??(record.outcome?.transaction||undefined));}catch{}
+ if(lastFailure&&phaseAcknowledged)try{await updateRecord(deps.store,o,record.attemptId,r=>{if(['uncertain','settled'].includes(r.phase))r.lastFailure=lastFailure;});}catch{}
 }
 async function finalizePaid(deps:MarketX402Dependencies,o:MarketOrder,record:MarketX402Settlement){
  const transactionHash=record.transactionHash??record.outcome?.transaction;
@@ -144,21 +198,86 @@ async function finalizePaid(deps:MarketX402Dependencies,o:MarketOrder,record:Mar
   if(auth.transactionHash!==receipt.transaction||auth.fingerprint!==record.authorizationFingerprint)throw new WorkspaceError('X402_PAYMENT_NOT_VERIFIED',409);
   await updateRecord(deps.store,o,record.attemptId,r=>{r.phase='confirmed';r.outcome=receipt;});
  }
- return configuredMarketStore().transact(s=>{const r=s.orders.find(v=>v.operationId===o.operationId);if(!r||marketX402OrderBinding(r)!==marketX402OrderBinding(o)||r.settlementAttemptId!==record.attemptId||r.transactionHash!==receipt.transaction)throw new WorkspaceError('OPERATION_CONFLICT',409);if(['payment-submitting','payment-uncertain'].includes(r.phase)){r.phase='paid';r.paymentVerifiedAt=new Date().toISOString();r.updatedAt=r.paymentVerifiedAt;}return r;});
+ return configuredMarketStore().transact(s=>{const r=s.orders.find(v=>v.operationId===o.operationId);if(!r||marketX402OrderBinding(r)!==marketX402OrderBinding(o)||r.settlementAttemptId!==record.attemptId||r.transactionHash!==receipt.transaction)throw new WorkspaceError('OPERATION_CONFLICT',409);if(['payment-submitting','payment-uncertain'].includes(r.phase)){r.phase='paid';r.paymentVerifiedAt=new Date().toISOString();r.updatedAt=r.paymentVerifiedAt;}if(r.phase==='paid')queueMarketTextWake(s,r);return r;});
 }
-function paidResponse(order:MarketOrder,record:MarketX402Settlement,origin:string){
+export function paidResponse(order:MarketOrder,record:MarketX402Settlement,origin:string){
  const response=Response.json({order,statusUrl:origin+`/api/market/orders/${order.operationId}`},{status:order.delivery?200:202,headers:workspaceHeaders});
  if(record.outcome?.success)response.headers.set('PAYMENT-RESPONSE',encodePaymentResponseHeader(record.outcome));return response;
 }
-export async function reconcileMarketX402Payment(p:WorkspacePrincipal,id:string,deps=dependencies()){
+export const ORIGINAL_MARKET_PAYMENT_RECOVERY=Object.freeze({operationId:'31c97193-be74-4b9d-b0a3-f3890b0a41e8',serviceId:'guionista-bazaar-production-text-v1',amount:'0.01',firstLedger:5151488,expirationLedger:5151548,maximumSponsoredFeeStroops:1000000});
+/** A facilitator trace provides a candidate, never authority. The native
+ * original payload and a successful Testnet RPC envelope supply the proof. */
+export function verifyOriginalMarketRecoveryTransaction(order:MarketOrder,record:MarketX402Settlement,transactionHash:string,chain:MarketX402Transaction){
+ try{
+  if(order.operationId!==ORIGINAL_MARKET_PAYMENT_RECOVERY.operationId||order.serviceId!==ORIGINAL_MARKET_PAYMENT_RECOVERY.serviceId||order.amount!==ORIGINAL_MARKET_PAYMENT_RECOVERY.amount||order.paymentProtocol!==MARKET_X402_PROTOCOL||!isCanonicalUsdcTestnet(order.settlement)||!/^[a-f0-9]{64}$/.test(transactionHash))throw Error();
+  assertRecordBinding(record,order);
+  const payload=record.payload;
+  if(!payload||sha(canonical(payload))!==record.payloadHash||payload.x402Version!==2||canonical(payload.accepted)!==canonical(record.challenge.accepts[0])||canonical(payload.resource)!==canonical(record.challenge.resource)||!payload.payload||Object.keys(payload.payload).sort().join(',')!=='transaction'||typeof payload.payload.transaction!=='string')throw Error();
+  const originalProof=marketX402Authorization(payload.payload.transaction,order);
+  if(originalProof.fingerprint!==record.authorizationFingerprint||chain.status!=='SUCCESS'||typeof chain.envelopeXdr!=='string'||!Number.isSafeInteger(chain.ledger)||chain.ledger!<ORIGINAL_MARKET_PAYMENT_RECOVERY.firstLedger||chain.ledger!>ORIGINAL_MARKET_PAYMENT_RECOVERY.expirationLedger)throw Error();
+  const submittedProof=marketX402Authorization(chain.envelopeXdr,order,true);
+  if(submittedProof.transactionHash!==transactionHash||submittedProof.fingerprint!==record.authorizationFingerprint)throw Error();
+  const original=TransactionBuilder.fromXDR(payload.payload.transaction,Networks.TESTNET);
+  if(original instanceof FeeBumpTransaction)throw Error();
+  const envelope=TransactionBuilder.fromXDR(chain.envelopeXdr,Networks.TESTNET),submitted=envelope instanceof FeeBumpTransaction?envelope.innerTransaction:envelope;
+  const originalOperation=original.operations[0],submittedOperation=submitted.operations[0];
+  if(originalOperation.type!=='invokeHostFunction'||submittedOperation.type!=='invokeHostFunction')throw Error();
+  const originalAuth=originalOperation.auth![0],submittedAuth=submittedOperation.auth![0];
+  if(originalAuth.credentials().address().signatureExpirationLedger()!==ORIGINAL_MARKET_PAYMENT_RECOVERY.expirationLedger||!originalAuth.toXDR().equals(submittedAuth.toXDR()))throw Error();
+  if(typeof chain.resultXdr!=='string'||!chain.resultXdr||Buffer.byteLength(chain.resultXdr)>24000)throw new WorkspaceError('X402_RECOVERY_FEE_UNVERIFIED',409);
+  const result=xdr.TransactionResult.fromXDR(chain.resultXdr,'base64'),feeCharged=BigInt(result.feeCharged().toString()),feeOffered=BigInt(envelope.fee),maximumFee=BigInt(ORIGINAL_MARKET_PAYMENT_RECOVERY.maximumSponsoredFeeStroops);
+  const feeSource=envelope instanceof FeeBumpTransaction?envelope.feeSource:submitted.source;
+  const resultCode=result.result().switch().name;
+  if((envelope instanceof FeeBumpTransaction?resultCode!=='txFeeBumpInnerSuccess':resultCode!=='txSuccess')||feeCharged<0n||feeCharged>maximumFee||feeOffered<feeCharged||feeSource===order.payer)throw new WorkspaceError('X402_RECOVERY_FEE_UNVERIFIED',409);
+  if(envelope instanceof FeeBumpTransaction){const inner=result.result().innerResultPair();if(!inner.transactionHash().equals(submitted.hash())||inner.result().result().switch().name!=='txSuccess')throw new WorkspaceError('X402_RECOVERY_FEE_UNVERIFIED',409);}
+  return {transactionHash,authorizationFingerprint:submittedProof.fingerprint,feeChargedStroops:Number(feeCharged),ledger:chain.ledger!};
+ }catch(error){if(error instanceof WorkspaceError&&error.code==='X402_RECOVERY_FEE_UNVERIFIED')throw error;throw new WorkspaceError('X402_PAYMENT_NOT_VERIFIED',409);}
+}
+async function adoptOriginalMarketPaymentHash(p:WorkspacePrincipal,order:MarketOrder,record:MarketX402Settlement,transactionHash:string,deps:MarketX402Dependencies){
+ if(order.operationId!==ORIGINAL_MARKET_PAYMENT_RECOVERY.operationId||order.phase!=='payment-uncertain'||record.phase!=='uncertain'||!record.attemptId||record.attemptId!==order.settlementAttemptId||!record.payloadHash||!record.authorizationFingerprint||record.transactionHash||record.outcome||order.transactionHash||order.paymentVerifiedAt)throw new WorkspaceError('X402_RECOVERY_SCOPE_MISMATCH',409);
+ const store=configuredMarketStore();if(!store.recoverySnapshot)throw new WorkspaceError('X402_RECOVERY_UNAVAILABLE',503);
+ const snapshot=await store.recoverySnapshot(order.operationId);
+ if(marketX402OrderBinding(snapshot.order)!==marketX402OrderBinding(order)||snapshot.order.phase!==order.phase||snapshot.order.settlementAttemptId!==record.attemptId||snapshot.order.transactionHash||snapshot.order.paymentVerifiedAt)throw new WorkspaceError('OPERATION_CONFLICT',409);
+ const wallet=await configuredWorkspaceStore().walletIdentity(p),ownerGuard=wallet.guard;
+ if(!ownerGuard||ownerGuard.keys.length!==1||ownerGuard.values.length!==1||snapshot.guard.keys.length!==1||snapshot.guard.values.length!==1)throw new WorkspaceError('X402_RECOVERY_UNAVAILABLE',503);
+ const guard:MarketCommitGuard={keys:[...snapshot.guard.keys,...ownerGuard.keys],values:[...snapshot.guard.values,...ownerGuard.values]};
+ const chain=await deps.rpc.transaction(transactionHash);
+ verifyOriginalMarketRecoveryTransaction(snapshot.order,record,transactionHash,chain);
+ const matches=(r:MarketX402Settlement|undefined)=>Boolean(r&&r.operationId===record.operationId&&r.buyerOwnerId===p.ownerId&&r.orderBinding===record.orderBinding&&r.attemptId===record.attemptId&&r.payloadHash===record.payloadHash&&r.authorizationFingerprint===record.authorizationFingerprint&&canonical(r.challenge)===canonical(record.challenge)&&sha(canonical(r.payload))===record.payloadHash);
+ let adopted:MarketX402Settlement;
+ try{adopted=await deps.store.transact(s=>{const current=s.records.find(r=>r.operationId===record.operationId);if(!matches(current)||current!.phase!=='uncertain'||current!.transactionHash||current!.outcome)throw new WorkspaceError('OPERATION_CONFLICT',409);current!.transactionHash=transactionHash;current!.updatedAt=new Date().toISOString();return current!;},guard);}
+ catch(error){
+  // A known conflict is not an uncertain acknowledgement. An unknown write
+  // outcome gets one read of this same record, never another adoption write.
+  if(error instanceof WorkspaceError&&['OPERATION_CONFLICT','AUTHORIZATION_SNAPSHOT_CHANGED','CAPACITY_BINDING_CHANGED','FREE_DEMO_REQUEST_LIMIT'].includes(error.code))throw error;
+  let saved:MarketX402Settlement|undefined;try{saved=await deps.store.transact(s=>s.records.find(r=>r.operationId===record.operationId));}catch{throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);}
+  if(!matches(saved)||saved!.transactionHash!==transactionHash||saved!.outcome&&saved!.outcome.transaction!==transactionHash)throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+  adopted=saved!;
+ }
+ // Reuse this one proven chain read for native finalization. No adapter here
+ // can verify, settle, sign, submit, scan or select another transaction.
+ return {order:snapshot.order,record:adopted,dependencies:{...deps,rpc:{transaction:async(hash:string)=>{if(hash!==transactionHash)throw new WorkspaceError('X402_RECOVERY_TRANSACTION_CONFLICT',409);return chain;}}}};
+}
+export async function reconcileMarketX402Payment(p:WorkspacePrincipal,id:string,deps?:MarketX402Dependencies,transactionHash?:string):Promise<MarketOrder|MarketRecovery>{
+ if(marketPerOrderStorageEnabled(id)&&!isPerOrderPaymentEnabled(id)&&perOrderProductionPaymentsConfigured()){if(deps!==undefined)throw new WorkspaceError('PER_ORDER_PAYMENTS_NOT_ENABLED',503);return withPerOrderX402Production(id,()=>reconcileMarketX402Payment(p,id,undefined,transactionHash));}
+ if(isPerOrderPaymentEnabled(id)&&marketPerOrderStorageEnabled(id)){if(transactionHash!==undefined)throw new WorkspaceError('X402_RECOVERY_SCOPE_MISMATCH',409);return (await import('./per-order-x402.ts')).reconcilePerOrderX402Payment(p,id,deps??perOrderPaymentDependencies(id));}
+ assertMarketOrderFinancialStorage(id);
+ deps??=dependencies();
+ if(transactionHash!==undefined&&(!/^[a-f0-9]{64}$/.test(transactionHash)||id!==ORIGINAL_MARKET_PAYMENT_RECOVERY.operationId))throw new WorkspaceError('X402_RECOVERY_SCOPE_MISMATCH',409);
  let o:MarketOrder;
- try{o=await readMarketOrder(p,id);}catch(e){if(!(e instanceof WorkspaceError)||e.code!=='ORDER_CONTENT_EXPIRED')throw e;const recovery=await readMarketRecovery(p,id);if(!recovery||recovery.buyerOwnerId!==p.ownerId||!['human','agent'].includes(p.role))throw new WorkspaceError('NOT_FOUND',404);await reconcileMarketGuardianOrder(id,deps);return (await readMarketRecovery(p,id))!;}
- buyer(p,o);const record=await boundRecord(deps.store,o);
+ try{o=await readMarketOrder(p,id);}catch(e){if(!(e instanceof WorkspaceError)||e.code!=='ORDER_CONTENT_EXPIRED'||transactionHash!==undefined)throw e;const recovery=await readMarketRecovery(p,id);if(!recovery||recovery.buyerOwnerId!==p.ownerId||!['human','agent'].includes(p.role))throw new WorkspaceError('NOT_FOUND',404);await reconcileMarketGuardianOrder(id,deps);return (await readMarketRecovery(p,id))!;}
+ buyer(p,o);let record=await boundRecord(deps.store,o);
+ if(transactionHash!==undefined){
+  const known=[record.transactionHash,record.outcome?.transaction,o.transactionHash].filter(Boolean);
+  if(known.some(hash=>hash!==transactionHash))throw new WorkspaceError('X402_RECOVERY_TRANSACTION_CONFLICT',409);
+  if(!record.transactionHash&&!record.outcome?.transaction){const adopted=await adoptOriginalMarketPaymentHash(p,o,record,transactionHash,deps);o=adopted.order;record=adopted.record;deps=adopted.dependencies;}
+ }
  if(!(record.transactionHash||record.outcome?.transaction)||!['settling','settled','confirmed','uncertain'].includes(record.phase))throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
  try{return await finalizePaid(deps,o,record);}catch(e){await markUncertain(deps,o,record);throw e;}
 }
 /** Internal guardian recovery reads the chain only; it never resubmits a payment. */
-export async function reconcileArchivedMarketPayment(id:string,deps=dependencies()){
+export async function reconcileArchivedMarketPayment(id:string,deps=(assertMarketOrderFinancialStorage(id),dependencies())){
+ assertMarketOrderFinancialStorage(id);
  const r=await configuredMarketStore().transact(s=>s.archived?.find(r=>r.operationId===id));
  if(!r||r.paymentProtocol!==MARKET_X402_PROTOCOL||!r.transactionHash||!r.authorizationFingerprint)throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
  if(r.paymentPhase==='confirmed')return r;
@@ -168,35 +287,50 @@ export async function reconcileArchivedMarketPayment(id:string,deps=dependencies
  if(proof.transactionHash!==r.transactionHash||proof.fingerprint!==r.authorizationFingerprint)throw new WorkspaceError('X402_PAYMENT_NOT_VERIFIED',409);
  return configuredMarketStore().transact(s=>{const current=s.archived?.find(o=>o.operationId===id);if(!current||current.orderBinding!==r.orderBinding||current.transactionHash!==r.transactionHash||current.authorizationFingerprint!==r.authorizationFingerprint)throw new WorkspaceError('OPERATION_CONFLICT',409);current.paymentPhase='confirmed';current.paymentVerifiedAt=new Date().toISOString();return current;});
 }
-export async function reconcileMarketGuardianOrder(id:string,deps=dependencies()){
+export async function reconcileMarketGuardianOrder(id:string,deps=(assertMarketOrderFinancialStorage(id),dependencies())){
+ assertMarketOrderFinancialStorage(id);
  const o=await configuredMarketStore().transact(s=>s.orders.find(o=>o.operationId===id));
  if(!o)return reconcileArchivedMarketPayment(id,deps);
  const record=await boundRecord(deps.store,o);
  if(!(record.transactionHash||record.outcome?.transaction)||!['settling','settled','confirmed','uncertain'].includes(record.phase))throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
  return finalizePaid(deps,o,record);
 }
-export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,origin:string,signature?:string,deps=dependencies()):Promise<Response>{
+export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,origin:string,signature?:string,deps?:MarketX402Dependencies):Promise<Response>{
+ if(marketPerOrderStorageEnabled(id)&&!isPerOrderPaymentEnabled(id)&&perOrderProductionPaymentsConfigured()){if(deps!==undefined)throw new WorkspaceError('PER_ORDER_PAYMENTS_NOT_ENABLED',503);return withPerOrderX402Production(id,()=>executeMarketX402Payment(p,id,origin,signature));}
+ if(isPerOrderPaymentEnabled(id)&&marketPerOrderStorageEnabled(id))return (await import('./per-order-x402.ts')).executePerOrderX402Payment(p,id,origin,signature,deps??perOrderPaymentDependencies(id));
+ assertMarketOrderFinancialStorage(id);
+ deps??=dependencies();
  assertMarketEnabled();
  const o=await readMarketOrder(p,id);buyer(p,o);
  let record=await deps.store.transact(s=>s.records.find(r=>r.operationId===id));
  if(!record){
   if(o.phase!=='awaiting-payment')throw new WorkspaceError('X402_SETTLEMENT_UNAVAILABLE',409);
-  assertMarketPurchaseAdmission();if(await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
+  assertMarketPurchaseAdmission(p);if(await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
   const challengeGuard=await sellerPaymentGuard(o,p);
   await operationalRequestGate({profile:'authenticated',newOperation:true});
-  const challenge=createMarketX402Challenge(o,origin);record=await deps.store.transact(s=>{assertMarketPurchaseAdmission();if(s.records.some(r=>r.operationId===id))throw new WorkspaceError('OPERATION_CONFLICT',409);const time=new Date().toISOString(),r:MarketX402Settlement={operationId:id,buyerOwnerId:p.ownerId,orderBinding:marketX402OrderBinding(o),challenge,phase:'challenged',createdAt:time,updatedAt:time};s.records.push(r);return r;},challengeGuard);
+  const challenge=createMarketX402Challenge(o,origin);record=await deps.store.transact(s=>{assertMarketPurchaseAdmission(p);if(s.records.some(r=>r.operationId===id))throw new WorkspaceError('OPERATION_CONFLICT',409);const time=new Date().toISOString(),r:MarketX402Settlement={operationId:id,buyerOwnerId:p.ownerId,orderBinding:marketX402OrderBinding(o),challenge,phase:'challenged',createdAt:time,updatedAt:time};s.records.push(r);return r;},challengeGuard);
  }
  assertRecordBinding(record,o);
  if(!signature){if(record.phase==='confirmed')return paidResponse(await finalizePaid(deps,o,record),record,origin);if(record.phase!=='challenged')throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);return Response.json(record.challenge,{status:402,headers:{...workspaceHeaders,'PAYMENT-REQUIRED':encodePaymentRequiredHeader(record.challenge)}});}
  const proof=parseProof(signature,record,o);
  if(record.payloadHash){if(record.payloadHash!==proof.payloadHash||record.authorizationFingerprint!==proof.authorizationFingerprint)throw new WorkspaceError('OPERATION_CONFLICT',409);if(record.phase==='confirmed')return paidResponse(await finalizePaid(deps,o,record),record,origin);throw new WorkspaceError(record.phase==='rejected'?'X402_PAYMENT_REJECTED':'X402_PAYMENT_OUTCOME_UNCERTAIN',record.phase==='rejected'?402:409);}
- assertMarketPurchaseAdmission();if(await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
+ assertMarketPurchaseAdmission(p);if(await configuredMarketStore().transact(s=>s.paused??false))throw new WorkspaceError('PURCHASES_PAUSED',503);
  const paymentGuard=await sellerPaymentGuard(o,p);
  await operationalRequestGate({profile:'authenticated',newOperation:true});
- const attemptId=randomUUID();record=await deps.store.transact(s=>{assertMarketPurchaseAdmission();const r=s.records.find(v=>v.operationId===id);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.phase!=='challenged')throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.records.some(v=>v.authorizationFingerprint===proof.authorizationFingerprint))throw new WorkspaceError('X402_AUTHORIZATION_REUSE',409);Object.assign(r,proof,{attemptId,phase:'verifying',updatedAt:new Date().toISOString()});return r;},paymentGuard);
+ const attemptId=randomUUID();
+ // Index the potential reconciliation before creating a verifying ledger
+ // record. A crash between the writes cannot hide an uncertain payment.
+ await markOrder(o,attemptId);
+ record=await deps.store.transact(s=>{assertMarketPurchaseAdmission(p);const r=s.records.find(v=>v.operationId===id);if(!r||r.orderBinding!==marketX402OrderBinding(o)||r.phase!=='challenged')throw new WorkspaceError('OPERATION_CONFLICT',409);if(s.records.some(v=>v.authorizationFingerprint===proof.authorizationFingerprint))throw new WorkspaceError('X402_AUTHORIZATION_REUSE',409);Object.assign(r,proof,{attemptId,phase:'verifying',updatedAt:new Date().toISOString()});return r;},paymentGuard);
+ let settlementStarted=false,verificationRejected=false,failureStage:MarketX402PaymentFailure['stage']='verify';
  try{
   const verified=await deps.facilitator.verify(proof.payload,record.challenge.accepts[0]);
-  if(verified.isValid!==true||verified.payer!==o.payer){await updateRecord(deps.store,o,attemptId,r=>{r.phase='rejected';});await releaseRejectedSeat(o,attemptId);throw new WorkspaceError('X402_PAYMENT_REJECTED',402);}
+  // Verify is read-only. Stop classifying failures as verification failures as
+  // soon as it returns: a lost ACK while recording a rejection is not proof
+  // that the rejection or the seller-seat release was committed.
+  failureStage='before-settle';
+  if(verified.isValid!==true||verified.payer!==o.payer){verificationRejected=true;await updateRecord(deps.store,o,attemptId,r=>{if(r.phase!=='verifying'||r.transactionHash||r.outcome)throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='rejected';});await releaseRejectedSeat(o,attemptId);throw new WorkspaceError('X402_PAYMENT_REJECTED',402);}
+  assertMarketPurchaseAdmission(p);
   const settleGuard=await sellerPaymentGuard(o,p);
   await markOrder(o,attemptId);
   record=await updateRecord(deps.store,o,attemptId,r=>{if(r.phase!=='verifying')throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='settling';},settleGuard);
@@ -205,22 +339,49 @@ export async function executeMarketX402Payment(p:WorkspacePrincipal,id:string,or
   // A stalled wall clock cannot hide time spent awaiting the final Redis ACK.
   const admissionNow=Math.max(Date.now(),admissionWallStart+Math.max(0,performance.now()-admissionMonotonicStart));
   if(admissionNow>=expiresAt)throw new WorkspaceError('SELLER_UNAVAILABLE',503,60);
+  assertMarketPurchaseAdmission(p);
+  settlementStarted=true;
+  failureStage='settle';
   const outcome=await deps.facilitator.settle(proof.payload,record.challenge.accepts[0]);
+  failureStage='outcome-save';
   try{record=await updateRecord(deps.store,o,attemptId,r=>{r.responseHash=sha(canonical(outcome));if(outcome.network==='stellar:testnet'&&outcome.payer===o.payer&&/^[a-f0-9]{64}$/.test(outcome.transaction))r.transactionHash=outcome.transaction;});}
   catch(e){if(await retainArchivedOutcome(o,record,outcome))throw new WorkspaceError('ORDER_CONTENT_EXPIRED',410);throw e;}
   if(outcome.success!==true||outcome.network!=='stellar:testnet'||outcome.payer!==o.payer||!/^[a-f0-9]{64}$/.test(outcome.transaction))throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
   const receipt:SettleResponse={success:true,network:'stellar:testnet',transaction:outcome.transaction,payer:outcome.payer};
   record=await updateRecord(deps.store,o,attemptId,r=>{r.outcome=receipt;r.phase='settled';});
+  failureStage='chain-confirm';
   const paid=await finalizePaid(deps,o,record);return paidResponse(paid,record,origin);
  }catch(e){
+  // An invalid verify result also proves no settle call. Never retry either
+  // rejection/seat write after its unknown ACK through markUncertain.
+  if(verificationRejected)throw e instanceof WorkspaceError?e:new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+  // No path from a failing verify invocation has called settle. Retain the
+  // signed proof as permanently rejected, rather than allowing another send.
+  // Release the seller seat only after an acknowledged native rejection CAS.
+  if(!settlementStarted&&failureStage==='verify'&&record.phase==='verifying'){
+   const expectedPayloadHash=record.payloadHash,expectedAuthorizationFingerprint=record.authorizationFingerprint;
+   try{await updateRecord(deps.store,o,attemptId,r=>{
+    if(r.phase!=='verifying'||r.payloadHash!==expectedPayloadHash||r.authorizationFingerprint!==expectedAuthorizationFingerprint||r.transactionHash||r.outcome)throw new WorkspaceError('OPERATION_CONFLICT',409);
+    r.phase='rejected';r.lastFailure=safePaymentFailure(e,'verify');
+   });}catch{
+    // Do not issue a second write after an unknown rejection ACK. The original
+    // payment-submitting marker and reserved seat already require recovery.
+    throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+   }
+   try{await releaseRejectedSeat(o,attemptId);}catch{throw new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);}
+   throw new WorkspaceError('X402_PAYMENT_REJECTED',402);
+  }
   // A known availability rejection before settling is a definitive no-send.
   // Unknown acknowledgements still enter the existing reconciliation path.
-  if(e instanceof WorkspaceError&&['SELLER_UNAVAILABLE','SELLER_RESERVATION_EXPIRED','SELLER_CAPACITY_EXHAUSTED'].includes(e.code)&&record.phase==='verifying'){
-   await updateRecord(deps.store,o,attemptId,r=>{if(r.phase!=='verifying')throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='rejected';});await releaseRejectedSeat(o,attemptId);throw e;
+  if(!settlementStarted&&e instanceof WorkspaceError&&['SELLER_UNAVAILABLE','SELLER_RESERVATION_EXPIRED','SELLER_CAPACITY_EXHAUSTED','BUYER_ADMISSION_RESTRICTED','BUYER_PILOT_INTENT_RESTRICTED','PUBLIC_BUYER_ADMISSION_UNAVAILABLE','PURCHASE_ADMISSION_CONFIGURATION_INCOMPLETE','PURCHASES_PAUSED','X402_PAYMENTS_DISABLED','X402_CONFIGURATION_INCOMPLETE','TEXT_SELLER_UNAVAILABLE','TEXT_SELLER_CONFIGURATION_INCOMPLETE','TEXT_SELLER_BINDING_MISMATCH','FREE_DEMO_REQUEST_LIMIT','FREE_DEMO_BUDGET_UNAVAILABLE'].includes(e.code)&&(record.phase==='verifying'||o.executionMode==='on-demand'&&record.phase==='settling')){
+   await updateRecord(deps.store,o,attemptId,r=>{if(!['verifying','settling'].includes(r.phase))throw new WorkspaceError('OPERATION_CONFLICT',409);r.phase='rejected';});await releaseRejectedSeat(o,attemptId);throw e;
   }
-  if(!(e instanceof WorkspaceError&&e.code==='X402_PAYMENT_REJECTED'))await markUncertain(deps,o,record);throw e instanceof WorkspaceError?e:new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
+  if(!(e instanceof WorkspaceError&&e.code==='X402_PAYMENT_REJECTED'))await markUncertain(deps,o,record,safePaymentFailure(e,failureStage));throw e instanceof WorkspaceError?e:new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
  }
 }
-export async function marketX402Handler(request:Request,id:string){
- try{const p=await authenticateWorkspaceRequest(request);await parseWorkspaceBody(request,z.object({}).strict(),1024);return await executeMarketX402Payment(p,id,workspaceRequestOrigin(request),request.headers.get('payment-signature')??undefined);}catch(e){return workspaceFailure(e);}
+export async function marketX402Handler(request:Request,id:string):Promise<Response>{
+ try{if(marketPerOrderStorageEnabled(id)&&!isPerOrderPaymentEnabled(id)&&perOrderProductionPaymentsConfigured())return await withPerOrderX402Production(id,()=>marketX402Handler(request,id));}catch(error){return workspaceFailure(error);}
+ try{assertMarketOrderFinancialStorage(id);const p=await authenticateWorkspaceRequest(request);await parseWorkspaceBody(request,z.object({}).strict(),1024);const response=await executeMarketX402Payment(p,id,workspaceRequestOrigin(request),request.headers.get('payment-signature')??undefined);if(response.ok){const body=await response.clone().json();if(body.order)scheduleMarketTextWake(body.order);}return response;}catch(e){return workspaceFailure(e);}
 }
+import {ensureMarketTextReadiness,queueMarketTextWake} from './market-text-seller-runtime.ts';
+import {scheduleMarketTextWake} from './market-text-seller-after.ts';

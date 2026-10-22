@@ -25,5 +25,6 @@ export async function resolveHistoryPrincipal(authorization: string | null, writ
     if (!(e instanceof HistoryAuthError) || e.code !== "UNAUTHORIZED" || !openWorkspacesEnabled()) throw e;
   }
   const workspace = await requireWorkspacePrincipal(authorization, write ? "agent" : undefined);
+  if(workspace.purpose==='treasury-controls')throw new WorkspaceError('TREASURY_CONTROL_SCOPE',403);
   return { ownerId: workspace.ownerId, permission: workspace.role === "agent" ? "write" : "read", workspace };
 }

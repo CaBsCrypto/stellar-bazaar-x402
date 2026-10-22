@@ -3,6 +3,7 @@ import { WorkspaceError, type WorkspacePrincipal } from './workspace-types.ts';
 
 /** A grant stays bound to the server-assigned agent and current access generation. */
 export async function marketSubmissionGuard(principal: WorkspacePrincipal) {
+  if(principal.purpose==='treasury-controls')throw new WorkspaceError('TREASURY_CONTROL_SCOPE',403);
   const snapshot = await configuredWorkspaceStore().readMarketPermissionSnapshot(principal);
   if (principal.role === 'agent' && !snapshot.permission.allowServiceSubmission) throw new WorkspaceError('MARKET_SUBMISSION_NOT_ALLOWED', 403);
   // Agent publication requires a store that can atomically compare both keys at commit.

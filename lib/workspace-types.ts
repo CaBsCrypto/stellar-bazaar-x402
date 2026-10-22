@@ -10,7 +10,7 @@ export const workspaceAccessSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("revoke"), expectedGeneration: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER - 1) }).strict(),
 ]);
 export type WorkspaceRole = "human" | "agent" | "bootstrap";
-export type WorkspacePrincipal = { ownerId: string; workspaceId: string; agentId: string; role: WorkspaceRole; generation: number };
+export type WorkspacePrincipal = { purpose?:'treasury-controls'; ownerId: string; workspaceId: string; agentId: string; role: WorkspaceRole; generation: number };
 export type WorkspaceMessage = { messageId: string; conversationId: string; taskId: string; actor: "human" | "agent"; text: string; recordedAt: string; operationId?: string };
 export type WorkspaceConversation = { conversationId: string; title: string; createdAt: string; messages: WorkspaceMessage[]; tasks?: WorkspaceTask[] };
 export type WorkspaceTask = { taskId: string; conversationId: string; humanMessageId: string; text: string; status: "pending" | "claimed" | "responded" | "uncertain"; createdAt: string; attemptId?: string; agentId?: string; responseMessageId?: string; operationId?: string };

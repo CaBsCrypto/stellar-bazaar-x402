@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "packageVersion": "1.1.0",
+  "contract": "bazaar.integration/v1",
+  "archive": "bazaar-stellar-buyer-kit-v1.zip",
+  "sha256": "09ee892a2b1d0a717974559e975d852015512c44387154fa50a99c2ffb4da418",
+  "bytes": 50233,
+  "format": "zip",
+  "deterministic": {
+    "sortedPaths": true,
+    "timestamp": "1980-01-01T00:00:00",
+    "symlinks": false
+  },
+  "files": [
+    {
+      "path": "examples/agent-access-cli.mjs",
+      "bytes": 4933,
+      "sha256": "a7cedda5528c4ace7765148cf9a735adbf2b593f79dfd0eeebdf6f8bcedf8f82"
+    },
+    {
+      "path": "examples/agent-access-client.mjs",
+      "bytes": 11794,
+      "sha256": "72706b93918290e49cc268d1358f1b6846f9984b85a4530ee58608fbd0fa4b65"
+    },
+    {
+      "path": "examples/buyer-cli.mjs",
+      "bytes": 6560,
+      "sha256": "9f68a6904c1c3b5196e2b6547154d97d14971b5a6cb45162bc0001debfabce04"
+    },
+    {
+      "path": "examples/buyer-portable-runtime.mjs",
+      "bytes": 7481,
+      "sha256": "cba46acef35d7709c1829b071333db2815a773ecdde56feda0473861ebb740b5"
+    },
+    {
+      "path": "examples/buyer-portable-secret-store.mjs",
+      "bytes": 8429,
+      "sha256": "c1fde9c4c89d3a898983a7b193db5b9a4ce9bf9b6e867bf97915dd866c093743"
+    },
+    {
+      "path": "examples/buyer-private-input.mjs",
+      "bytes": 1867,
+      "sha256": "f4576e9a06adc2b3f15dfa5f7f50ceecdb4d86cade4f9497705eda1bb9d973aa"
+    },
+    {
+      "path": "examples/market-price.mjs",
+      "bytes": 783,
+      "sha256": "5bee11f95d5268c81cd3765e56243ad6d07be94073c57f3dfcb0e0b74499ee2e"
+    },
+    {
+      "path": "examples/marketplace-x402-buyer.mjs",
+      "bytes": 37033,
+      "sha256": "a266765ef86d29794e1c94bd1acb414f9da0c2da52e13383c75d6b4be3e0ac9d"
+    },
+    {
+      "path": "examples/private-mcp-client.mjs",
+      "bytes": 1549,
+      "sha256": "5b60dc9a8c3cba64e389f0de0143a9e70eba18fd5a405a42b8c63011411620bd"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 664,
+      "sha256": "77a4de31bcf9fce3bb7b39f8ba19bf2a4919ff59fa7e9873074801f630e869fd"
+    },
+    {
+      "path": "MANIFEST.json",
+      "bytes": 4649,
+      "sha256": "87c0c8206014cb1440f17b9d152ccd2ac85b9f78d2ffccc0b3244b15f795fa2b"
+    },
+    {
+      "path": "mcp.private.template.json",
+      "bytes": 153,
+      "sha256": "203b624cf2aaa6ebd15cd6a055d05c8733a0d36614a92a76a87a6fce4f5cc837"
+    },
+    {
+      "path": "mcp.public.json",
+      "bytes": 337,
+      "sha256": "85a3cde7e8cdb41c5925dd74f6155a672bc0f75b5c9d1f63cc2e118951b18aa0"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 63293,
+      "sha256": "5f2324e33b6d574ff94b401724b4d8e1843bd5107faa317e4dddb25b350eb0ae"
+    },
+    {
+      "path": "package.json",
+      "bytes": 504,
+      "sha256": "ce907c850694f54762e8db4dca600758b897aca73b2c43b5147442081d33221e"
+    },
+    {
+      "path": "README.md",
+      "bytes": 8938,
+      "sha256": "07c84c2f468dc58d8591dd9e014c9c9219742588161a42dbf17c5a6c34dc9e75"
+    }
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@stellar/stellar-sdk": "14.4.2",
+    "@x402/core": "2.24.0"
+  },
+  "dependencyLockSha256": "5f2324e33b6d574ff94b401724b4d8e1843bd5107faa317e4dddb25b350eb0ae",
+  "resolvedPackageCount": 139,
+  "lockEdgeCount": 232,
+  "sourceModules": 9,
+  "entryPoints": {
+    "buyer": "examples/buyer-cli.mjs",
+    "nonfinancial": "examples/agent-access-cli.mjs"
+  },
+  "historyRequiresWalletSeed": false,
+  "installationPerformed": false,
+  "liveRequests": 0,
+  "financialActions": 0,
+  "containsCredentials": false
+}

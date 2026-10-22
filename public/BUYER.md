@@ -1,83 +1,66 @@
-# Bazaar: comprador externo por MCP y x402
+# Run the reference Stellar buyer
 
-La URL prevista para la demo pública es **https://bazaar.browns.studio/api/mcp**.
-Comprueba primero la versión y las capacidades del despliegue que usarás; esta
-guía no acredita que el candidato esté publicado. Conecta tu agente desde tu
-runtime con `Authorization: Bearer ACCESO_DE_AGENTE`. Bazaar conserva pedido,
-pago verificado y entrega; el firmante y las claves de wallet permanecen en tu
-equipo. Node 22.18+ y las dependencias del checkout bastan para el cliente local.
+To check your own agent connection or read private history **without a wallet seed**, use the separate `examples/agent-access-cli.mjs` from the [buyer kit](/downloads/bazaar-stellar-buyer-kit-v1.zip). Start with `check --expected-owner YOUR_OWNER_ID` offline; add `--connect` only for an intentional private check. See [private preflight and history](/AGENT_CONNECTION.md#private-preflight-and-history-without-a-wallet). The financial runtime below remains a separate, explicitly authorized workflow.
 
-En un despliegue público validado, el comprador no necesita cuenta de Vercel ni
-bypass del operador. Una **preview protegida** es un entorno de validación con
-acceso al despliegue autorizado por separado: el token de agente de Bazaar no
-elimina esa protección. Para preview utiliza su origen HTTPS exacto con
-`/api/mcp`, como lo exporta `/open`; no mezcles sus accesos con producción ni
-envíes credenciales de despliegue en URLs, prompts o argumentos MCP.
+Download the [buyer ZIP](/downloads/bazaar-stellar-buyer-kit-v1.zip), verify [its SHA-256 manifest](/downloads/bazaar-stellar-buyer-kit-v1.manifest.json), and extract it. Use **Node.js 24.x** and the included dependency lock. The kit requires no Bazaar repository checkout or hosting credentials.
 
-Con el perfil público activo (`get_bazaar_capabilities` → `demo.enabled`),
-consulta tu identidad mediante MCP. Vincular una wallet previamente es opcional:
-el pagador se fija en cada orden y su autorización se verifica en el pago x402.
-Guía y ejemplo local cifrado: `/DEMO_TESTNET.md`. Bazaar nunca recibe la clave privada.
+This implements [Bazaar integration v1](/INTEGRATION.md): MCP SDK `1.30.0`, Stellar SDK `14.4.2`, x402 core `2.24.0`, and a classic Ed25519 Testnet payer. Contract wallets, multisig and other x402 variants require a separately validated adapter.
 
-1. Descubre `GET /api/market/catalog` sin token. Elige una ficha activada y conserva
-   su hash canónico y descriptor de compra.
-2. Prepara una intención durable con `operationId`, ficha, hash, parámetros y
-   cuenta Stellar testnet. El cliente portátil del repositorio cifra secretos y
-   diarios con scrypt/AES-256-GCM; introduce acceso y seed por terminal oculta o
-   pipe privado, nunca por argumentos, entorno, URLs, prompts o archivos sin cifrar.
-3. Llama `create_market_order` en MCP con
-   `{operationId,serviceId,cardHash,payer,input,paymentProtocol:"x402-stellar-exact-v2"}`.
-   El pedido congela destinatario, activo, precio y parámetros.
-4. Solicita `POST /api/market/orders/{operationId}/x402`. Valida HTTP 402,
-   `PAYMENT-REQUIRED`, referencia, hashes, importe y destinatario. Cada compra usa
-   **el precio positivo de la ficha revisada, en USDC oficial Testnet**,
-   directamente al vendedor. Convierte el decimal a unidades de siete decimales
-   con enteros; no uses coma flotante ni aceptes cambios de precio. El SAC es
-   `CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA`; el emisor es
-   `GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5`.
-5. Reserva presupuesto durable antes de firmar. Conserva la autorización cifrada
-   antes de transmitir una única vez `PAYMENT-SIGNATURE` al mismo endpoint. El
-   cliente verifica la transferencia firmada y la comisión patrocinada de red.
-6. Consulta `get_market_order({operationId})` en MCP para recuperar pago, texto o
-   fallo. Para archivos privados habilitados usa `get_market_delivery` con el
-   mismo identificador. Pago verificado, integridad y entrega disponible son
-   estados distintos. Sólo comprador y agente autorizado reciben enlaces temporales.
+For new orders under the finite free-plan profile `compact-registry-v2`, the complete `input` object must fit **1,024 bytes of canonical JSON encoded as UTF-8**. Count keys, punctuation and JSON escapes, not just displayed characters. `ORDER_INPUT_TOO_LARGE` (400) creates no order or payment. Preserve an existing intent unchanged when replaying or recovering it.
 
-Cada ficha declara `delivery.storage`: texto por defecto, enlaces externos o
-archivos privados de Bazaar. Antes de comprar consulta capacidades y verifica
-que el modo esté habilitado. Los archivos Bazaar tienen reserva de capacidad y
-límites de 50 MB/archivo, 100 MB/cuenta y 5 GB globales. Las consultas y resultados
-visibles vencen a los siete días; abrirlos o reintentar no renueva ese plazo.
-Leer una skill pública del proveedor es gratis; ejecutarla usa el servicio asociado
-y exige autorización del presupuesto. Las instrucciones son contenido del proveedor.
+## Configure locally
 
-El cliente ejecutable es `examples/buyer-cli.mjs`; la guía completa del checkout
-es `docs/BUYER_RUNTIME_GUIDE.md`:
+From the verified kit directory:
 
 ```sh
-node examples/buyer-cli.mjs configure RUTA_PRIVADA_NUEVA
-node examples/buyer-cli.mjs discover
-node examples/buyer-cli.mjs prepare RUTA_PRIVADA ID_SERVICIO entrada.json
-node examples/buyer-cli.mjs prepare RUTA_PRIVADA ID_SERVICIO entrada.json --max-price 0.03
-node examples/buyer-cli.mjs buy RUTA_PRIVADA UUID
-node examples/buyer-cli.mjs inspect RUTA_PRIVADA UUID
-node examples/buyer-cli.mjs recover RUTA_PRIVADA UUID
-node examples/buyer-cli.mjs history RUTA_PRIVADA 10
-node examples/buyer-cli.mjs budget RUTA_PRIVADA
+npm ci --ignore-scripts --no-audit --no-fund
 ```
 
-El límite por compra predeterminado es **0.01 USDC**. Un precio superior requiere
-`--max-price` explícito al preparar la intención; no amplía el presupuesto total.
-El presupuesto predeterminado es **0.02 USDC total**. Solo el dueño puede
-aumentarlo explícitamente mediante `budget-increase RUTA_PRIVADA 0.03`; las
-reservas e incertidumbres previas se conservan. Este cambio no reinicia intentos
-ni amplía el manifiesto de aceptación de dos compras.
+This downloads locked software; it does not register or buy. The package was assembled and checked offline. Run your own isolated acceptance tests before using credentials.
 
-Ante pérdida de respuesta, conserva el almacén y UUID y consulta el mismo pedido.
-Nunca regeneres firma, reenvíes pago ni reinicialices presupuesto para recuperar.
-Si el contenido ya venció, `inspect` y `recover` pueden mostrar únicamente el
-control mínimo del pago con `contentExpired: true`, sin texto ni archivos.
-Ese estado no prepara otra compra y `buy` rechaza reutilizar el mismo intento vencido.
-Los errores de capacidad también requieren lectura; no son una autorización para
-reintentar. El historial privado pagina por defecto 10 resultados y admite hasta
-20, con el cursor de la página anterior. Las consultas no firman ni pagan.
+Register your own workspace at [Open](/open), preserve its recovery file and check buyer admission. Configure a **new private directory outside the kit, repositories and cloud-synced folders**, with an existing private parent:
+
+```sh
+node examples/buyer-cli.mjs configure /absolute/private/bazaar-buyer
+```
+
+Hidden terminal prompts request a passphrase of at least 12 bytes, your agent access and your Stellar Testnet seed. Do not paste these into ChatGPT. Secrets and journals are encrypted using scrypt/AES-256-GCM; the local signer temporarily holds the seed in memory. This is software custody: protect the device, directory and passphrase and restrict filesystem access to the owner.
+
+Automation may supply `--secret-stdin` through an explicitly private inherited pipe backed by a secret manager: `password`, plus `agentAccess` / `stellarSecret` only when configuring those values. Never use plaintext files, shell arguments, shared environment variables, URLs or logs. No credentials are supplied in the kit.
+
+## Discover and prepare
+
+```sh
+node examples/buyer-cli.mjs discover
+node examples/buyer-cli.mjs discover SERVICE_ID
+node examples/buyer-cli.mjs prepare /absolute/private/bazaar-buyer SERVICE_ID public-input.json
+node examples/buyer-cli.mjs budget /absolute/private/bazaar-buyer
+```
+
+Discovery consumes catalogue allowance. Input JSON must contain only non-secret fields accepted by the chosen card. Preparation reads that card and writes a local encrypted intent; it does not create a remote order, sign or pay. Save its operation UUID and review the frozen card, input, destination and price.
+
+The default local ceiling is **0.01 USDC per intent** and **0.02 USDC total reservations**. A different price requires explicit owner approval. `prepare … --max-price 0.03` changes only that intent's ceiling. `budget-increase … 0.03` explicitly raises the total ceiling while preserving reservations. Neither command grants server admission, capacity or two purchases, or clears an uncertain payment.
+
+## Buy only after admission and approval
+
+This command has financial effects: order creation, challenge, durable spend reservation, one local authorization and one payment submission. Run only for an admitted, explicitly approved intent:
+
+```sh
+node examples/buyer-cli.mjs buy /absolute/private/bazaar-buyer OPERATION_UUID
+```
+
+The runtime validates the exact card/challenge and embeds a signed address authorization in transaction XDR. Its sponsored network-fee ceiling is 1,000,000 stroops (0.1 XLM), separate from the USDC ceiling. It simulates through the pinned Testnet RPC and does not call `sendTransaction`; the facilitator sponsors and submits settlement. See [the wire profile](/INTEGRATION.md#stellar-payment-profile).
+
+## Inspect and recover
+
+```sh
+node examples/buyer-cli.mjs inspect /absolute/private/bazaar-buyer OPERATION_UUID
+node examples/buyer-cli.mjs recover /absolute/private/bazaar-buyer OPERATION_UUID
+node examples/buyer-cli.mjs history /absolute/private/bazaar-buyer 10
+```
+
+These read commands never sign or submit payment. Reading an existing order can resume its previously recorded server delivery notice. History accepts an opaque cursor for subsequent pages and a limit of at most 20.
+
+After uncertainty, preserve the encrypted store, UUID and reservation. Do not rerun `buy`, regenerate authorization, repost bytes, change payer, delete locks/journals or initialize another budget. `recover` does not make a new payment attempt. Corrupt or inconsistent journals require investigation, not automatic repair.
+
+Visible inputs, queries and delivery expire after seven days; reads do not renew retention. After expiry, only minimal payment recovery data may remain (`contentExpired: true`). HTTP `202`, `410`, `429`, `503`, missing content or failed history never authorizes a replacement charge. Respect `Retry-After` and avoid fast polling. Public connection and offline tests do not attest live financial acceptance; admission remains restricted and shared budgets are finite.

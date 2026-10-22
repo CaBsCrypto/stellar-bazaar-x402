@@ -5,6 +5,7 @@ import { resolveHistoryPrincipal, type ResolvedHistoryPrincipal } from "./worksp
 import { configuredWorkspaceStore } from "./workspace-store.ts";
 import { assertWorkspaceRequest, workspaceFailure, workspaceRequestOrigin } from "./workspace-http.ts";
 import { WorkspaceError } from "./workspace-types.ts";
+import { demoIngress } from "./demo-http.ts";
 
 const headers = { "Cache-Control": "private, no-store", "Vary": "Authorization", "X-Content-Type-Options": "nosniff" };
 function fail(code: string, status: number) {
@@ -35,7 +36,7 @@ export function createHistoryHandlers(dependencies: {
       try {
         if (!allowedRequest(request)) return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await authenticate(request.headers.get("authorization"));
-        if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
+        if (principal.workspace) { await demoIngress(request); assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
         const rawLimit = new URL(request.url).searchParams.get("limit") ?? "20";
         if (!/^[1-9][0-9]{0,2}$/.test(rawLimit) || Number(rawLimit) > 100) return fail("INVALID_REQUEST", 400);
         const records = await (principal.workspace ? configuredWorkspaceStore().forPrincipal(principal.workspace).operations : store()).list(principal.ownerId, Number(rawLimit));

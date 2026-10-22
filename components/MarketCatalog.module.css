@@ -1,5 +1,9 @@
 .catalog { color: var(--ink, #20251f); }
 .actions,.pager { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; margin-block: 1rem; }
+.search { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; margin-block: 1.5rem; }
+.search label { display: grid; gap: .5rem; flex: 1 1 20rem; }
+.search input { width: 100%; min-height: 44px; padding: .65rem 1rem; font: inherit; border: 1px solid #797469; border-radius: .4rem; background: white; color: inherit; }
+.card h2 a { color: inherit; text-underline-offset: .2em; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr)); gap: 1rem; margin-block: 1.5rem; }
 .card { padding: 1.5rem; border: 1px solid #dedbd3; border-radius: 1rem; background: white; display: flex; flex-direction: column; align-items: start; }
 .card h2 { margin-block: .5rem; font-size: 1.5rem; }
@@ -13,7 +17,7 @@
 .catalog button,.catalog select { min-height: 44px; padding: .65rem 1rem; font: inherit; border: 1px solid #797469; border-radius: .4rem; background: white; color: inherit; }
 .catalog button { cursor: pointer; }
 .catalog button:disabled { opacity: .6; cursor: default; }
-.catalog button:focus-visible,.catalog select:focus-visible,.catalog summary:focus-visible { outline: 3px solid #168976; outline-offset: 3px; }
+.catalog button:focus-visible,.catalog select:focus-visible,.catalog input:focus-visible,.catalog a:focus-visible,.catalog summary:focus-visible { outline: 3px solid #168976; outline-offset: 3px; }
 .pager label { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
 .catalog [role=alert] { color: #9d251b; }
 @media(max-width:480px) { .card { padding: 1rem; } }

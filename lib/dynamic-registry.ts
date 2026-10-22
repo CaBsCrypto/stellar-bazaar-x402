@@ -28,7 +28,7 @@ const INDEX_KEY = pilot ? namespace + ':index' : "bazaar:index";
 
 const redisUrl = pilot ? process.env.BAZAAR_WORKSPACE_REDIS_REST_URL : process.env.UPSTASH_REDIS_REST_URL ?? process.env.KV_REST_API_URL;
 const redisToken = pilot ? process.env.BAZAAR_WORKSPACE_REDIS_REST_TOKEN : process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
-const redis: Redis | null = redisUrl && redisToken ? meteredRedis(new Redis({ url: redisUrl, token: redisToken, retry: false, enableAutoPipelining: false })) : null;
+const redis: Redis | null = redisUrl && redisToken ? meteredRedis(new Redis({ url: redisUrl, token: redisToken, retry: { retries: 0 }, enableAutoPipelining: false })) : null;
 if (pilot && !redis) throw Error('CATALOG_REDIS_REQUIRED');
 
 const globalRegistry = globalThis as unknown as {
@@ -154,7 +154,7 @@ export async function withdrawDynamicServiceCard(id: string) {
   if (process.env.BAZAAR_ACCEPTANCE_X402 === 'true') {
     if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(id)) throw Error('CATALOG_WITHDRAWAL_UNCONFIRMED');
     // Preserve the exact stored envelope. No cjson rewrite, lease or retry.
-    const rawClient = meteredRedis(new Redis({url:redisUrl!,token:redisToken!,automaticDeserialization:false,retry:false,enableAutoPipelining:false}));
+    const rawClient = meteredRedis(new Redis({url:redisUrl!,token:redisToken!,automaticDeserialization:false,retry:{retries:0},enableAutoPipelining:false}));
     const key = CARD_KEY_PREFIX + id;
     const raw = await rawClient.get<string>(key);
     if (typeof raw !== 'string' || Buffer.byteLength(raw) > 7936) throw Error('CATALOG_WITHDRAWAL_UNCONFIRMED');

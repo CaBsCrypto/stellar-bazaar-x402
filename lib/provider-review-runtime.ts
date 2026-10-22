@@ -26,7 +26,7 @@ export function getReviewRedis(): ReviewRedis | null {
   if (!url || !token?.trim()) throw Error("REVIEW_REDIS_REQUIRED");
   const parsed = new URL(url);
   if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash) throw Error("INVALID_REVIEW_REDIS_URL");
-  return meteredRedis(new Redis({ url, token, automaticDeserialization: false, retry: false, enableAutoPipelining: false }));
+  return meteredRedis(new Redis({ url, token, automaticDeserialization: false, retry: { retries: 0 }, enableAutoPipelining: false }));
 }
 export function reviewSharedConfigured(): boolean {
   try { return getReviewRedis() !== null; } catch { return false; }

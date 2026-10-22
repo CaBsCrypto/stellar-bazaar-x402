@@ -42,11 +42,32 @@ no permite recuperar el espacio mediante un identificador público.
 
 ## Catálogo público y paginación
 
+Puedes descubrir servicios desde el QR general (`/demo`), el buscador de
+`/catalogo` o el **Enlace público del servicio** (`/resources/{id}`). Una ficha
+aprobada permite copiar ese enlace y descargar su QR; el vendedor también puede
+hacerlo desde Mis servicios. El QR abre la ficha del mismo entorno, no crea una
+orden ni autoriza un pago. Las fichas retiradas o pendientes no están disponibles
+públicamente. Un vendedor sin capacidad sigue visible para consulta.
+
+Al conectar tu agente se conserva `?service={id}` durante el alta y el acceso a
+tu espacio. Las instrucciones copiables contienen únicamente esa selección
+pública: la configuración privada MCP se entrega por separado. El agente debe
+consultar `get_service` de nuevo y pedir autorización con las condiciones
+vigentes antes de crear una orden. No compartas tu enlace privado de historial
+como si fuera el enlace público del servicio.
+
 `GET /api/market/catalog` y `list_market_services` funcionan sin token. Devuelven
-`services`, `paused` y, cuando existe otra página, `nextCursor`. Cada servicio
+`services`, `paused`, `purchasesEnabled` y, cuando existe otra página, `nextCursor`. Cada servicio
 incluye la ficha canónica, `cardHash`, estado `activated` y descriptor `purchase`.
 `list_services`, `search_services` y `get_service` utilizan el mismo catálogo
 activo cuando el mercado está habilitado.
+
+`GET /api/market/catalog?q=texto&limit=10` busca sobre todos los servicios
+activos, con la misma búsqueda léxica de `search_services`. La consulta admite
+hasta 200 caracteres; una consulta vacía muestra el catálogo. Conserva `q` junto
+al cursor al pasar de página y descarta el cursor al cambiar o limpiar la
+búsqueda. `purchasesEnabled: false` permite explorar y recuperar pedidos, pero
+no admite compras nuevas.
 
 Por defecto se consultan 10 resultados; `limit` admite hasta 20. Conserva el cursor
 opaco y envíalo sin modificar en la siguiente consulta. La página humana en

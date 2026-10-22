@@ -1,0 +1,90 @@
+{
+  "date": "2026-10-22",
+  "repository": "https://github.com/CaBsCrypto/stellar-bazaar-x402",
+  "outgoingOriginalHistory": {
+    "head": "e9daaf13e792760da0664485d7b189c699a1b0ad",
+    "excludedReferences": "freshly fetched refs/remotes/verified-github/* only",
+    "newCommits": 151,
+    "uniqueObjects": 2406,
+    "uniqueBlobsInspected": 1445,
+    "blobBytesInspected": 24122284,
+    "imagesOcrReviewed": 63,
+    "qrCodesDecoded": 3,
+    "qrAccessCapabilitiesFound": 0,
+    "imagesWithExifOrGps": 0,
+    "confirmedRealCredentials": 0,
+    "privateDataBlockingPublicationIdentified": false,
+    "imageContext": "Six OCR uncertainties were resolved against exact screenshot hashes, synthetic-account reports, matching deterministic delivery digests and clean preview URLs. Testnet payments in historical evidence were real; delivery content and accounts were synthetic.",
+    "historicalDeletedBlobsIncluded": true
+  },
+  "selectedWorkingSnapshot": {
+    "trackedEdits": 77,
+    "selectedNewSourceFiles": 604,
+    "excludedUntrackedFiles": 868,
+    "newTextChangesReviewed": 682,
+    "newCredentialFindings": 0,
+    "environmentTemplateValues": "all empty",
+    "historicalScriptsWithMachinePaths": "preserved as source; do not run automatically"
+  },
+  "originalDownloadAssets": {
+    "createdForMigration": false,
+    "zip": {
+      "path": "public/downloads/bazaar-stellar-buyer-kit-v1.zip",
+      "bytes": 50233,
+      "membersInspectedInMemory": 16,
+      "sha256": "09ee892a2b1d0a717974559e975d852015512c44387154fa50a99c2ffb4da418"
+    },
+    "tgz": {
+      "path": "public/downloads/bazaar-native-text-provider-kit.tgz",
+      "bytes": 45383,
+      "membersInspectedInMemory": 23,
+      "sha256": "dc42e87f6d40fba30a1adbfae738918f501ea40127fec11f1ad3d54c86e00df7"
+    },
+    "membersMatchProductManifests": true,
+    "realEnvironmentFilesCredentialsOrPrivateDataFound": false,
+    "externalPathsLinksEncryptedMembersOrInstalledDependenciesFound": false
+  },
+  "multisellerWasm": {
+    "path": "contracts/bazaar-split-v1/router.wasm",
+    "bytes": 18951,
+    "sha256": "37f5a0488ef4d605b54a2a7ffd0f31bbe49313f2796ec7d3ac0bf1817e9c1b28",
+    "structureAndSorobanMetadataInspected": true,
+    "rustSourcesAndCargoLockPreserved": true,
+    "sorobanSdk": "21.7.7",
+    "compilerPathMetadataPresent": true,
+    "runtimeDependencyOnCompilerPaths": false,
+    "recompiledOrBinarySourceEquivalenceVerified": false
+  },
+  "storage": {
+    "lfsPointersIdentifiedInCandidate": false,
+    "submodulesIdentifiedInCandidate": false,
+    "newCandidateFilesOver5MiB": 0,
+    "githubDocumentationChecked": "https://docs.github.com/en/repositories/working-with-files/managing-large-files/about-large-files-on-github",
+    "githubBlocksFilesOverMiB": 100
+  },
+  "automation": {
+    "githubPushWorkflowsMatchMigrationBranches": false,
+    "vercelGitIntegrationEnabled": true,
+    "vercelProject": "stellar-bazaar-x402",
+    "vercelProductionBranch": "main",
+    "existingIgnoreBuildCommand": "[ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ] && exit 1 || exit 0",
+    "nonMainPushCanCreateCancelledRecordAndConsumeLimits": true,
+    "configurationChangedToAvoidThis": false,
+    "pushRequiresDecisionOnThatEffect": true,
+    "publicationNotAttestedByThisFile": true
+  },
+  "stashes": {
+    "originalsPreserved": true,
+    "metadataOnlyReviewed": true,
+    "count": 2,
+    "dates": ["2026-08-22", "2026-08-22"],
+    "scope": "Older provider-catalog drafts; no automatic recovery or combination with current application",
+    "contentsPublished": false
+  },
+  "limitations": [
+    "This is a documented review, not an absolute guarantee of absence of secrets.",
+    "No project scripts, installations, applications, builds, tests, migrations or deploys were executed.",
+    "Notebook operation, credential portability, original-PC independence and reproducible Rust compilation remain unverified.",
+    "Other historical worktrees, excluded evidence, original private settings and stashes remain on the original PC."
+  ]
+}

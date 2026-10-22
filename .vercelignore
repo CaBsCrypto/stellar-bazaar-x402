@@ -12,7 +12,7 @@ contracts/**/target
 .env*
 docs
 scripts
-examples
+/examples
 contracts
 .github
 AGENTS.md

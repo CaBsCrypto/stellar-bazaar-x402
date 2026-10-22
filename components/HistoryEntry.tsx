@@ -1,4 +1,6 @@
 "use client";
+import {UiText, useUiLanguage} from "@/components/UiLanguage";
+
 import {useEffect,useRef,useState,type ChangeEvent} from "react";
 import dynamic from "next/dynamic";
 import {DeliverableReview} from "./DeliverableReview";
@@ -9,7 +11,9 @@ import {Button} from "./ui";
 import DemoAccount from './DemoAccount';
 import MarketplaceWorkspace from './MarketplaceWorkspace';
 import {parsePilotAccess} from '../lib/pilot-access';
-const OperationHistory=dynamic(()=>import("./OperationHistory").then(module=>module.OperationHistory),{loading:()=> <p role="status" className="shell">Abriendo tus operaciones…</p>});
+import {serviceSelectionHref} from '@/lib/service-selection';
+import {SelectedServiceContext} from './SelectedServiceContext';
+const OperationHistory=dynamic(()=>import("./OperationHistory").then(module=>module.OperationHistory),{loading:()=> <p role="status" className="shell"><UiText text="Abriendo tus operaciones…"/></p>});
 function capsuleToken(raw:string):string {
  if(new TextEncoder().encode(raw).byteLength>4096)throw Error("INVALID_ACCESS_CAPSULE");
  const value:unknown=JSON.parse(raw);
@@ -20,7 +24,8 @@ function capsuleToken(raw:string):string {
  if(capsule.version!==1||capsule.kind!=="bazaar-private-read-access"||typeof capsule.token!=="string"||!/^[A-Za-z0-9_-]{43}$/.test(capsule.token))throw Error("INVALID_ACCESS_CAPSULE");
  return capsule.token;
 }
-export function HistoryEntry({marketEnabled=false,demoEnabled=false}:{marketEnabled?:boolean;demoEnabled?:boolean}={}){
+export function HistoryEntry({marketEnabled=false,demoEnabled=false,serviceId}:{marketEnabled?:boolean;demoEnabled?:boolean;serviceId?:string}={}){
+ const {t, language} = useUiLanguage();
  const [mode,setMode]=useState<"checking"|"demo"|"private"|"locked">("checking");
  const [view,setView]=useState<"market"|"operations">("market");
  const [access,setAccess]=useState("");const [manual,setManual]=useState("");
@@ -43,14 +48,14 @@ export function HistoryEntry({marketEnabled=false,demoEnabled=false}:{marketEnab
  if(supplied){url.searchParams.delete("token");hash.delete("token");url.hash=hash.toString();window.history.replaceState(window.history.state,"",url.pathname+url.search+url.hash);if(/^[A-Za-z0-9_-]{43}$/.test(token)){setAccess(token);setView("market");setMode("private");}else{setAccess('');setMode('locked');setCapsuleError('El enlace de acceso no es válido. Recupera tu archivo privado.');}}else setMode(marketEnabled?"locked":"demo");};detect();window.addEventListener("hashchange",detect);return ()=>{alive.current=false;generation.current++;window.removeEventListener("hashchange",detect);};},[marketEnabled]);
  const leave=()=>{invalidateCapsule();setAccess("");setManual("");setView("market");setMode("locked");};
  const explore=()=>{invalidateCapsule();setAccess("");setManual("");setView("market");setMode(marketEnabled?"locked":"demo");};
- const views=<nav aria-label="Vistas de tu espacio" className="history-nav"><Button variant={view==="market"?"primary":"secondary"} aria-current={view==="market"?"page":undefined} onClick={()=>setView("market")}>Compras y ventas</Button><Button variant={view==="operations"?"primary":"secondary"} aria-current={view==="operations"?"page":undefined} onClick={()=>setView("operations")}>Otras operaciones</Button></nav>;
- if(mode==="checking")return <main className="shell ui-page" role="status">Comprobando acceso…</main>;
+ const views=<nav aria-label={t("Vistas de tu espacio")} className="history-nav"><Button variant={view==="market"?"primary":"secondary"} aria-current={view==="market"?"page":undefined} onClick={()=>setView("market")}><UiText text="Compras y ventas"/></Button><Button variant={view==="operations"?"primary":"secondary"} aria-current={view==="operations"?"page":undefined} onClick={()=>setView("operations")}><UiText text="Otras operaciones"/></Button></nav>;
+ if(mode==="checking")return <main className="shell ui-page" role="status"><UiText text="Comprobando acceso…"/></main>;
  if(mode==="private"){
   if(!marketEnabled)return <OperationHistory key={access} initialAccess={access} onLocked={leave} onExploreDemo={explore}/>;
   if(view==="operations")return <><div className="shell ui-page">{views}</div><OperationHistory key={access} initialAccess={access} onLocked={leave} onExploreDemo={explore}/></>;
-  return <><Navbar prefetch={false}/><main className="operation-history shell"><Breadcrumbs prefetch={false} items={[{label:"Mi espacio privado"}]}/><h1>Mi espacio privado</h1><p><a href="/storage">Archivos, privacidad y plazo del historial</a></p>{demoEnabled&&<DemoAccount key={access} access={access}/>}{views}<MarketplaceWorkspace key={`market-${access}`} access={access} onLock={leave} view="history"/></main><Footer prefetch={false}/></>;
+  return <><Navbar prefetch={false}/><main className="operation-history shell"><Breadcrumbs prefetch={false} items={[{label:t("Mi espacio privado")}]}/><h1><UiText text="Mi espacio privado"/></h1><SelectedServiceContext serviceId={serviceId} connect/><p><a href="/storage"><UiText text="Archivos, privacidad y plazo del historial"/></a></p>{demoEnabled&&<DemoAccount key={access} access={access}/>}{views}<MarketplaceWorkspace key={`market-${access}`} access={access} onLock={leave} view="history"/></main><Footer prefetch={false}/></>;
  }
- const form=<details className="history-manual"><summary>Tengo mi archivo o acceso privado</summary><form onSubmit={e=>{e.preventDefault();invalidateCapsule();if(/^[A-Za-z0-9_-]{43}$/.test(manual.trim())){setAccess(manual.trim());setManual("");setView("market");setMode("private");}else setCapsuleError('El acceso no es válido.');}}><label htmlFor="manual-history-access">Acceso privado</label><input id="manual-history-access" type="password" autoComplete="off" value={manual} onChange={e=>{invalidateCapsule();setManual(e.target.value);}}/><Button type="submit" disabled={!manual.trim()}>Abrir mi espacio</Button><label htmlFor="history-access-capsule">Restaurar mi archivo de recuperación</label><input id="history-access-capsule" type="file" accept="application/json,.json" onChange={restoreCapsule} aria-invalid={!!capsuleError} aria-describedby={`history-capsule-help${capsuleError?" history-capsule-error":""}`}/><p id="history-capsule-help">El archivo raíz recupera el acceso humano de este origen. También puedes usar una cápsula de lectura. El acceso permanece sólo en memoria.</p>{capsuleReading&&<p role="status">Leyendo el archivo…</p>}{capsuleError&&<p id="history-capsule-error" role="alert">{capsuleError}</p>}</form></details>;
- if(mode==="locked")return <><Navbar prefetch={false}/><main className="shell ui-page"><h1>Abre tu espacio privado</h1><p><a href="/storage">Archivos, privacidad y plazo del historial</a></p><p>Recupera tu archivo privado o abre el enlace de acceso que conservaste para consultar tus compras, ventas y servicios.</p>{marketEnabled?<a className='ui-button ui-button--primary' href='/open'>Crear o recuperar mi espacio</a>:<Button onClick={explore}>Explorar demostración</Button>}{form}</main><Footer prefetch={false}/></>;
+ const form=<details className="history-manual"><summary><UiText text="Tengo mi archivo o acceso privado"/></summary><form onSubmit={e=>{e.preventDefault();invalidateCapsule();if(/^[A-Za-z0-9_-]{43}$/.test(manual.trim())){setAccess(manual.trim());setManual("");setView("market");setMode("private");}else setCapsuleError("El acceso no es válido.");}}><label htmlFor="manual-history-access"><UiText text="Acceso privado"/></label><input id="manual-history-access" type="password" autoComplete="off" value={manual} onChange={e=>{invalidateCapsule();setManual(e.target.value);}}/><Button type="submit" disabled={!manual.trim()}><UiText text="Abrir mi espacio"/></Button><label htmlFor="history-access-capsule"><UiText text="Restaurar mi archivo de recuperación"/></label><input id="history-access-capsule" type="file" accept="application/json,.json" onChange={restoreCapsule} aria-invalid={!!capsuleError} aria-describedby={`history-capsule-help${capsuleError?" history-capsule-error":""}`}/><p id="history-capsule-help"><UiText text="El archivo raíz recupera el acceso humano de este origen. También puedes usar una cápsula de lectura. El acceso permanece sólo en memoria."/></p>{capsuleReading&&<p role="status"><UiText text="Leyendo el archivo…"/></p>}{capsuleError&&<p id="history-capsule-error" role="alert">{t(capsuleError)}</p>}</form></details>;
+ if(mode==="locked")return <><Navbar prefetch={false}/><main className="shell ui-page"><h1><UiText text="Abre tu espacio privado"/></h1><SelectedServiceContext serviceId={serviceId} connect/><p><a href="/storage"><UiText text="Archivos, privacidad y plazo del historial"/></a></p><p><UiText text="Recupera tu archivo privado o abre el enlace de acceso que conservaste para consultar tus compras, ventas y servicios."/></p>{marketEnabled?<a className='ui-button ui-button--primary' href={serviceSelectionHref('/open', serviceId)}><UiText text="Crear o recuperar mi espacio"/></a>:<Button onClick={explore}><UiText text="Explorar demostración"/></Button>}{form}</main><Footer prefetch={false}/></>;
  return <DeliverableReview accessEntry={form}/>;
 }

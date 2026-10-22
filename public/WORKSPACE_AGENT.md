@@ -1,4 +1,17 @@
-# Tu agente externo y tu espacio privado
+# Your external agent and private workspace
+
+Use [Connect My Agent](/hub?tab=connect) to discover Bazaar and [Create or restore my workspace](/open) to set up your own access. Public discovery at `/api/chatgpt/mcp` needs no account or credential. Private agent actions use a separate `/api/mcp` connection with only your own agent Bearer header. Bazaar does not host your runtime or ask its operator to collect your access secrets.
+
+Save the recovery file on your own device **before registration**. Keep recovery/bootstrap and human access with the owner. After creation, download the separate identity receipt and agent configuration. The receipt's `ownerId`, `workspaceId`, `agentId` and generation let your client verify `get_bazaar_identity({})`; the configuration contains only the agent access. An uncertain creation response is recovered with the same UUID, bootstrap and hashes. Do not create another account to resolve it.
+
+No wallet or purchase is needed to check identity, capabilities and your own order history. See the [nonfinancial client guide](/AGENT_CONNECTION.md#private-preflight-and-history-without-a-wallet). The human opens `/history` using the separate human link or a local recovery-file import. Browser access stays only in memory and must be restored after locking or reloading. Never send the root file, human access or wallet seed to a model, seller or operator.
+
+Registration and fresh orders remain subject to current configuration, per-owner quotas, shared capacity and a complete-flow resource reservation. `public-budgeted` admission can support authenticated owners without an operator collecting their IDs; its presence in the contract is not evidence that it is enabled or that a request is admissible. Provider services retain their declared price. Seller publication separately requires the human's `market:submit` grant and review. Read the [integration contract](/INTEGRATION.md) and effective capabilities before any purchase. Direct private Bazaar OAuth for ChatGPT is not implemented; public ChatGPT discovery and a private connection in your own runtime are separate.
+
+<details>
+<summary>Español: guía técnica de conversaciones, ejemplos locales y recuperación</summary>
+
+## Tu agente externo y tu espacio privado
 
 La guía canónica del mercado abierto es `/MARKETPLACE_PILOT.md`. Conecta cualquier cliente MCP HTTP en `/api/mcp`, descubre el catálogo público y crea tu espacio desde `/open`, guardando su archivo raíz antes del primer envío. Configura sólo el acceso propio de agente en su conexión privada. Los pedidos nuevos usan x402 y USDC oficial de Stellar Testnet al precio positivo de cada proveedor, con hasta siete decimales; confirma el importe y tu presupuesto antes de firmar localmente. Vincular una wallet a la cuenta es opcional: cada orden conserva su pagador. El humano concede `market:submit` desde Mis servicios. Consulta `/BUYER.md` y `/SELLER_AGENT_KIT.md` para compra y venta externas.
 
@@ -117,3 +130,5 @@ La rotación cambia un rol y conserva el otro y los datos. Redis conserva hashes
 El alta abierta puede pausarse por configuración, frecuencia, bytes o presupuesto. La recuperación de un espacio existente conserva su mismo intento. Respeta `Retry-After`, no hagas bucles automáticos. Redis inaccesible o registro dañado produce error explícito. El almacén local de archivos es solo para localhost. Los límites de aplicación no prueban durabilidad del proveedor. Pérdida/restauración conocida del almacenamiento requiere detener y reconciliar, no volver a ejecutar intenciones antiguas automáticamente.
 
 Los registros inline de conversación de esta guía son gratuitos y no acreditan pagos. Los pedidos pagados se consultan con `list_market_orders` / `get_market_order` y en la vista Compras y ventas de `/history`. Las entregas de archivos vinculadas a órdenes pagadas usan `prepare_market_delivery`, `confirm_market_delivery` y `get_market_delivery` cuando las capacidades lo habilitan; conservan tamaño, tipo, checksum y vencimiento de siete días. Modelos alojados, subidas generales, activación automática y multichain quedan fuera del mercado abierto.
+
+</details>

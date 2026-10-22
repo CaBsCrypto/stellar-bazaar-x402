@@ -3,6 +3,7 @@ import { GET as tasks, POST as claim } from "../app/api/agent-tasks/route";
 import { POST as respond } from "../app/api/agent-tasks/[id]/response/route";
 import { POST as recordOperation } from "../app/api/operations/route";
 import { POST as recordActivity } from "../app/api/activity/route";
+import {inheritDemoIngress} from './demo-http.ts';
 
 // Native handlers remain the sole permission, validation and persistence boundary.
 export function workspaceMcpContext(incoming: Request) {
@@ -20,7 +21,7 @@ export function workspaceMcpContext(incoming: Request) {
     return {ok:response.ok,status:response.status,body:await response.json(),...(wait&&/^\d+$/.test(wait)?{retryAfter:Number(wait)}:{})};
   }
   return {
-    create: async (body: unknown) => envelope(await createWorkspace(request('/api/workspaces',body))),
+    create: async (body: unknown) => envelope(await createWorkspace(inheritDemoIngress(incoming,request('/api/workspaces',body)))),
     listTasks: async () => envelope(await tasks(request('/api/agent-tasks'))),
     claim: async (body: unknown) => envelope(await claim(request('/api/agent-tasks',body))),
     respond: async (taskId: string,body:unknown) => envelope(await respond(request(`/api/agent-tasks/${encodeURIComponent(taskId)}/response`,body),{params:Promise.resolve({id:taskId})})),

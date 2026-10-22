@@ -13,6 +13,7 @@ import { resolveHistoryPrincipal, type ResolvedHistoryPrincipal } from "./worksp
 import { configuredWorkspaceStore } from "./workspace-store.ts";
 import { assertWorkspaceRequest, workspaceFailure, workspaceRequestOrigin } from "./workspace-http.ts";
 import { WorkspaceError } from "./workspace-types.ts";
+import { demoIngress } from "./demo-http.ts";
 const headers = {
   "Cache-Control": "private, no-store",
   Vary: "Authorization",
@@ -53,7 +54,7 @@ export function createActivityHandlers(
         const expectedOrigin = workspaceRequestOrigin(request);
         if (origin && origin !== expectedOrigin) return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await auth(request.headers.get("authorization"));
-        if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
+        if (principal.workspace) { await demoIngress(request); assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
         const workspaceStore = principal.workspace ? configuredWorkspaceStore().forPrincipal(principal.workspace) : undefined;
         const q = new URL(request.url).searchParams;
         if (

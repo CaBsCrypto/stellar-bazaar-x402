@@ -1,9 +1,18 @@
 {
   "buildCommand": "next build --webpack",
-  "regions": ["iad1"],
-  "crons": [{"path":"/api/market/guardian/tick","schedule":"17 * * * *"}],
+  "regions": [
+    "iad1"
+  ],
+  "crons": [
+    {
+      "path": "/api/market/guardian/tick",
+      "schedule": "0 * * * *"
+    }
+  ],
   "functions": {
-    "app/api/**/route.ts": { "maxDuration": 60 }
+    "app/api/**/route.ts": {
+      "maxDuration": 60
+    }
   },
   "git": {
     "deploymentEnabled": {

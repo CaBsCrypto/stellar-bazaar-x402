@@ -11,6 +11,10 @@ import { canonicalOperationJson, parseOperationHistoryInput, operationHistoryInp
 import { WORKSPACE_LIMITS, WorkspaceError, createWorkspaceSchema, workspaceAccessSchema, marketPermissionChangeSchema, workspaceHashSchema, workspaceIdentifierSchema, workspaceTextSchema, type WorkspacePrincipal, type WorkspaceRole, type WorkspaceConversation, type WorkspaceTask } from "./workspace-types.ts";
 import { legacyHistoryReservations } from "./operation-history-auth.ts";
 import { workspaceGlobalRequestLimits } from "./workspace-admission.ts";
+import {prepareContinuousStorageCommit} from './continuous-free-storage.ts';
+import {prepareQuotaRegistryPatch,QUOTA_REGISTRY_PATCH_LUA,workspaceRegistryTransportMaximum,COMPACT_WORKSPACE_REGISTRY_MAX_BYTES,COMPACT_WORKSPACE_REGISTRY_V2_MAX_BYTES,isCompactWorkspaceTransport} from './quota-registry-patch.ts';
+import {assertTreasuryControlRegistration,treasuryControlRegistrationPool,consumeTreasuryControl} from './treasury-control-workspace.ts';
+import {publicRegistrationPool,appendPublicRegistrationGuard,publicRegistrationBudgetKey,consumePublicOwnerControl} from './public-registration-budget.ts';
 
 import {demoEnabled,walletBindingSchema,walletChallengeSchema,walletMessage,verifyWalletProof,walletAddressSchema,type WalletChallenge} from "./demo-wallet.ts";
 
@@ -18,7 +22,7 @@ if (typeof window !== "undefined") throw new Error("Workspace storage is server-
 const fileDiagnostics = channel("bazaar.workspace.file");
 const uuid = z.string().uuid(), iso = z.string().datetime();
 const accessIntentSchema = z.object({ expectedGeneration: z.number().int().min(1), digest: workspaceHashSchema, generation: z.number().int().min(2), revoked: z.boolean() }).strict();
-const metaSchema = z.object({ creationId: uuid, workspaceId: uuid, ownerId: z.string().regex(/^ow_[a-f0-9]{32}$/), agentId: z.string().regex(/^agent_[a-f0-9]{32}$/), bootstrapHash: workspaceHashSchema, initialHumanHash: workspaceHashSchema, initialAgentHash: workspaceHashSchema, humanHash: workspaceHashSchema.nullable(), agentHash: workspaceHashSchema.nullable(), retiredHashes: z.array(workspaceHashSchema).max(4096), accessIntents: z.array(accessIntentSchema).max(4094), generation: z.number().int().min(1), revoked: z.boolean(), createdAt: iso, wallet: walletBindingSchema.optional(), walletChallenge: walletChallengeSchema.optional(), documentRevision: uuid, documentBytes: z.number().int().min(0).max(WORKSPACE_LIMITS.ownerBytes) }).strict();
+const metaSchema = z.object({ purpose:z.literal('treasury-controls').optional(), creationId: uuid, workspaceId: uuid, ownerId: z.string().regex(/^ow_[a-f0-9]{32}$/), agentId: z.string().regex(/^agent_[a-f0-9]{32}$/), bootstrapHash: workspaceHashSchema, initialHumanHash: workspaceHashSchema, initialAgentHash: workspaceHashSchema, humanHash: workspaceHashSchema.nullable(), agentHash: workspaceHashSchema.nullable(), retiredHashes: z.array(workspaceHashSchema).max(4096), accessIntents: z.array(accessIntentSchema).max(4094), generation: z.number().int().min(1), revoked: z.boolean(), createdAt: iso, wallet: walletBindingSchema.optional(), walletChallenge: walletChallengeSchema.optional(), documentRevision: uuid, documentBytes: z.number().int().min(0).max(WORKSPACE_LIMITS.ownerBytes), nextContentExpiryAt:z.number().int().nonnegative().nullable().optional() }).strict();
 const registrySchema = z.object({ version: z.literal(1), revision: uuid, workspaces: z.array(metaSchema), creationWindows: z.array(z.object({ key: z.string().max(100), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()), requestWindows: z.array(z.object({ ownerId: z.string(), count: z.number().int().min(0), until: z.number().int().min(0) }).strict()), globalRequestQuota: z.object({ minute: z.number().int().min(0), minuteCount: z.number().int().min(0).max(1000), day: z.number().int().min(0), dayCount: z.number().int().min(0).max(10000) }).strict().refine(q => q.day === Math.floor(q.minute / 1440) && q.dayCount >= q.minuteCount).optional() }).strict();
 const messageSchema = z.object({ messageId: workspaceIdentifierSchema, conversationId: workspaceIdentifierSchema, taskId: workspaceIdentifierSchema, actor: z.enum(["human", "agent"]), text: workspaceTextSchema, recordedAt: iso, operationId: workspaceIdentifierSchema.optional() }).strict();
 const conversationSchema = z.object({ conversationId: workspaceIdentifierSchema, title: z.string().min(1).max(160), createdAt: iso, messages: z.array(messageSchema).max(500) }).strict();
@@ -36,8 +40,12 @@ const marketPermissionSchema = z.object({ version: z.literal(1), ownerId: z.stri
 type FrozenOwner = z.infer<typeof frozenOwnerSchema>;
 type Document = Omit<z.infer<typeof docSchema>, "operations" | "events"> & { operations: { digest: string; record: OperationHistoryRecord }[]; events: { digest: string; record: ActivityEvent }[] };
 export type WorkspaceLegacyRegistry = { ownerIds: string[]; hashes: string[] };
-export interface WorkspaceRedis { eval(script: string, keys: string[], args: string[]): Promise<unknown> }
+export interface WorkspaceRedis { eval(script: string, keys: string[], args: string[]): Promise<unknown>;get?(key:string):Promise<unknown> }
+export const READ_CONTINUOUS_WORKSPACE_STORAGE_LUA=`return redis.call('GET',KEYS[1])`;
 export const READ_WORKSPACE_LUA = `return {redis.call('GET', KEYS[1]) or '', redis.call('GET', KEYS[2]) or '', redis.call('GET', KEYS[3]) or ''}`;
+export const READ_COMPACT_WORKSPACE_LUA = `local registry=redis.call('GET',KEYS[1]) or '';if #registry>131072 then return -26 end;return {registry,redis.call('GET',KEYS[2]) or '',redis.call('GET',KEYS[3]) or ''}`;
+export const READ_COMPACT_V2_WORKSPACE_LUA=`local registry=redis.call('GET',KEYS[1]) or '';if #registry>32768 then return -26 end;local document=redis.call('GET',KEYS[2]) or '';if #document>131072 then return -26 end;local marker=redis.call('GET',KEYS[3]) or '';if #marker>512 then return -26 end;return {registry,document,marker}`;
+export const READ_COMPACT_V2_REGISTRY_LUA=`local registry=redis.call('GET',KEYS[1]) or '';if #registry>32768 then return -26 end;if redis.call('GET',KEYS[2]) then return -26 end;local marker=redis.call('GET',KEYS[3]) or '';if #marker>512 then return -26 end;return {registry,'',marker}`;
 export const COMMIT_WORKSPACE_LUA = `
 local registry = redis.call('GET', KEYS[1]) or ''
 local document = redis.call('GET', KEYS[2]) or ''
@@ -47,6 +55,24 @@ redis.call('SET', KEYS[1], ARGV[4])
 if ARGV[5] ~= '' then redis.call('SET', KEYS[2], ARGV[5]) end
 redis.call('SET', KEYS[3], 'workspace-v1')
 return 1`;
+// The old three-key script remains available to existing clients and fixtures.
+// Continuous mode adds only an index to the same compare-and-set transaction.
+export const COMMIT_CONTINUOUS_WORKSPACE_LUA = COMMIT_WORKSPACE_LUA.replace("return 1", "redis.call('SET', KEYS[4], ARGV[6])\nreturn 1");
+export const COMMIT_CONTINUOUS_WORKSPACE_QUOTA_LUA = COMMIT_CONTINUOUS_WORKSPACE_LUA.replace("redis.call('SET', KEYS[1], ARGV[4])", () => QUOTA_REGISTRY_PATCH_LUA + "\nlocal quotaRegistryNext=quota_apply_registry_patch(registry,ARGV[4])\nif not quotaRegistryNext then return -25 end\nredis.call('SET', KEYS[1], quotaRegistryNext)");
+export const COMMIT_COMPACT_CONTINUOUS_WORKSPACE_LUA = COMMIT_CONTINUOUS_WORKSPACE_LUA.replace("redis.call('SET', KEYS[1], ARGV[4])",()=>"if #registry>131072 or #ARGV[4]>131072 then return -26 end\nredis.call('SET', KEYS[1], ARGV[4])");
+export const COMMIT_COMPACT_CONTINUOUS_WORKSPACE_QUOTA_LUA = COMMIT_CONTINUOUS_WORKSPACE_QUOTA_LUA.replace(QUOTA_REGISTRY_PATCH_LUA,()=>"if #registry>131072 then return -26 end\n"+QUOTA_REGISTRY_PATCH_LUA).replace("if not quotaRegistryNext then return -25 end",()=>"if not quotaRegistryNext then return -25 end\nif #quotaRegistryNext>131072 then return -26 end");
+export const COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_LUA=COMMIT_COMPACT_CONTINUOUS_WORKSPACE_LUA.replaceAll('131072','32768').replace('if #registry>32768 or #ARGV[4]>32768','if #document>131072 or #ARGV[5]>131072 or #registry>32768 or #ARGV[4]>32768');
+export const COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_QUOTA_LUA=COMMIT_COMPACT_CONTINUOUS_WORKSPACE_QUOTA_LUA.replaceAll('131072','32768').replace('if #registry>32768 then','if #document>131072 or #ARGV[5]>131072 or #registry>32768 then');
+export const READ_WORKSPACE_MAINTENANCE_LUA = `local clock=redis.call('TIME');return {redis.call('GET',KEYS[1]) or '',clock[1],clock[2]}`;
+const maintenanceIndexSchema=z.object({version:z.literal(1),registryRevision:uuid,initialized:z.boolean(),nextExpiryAt:z.number().int().nonnegative().nullable()}).strict();
+export type WorkspaceMaintenanceIndex={initialized:boolean;nextExpiryAt:number|null;observedAt:number;needsBootstrap:boolean};
+const continuousWorkspaceMode=()=>process.env.BAZAAR_FREE_DEMO_MODE==='continuous';
+function workspaceMaintenanceRaw(registryRaw:string):string {
+ const registry=registrySchema.parse(JSON.parse(registryRaw));
+ const initialized=registry.workspaces.every(meta=>meta.nextContentExpiryAt!==undefined);
+ const due=registry.workspaces.flatMap(meta=>typeof meta.nextContentExpiryAt==='number'?[meta.nextContentExpiryAt]:[]);
+ return JSON.stringify({version:1,registryRevision:registry.revision,initialized,nextExpiryAt:due.length?Math.min(...due):null});
+}
 const digest = (v: unknown) => createHash("sha256").update(canonicalOperationJson(v)).digest("hex");
 const bytes = (v: string) => Buffer.byteLength(v, "utf8");
 const emptyRegistry = (): Registry => ({ version: 1, revision: randomUUID(), workspaces: [], creationWindows: [], requestWindows: [] });
@@ -86,6 +112,13 @@ function pruneDocument(d:Document,now:number):number {
   d.events=d.events.filter(e=>{if(liveContent(e.record.recordedAt,now))return true;rememberReplay(d,{kind:"event",id:e.record.eventId,digest:e.digest});removed++;return false;});
   return removed;
 }
+/** Same timestamps as pruning, without reading content from the guardian. */
+function documentNextExpiryAt(d:Document):number|null {
+ if(!retentionActive(d))return null;
+ const times=[...(d.queries??[]).map(q=>q.recordedAt),...d.conversations.map(c=>c.record.createdAt),...d.tasks.map(t=>t.record.createdAt),...d.operations.map(o=>o.record.recordedAt),...d.events.map(e=>e.record.recordedAt)].map(workspaceContentExpiresAt);
+ if(times.some(t=>!Number.isSafeInteger(t)||t<0))throw unavailable('retention-index-timestamp');
+ return times.length?Math.min(...times):null;
+}
 const unavailable = (phase = "store-unavailable") => { fileDiagnostics.publish({ phase, code: "UNAVAILABLE" }); return new WorkspaceError("WORKSPACE_UNAVAILABLE"); };
 function consumeGlobalQuota(registry: Registry, now: number, limits: ReturnType<typeof workspaceGlobalRequestLimits>) {
   if (!limits) return;
@@ -100,9 +133,10 @@ function consumeGlobalQuota(registry: Registry, now: number, limits: ReturnType<
   }
   quota.minuteCount++; quota.dayCount++; registry.globalRequestQuota = quota;
 }
-function validateRegistry(raw: string, marker: string, legacy: WorkspaceLegacyRegistry): Registry {
+function validateRegistry(raw: string, marker: string, legacy: WorkspaceLegacyRegistry,observe=true): Registry {
+  const maximumBytes=workspaceRegistryTransportMaximum();
   if (!raw) { if (marker) throw unavailable("registry-missing"); return emptyRegistry(); }
-  if (marker !== "workspace-v1" || bytes(raw) > WORKSPACE_LIMITS.registryBytes) throw unavailable("registry-envelope");
+  if (marker !== "workspace-v1" || bytes(raw) > maximumBytes) throw unavailable("registry-envelope");
   const registry = registrySchema.parse(JSON.parse(raw));
   const ids = new Set<string>(), hashes = new Set<string>(), wallets = new Set<string>();
   for (const m of registry.workspaces) {
@@ -118,8 +152,29 @@ function validateRegistry(raw: string, marker: string, legacy: WorkspaceLegacyRe
   if (committedBytes > WORKSPACE_LIMITS.globalBytes) throw unavailable();
   // Permission documents are separate keys. Reserve their bounded possible size;
   // this metric is a projection, not a claim that every owner has granted access.
-  recordOperationalStorageBounds({ workspace: { committedBytes, reservedBytes: registry.workspaces.length * 4096 } });
+  if(observe)recordOperationalStorageBounds({ workspace: { committedBytes, reservedBytes: registry.workspaces.length * 4096 } });
   return registry;
+}
+/** Pure pre-activation envelope for the finite two-agent plan. Existing bytes
+ * are retained; no expiry, deletion, quota credit, identity or wallet is
+ * created. Two prospective records and at most128 ingress calls are only
+ * serialized in memory to prove growth fits the new native registry cap. */
+export function workspaceTransportActivationProjection(raw:string,marker:string,legacy:WorkspaceLegacyRegistry={ownerIds:[],hashes:[]}){
+ const registry=structuredClone(validateRegistry(raw,marker,legacy,false)),existingBytes=bytes(raw),occupied=new Set<string>([...legacy.ownerIds,...legacy.hashes]);
+ for(const meta of registry.workspaces){for(const value of [meta.creationId,meta.workspaceId,meta.ownerId,meta.agentId,meta.bootstrapHash,meta.initialHumanHash,meta.initialAgentHash,meta.humanHash,meta.agentHash,...meta.retiredHashes])if(value)occupied.add(value);meta.documentBytes=WORKSPACE_LIMITS.ownerBytes;meta.nextContentExpiryAt=Number.MAX_SAFE_INTEGER;}
+ let serial=0;const uniqueHash=()=>{for(;;){const value=createHash('sha256').update('bazaar-transport-v2-growth-'+serial++).digest('hex');if(!occupied.has(value)){occupied.add(value);return value;}}},uniqueUuid=()=>{for(;;){const h=uniqueHash(),value=h.slice(0,8)+'-'+h.slice(8,12)+'-4'+h.slice(13,16)+'-8'+h.slice(17,20)+'-'+h.slice(20,32);if(!occupied.has(value)){occupied.add(value);return value;}}};
+ for(let i=0;i<2;i++){const human=uniqueHash(),agent=uniqueHash(),ownerId='ow_'+uniqueHash().slice(0,32),agentId='agent_'+uniqueHash().slice(0,32);registry.workspaces.push({creationId:uniqueUuid(),workspaceId:uniqueUuid(),ownerId,agentId,bootstrapHash:uniqueHash(),initialHumanHash:human,initialAgentHash:agent,humanHash:human,agentHash:agent,retiredHashes:[],accessIntents:[],generation:1,revoked:false,createdAt:'9999-12-31T23:59:59.999Z',documentRevision:uniqueUuid(),documentBytes:WORKSPACE_LIMITS.ownerBytes,nextContentExpiryAt:Number.MAX_SAFE_INTEGER});}
+ // New IP keys are fixed native ASCII hashes. Preserve all existing windows
+ // even if expired, then bound one new IP per call plus global/create windows.
+ for(const row of registry.creationWindows){row.count=Number.MAX_SAFE_INTEGER;row.until=Number.MAX_SAFE_INTEGER;}
+ for(const row of registry.requestWindows){row.count=Number.MAX_SAFE_INTEGER;row.until=Number.MAX_SAFE_INTEGER;}
+ // Include two persistent owner control-quota windows as well as ingress.
+ for(let i=0;i<135;i++)registry.creationWindows.push({key:('projection-'+i+'-').padEnd(100,'x'),count:Number.MAX_SAFE_INTEGER,until:Number.MAX_SAFE_INTEGER});
+ for(const meta of registry.workspaces)registry.requestWindows.push({ownerId:meta.ownerId,count:Number.MAX_SAFE_INTEGER,until:Number.MAX_SAFE_INTEGER});
+ registry.globalRequestQuota={minute:Number.MAX_SAFE_INTEGER,minuteCount:1000,day:Math.floor(Number.MAX_SAFE_INTEGER/1440),dayCount:10000};
+ const projectedRaw=JSON.stringify(registry);registrySchema.parse(registry);const projectedBytes=bytes(projectedRaw);
+ if(projectedBytes>COMPACT_WORKSPACE_REGISTRY_V2_MAX_BYTES)throw new WorkspaceError('FREE_PLAN_REGISTRY_PLAN_CAPACITY',503);
+ return {profile:'compact-registry-v2' as const,registryMaximumBytes:COMPACT_WORKSPACE_REGISTRY_V2_MAX_BYTES,existingRegistryBytes:existingBytes,projectedRegistryBytes:projectedBytes,additionalAccounts:2,maximumIngressRequests:128,additionalPublicControlQuotaRecords:2,existingWindowsDiscarded:0,walletBindingsIncluded:0,accessRotationsIncluded:0};
 }
 function validateDocument(raw: string, meta: Meta): Document {
   if (!raw) throw unavailable("owner-missing");
@@ -167,8 +222,10 @@ function enforceUnpaid(input: OperationHistoryInput) {
 type Snapshot = { registryRaw: string; documentRaw: string; marker: string };
 export type MarketCommitGuard = { keys: string[]; values: (string | null)[] };
 type PermissionSnapshot = Snapshot & { permissionRaw: string | null; guard?: MarketCommitGuard };
-interface Backend { read(ownerId?: string): Promise<Snapshot>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string) => Promise<void>) => Promise<T>): Promise<T>; readPermission(ownerId: string): Promise<PermissionSnapshot>; transactPermission<T>(ownerId: string, callback: (snapshot: PermissionSnapshot, commit: (permission: string) => Promise<void>) => Promise<T>): Promise<T> }
+interface Backend { read(ownerId?: string): Promise<Snapshot>; maintenanceIndex():Promise<WorkspaceMaintenanceIndex>; transact<T>(ownerId: string | undefined, callback: (snapshot: Snapshot, commit: (registry: string, document: string) => Promise<void>) => Promise<T>): Promise<T>; readPermission(ownerId: string): Promise<PermissionSnapshot>; transactPermission<T>(ownerId: string, callback: (snapshot: PermissionSnapshot, commit: (permission: string) => Promise<void>) => Promise<T>): Promise<T> }
 export const READ_MARKET_PERMISSION_LUA = `return {redis.call('GET', KEYS[1]) or '', redis.call('GET', KEYS[2]) or '', redis.call('GET', KEYS[3]) or '', redis.call('GET', KEYS[4]) or ''}`;
+export const READ_COMPACT_MARKET_PERMISSION_LUA = `local registry=redis.call('GET',KEYS[1]) or '';if #registry>131072 then return -26 end;return {registry,redis.call('GET',KEYS[2]) or '',redis.call('GET',KEYS[3]) or '',redis.call('GET',KEYS[4]) or ''}`;
+export const READ_COMPACT_V2_MARKET_PERMISSION_LUA=`local registry=redis.call('GET',KEYS[1]) or '';if #registry>32768 then return -26 end;local document=redis.call('GET',KEYS[2]) or '';if #document>131072 then return -26 end;local marker=redis.call('GET',KEYS[3]) or '';if #marker>512 then return -26 end;local permission=redis.call('GET',KEYS[4]) or '';if #permission>4096 then return -26 end;return {registry,document,marker,permission}`;
 export const COMMIT_MARKET_PERMISSION_LUA = `
 if (redis.call('GET',KEYS[1]) or '') ~= ARGV[1] then return 0 end
 if (redis.call('GET',KEYS[2]) or '') ~= ARGV[2] then return 0 end
@@ -186,28 +243,78 @@ function redisBackend(redis: WorkspaceRedis, prefix: string, allowedOwners?: rea
     return [`${prefix}:{${tag}}:registry`, `${prefix}:{${tag}}:owner:${ownerId ?? "none"}`, `${prefix}:{${tag}}:initialized`];
   };
   const read = async (ownerId?: string): Promise<Snapshot> => {
-    const result = await redis.eval(READ_WORKSPACE_LUA, keys(ownerId), []);
+    const registryMaximum=workspaceRegistryTransportMaximum(),compactProfile=isCompactWorkspaceTransport();
+    const script=registryMaximum===COMPACT_WORKSPACE_REGISTRY_V2_MAX_BYTES?(ownerId===undefined?READ_COMPACT_V2_REGISTRY_LUA:READ_COMPACT_V2_WORKSPACE_LUA):compactProfile?READ_COMPACT_WORKSPACE_LUA:READ_WORKSPACE_LUA;
+    const result = await redis.eval(script, keys(ownerId), []);
+    if(result===-26)throw new WorkspaceError('FREE_PLAN_TRANSPORT_CAPACITY',503);
     if (!Array.isArray(result) || result.length !== 3 || !result.every(v => typeof v === "string")) throw unavailable();
     return { registryRaw: result[0], documentRaw: result[1], marker: result[2] };
   };
   const permissionKeys = (ownerId: string) => [...keys(ownerId), `${prefix}:{${tag}}:market-permissions:${ownerId}`];
+  const maintenanceKey=`${prefix}:{${tag}}:maintenance`;
+  const storageRedis={eval:redis.eval.bind(redis),get:(key:string)=>redis.get?redis.get(key):redis.eval(READ_CONTINUOUS_WORKSPACE_STORAGE_LUA,[key],[])};
+  const maintenanceIndex=async():Promise<WorkspaceMaintenanceIndex>=>{
+    const result=await redis.eval(READ_WORKSPACE_MAINTENANCE_LUA,[maintenanceKey],[]);
+    if(!Array.isArray(result)||result.length!==3||result.some(v=>typeof v!=='string'))throw unavailable('maintenance-index-read');
+    if(!/^\d+$/.test(result[1])||!/^\d{1,6}$/.test(result[2])||Number(result[2])>=1_000_000||Buffer.byteLength(result[0])>512)throw unavailable('maintenance-index-envelope');
+    const observedAt=Number(result[1])*1000+Math.floor(Number(result[2])/1000);
+    if(!Number.isSafeInteger(observedAt)||observedAt<0)throw unavailable('maintenance-index-clock');
+    if(!result[0])return {initialized:false,nextExpiryAt:null,observedAt,needsBootstrap:true};
+    const index=maintenanceIndexSchema.parse(JSON.parse(result[0]));
+    return {initialized:index.initialized,nextExpiryAt:index.nextExpiryAt,observedAt,needsBootstrap:!index.initialized};
+  };
   const readPermission = async (ownerId: string): Promise<PermissionSnapshot> => {
-    const allKeys = permissionKeys(ownerId), result = await redis.eval(READ_MARKET_PERMISSION_LUA, allKeys, []);
+    const allKeys = permissionKeys(ownerId),registryMaximum=workspaceRegistryTransportMaximum(),compactProfile=isCompactWorkspaceTransport(),result = await redis.eval(registryMaximum===COMPACT_WORKSPACE_REGISTRY_V2_MAX_BYTES?READ_COMPACT_V2_MARKET_PERMISSION_LUA:compactProfile?READ_COMPACT_MARKET_PERMISSION_LUA:READ_MARKET_PERMISSION_LUA, allKeys, []);
+    if(result===-26)throw new WorkspaceError('FREE_PLAN_TRANSPORT_CAPACITY',503);
     if (!Array.isArray(result) || result.length !== 4 || !result.every(v => typeof v === 'string')) throw unavailable();
     return { registryRaw: result[0], documentRaw: result[1], marker: result[2], permissionRaw: result[3] || null, guard: { keys: [allKeys[0], allKeys[3]], values: [result[0], result[3] || null] } };
   };
-  return { read, readPermission, async transactPermission(ownerId, callback) {
+  return { read, readPermission, maintenanceIndex, async transactPermission(ownerId, callback) {
     const snapshot = await readPermission(ownerId);
     return callback(snapshot, async permission => {
-      const result = await redis.eval(COMMIT_MARKET_PERMISSION_LUA, permissionKeys(ownerId), [snapshot.registryRaw, snapshot.documentRaw, snapshot.marker, snapshot.permissionRaw ?? '', permission]);
+      const baseKeys=permissionKeys(ownerId),baseArgs=[snapshot.registryRaw, snapshot.documentRaw, snapshot.marker, snapshot.permissionRaw ?? '', permission];
+      const storage=await prepareContinuousStorageCommit(storageRedis,prefix,[{key:baseKeys[3],expectedRaw:snapshot.permissionRaw,nextRaw:permission}]);
+      let script=COMMIT_MARKET_PERMISSION_LUA;
+      if(storage){script=script.replace("redis.call('SET',KEYS[4],ARGV[5]);",storage.appendScript(5,6)+storage.writeScript(5)+"redis.call('SET',KEYS[4],ARGV[5]);");baseKeys.push(...storage.keys);baseArgs.push(...storage.args);}
+      const result = await redis.eval(script, baseKeys, baseArgs);
       if (result === 0) throw new WorkspaceError('PERMISSION_CONFLICT', 409);
+      if (result === -20) throw new WorkspaceError('FREE_DEMO_STORAGE_CONFLICT',409);
+      if (result === -21) throw new WorkspaceError('FREE_DEMO_STORAGE_UNINITIALIZED',503);
+      if (result === -22||result===-23) throw new WorkspaceError('FREE_DEMO_STORAGE_UNAVAILABLE',503);
+      if (result === -24) throw new WorkspaceError('FREE_DEMO_STORAGE_CAPACITY',503);
       if (result !== 1) throw unavailable();
     });
   }, async transact(ownerId, callback) {
     const snapshot = await read(ownerId);
     return callback(snapshot, async (registry, document) => {
-      const result = await redis.eval(COMMIT_WORKSPACE_LUA, keys(ownerId), [snapshot.registryRaw, snapshot.documentRaw, snapshot.marker, registry, document]);
+      if(bytes(registry)>workspaceRegistryTransportMaximum())throw new WorkspaceError('WORKSPACE_CAPACITY',503);
+      const args=[snapshot.registryRaw, snapshot.documentRaw, snapshot.marker, registry, document];
+      const continuous=continuousWorkspaceMode();
+      const registryMaximum=workspaceRegistryTransportMaximum(),compactProfile=isCompactWorkspaceTransport(),v2=registryMaximum===COMPACT_WORKSPACE_REGISTRY_V2_MAX_BYTES;
+      const commitKeys=continuous?[...keys(ownerId),maintenanceKey]:keys(ownerId);
+      let script=continuous?(v2?COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_LUA:compactProfile?COMMIT_COMPACT_CONTINUOUS_WORKSPACE_LUA:COMMIT_CONTINUOUS_WORKSPACE_LUA):COMMIT_WORKSPACE_LUA;
+      const compact=continuous&&!document?prepareQuotaRegistryPatch(snapshot.registryRaw,registry):undefined;
+      if(compact!==undefined){args[3]=compact;script=v2?COMMIT_COMPACT_V2_CONTINUOUS_WORKSPACE_QUOTA_LUA:compactProfile?COMMIT_COMPACT_CONTINUOUS_WORKSPACE_QUOTA_LUA:COMMIT_CONTINUOUS_WORKSPACE_QUOTA_LUA;}
+      if(continuous){
+        const nextIndex=workspaceMaintenanceRaw(registry),oldIndex=await storageRedis.get(maintenanceKey);
+        if(oldIndex!==null&&typeof oldIndex!=='string')throw unavailable('maintenance-index-envelope');
+        args.push(nextIndex);
+        const writes=[{key:commitKeys[0],expectedRaw:snapshot.registryRaw||null,nextRaw:registry},{key:commitKeys[2],expectedRaw:snapshot.marker||null,nextRaw:'workspace-v1'},{key:maintenanceKey,expectedRaw:oldIndex as string|null,nextRaw:nextIndex},...(document?[{key:commitKeys[1],expectedRaw:snapshot.documentRaw||null,nextRaw:document}]:[])];
+        const storage=await prepareContinuousStorageCommit(storageRedis,prefix,writes);
+        if(storage){const registryWrite=compact!==undefined?"redis.call('SET', KEYS[1], quotaRegistryNext)":"redis.call('SET', KEYS[1], ARGV[4])";script=script.replace(registryWrite,()=>storage.appendScript(5,7)+storage.writeScript(5)+registryWrite);commitKeys.push(...storage.keys);args.push(...storage.args);}
+      }
+      if(continuous&&document&&!snapshot.documentRaw){
+        const old=validateRegistry(snapshot.registryRaw,snapshot.marker,{ownerIds:[],hashes:[]},false),next=registrySchema.parse(JSON.parse(registry)),created=next.workspaces.find(m=>m.ownerId===ownerId&&!old.workspaces.some(v=>v.ownerId===m.ownerId));
+        if(created){const pool=created.purpose==='treasury-controls'?treasuryControlRegistrationPool(created.creationId,created.ownerId):publicRegistrationPool(old.workspaces.filter(w=>w.purpose!=='treasury-controls'),created.creationId,created.ownerId);if(pool){const keyIndex=commitKeys.length+1,argIndex=args.length+1;script=appendPublicRegistrationGuard(script,keyIndex,argIndex,argIndex+1);commitKeys.push(publicRegistrationBudgetKey(prefix));args.push(JSON.stringify(pool.configuration),JSON.stringify(pool.request));}}
+      }
+      const result = await redis.eval(script, commitKeys, args);
       if (result === 0) throw new RedisCompareConflict();
+      if (result === -20) throw new WorkspaceError('FREE_DEMO_STORAGE_CONFLICT',409);
+      if (result === -21) throw new WorkspaceError('FREE_DEMO_STORAGE_UNINITIALIZED',503);
+      if (result === -22||result===-23) throw new WorkspaceError('FREE_DEMO_STORAGE_UNAVAILABLE',503);
+      if (result === -24) throw new WorkspaceError('FREE_DEMO_STORAGE_CAPACITY',503);
+      if (result === -26) throw new WorkspaceError('FREE_PLAN_TRANSPORT_CAPACITY',503);
+      if (result === -28) throw new WorkspaceError('REGISTRATION_RESOURCE_LIMIT',429,3600);
       if (result !== 1) throw unavailable();
     });
   } };
@@ -220,7 +327,7 @@ function fileFailure(phase: string, error: unknown) {
 }
 function fileBackend(directory: string, prefix: string): Backend {
   validatePrefix(prefix); const root = join(resolve(directory), prefix.split(":")[1]);
-  const paths = (ownerId?: string) => ({ registry: join(root, "registry.json"), document: join(root, ownerId ? `owner-${ownerId}.json` : "unused.json"), permission: join(root, `market-permissions-${ownerId}.json`), marker: join(root, "initialized"), pending: join(root, "pending.json"), lock: join(root, "lock") });
+  const paths = (ownerId?: string) => ({ registry: join(root, "registry.json"), document: join(root, ownerId ? `owner-${ownerId}.json` : "unused.json"), permission: join(root, `market-permissions-${ownerId}.json`), maintenance:join(root,'maintenance.json'), marker: join(root, "initialized"), pending: join(root, "pending.json"), lock: join(root, "lock") });
   async function locked<T>(ownerId: string | undefined, callback: (p: ReturnType<typeof paths>) => Promise<T>) {
     await mkdir(root, { recursive: true }); const p = paths(ownerId);
     let handle, reportedPermissionContention = false; const until = Date.now() + 2500;
@@ -241,10 +348,18 @@ function fileBackend(directory: string, prefix: string): Backend {
   const snapshot = async (p: ReturnType<typeof paths>) => { try { const values = await Promise.all([optionalRead(p.registry), optionalRead(p.document), optionalRead(p.marker)]); return { registryRaw: values[0], documentRaw: values[1], marker: values[2] }; } catch (e) { fileFailure("snapshot-read", e); throw e; } };
   const atomicWrite = async (path: string, raw: string, phase: string) => { try { const temp = path + "." + randomUUID() + ".tmp"; const h = await open(temp, "wx"); try { await h.writeFile(raw); await h.sync(); } finally { await h.close(); } await rename(temp, path); } catch (e) { fileFailure(phase, e); throw e; } };
   const permissionSnapshot = async (p: ReturnType<typeof paths>): Promise<PermissionSnapshot> => ({ ...await snapshot(p), permissionRaw: await optionalRead(p.permission) || null });
-  return { read: ownerId => locked(ownerId, snapshot), readPermission: ownerId => locked(ownerId, permissionSnapshot), transactPermission: (ownerId, callback) => locked(ownerId, async p => callback(await permissionSnapshot(p), async permission => { await atomicWrite(p.permission, permission, 'write-market-permission'); })), transact: (ownerId, callback) => locked(ownerId, async p => callback(await snapshot(p), async (registry, document) => {
+  const maintenanceIndex=()=>locked(undefined,async p=>{
+    const raw=await optionalRead(p.maintenance),observedAt=Date.now();
+    if(!raw)return {initialized:false,nextExpiryAt:null,observedAt,needsBootstrap:true};
+    const index=maintenanceIndexSchema.parse(JSON.parse(raw));
+    return {initialized:index.initialized,nextExpiryAt:index.nextExpiryAt,observedAt,needsBootstrap:!index.initialized};
+  });
+  return { read: ownerId => locked(ownerId, snapshot), readPermission: ownerId => locked(ownerId, permissionSnapshot), maintenanceIndex, transactPermission: (ownerId, callback) => locked(ownerId, async p => callback(await permissionSnapshot(p), async permission => { await atomicWrite(p.permission, permission, 'write-market-permission'); })), transact: (ownerId, callback) => locked(ownerId, async p => callback(await snapshot(p), async (registry, document) => {
     await atomicWrite(p.pending, JSON.stringify({ transaction: randomUUID() }), "write-pending");
     if (document) await atomicWrite(p.document, document, "write-owner");
-    await atomicWrite(p.registry, registry, "write-registry"); await atomicWrite(p.marker, "workspace-v1", "write-marker"); try { await unlink(p.pending); } catch (e) { fileFailure("clear-pending-after-commit", e); throw e; }
+    await atomicWrite(p.registry, registry, "write-registry");
+    if(continuousWorkspaceMode())await atomicWrite(p.maintenance,workspaceMaintenanceRaw(registry),'write-maintenance');
+    await atomicWrite(p.marker, "workspace-v1", "write-marker"); try { await unlink(p.pending); } catch (e) { fileFailure("clear-pending-after-commit", e); throw e; }
   })) };
 }
 function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistry = legacyHistoryReservations, principal?: WorkspacePrincipal, testOwnerUuid?: (creationId: string) => string, frozenOwners?: readonly FrozenOwner[]) {
@@ -264,37 +379,67 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     if (principal && (meta.ownerId !== principal.ownerId || meta.workspaceId !== principal.workspaceId || meta.generation !== principal.generation || meta.agentId !== principal.agentId)) throw new WorkspaceError("UNAUTHORIZED", 401);
     if (principal && (role ? principal.role !== role : principal.role === "bootstrap")) throw new WorkspaceError("FORBIDDEN", 403);
   }
-  const readOwner = (ownerId: string, role?: WorkspaceRole) => safe(async () => {
+  const readOwner = (ownerId: string, role?: WorkspaceRole, allowTreasuryControl=false) => safe(async () => {
     if (!/^ow_[a-f0-9]{32}$/.test(ownerId)) throw unavailable();
     const s = await backend.read(ownerId), registry = readRegistry(s.registryRaw, s.marker, reservations());
     const meta = registry.workspaces.find(m => m.ownerId === ownerId); if (!meta) throw new WorkspaceError("NOT_FOUND", 404);
-    authorized(meta, role); const document=validateDocument(s.documentRaw, meta);pruneDocument(document,Date.now());return { registry, meta, document };
+    authorized(meta, role); if(meta.purpose==='treasury-controls'&&!allowTreasuryControl)throw new WorkspaceError('TREASURY_CONTROL_SCOPE',403); const document=validateDocument(s.documentRaw, meta);pruneDocument(document,Date.now());return { registry, meta, document };
   });
   const mutateOwner = <T>(ownerId: string, role: WorkspaceRole | undefined, fn: (d: Document, meta: Meta) => T, implicitPrune=true) => safe(() => {
     if (!/^ow_[a-f0-9]{32}$/.test(ownerId)) throw unavailable();
     return backend.transact(ownerId, async (s, commit) => {
     const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId); if (!meta) throw new WorkspaceError("NOT_FOUND", 404);
-    authorized(meta, role); const d = validateDocument(s.documentRaw, meta), before = JSON.stringify(d);if(implicitPrune)pruneDocument(d,Date.now());const result = fn(d, meta);
-    if (JSON.stringify(d) !== before) {
-      d.revision = randomUUID(); const raw = JSON.stringify(d); if (bytes(raw) > WORKSPACE_LIMITS.ownerBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", retentionActive(d)?503:409);
-      meta.documentRevision = d.revision; meta.documentBytes = bytes(raw); registry.revision = randomUUID(); const reg = JSON.stringify(registry);
-      if (bytes(reg) > WORKSPACE_LIMITS.registryBytes || registry.workspaces.reduce((n, m) => n + m.documentBytes, bytes(reg)) > WORKSPACE_LIMITS.globalBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", retentionActive(d)?503:409);
-      validateDocument(raw, meta); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, raw);
+    authorized(meta, role); if(meta.purpose==='treasury-controls')throw new WorkspaceError('TREASURY_CONTROL_SCOPE',403); const d = validateDocument(s.documentRaw, meta), before = JSON.stringify(d);if(implicitPrune)pruneDocument(d,Date.now());const result = fn(d, meta);
+    const documentChanged=JSON.stringify(d)!==before,needsIndex=continuousWorkspaceMode()&&meta.nextContentExpiryAt===undefined;
+    if (documentChanged||needsIndex) {
+      if(documentChanged)d.revision = randomUUID(); const raw = JSON.stringify(d); if (bytes(raw) > WORKSPACE_LIMITS.ownerBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", retentionActive(d)?503:409);
+      meta.documentRevision = d.revision; meta.documentBytes = bytes(raw); registry.revision = randomUUID();
+      if(continuousWorkspaceMode())meta.nextContentExpiryAt=documentNextExpiryAt(d);
+      const indexedReg=JSON.stringify(registry);
+      if (bytes(indexedReg) > workspaceRegistryTransportMaximum() || registry.workspaces.reduce((n, m) => n + m.documentBytes, bytes(indexedReg)) > WORKSPACE_LIMITS.globalBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", retentionActive(d)?503:409);
+      validateDocument(raw, meta); readRegistry(indexedReg, "workspace-v1", reservations()); await commit(indexedReg, documentChanged?raw:'');
     }
     return result;
   }); });
   const walletTransaction = <T>(p:WorkspacePrincipal, fn:(registry:Registry,meta:Meta)=>T) => safe(()=>backend.transact(p.ownerId,async(s,commit)=>{
     const registry=readRegistry(s.registryRaw,s.marker,reservations()),meta=registry.workspaces.find(m=>m.ownerId===p.ownerId);
     if(!meta||meta.revoked||meta.workspaceId!==p.workspaceId||meta.agentId!==p.agentId||meta.generation!==p.generation)throw new WorkspaceError("UNAUTHORIZED",401);
+    if(meta.purpose==='treasury-controls'&&p.role!=='human'&&p.role!=='bootstrap')throw new WorkspaceError('TREASURY_CONTROL_SCOPE',403);
     validateDocument(s.documentRaw,meta);const value=fn(registry,meta);registry.revision=randomUUID();const raw=JSON.stringify(registry);
-    if(bytes(raw)>WORKSPACE_LIMITS.registryBytes||registry.workspaces.reduce((n,m)=>n+m.documentBytes,bytes(raw))>WORKSPACE_LIMITS.globalBytes)throw new WorkspaceError("WORKSPACE_CAPACITY",503);
+    if(bytes(raw)>workspaceRegistryTransportMaximum()||registry.workspaces.reduce((n,m)=>n+m.documentBytes,bytes(raw))>WORKSPACE_LIMITS.globalBytes)throw new WorkspaceError("WORKSPACE_CAPACITY",503);
     readRegistry(raw,"workspace-v1",reservations());await commit(raw,"");return value;
   }));
   const store = {
-    async retentionOwnerIds():Promise<string[]> {return safe(async()=>{
+    async maintenanceIndex():Promise<WorkspaceMaintenanceIndex>{return safe(async()=>{
+      if(principal)throw new WorkspaceError('FORBIDDEN',403);
+      return backend.maintenanceIndex();
+    });},
+    async bootstrapMaintenanceIndex(limit=20,deadline=Date.now()+30000){return safe(async()=>{
+      if(principal)throw new WorkspaceError('FORBIDDEN',403);
+      if(!continuousWorkspaceMode()||!Number.isInteger(limit)||limit<1||limit>20||!Number.isSafeInteger(deadline)||deadline<0)throw new WorkspaceError('INVALID_REQUEST',400);
+      const snapshot=await backend.read(),registry=readRegistry(snapshot.registryRaw,snapshot.marker,reservations());
+      const owners=registry.workspaces.filter(m=>m.nextContentExpiryAt===undefined).slice(0,limit).map(m=>m.ownerId);
+      let processed=0;
+      for(const ownerId of owners){if(Date.now()>=deadline)break;await backend.transact(ownerId,async(s,commit)=>{
+        const current=readRegistry(s.registryRaw,s.marker,reservations()),meta=current.workspaces.find(m=>m.ownerId===ownerId);
+        if(!meta)throw unavailable('maintenance-bootstrap-owner');
+        if(meta.nextContentExpiryAt!==undefined)return;
+        meta.nextContentExpiryAt=documentNextExpiryAt(validateDocument(s.documentRaw,meta));
+        current.revision=randomUUID();const raw=JSON.stringify(current);readRegistry(raw,'workspace-v1',reservations());
+        // No content replacement, no replay after an uncertain acknowledgement.
+        await commit(raw,'');processed++;
+      });}
+      if(!owners.length&&Date.now()<deadline)await backend.transact(undefined,async(s,commit)=>{
+        const current=readRegistry(s.registryRaw,s.marker,reservations());current.revision=randomUUID();const raw=JSON.stringify(current);
+        readRegistry(raw,'workspace-v1',reservations());await commit(raw,'');
+      });
+      return {processed,...await backend.maintenanceIndex()};
+    });},
+    async retentionOwnerIds(now?:number):Promise<string[]> {return safe(async()=>{
+      if(now!==undefined&&(!Number.isSafeInteger(now)||now<0))throw new WorkspaceError('INVALID_REQUEST',400);
       const s=await backend.read(),registry=readRegistry(s.registryRaw,s.marker,reservations());
       if(principal){const m=registry.workspaces.find(m=>m.ownerId===principal.ownerId);if(!m)throw new WorkspaceError("UNAUTHORIZED",401);authorized(m,principal.role);return [m.ownerId];}
-      return registry.workspaces.map(m=>m.ownerId);
+      return registry.workspaces.filter(m=>!continuousWorkspaceMode()||now===undefined||m.nextContentExpiryAt===undefined||m.nextContentExpiryAt!==null&&m.nextContentExpiryAt<=now).map(m=>m.ownerId);
     });},
     async pruneExpiredContent(ownerId:string,now=Date.now()) {
       if(!Number.isSafeInteger(now)||now<0)throw new WorkspaceError("INVALID_REQUEST",400);
@@ -306,7 +451,8 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       const s=await backend.readPermission(p.ownerId),registry=readRegistry(s.registryRaw,s.marker,reservations()),meta=registry.workspaces.find(m=>m.ownerId===p.ownerId);
       if(!meta||meta.revoked||meta.workspaceId!==p.workspaceId||meta.agentId!==p.agentId||meta.generation!==p.generation)throw new WorkspaceError("UNAUTHORIZED",401);
       validateDocument(s.documentRaw,meta);
-      return {identity:{ownerId:meta.ownerId,workspaceId:meta.workspaceId,agentId:meta.agentId,generation:meta.generation,wallet:meta.wallet??null,network:"stellar:testnet" as const,emailRequired:false},guard:s.guard};
+      if(meta.purpose==='treasury-controls'&&p.role==='agent')throw new WorkspaceError('TREASURY_CONTROL_SCOPE',403);
+      return {identity:{...(meta.purpose?{purpose:meta.purpose}:{}),ownerId:meta.ownerId,workspaceId:meta.workspaceId,agentId:meta.agentId,generation:meta.generation,role:p.role,wallet:meta.wallet??null,network:"stellar:testnet" as const,emailRequired:false},guard:s.guard};
     });},
     async walletChallenge(p:WorkspacePrincipal,wallet:string,origin:string) {
       walletAddressSchema.parse(wallet);const u=new URL(origin);if(u.origin!==origin||(!["127.0.0.1","localhost"].includes(u.hostname)&&u.protocol!=="https:"))throw new WorkspaceError("INVALID_REQUEST",400);
@@ -317,7 +463,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       });
     },
     async readWalletChallenge(p:WorkspacePrincipal,id:string,origin:string) {
-      const {registry}=await readOwner(p.ownerId,p.role);const challenge=registry.workspaces.find(m=>m.ownerId===p.ownerId)?.walletChallenge;
+      const {registry}=await readOwner(p.ownerId,p.role,true);const challenge=registry.workspaces.find(m=>m.ownerId===p.ownerId)?.walletChallenge;
       if(!challenge||challenge.challengeId!==id||challenge.origin!==origin||challenge.generation!==p.generation)throw new WorkspaceError("WALLET_CHALLENGE_INVALID",409);
       if(challenge.expiresAt<=Date.now())throw new WorkspaceError("WALLET_CHALLENGE_EXPIRED",409);
       return challenge;
@@ -351,7 +497,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
     },
     async queries(ownerId:string) {return (await readOwner(ownerId)).document.queries??[];},
     async consumeIngress(ip:string) {return safe(async()=>{
-      const attempts=process.env.BAZAAR_ACCEPTANCE_METER==='true'&&process.env.BAZAAR_ACCEPTANCE_X402==='true'?1:8;
+      const attempts=continuousWorkspaceMode()||process.env.BAZAAR_ACCEPTANCE_METER==='true'&&process.env.BAZAAR_ACCEPTANCE_X402==='true'?1:8;
       for(let attempt=0;attempt<attempts;attempt++)try{
         await backend.transact(undefined,async(s,commit)=>{
           const registry=readRegistry(s.registryRaw,s.marker,reservations()),now=Date.now(),minute=Math.floor(now/60000);
@@ -378,6 +524,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       if (s.permissionRaw && bytes(s.permissionRaw) > 4096) throw unavailable('permission-envelope');
       const permission = s.permissionRaw ? marketPermissionSchema.parse(JSON.parse(s.permissionRaw)) : undefined;
       if (permission && (permission.ownerId !== meta.ownerId || permission.agentId !== meta.agentId || permission.generation > meta.generation)) throw unavailable('permission-binding');
+      if(meta.purpose==='treasury-controls')throw new WorkspaceError('TREASURY_CONTROL_SCOPE',403);
       return { permission: { permission: 'market:submit' as const, revision: permission?.revision ?? 0, generation: meta.generation, allowServiceSubmission: permission?.generation === meta.generation && permission.allowServiceSubmission }, guard: s.guard };
     }); },
     async changeMarketPermissions(p: WorkspacePrincipal, input: z.infer<typeof marketPermissionChangeSchema>) { return safe(async () => {
@@ -388,6 +535,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         if (!meta || meta.revoked || meta.generation !== p.generation || meta.workspaceId !== p.workspaceId || meta.agentId !== p.agentId) throw new WorkspaceError('UNAUTHORIZED', 401);
         validateDocument(s.documentRaw, meta);
         if (s.permissionRaw && bytes(s.permissionRaw) > 4096) throw unavailable('permission-envelope');
+        if(meta.purpose==='treasury-controls')throw new WorkspaceError('TREASURY_CONTROL_SCOPE',403);
         const old = s.permissionRaw ? marketPermissionSchema.parse(JSON.parse(s.permissionRaw)) : undefined;
         if (old && (old.ownerId !== p.ownerId || old.agentId !== p.agentId || old.generation > p.generation)) throw unavailable('permission-binding');
         const intent = digest({ ...parsed, ownerId: meta.ownerId, agentId: meta.agentId, generation: meta.generation });
@@ -411,13 +559,14 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       workspaceHashSchema.parse(hash); const s = await backend.read(); const registry = readRegistry(s.registryRaw, s.marker, reservations());
       for (const m of registry.workspaces) {
         const role: WorkspaceRole | undefined = hash === m.bootstrapHash ? "bootstrap" : hash === m.humanHash ? "human" : hash === m.agentHash ? "agent" : undefined;
-        if (role && (!m.revoked || role === "bootstrap")) return { ownerId: m.ownerId, workspaceId: m.workspaceId, agentId: m.agentId, generation: m.generation, role };
+        if (role && (!m.revoked || role === "bootstrap") && !(m.purpose==='treasury-controls'&&role==='agent')) return { ...(m.purpose?{purpose:m.purpose}:{}), ownerId: m.ownerId, workspaceId: m.workspaceId, agentId: m.agentId, generation: m.generation, role };
       }
       throw new WorkspaceError("UNAUTHORIZED", 401);
     }); },
-    async createWorkspace(input: z.infer<typeof createWorkspaceSchema>, bootstrapHash: string, trustedIp = "untrusted", allowNew = true) { return safe(async () => {
+    async createWorkspace(input: z.infer<typeof createWorkspaceSchema>, bootstrapHash: string, trustedIp = "untrusted", allowNew = true, purpose: 'market'|'treasury-controls'='market', operatorRequest?:Request) { return safe(async () => {
       const globalLimits = workspaceGlobalRequestLimits();
       createWorkspaceSchema.parse(input); workspaceHashSchema.parse(bootstrapHash);
+      if(purpose==='treasury-controls')assertTreasuryControlRegistration(input,bootstrapHash,operatorRequest);
       const frozen = frozenOwners?.find(owner => owner.creationId === input.creationId);
       // The server freezes ownership and the whole creation intent before any
       // Redis read. Neither request fields nor an unrecognized creation choose keys.
@@ -428,6 +577,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
       const initial = await backend.read(), initialRegistry = readRegistry(initial.registryRaw, initial.marker, reservations());
       const ownerId = initialRegistry.workspaces.find(m => m.creationId === input.creationId)?.ownerId ?? frozen?.ownerId ?? "ow_" + uuid.parse(testOwnerUuid ? testOwnerUuid(input.creationId) : randomUUID()).replaceAll("-", "");
       const authenticateReplay = (existing: Meta) => {
+        if((existing.purpose??'market')!==purpose)throw new WorkspaceError('WORKSPACE_CONFLICT',409);
         if (existing.bootstrapHash !== bootstrapHash) throw new WorkspaceError("UNAUTHORIZED", 401);
         if (existing.initialHumanHash !== input.humanAccessHash || existing.initialAgentHash !== input.agentAccessHash) throw new WorkspaceError("WORKSPACE_CONFLICT", 409);
       };
@@ -444,6 +594,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
           return { record: receipt(existing), created: false };
         }
         if (!allowNew) throw new WorkspaceError("ADMISSIONS_PAUSED");
+        if(purpose==='treasury-controls'&&registry.workspaces.some(m=>m.purpose==='treasury-controls'))throw new WorkspaceError('TREASURY_WORKSPACE_EXISTS',409);
         const hashes = [bootstrapHash, input.humanAccessHash, input.agentAccessHash];
         if (new Set(hashes).size !== 3 || hashes.some(h => legacy.hashes.includes(h) || registry.workspaces.some(m => [m.bootstrapHash, m.initialHumanHash, m.initialAgentHash, m.humanHash, m.agentHash, ...m.retiredHashes].includes(h)))) throw new WorkspaceError("WORKSPACE_COLLISION", 409);
         if (legacy.ownerIds.includes(ownerId) || s.documentRaw) throw new WorkspaceError("WORKSPACE_COLLISION", 409);
@@ -455,7 +606,8 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         const windows = [{ key: "global:" + Math.floor(now / 86400000), until: (Math.floor(now / 86400000) + 1) * 86400000, max: demoEnabled()?WORKSPACE_LIMITS.demoDailyCreations:WORKSPACE_LIMITS.dailyCreations }, { key: "ip:" + digest(trustedIp) + ":" + Math.floor(now / 3600000), until: (Math.floor(now / 3600000) + 1) * 3600000, max: demoEnabled()?WORKSPACE_LIMITS.demoHourlyCreationsPerIp:WORKSPACE_LIMITS.hourlyCreationsPerIp }];
         for (const w of windows) { let old = registry.creationWindows.find(v => v.key === w.key); if (old && old.count >= w.max) throw new WorkspaceError("WORKSPACE_RATE_LIMIT", 429,Math.max(1,Math.ceil((w.until-now)/1000))); if (!old) { old = { key: w.key, count: 0, until: w.until }; registry.creationWindows.push(old); } old.count++; }
         const d = emptyDocument(ownerId), raw = JSON.stringify(d);
-        const meta: Meta = { creationId: input.creationId, workspaceId: randomUUID(), ownerId, agentId: "agent_" + randomUUID().replaceAll("-", ""), bootstrapHash, initialHumanHash: input.humanAccessHash, initialAgentHash: input.agentAccessHash, humanHash: input.humanAccessHash, agentHash: input.agentAccessHash, retiredHashes: [], accessIntents: [], generation: 1, revoked: false, createdAt: new Date(Date.now()).toISOString(), documentRevision: d.revision, documentBytes: bytes(raw) };
+        const meta: Meta = { ...(purpose==='treasury-controls'?{purpose}:{}), creationId: input.creationId, workspaceId: randomUUID(), ownerId, agentId: "agent_" + randomUUID().replaceAll("-", ""), bootstrapHash, initialHumanHash: input.humanAccessHash, initialAgentHash: input.agentAccessHash, humanHash: input.humanAccessHash, agentHash: input.agentAccessHash, retiredHashes: [], accessIntents: [], generation: 1, revoked: false, createdAt: new Date(Date.now()).toISOString(), documentRevision: d.revision, documentBytes: bytes(raw) };
+        if(continuousWorkspaceMode())meta.nextContentExpiryAt=documentNextExpiryAt(d);
         registry.workspaces.push(meta); registry.revision = randomUUID(); const reg = JSON.stringify(registry); readRegistry(reg, "workspace-v1", legacy); await commit(reg, raw); return { record: receipt(meta), created: true };
       }); } catch (e) {
         if (!(e instanceof RedisCompareConflict)) throw e;
@@ -474,6 +626,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         return { record: receipt(existing), created: false };
       });
     }); },
+    async createTreasuryControlWorkspace(input:z.infer<typeof createWorkspaceSchema>,bootstrapHash:string,trustedIp:string,operatorRequest:Request){return store.createWorkspace(input,bootstrapHash,trustedIp,true,'treasury-controls',operatorRequest);},
     async changeAccess(workspaceId: string, bootstrapHash: string, input: z.infer<typeof workspaceAccessSchema>) { return safe(async () => {
       const first = await backend.read(), firstRegistry = readRegistry(first.registryRaw, first.marker, reservations());
       const owner = firstRegistry.workspaces.find(m => m.workspaceId === workspaceId && m.bootstrapHash === bootstrapHash)?.ownerId;
@@ -494,14 +647,14 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
         if (reservations().hashes.includes(input.accessHash) || registry.workspaces.some(m => [m.bootstrapHash, m.initialHumanHash, m.initialAgentHash, m.humanHash, m.agentHash, ...m.retiredHashes].includes(input.accessHash))) throw new WorkspaceError("WORKSPACE_COLLISION", 409);
         const field = input.role === "human" ? "humanHash" : "agentHash"; meta.retiredHashes.push(meta[field]!); meta[field] = input.accessHash;
       } else { meta.retiredHashes.push(meta.humanHash!, meta.agentHash!); meta.humanHash = null; meta.agentHash = null; meta.revoked = true; }
-      meta.generation++; meta.accessIntents.push({ expectedGeneration: input.expectedGeneration, digest: intentDigest, generation: meta.generation, revoked: meta.revoked }); registry.revision = randomUUID(); const reg = JSON.stringify(registry); if (bytes(reg) > WORKSPACE_LIMITS.registryBytes) throw new WorkspaceError("WORKSPACE_CAPACITY", 409); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, ""); return { record: receipt(meta), current: { generation: meta.generation, revoked: meta.revoked }, created: true };
+      meta.generation++; meta.accessIntents.push({ expectedGeneration: input.expectedGeneration, digest: intentDigest, generation: meta.generation, revoked: meta.revoked }); registry.revision = randomUUID(); const reg = JSON.stringify(registry); if (bytes(reg) > workspaceRegistryTransportMaximum()) throw new WorkspaceError("WORKSPACE_CAPACITY", 409); readRegistry(reg, "workspace-v1", reservations()); await commit(reg, ""); return { record: receipt(meta), current: { generation: meta.generation, revoked: meta.revoked }, created: true };
     }); }); },
-    async consumeRequest(ownerId: string, generation: number, bootstrapHash?: string) { return safe(async () => {
+    async consumeRequest(ownerId: string, generation: number, bootstrapHash?: string,publicControl=true) { return safe(async () => {
       const globalLimits = workspaceGlobalRequestLimits();
       // Acceptance v2 budgets one quota CAS; contention stops before any action.
       // Outside that measured sprint, only a definite CAS0 permits counter retry.
       // Every attempt reads and validates current identity, document and quota.
-      const attempts = process.env.BAZAAR_ACCEPTANCE_METER === 'true' && process.env.BAZAAR_ACCEPTANCE_X402 === 'true' ? 1 : 8;
+      const attempts = continuousWorkspaceMode() || process.env.BAZAAR_ACCEPTANCE_METER === 'true' && process.env.BAZAAR_ACCEPTANCE_X402 === 'true' ? 1 : 8;
       for (let attempt = 0; attempt < attempts; attempt++) {
         try { await backend.transact(ownerId, async (s, commit) => {
           const registry = readRegistry(s.registryRaw, s.marker, reservations()), meta = registry.workspaces.find(m => m.ownerId === ownerId);
@@ -510,6 +663,9 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
           if ((bootstrapHash !== undefined && !administration) || (!administration && (meta.generation !== generation || meta.revoked))) throw new WorkspaceError("UNAUTHORIZED", 401);
           validateDocument(s.documentRaw, meta);
           const now = Date.now();
+          registry.creationWindows=registry.creationWindows.filter(w=>w.until>now);
+          if(meta.purpose==='treasury-controls'&&!administration)consumeTreasuryControl(registry.creationWindows,meta,now);
+          else if(publicControl&&!administration)consumePublicOwnerControl(registry.creationWindows,meta,process.env,now);
           consumeGlobalQuota(registry, now, globalLimits);
           registry.requestWindows = registry.requestWindows.filter(w => w.until > now); let w = registry.requestWindows.find(w => w.ownerId === ownerId);
           if (!w) { w = { ownerId, count: 0, until: now + 60000 }; registry.requestWindows.push(w); }
@@ -551,7 +707,7 @@ function buildStore(backend: Backend, reservations: () => WorkspaceLegacyRegistr
   };
   return store;
 }
-function receipt(m: Meta) { return { workspaceId: m.workspaceId, ownerId: m.ownerId, agentId: m.agentId, creationId: m.creationId, generation: m.generation, revoked: m.revoked, createdAt: m.createdAt }; }
+function receipt(m: Meta) { return { ...(m.purpose?{purpose:m.purpose}:{}), workspaceId: m.workspaceId, ownerId: m.ownerId, agentId: m.agentId, creationId: m.creationId, generation: m.generation, revoked: m.revoked, createdAt: m.createdAt }; }
 export type WorkspaceStore = ReturnType<typeof buildStore>;
 // The isolated HTTP acceptance harness can freeze server-owned keys before any
 // transport effect. Deployed/configured stores cannot supply this test-only hook.

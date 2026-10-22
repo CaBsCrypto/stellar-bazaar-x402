@@ -1,7 +1,7 @@
 // Public contract; safe to import from docs, tests and server code.
-export const MCP_VERSION = "1.1.0";
+export const MCP_VERSION = "1.2.2";
 export const MCP_TOOLS = [
-  "get_bazaar_capabilities", "list_services", "search_services", "get_service",
+  "get_bazaar_integration", "get_bazaar_capabilities", "list_services", "search_services", "get_service",
   "list_workflow_bundles", "get_workflow_bundle", "validate_service_card",
   "get_operation_history", "get_bazaar_skills", "submit_provider_request",
   "get_provider_request_status", "create_bazaar_workspace", "list_bazaar_agent_tasks",

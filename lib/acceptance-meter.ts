@@ -2,11 +2,15 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { isDeepStrictEqual } from 'node:util';
 import type { Redis } from '@upstash/redis';
-import { classifyOperationalRequest, type OperationalRequestClass, type OperationalProfile } from './operational-pressure.ts';
+import { classifyOperationalRequest, type OperationalRequestClass, type OperationalProfile,type OperationalWorkload } from './operational-pressure.ts';
 import { operationalMetricTotals } from './operational-metrics.ts';
 import { operationalTransportEnvelope } from './operational-envelopes.ts';
+import {withCatalogBudget,catalogBudgetRedis,catalogBudgetObservation} from './catalog-budget.ts';
+import {withContinuousControlBudget,continuousControlBudgetRedis,continuousControlBudgetObservation} from './continuous-control-budget.ts';
+import {guardianBudgetRedis,guardianBudgetObservation} from './guardian-budget.ts';
+import {isPerOrderPaymentEnabled,perOrderPaymentCapabilityKind} from './per-order-payment-profile.ts';
 
-export type Counts = { redis: number; commandsUpperBound: number; outboundPayloadBytes: number; inboundPayloadBytes: number; workspaceStoredBytesUpperBound: number; marketStoredBytesUpperBound:number; reviewStoredBytesUpperBound:number; catalogStoredBytesUpperBound:number; settlementStoredBytesUpperBound:number; ledgerStoredBytesUpperBound?:number; storageObservation?:'prospective-upper-bound'; operationalProfile?:OperationalProfile; operationalWorkload?:'metadata'; operationalPendingClass?:OperationalRequestClass; operationalCredited?:boolean; operationalReserved?:boolean; external:Partial<Record<ExternalKind,number>>; externalOutboundPayloadBytes:number; externalInboundPayloadBytes:number; uncertain: boolean };
+export type Counts = { redis: number; commandsUpperBound: number; outboundPayloadBytes: number; inboundPayloadBytes: number; workspaceStoredBytesUpperBound: number; marketStoredBytesUpperBound:number; reviewStoredBytesUpperBound:number; catalogStoredBytesUpperBound:number; settlementStoredBytesUpperBound:number; ledgerStoredBytesUpperBound?:number; storageObservation?:'prospective-upper-bound'; operationalProfile?:OperationalProfile; operationalWorkload?:OperationalWorkload; operationalPendingClass?:OperationalRequestClass; operationalCredited?:boolean; operationalReserved?:boolean; perOrderBackground?:boolean; external:Partial<Record<ExternalKind,number>>; externalOutboundPayloadBytes:number; externalInboundPayloadBytes:number; uncertain: boolean };
 export type ExternalKind='horizon'|'proof-dns'|'proof-http'|'provider'|'facilitator'|'rpc';
 export const OPERATIONAL_STORAGE_CAPS={workspace:12*1048576,market:512*1024,review:1048576,settlement:128*1024,ledger:64*1024} as const;
 const scope = new AsyncLocalStorage<Counts>();
@@ -38,11 +42,25 @@ export function acceptanceCatalogAllocation(market:string,catalogCap:number){
  return {cards,indexKey,aggregateBytes};
 }
 const fresh=():Counts=>({redis:0,commandsUpperBound:0,outboundPayloadBytes:0,inboundPayloadBytes:0,workspaceStoredBytesUpperBound:0,marketStoredBytesUpperBound:0,reviewStoredBytesUpperBound:0,catalogStoredBytesUpperBound:0,settlementStoredBytesUpperBound:0,external:{horizon:0,'proof-dns':0,'proof-http':0,provider:0,...(x402Enabled()||operationalMeterEnabled()?{facilitator:0,rpc:0}:{})},externalOutboundPayloadBytes:0,externalInboundPayloadBytes:0,uncertain:false});
-function record(counts:Counts,source:'api'|'ssr'|'proxy',requests=1){const requestId=randomUUID();console.info(JSON.stringify({...(operationalMeterEnabled()?{operationalMeter:'v1',...operationalMetricTotals(counts,requests),...(counts.storageObservation?{storagePressure:storagePressure(counts)}:{})}:{acceptanceMeter:x402Enabled()?'v2':'v1'}),source,requestId,...counts}));return requestId;}
+/** A native background dispatch has its own already-reserved work and must not
+ * inherit the completed payment HTTP request's external counter through after().
+ * This selects accounting only; the operation capability and native background
+ * reservation remain mandatory. No request argument creates this boundary. */
+export async function withPerOrderProductionBackgroundMeter<T>(operationId:string,handler:()=>Promise<T>):Promise<T>{
+ if(!isPerOrderPaymentEnabled(operationId)||perOrderPaymentCapabilityKind(operationId)!=='production')throw Error('PER_ORDER_PAYMENTS_NOT_ENABLED');
+ if(!enabled())return handler();
+ const counts=fresh();counts.operationalProfile='authenticated';counts.operationalWorkload='seller-control';counts.perOrderBackground=true;
+ return scope.run(counts,async()=>{try{return await handler();}catch(error){counts.uncertain=true;throw error;}finally{
+  // These are background measurements, not another HTTP ingress reservation.
+  // Use this fresh scope's counters, never an inherited completed HTTP clamp.
+  console.info(JSON.stringify({operationalMeter:'v1',source:'api',background:'per-order-text-v1',requestId:randomUUID(),...operationalMetricTotals(counts,0),...counts}));
+ }});
+}
+function record(counts:Counts,source:'api'|'ssr'|'proxy',requests=1){const catalog=catalogBudgetObservation(),control=continuousControlBudgetObservation(),wire=catalog??control;if(wire){counts.redis=wire.requests;counts.commandsUpperBound=wire.commands;counts.outboundPayloadBytes=wire.outboundBytes;counts.inboundPayloadBytes=wire.inboundBytes;}const requestId=randomUUID();console.info(JSON.stringify({...(operationalMeterEnabled()?{operationalMeter:'v1',...operationalMetricTotals(counts,requests),...(counts.storageObservation?{storagePressure:storagePressure(counts)}:{})}:{acceptanceMeter:x402Enabled()?'v2':'v1'}),source,requestId,...counts,...(catalog?{catalogInboundEvidence:'reserved-wire-upper-bound'}:{}),...(control?{controlInboundEvidence:'reserved-wire-upper-bound'}:{})}));return requestId;}
 function storagePressure(counts:Counts) { return Object.fromEntries(Object.entries(OPERATIONAL_STORAGE_CAPS).map(([name,cap])=>{const bytes=counts[`${name as keyof typeof OPERATIONAL_STORAGE_CAPS}StoredBytesUpperBound`]??0;return [name,{bytes,cap,percent:Math.ceil(bytes*100/cap),alert:bytes*100>=cap*70}];})); }
 async function gate(kind: OperationalRequestClass) { if (operationalMeterEnabled()) { const counts=scope.getStore(); if(counts){counts.operationalProfile=kind.profile;counts.operationalWorkload=kind.workload;}const { operationalRequestGate } = await import('./operational-budget.ts'); await operationalRequestGate(kind);if(counts)counts.operationalReserved=true; } }
 /** An inner fresh-payment gate upgrades a recovered HTTP request to its payment transport bounds. */
-export function setOperationalTransportProfile(profile: OperationalProfile, workload?:'metadata') {
+export function setOperationalTransportProfile(profile: OperationalProfile, workload?:OperationalWorkload) {
   if(!operationalMeterEnabled())return;const counts=scope.getStore();if(counts){counts.operationalProfile=profile;counts.operationalWorkload=workload;}
 }
 /** Call only after authoritative credential and requested-role verification. No credential is recorded. */
@@ -76,7 +94,7 @@ export type ExternalPayloadEvidence=()=>{outboundBytes?:number;inboundBytes?:num
 export async function meteredExternal<T>(kind:ExternalKind,handler:()=>Promise<T>,outbound?:unknown,evidence?:ExternalPayloadEvidence):Promise<T>{
  const limits=currentLimits();
  if(!enabled())return handler();const counts=scope.getStore();if(!counts)throw Error('ACCEPTANCE_SCOPE_REQUIRED');
- const operational=operationalMeterEnabled()?operationalTransportEnvelope(counts.operationalProfile??'authenticated'):undefined;
+ const operational=operationalMeterEnabled()?operationalTransportEnvelope(counts.operationalProfile??'authenticated',counts.operationalWorkload):undefined;
  if(!(kind in counts.external)||(counts.external[kind]??0)>=8||operational&&(Object.values(counts.external).reduce((n,value)=>n+(value??0),0)>=operational.externalRequests||counts.operationalProfile==='recovery'&&kind==='facilitator'))throw Error(operational?'OPERATIONAL_EXTERNAL_BUDGET':'ACCEPTANCE_EXTERNAL_BUDGET');
  const checkedBytes=(value:number)=>{if(!Number.isSafeInteger(value)||value<0)throw Error('ACCEPTANCE_EXTERNAL_BYTE_EVIDENCE_INVALID');return value;};
  const before=evidence?.();const bytes=before?.outboundBytes===undefined?(outbound===undefined?0:Buffer.byteLength(JSON.stringify(outbound))):checkedBytes(before.outboundBytes);
@@ -92,7 +110,7 @@ export async function meteredExternal<T>(kind:ExternalKind,handler:()=>Promise<T
 
 /** Only payload counts, never credentials, keys or record contents, reach responses. */
 export function measuredHandler<A extends unknown[]>(handler: (...args: A) => Response | Promise<Response>, options: { source?: 'api'|'proxy'; budget?: boolean; classify?: (...args:A)=>OperationalRequestClass|Promise<OperationalRequestClass> } = {}) {
-  return async (...args: A): Promise<Response> => {
+  const run = async (...args: A): Promise<Response> => {
     if (!enabled() || scope.getStore()) return handler(...args);
     const counts=fresh();
     return scope.run(counts, async () => {
@@ -136,11 +154,24 @@ export function measuredHandler<A extends unknown[]>(handler: (...args: A) => Re
       return response;
     });
   };
+  return async (...args:A):Promise<Response>=>{
+    const request=args[0] instanceof Request?args[0]:undefined;
+    const kind=request?await classifyOperationalRequest(request):{profile:'public' as const,newOperation:false};
+    const authenticated=request?.headers.has('authorization')??false;
+    return withCatalogBudget(kind,authenticated,()=>withContinuousControlBudget(kind,authenticated,()=>run(...args),{request}),{mcp:request!==undefined&&new URL(request.url).pathname==='/api/mcp'});
+  };
 }
 
 type RedisMiddleware = Parameters<Redis['use']>[0];
 /** Operational accounting uses the same transport hook and never inspects or logs secrets. */
 async function operationalRedisRequest(counts: Counts, request: Parameters<RedisMiddleware>[0], next: Parameters<RedisMiddleware>[1]) {
+  // Catalogue's exact native-script guard ran before this middleware. Its
+  // conservative wire/command limits also apply with the optional meter off.
+  // Other workloads retain the unchanged generic script/loop restrictions.
+  if(catalogBudgetObservation()||continuousControlBudgetObservation()||guardianBudgetObservation()){
+   if(!counts.perOrderBackground)return next(request);
+   try{return await next(request);}finally{const wire=continuousControlBudgetObservation();if(wire){counts.redis=wire.requests;counts.commandsUpperBound=wire.commands;counts.outboundPayloadBytes=wire.outboundBytes;counts.inboundPayloadBytes=wire.inboundBytes;}}
+  }
   const prefix = process.env.BAZAAR_WORKSPACE_PREFIX;
   if (!/^bazaar-workspace:pilot-[a-f0-9]{32}$/.test(prefix ?? '')) throw Error('OPERATIONAL_NAMESPACE_REQUIRED');
   const suffix = prefix!.slice('bazaar-workspace:'.length), allowed = [prefix!, 'bazaar-market:' + suffix, 'bazaar-review:' + suffix];
@@ -171,6 +202,9 @@ async function operationalRedisRequest(counts: Counts, request: Parameters<Redis
 }
 
 export function meteredRedis(redis: Redis): Redis {
+  catalogBudgetRedis(redis);
+  continuousControlBudgetRedis(redis);
+  guardianBudgetRedis(redis);
   redis.use(async (request, next) => {
     if (!enabled()) return next(request);
     const counts = scope.getStore();
