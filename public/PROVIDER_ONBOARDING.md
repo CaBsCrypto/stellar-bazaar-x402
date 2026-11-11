@@ -82,7 +82,7 @@ Envía el objeto completo en `{"card": ...}` a `validate_service_card`. Un catá
 
 Guarda el manifest, el resultado de validación, una muestra identificada, las pruebas de funcionamiento realizadas y los puntos pendientes. Incluye el hostname exacto del endpoint y el método de control que puedes preparar: DNS TXT o HTTP `.well-known`. Informa «preparado para revisión», nunca «publicado» por haber validado.
 
-Opcional, solo con una copia de este repositorio, dependencias instaladas y Node.js 22.18 o posterior: ejecuta `node scripts/prepare-provider-review.mjs ruta/mi-service-card.json ruta/paquete-nuevo`. El primer archivo debe ser una ServiceCard completa, no el borrador editorial ni la configuración inicial del CLI. El directorio de salida no debe existir. Se generan `service-card.json`, `review-packet.json` con hash SHA-256 canónico y `REVIEW.md`. El comando valida localmente y no realiza solicitudes de red, pagos ni publicación; control, revisión e indexación siguen pendientes. Sin el repositorio, conserva los mismos datos y evidencias manualmente.
+Conserva la ServiceCard completa y los resultados de `validate_service_card`; un borrador editorial o la configuración inicial del kit no sustituyen la ficha. Puedes preparar el paquete en tu propio entorno con esos datos. La validación de formato no realiza el control del dominio ni confirma la revisión o la indexación.
 
 La recepción permanece deshabilitada por defecto. El candidato admite archivos para pruebas locales o Redis compartido para una futura habilitación controlada. La existencia de ese código no indica que el entorno público esté habilitado. Consulta `get_bazaar_capabilities.providerOnboarding`; no presupongas disponibilidad por ver el formulario. Durante una prueba local usa exclusivamente el origen localhost que te entregue el operador, también para guía y MCP; no mezcles esta versión con la web pública.
 
@@ -106,20 +106,13 @@ La incorporación al catálogo requiere una acción del operador con controles y
 
 Antes de afirmar que está publicado, el operador debe confirmar el alta y debe comprobarse que discovery devuelve la ficha aceptada. Estar en discovery no certifica seguridad, disponibilidad ni una compra completada. Resume siempre qué está listo, qué se comprobó y qué depende del operador.
 
-Para comprobar el alta, consulta `list_services`, `search_services` y `get_service` por el identificador aceptado. La alternativa HTTP pública es `GET /api/discovery/resources` en el mismo origen; contrasta la ficha en `results` por su `id`, endpoint y condiciones. Si informa disponibilidad parcial o error del registro, conserva esa limitación. No confundas aparición en discovery con disponibilidad de pago.
+Para comprobar el alta, consulta `get_service({id})` en `/api/mcp` por el identificador aceptado. La alternativa HTTP en modo legado es `GET /api/discovery/resources` en el mismo origen; en modo marketplace, usa `GET /api/market/catalog`. Contrasta el identificador, el endpoint y las condiciones. Si el catálogo es parcial o falla el registro, conserva esa limitación. El catálogo publicado de `/api/chatgpt/mcp` refleja su fecha de revisión; la disponibilidad se comprueba por separado.
 
-## Ejemplo MCP desde el repositorio
+## Solicitud de compatibilidad por MCP
 
-Con Node 22.18+ y npm ci, prepara fuera del repositorio un directorio privado nuevo:
+Si el entorno ofrece este recorrido, abre una conexión Streamable HTTP a `/api/mcp` en el mismo origen, con el token de esa solicitud como `Authorization: Bearer …`. Usa `submit_provider_request({submissionId, card, controlProof})`, con los datos guardados y autorizados del paso 3. Guarda el primer comprobante exitoso; consulta `get_provider_request_status({submissionId})` para seguir o reconciliar el mismo intento.
 
-```sh
-node examples/agent-provider-mcp.mjs prepare /ruta/privada/nueva https://bazaar.browns.studio servicio.json dns-txt api.tudominio.com
-# Revisa y autoriza las condiciones antes de enviar:
-node examples/agent-provider-mcp.mjs submit /ruta/privada/nueva
-node examples/agent-provider-mcp.mjs status /ruta/privada/nueva
-```
-
-request.json contiene el token y las condiciones congeladas: no lo compartas. accepted-receipt.json conserva el primer comprobante exitoso sin sobrescribirlo; responses/ conserva consultas y errores posteriores. Ante respuesta incierta, status consulta el mismo intento; `node examples/agent-provider-mcp.mjs retry /ruta/privada/nueva` reenvía explícitamente el mismo paquete. No hay reintentos automáticos. Un error conserva http.status y http.retryAfter cuando corresponda: respeta ese tiempo y los límites del entorno; no anuncies éxito si el servidor está inaccesible o cerrado. Para HTTP .well-known sustituye dns-txt por http-well-known. En Windows usa una ruta privada absoluta. No uses esta URL pública en pruebas sintéticas: usa un localhost explícito. No configures credenciales administrativas, del espacio o de historial como acceso de solicitud. El espacio privado opcional se prepara siguiendo /WORKSPACE_AGENT.md, en una conexión distinta.
+Ante una respuesta incierta, consulta antes de reenviar. Si haces un reenvío explícito, usa el mismo UUID, token, ficha y prueba; desactiva reintentos automáticos. Respeta `Retry-After` y usa sólo localhost en pruebas locales. No sustituyas el token de solicitud por credenciales administrativas, del espacio o de historial. Para la conexión privada de agente, sigue [la guía del espacio](/WORKSPACE_AGENT.md).
 
 
 <!-- continuous-on-demand-v1 -->

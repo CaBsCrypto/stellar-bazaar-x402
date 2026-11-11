@@ -17,6 +17,9 @@ import {syncDeliveryContract} from '../lib/delivery-contract.ts';
 import {computeCanonicalServiceCardHash} from '../lib/canonical-service-card.ts';
 import {sha,canonical,orderMemo} from '../lib/marketplace-identity.ts';
 import {reportCapacityInState,reserveSellerCapacity} from '../lib/market-seller-capacity.ts';
+import {assertPerOrderArchiveTransition} from '../lib/market-order-repository.ts';
+import {withPerOrderX402Simulation} from '../lib/per-order-payment-profile.ts';
+import {reconcilePerOrderX402Payment} from '../lib/per-order-x402.ts';
 
 const previous={...process.env};
 for(const key of Object.keys(process.env))if(/BAZAAR|UPSTASH|KV_REST|VERCEL/.test(key))delete process.env[key];
@@ -44,7 +47,47 @@ async function chain(o,nonce=42n,amount='234567'){
 }
 let rpcCalls=0,externalEffects=0,chainStatus='SUCCESS',chainXdr;
 const deps={store:settlements,rpc:{async transaction(){rpcCalls++;return {status:chainStatus,envelopeXdr:chainXdr};}},facilitator:{async verify(){externalEffects++;throw Error('MUST_NOT_VERIFY');},async settle(){externalEffects++;throw Error('MUST_NOT_SETTLE');}}};
+// An expired per-order payment is reconciled against the saved hash only.
+// Repository double enforces the same archival projection as the native CAS.
+async function expiredPerOrderRecovery(){
+ const expired=order(),signed=await chain(expired,50n),proof=marketX402Authorization(signed.toXDR(),expired,true);
+ expired.transactionHash=proof.transactionHash;
+ expired.sellerReservation={day:createdAt.slice(0,10),expiresAt:createdAt,committed:true};
+ const payload={x402Version:2,payload:{transaction:signed.toXDR()}};
+ const settlement={operationId:expired.operationId,buyerOwnerId:buyer.ownerId,orderBinding:marketX402OrderBinding(expired),challenge:createMarketX402Challenge(expired,origin),phase:'uncertain',createdAt,updatedAt:createdAt,attemptId:expired.settlementAttemptId,payload,payloadHash:sha(canonical(payload)),authorizationFingerprint:proof.fingerprint,transactionHash:proof.transactionHash};
+ let envelope={order:expired,settlement},reads=0,commits=0,result='NOT_FOUND';
+ const repository={async read(){return structuredClone(envelope);},async transact(id,mutate){assert.equal(id,expired.operationId);const next=structuredClone(envelope),value=mutate(next);if(next.recovery&&!envelope.recovery)assertPerOrderArchiveTransition(envelope.order,envelope.settlement,next.recovery);envelope=next;commits++;return value;}};
+ const simulation={facilitator:deps.facilitator,rpc:{async transaction(hash){reads++;assert.equal(hash,proof.transactionHash);return {status:result,envelopeXdr:signed.toXDR()};}}};
+ const context={...simulation,repository};
+ const code=expected=>error=>error.code===expected;
+ await withPerOrderX402Simulation(simulation,async()=>{
+  await assert.rejects(reconcilePerOrderX402Payment(stranger,expired.operationId,context),code('NOT_FOUND'));
+  assert.equal(reads,0);
+  await assert.rejects(reconcilePerOrderX402Payment(buyer,expired.operationId,context),code('X402_PAYMENT_OUTCOME_UNCERTAIN'));
+  assert.equal(commits,0);
+  assert.equal(envelope.settlement.phase,'uncertain');
+  result='SUCCESS';
+  const recovered=await reconcilePerOrderX402Payment(buyer,expired.operationId,context);
+  assert.equal(recovered.paymentPhase,'confirmed');
+  assert.equal(recovered.transactionHash,proof.transactionHash);
+  assert.equal(recovered.sellerReservationPending,true);
+  assert.equal(envelope.order,undefined);
+  assert.equal(envelope.settlement,undefined);
+  assert(!JSON.stringify(recovered).includes(expired.input.prompt));
+  assert(!JSON.stringify(recovered).includes(signed.toXDR()));
+  await assert.rejects(reconcilePerOrderX402Payment(stranger,expired.operationId,context),code('NOT_FOUND'));
+  assert.deepEqual(await reconcilePerOrderX402Payment(buyer,expired.operationId,context),recovered);
+  assert.equal(reads,2);
+  assert.equal(commits,1);
+  assert.equal(externalEffects,0);
+  assert.throws(()=>assertPerOrderArchiveTransition(expired,settlement,{...recovered,amount:'0.05'}),code('PER_ORDER_RECOVERY_BINDING_CHANGED'));
+  assert.throws(()=>assertPerOrderArchiveTransition({...expired,createdAt:recovered.archivedAt},settlement,recovered),code('PER_ORDER_RECOVERY_BINDING_CHANGED'));
+ });
+ console.log('PASS expired per-order payment: known hash only; one content-free commit; no verification, settlement or provider calls.');
+}
 try{
+ process.env.NODE_ENV='test';
+ await expiredPerOrderRecovery();
  Object.assign(process.env,{BAZAAR_ENABLE_OPEN_WORKSPACES:'true',BAZAAR_WORKSPACE_BACKEND:'redis',BAZAAR_WORKSPACE_PUBLIC_ORIGIN:origin,BAZAAR_ENABLE_MARKETPLACE:'true',BAZAAR_ENABLE_MARKET_PURCHASES:'false',BAZAAR_X402_MARKETPLACE_ENABLED:'false',BAZAAR_MARKET_PREFIX:prefix});
  setMarketStoreForTests(store);setMarketX402StoreForTests(settlements);
  const expired=order(),tx=await chain(expired),proof=marketX402Authorization(tx.toXDR(),expired,true);chainXdr=tx.toXDR();expired.transactionHash=proof.transactionHash;

@@ -34,7 +34,7 @@ compras y entrega antes de empezar; escanear el QR no instala ni firma por tu ag
 7. Pide las condiciones al endpoint HTTP x402 de la orden. HTTP **402** solicita
    pago; HTTP **404** significa que no existe la ruta. Comprueba red, activo,
    importe, destinatario, recurso y hash de entrada. Firma en el cliente y envía
-   el pago una vez, siguiendo el comprador x402 existente del proyecto.
+   el pago una vez, siguiendo [la guía del comprador x402](/BUYER.md).
 8. Consulta `get_market_order` para obtener el resultado y comprobante. Si la
    ficha declara archivos privados de Bazaar y las capacidades los habilitan,
    `get_market_delivery` obtiene enlaces temporales para tu cuenta. Ante una
@@ -59,19 +59,9 @@ La configuración MCP usa `url: https://bazaar.browns.studio/api/mcp` y
 `headers: { Authorization: "Bearer <acceso-del-agente>" }`. Guarda el acceso
 en la configuración privada del cliente; nunca en argumentos de herramientas.
 
-En el repositorio, configura primero el almacén cifrado local del comprador:
-`node examples/buyer-cli.mjs configure ./mi-comprador` (para preview agrega
-`--origin https://<origen-de-preview>`). Introduce passphrase, acceso y seed por
-terminal oculta o pipe privado; nunca por argumentos, variables de entorno o URLs.
-Opcionalmente ejecuta `node examples/bind-demo-wallet.mjs ./mi-comprador` e introduce
-la passphrase. Este ejemplo usa únicamente MCP y la seed en el proceso local:
-firma el desafío, no realiza pagos, no activa ni financia cuentas. La wallet debe
-existir ya en Testnet. Ante una respuesta incierta consulta primero
-`get_bazaar_identity`.
+Descarga el [kit del comprador](/downloads/bazaar-stellar-buyer-kit-v1.zip) y verifica su [manifiesto](/downloads/bazaar-stellar-buyer-kit-v1.manifest.json). Desde el directorio extraído, instala las dependencias fijadas y configura el almacén cifrado fuera del kit, siguiendo [la guía del comprador](/BUYER.md). El comando es `node examples/buyer-cli.mjs configure /ruta/privada/mi-comprador`. `--origin` permite fijar otro origen HTTPS; si Preview exige autenticación adicional, usa un cliente autorizado que la admita. Introduce passphrase, acceso y seed por terminal oculta o pipe privado; nunca por argumentos, variables de entorno o URLs.
 
-Después usa el comprador portable existente `examples/buyer-cli.mjs` y su guía
-`/BUYER.md`. La prueba publicada de pago necesita la autorización
-separada de servicio, cantidad e importe; no se ejecuta durante este ejemplo.
+Para verificar la identidad o el historial sin cargar una seed, usa el [cliente sin wallet](/AGENT_CONNECTION.md#private-preflight-and-history-without-a-wallet). Si quieres vincular la wallet opcionalmente, usa los dos pasos MCP del apartado anterior, con firma local del desafío. Ante una respuesta incierta consulta `get_bazaar_identity` antes de repetir. Una compra requiere autorización separada de servicio, entrada e importe.
 
 Si el historial no se confirma, la consulta devuelve un error recuperable;
 ese error jamás habilita un nuevo pago. Los pagos se consultan en órdenes,

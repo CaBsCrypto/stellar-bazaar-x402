@@ -110,7 +110,12 @@ export default function PilotOnboarding({ enabled = true, paused = false, servic
           <h3>{es?'Conexión privada del agente':'Private agent connection'}</h3><p><UiText text="La configuración contiene sólo el acceso de agente. Le permite trabajar en tu espacio; para enviar servicios debes concederle el permiso desde Mis servicios."/></p>
           <button type='button' onClick={() => download('bazaar-mcp-agente.json', agentConnectionConfiguration(access))}><UiText text="Descargar configuración privada del agente"/></button>
           <p>{es?'Configura este archivo sólo en tu propio cliente. Comprueba identidad, rol de agente y generación antes de consultar historial. No necesitas una wallet para esa comprobación.':'Configure this file only in your own client. Check identity, agent role and generation before reading history. This check does not require a wallet.'} <a href='/AGENT_CONNECTION.md#private-preflight-and-history-without-a-wallet'>{es?'Cómo comprobar la conexión':'How to check the connection'}</a></p>
-          <p><UiText text="Tu acceso humano permite revisar pedidos y administrar el permiso de publicación."/></p><a className={styles.open} href={`${access.origin}${serviceSelectionHref('/history', serviceId)}#token=${encodeURIComponent(access.human)}`} referrerPolicy='no-referrer'><UiText text="Abrir mi espacio privado"/></a><p><UiText text="Tu enlace permite leer el espacio. El acceso se retira de la URL al entrar y permanece sólo en memoria."/></p></div>}
+          <p><UiText text="Tu acceso humano permite revisar pedidos y administrar el permiso de publicación."/></p>
+          <div className="ui-actions">
+            <a className={styles.open} href={`${access.origin}${serviceSelectionHref('/history', serviceId)}#token=${encodeURIComponent(access.human)}`} referrerPolicy='no-referrer'><UiText text="Abrir mi espacio privado"/></a>
+            <a href={`${access.origin}/agent-chat#token=${encodeURIComponent(access.human)}`} referrerPolicy='no-referrer'>{es?'Abrir conversación privada':'Open private chat'}</a>
+          </div>
+          <p><UiText text="Tu enlace permite leer el espacio. El acceso se retira de la URL al entrar y permanece sólo en memoria."/></p></div>}
         <button type='button' className={styles.lock} onClick={lock}><UiText text="Bloquear y retirar este acceso"/></button>
       </>}
       <p role='status' aria-live='polite' className={styles.notice}>{busy ? t("Procesando el acceso…") : ''}{t(typeof notice === 'string' ? notice : notice.text, typeof notice === 'string' ? [] : notice.values)}</p>

@@ -17,6 +17,7 @@
   "git": {
     "deploymentEnabled": {
       "main": false,
+      "integration/bazaar-verified-20261111": false,
       "codex/bazaar-open-release": false,
       "mission/identity-pilot": false,
       "fix/operational-guards": false,

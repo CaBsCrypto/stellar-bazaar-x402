@@ -2,6 +2,7 @@ import { resolveHistoryPrincipal } from "../../../../lib/workspace-auth.ts";
 import { assertWorkspaceRequest, workspaceRequestOrigin, workspaceHeaders, workspaceFailure } from "../../../../lib/workspace-http.ts";
 import { configuredWorkspaceStore } from "../../../../lib/workspace-store.ts";
 import { WorkspaceError } from "../../../../lib/workspace-types.ts";
+import { demoIngress } from "../../../../lib/demo-http.ts";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 const headers = workspaceHeaders;
@@ -24,7 +25,10 @@ export async function POST(request: Request) {
       if (!reader.workspace || !writer.workspace || reader.workspace.role !== "human" || writer.workspace.role !== "agent" || reader.workspace.workspaceId !== writer.workspace.workspaceId) throw Error();
     }
     if (reader.ownerId !== writer.ownerId) throw Error();
-    if (reader.workspace) await configuredWorkspaceStore().consumeRequest(reader.ownerId, reader.workspace.generation);
+    if (reader.workspace) {
+      await demoIngress(request);
+      await configuredWorkspaceStore().consumeRequest(reader.ownerId, reader.workspace.generation);
+    }
     return Response.json({ ok: true }, { headers });
   } catch (error) {
     if (error instanceof WorkspaceError) return workspaceFailure(error);

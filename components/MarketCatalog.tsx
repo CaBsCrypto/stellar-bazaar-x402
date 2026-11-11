@@ -39,7 +39,7 @@ export function MarketCatalog({standalone = false}: {standalone?: boolean}) {
     const timer = setTimeout(() => request.abort(), 15000);
     try {
       const query = new URLSearchParams({limit: String(size)}); if (cursor) query.set('cursor', cursor); if (search) query.set('q', search);
-      const response = await fetch(`/api/market/catalog?${query}`, {headers:{'X-Bazaar-Catalogue-View':'published'},cache:'no-store',credentials:'omit',redirect:'error',signal:request.signal});
+      const response = await fetch(`/api/market/catalog?${query}`, {headers:{'X-Bazaar-Catalogue-View':'published'},cache:'no-store',credentials:'same-origin',redirect:'error',signal:request.signal});
       const body = await response.json(); if (current !== generation.current) return;
       if(!response.ok)throw Error('PUBLISHED_CATALOGUE_UNAVAILABLE');
       const published=parsePublishedCataloguePage(body,size);

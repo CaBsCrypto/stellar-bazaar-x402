@@ -19,6 +19,7 @@ import { resolveHistoryPrincipal, type ResolvedHistoryPrincipal } from "./worksp
 import { configuredWorkspaceStore } from "./workspace-store.ts";
 import { WorkspaceError } from "./workspace-types.ts";
 import { assertWorkspaceRequest, workspaceFailure, workspaceRequestOrigin } from "./workspace-http.ts";
+import { demoIngress } from "./demo-http.ts";
 const headers = {
   "Cache-Control": "private, no-store",
   Vary: "Authorization",
@@ -84,6 +85,7 @@ export function createDeliverableHandlers(
         if ([...url.searchParams.keys()].some((key) => key !== "operationId"))
           throw new DeliverableError("INVALID_QUERY", 400);
         const operationId = id.parse(url.searchParams.get("operationId"));
+        await demoIngress(request);
         const workspaceStore = configuredWorkspaceStore();
         await workspaceStore.consumeRequest(principal.ownerId, principal.workspace.generation);
         const operation = (await workspaceStore.forPrincipal(principal.workspace).operations.all(principal.ownerId)).find(

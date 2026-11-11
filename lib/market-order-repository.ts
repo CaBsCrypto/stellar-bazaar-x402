@@ -11,6 +11,7 @@ import {assertPerOrderStorageProfile} from './per-order-storage-profile.ts';
 import {preparePerOrderContinuousCommit} from './market-order-budget-commit.ts';
 import {continuousPerOrderResourceProfile} from './continuous-control-budget.ts';
 import {sellerReservationSchema} from './market-seller-capacity.ts';
+import {marketContentExpiresAt} from './market-file-delivery-schema.ts';
 
 export const ORIGINAL_LEGACY_OPERATION_ID='31c97193-be74-4b9d-b0a3-f3890b0a41e8';
 export const PER_ORDER_MAX_BYTES=196608;
@@ -46,6 +47,14 @@ function immutable(o:MarketOrder){return sha(canonical({operationId:o.operationI
 function fingerprint(record:MarketOrderEnvelope){return record.settlement?.authorizationFingerprint??record.recovery?.authorizationFingerprint??'';}
 function pending(record:MarketOrderEnvelope){return Boolean(record.order&&!['delivered','delivery-failed'].includes(record.order.phase)||record.recovery&&(record.recovery.paymentPhase==='uncertain'||record.recovery.sellerReservationPending));}
 function recoveryImmutable(r:MarketRecovery){return sha(canonical({operationId:r.operationId,buyerOwnerId:r.buyerOwnerId,sellerOwnerId:r.sellerOwnerId,intentHash:r.intentHash,cardHash:r.cardHash,inputHash:r.inputHash,orderBinding:r.orderBinding,payer:r.payer,destination:r.destination,amount:r.amount,settlement:r.settlement,paymentProtocol:r.paymentProtocol,archivedAt:r.archivedAt}));}
+export function assertPerOrderArchiveTransition(order:MarketOrder,settlement:MarketX402Settlement|undefined,next:MarketRecovery){
+ const archivedAt=Date.parse(next.archivedAt),expected=marketRecoveryRecord(order,settlement,archivedAt);
+ if(canonical(expected)===canonical(next))return;
+ // Reconciliation has already checked the ledger. Here enforce the exact
+ // content-free projection and require the same previously saved payment.
+ const knownTransaction=settlement?.transactionHash??settlement?.outcome?.transaction;
+ if(expected.paymentPhase!=='uncertain'||!expected.authorizationFingerprint||!knownTransaction||knownTransaction!==order.transactionHash||!settlement?.attemptId||settlement.attemptId!==order.settlementAttemptId||!settlement.payloadHash||!['settling','settled','uncertain'].includes(settlement.phase)||!['payment-submitting','payment-uncertain'].includes(order.phase)||Date.parse(marketContentExpiresAt(order))>archivedAt||canonical({...expected,paymentPhase:'confirmed',paymentVerifiedAt:expected.archivedAt})!==canonical(next))fail('PER_ORDER_RECOVERY_BINDING_CHANGED',409);
+}
 function validate(record:MarketOrderEnvelope){
  const allowed=['version','budgetProfile','revision','operationId','buyerOwnerId','sellerOwnerId','createdAt','intentHash','binding','immutableHash','challengeHash','readinessAttemptId','reserved','order','settlement','recovery'];
  if(!record||typeof record!=='object'||Object.keys(record).some(key=>!allowed.includes(key)))fail('PER_ORDER_STATE_UNAVAILABLE');
@@ -170,7 +179,7 @@ export function createMarketOrderRepository(redis:MarketRedis,prefix:string,opti
   const key=indexKey(ownerId,role),scope='admission:'+role+':'+sha(ownerId),limit=opts.limit??20;
   if(!Number.isSafeInteger(limit)||limit<1||limit>50)fail('INVALID_REQUEST',400);
   let after='+';if(opts.cursor!==undefined){try{if(!/^[A-Za-z0-9_-]{1,512}$/.test(opts.cursor))throw Error();const decoded=Buffer.from(opts.cursor,'base64url');if(decoded.toString('base64url')!==opts.cursor)throw Error();const parsed=JSON.parse(decoded.toString('utf8'));if(Object.keys(parsed).sort().join(',')!=='member,scope,version'||parsed.version!==2||parsed.scope!==scope||typeof parsed.member!=='string'||!memberPattern.test(parsed.member))throw Error();after='('+parsed.member;}catch{fail('INVALID_CURSOR',400);}}
-  const raw=await redis.eval(MARKET_ORDER_REPOSITORY_ADMISSION_PAGE,[key,revisionKey(key)],[after,String(limit+1),namespace,ownerId,role]);
+  const raw=await redis.eval(MARKET_ORDER_REPOSITORY_ADMISSION_PAGE,[key,revisionKey(key)],[after,String(limit+1),namespace,ownerId,role,...(role==='seller-pending'?[randomUUID()]:[])]);
   if(!Array.isArray(raw)||raw.length!==3||!Array.isArray(raw[2])||raw[2].length!==Math.min(limit,Array.isArray(raw[1])?raw[1].length:0)||typeof raw[0]!=='string'||!Array.isArray(raw[1])||raw[0]&&!uuid.test(raw[0])||raw[1].length>limit+1)fail('PER_ORDER_INDEX_UNAVAILABLE');
   const members=raw[1] as unknown[];if(members.some(x=>typeof x!=='string'||!memberPattern.test(x))||members.length&&!raw[0])fail('PER_ORDER_INDEX_UNAVAILABLE');
   const records:MarketOrderAdmission[]=[];let last:string|undefined;
@@ -202,7 +211,7 @@ export function createMarketOrderRepository(redis:MarketRedis,prefix:string,opti
    const next=structuredClone(record),result=op(next);if(result instanceof Promise||result&&typeof result==='object'&&'then' in result)fail('ASYNC_ORDER_CALLBACK_FORBIDDEN');const clonedResult=structuredClone(result);
    if(next.budgetProfile!==record.budgetProfile||next.operationId!==record.operationId||next.buyerOwnerId!==record.buyerOwnerId||next.sellerOwnerId!==record.sellerOwnerId||next.createdAt!==record.createdAt||next.intentHash!==record.intentHash||next.binding!==record.binding||next.immutableHash!==record.immutableHash||canonical(next.reserved)!==canonical(record.reserved)||record.challengeHash&&next.challengeHash!==record.challengeHash||record.readinessAttemptId&&next.readinessAttemptId!==record.readinessAttemptId||record.recovery&&!next.recovery||fingerprint(record)&&fingerprint(next)!==fingerprint(record))fail('PER_ORDER_IMMUTABLE_BINDING_CHANGED',409);
    if(next.settlement&&!next.challengeHash)next.challengeHash=sha(canonical(next.settlement.challenge));
-   if(next.recovery&&!record.recovery&&record.order&&canonical(next.recovery)!==canonical(marketRecoveryRecord(record.order,record.settlement,Date.parse(next.recovery.archivedAt))))fail('PER_ORDER_RECOVERY_BINDING_CHANGED',409);
+   if(next.recovery&&!record.recovery&&record.order)assertPerOrderArchiveTransition(record.order,record.settlement,next.recovery);
    if(record.recovery&&next.recovery&&recoveryImmutable(next.recovery)!==recoveryImmutable(record.recovery))fail('PER_ORDER_RECOVERY_BINDING_CHANGED',409);
    validate(next);if(canonical(next)!==canonical(record)||opts.guard){next.revision=randomUUID();await commit(raw,next,opts.guard);}return clonedResult;
   },

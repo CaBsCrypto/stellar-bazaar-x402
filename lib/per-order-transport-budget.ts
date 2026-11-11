@@ -64,7 +64,9 @@ export async function perOrderNativeRedisDescriptor(body:unknown):Promise<Native
   return {commands:2,responseBytes:2*(body[1]===MARKET_ORDER_REPOSITORY_ADMISSION_READ?4096:body[1]===MARKET_ORDER_REPOSITORY_BATCH_READ?101390:body[1]===MARKET_ORDER_REPOSITORY_READ?133309:67759)+8192,keys:keys as string[]};
  }
  const admissionBatch=body[1]===MARKET_ORDER_REPOSITORY_ADMISSION_PAGE,batch=body[1]===MARKET_ORDER_REPOSITORY_HISTORY_PAGE||admissionBatch;
- if(count!==2||args.length!==(batch?5:2)||keys[1]!==keys[0]+':revision')throw fail();
+ const sellerPending=admissionBatch&&args[4]==='seller-pending';
+ if(count!==2||args.length!==(sellerPending?6:batch?5:2)||keys[1]!==keys[0]+':revision')throw fail();
+ if(sellerPending&&!new RegExp('^'+uuid+'$').test(args[5] as string))throw fail();
  const index=(keys[0] as string).startsWith(namespace)?(keys[0] as string).slice(namespace.length):'';
  if(index!=='work'&&!/^(?:buyer|seller|seller-pending|participant):[a-f0-9]{64}$/.test(index))throw fail();
  if(args[0]!=='+'&&!new RegExp('^\\(\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d:\\d\\d\\.\\d{3}Z\\|'+uuid+'$').test(args[0]))throw fail();
@@ -74,7 +76,8 @@ export async function perOrderNativeRedisDescriptor(body:unknown):Promise<Native
   const ownedIndex=role==='seller'?[namespace+'seller:'+hash(who),namespace+'seller-pending:'+hash(who)]:[namespace+role+':'+hash(who)];
   if(admissionBatch&&!['buyer','seller','seller-pending'].includes(role))throw fail();
   if(args[2]!==namespace||(role==='work'?(index!=='work'||who!==''):( !(admissionBatch?['buyer','seller','seller-pending']:['buyer','seller','participant']).includes(role)||!/^ow_[a-f0-9]{32}$/.test(who)||!ownedIndex.includes(keys[0] as string))))throw fail();
-  return {commands:5+Number(args[1])-1,responseBytes:2*((admissionBatch?4096*(Number(args[1])-1):126976)+Number(args[1])*64+36)+8192,keys:keys as string[]};
+  const compaction=sellerPending&&args[0]==='+'&&args[1]==='51';
+  return {commands:5+Number(args[1])-1+(compaction?3:0),responseBytes:2*((admissionBatch?4096*(Number(args[1])-1):126976)+Number(args[1])*64+36)+8192,keys:keys as string[]};
  }
  return {commands:5,responseBytes:8192+2*(36+Number(args[1])*64),keys:keys as string[]};
 }

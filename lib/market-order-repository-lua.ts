@@ -160,13 +160,61 @@ local ok,record=pcall(cjson.decode,raw)
 if not ok or type(record)~='table' or record.budgetProfile~='batch-v1' then return -24 end
 return raw`;
 
+/** Redis has no UTC date parser. Parse only the canonical timestamps written
+ * by the order writer, and compare them against the same Redis clock as CAS. */
+const PRUNE_EXPIRED_SELLER_PENDING=`
+if role=='seller-pending' and ARGV[1]=='+' and count==51 and #members==count then
+ local function validRevision(value)
+  if type(value)~='string' or #value~=36 then return false end
+  local a,b,c,d,e=string.match(value,'^(%x+)%-(%x+)%-(%x+)%-(%x+)%-(%x+)$')
+  return a and #a==8 and #b==4 and #c==4 and #d==4 and #e==12 and string.sub(c,1,1)=='4' and string.find('89ab',string.sub(d,1,1),1,true)
+ end
+ if not validRevision(revision) or not validRevision(ARGV[6]) or revision==ARGV[6] then return -8 end
+ local function expiryMilliseconds(value)
+  if type(value)~='string' then return nil end
+  local y,m,d,h,mi,s,ms=string.match(value,'^(%d%d%d%d)%-(%d%d)%-(%d%d)T(%d%d):(%d%d):(%d%d)%.(%d%d%d)Z$')
+  if not y then return nil end
+  y,m,d,h,mi,s,ms=tonumber(y),tonumber(m),tonumber(d),tonumber(h),tonumber(mi),tonumber(s),tonumber(ms)
+  if y<1970 or m<1 or m>12 or h>23 or mi>59 or s>59 then return nil end
+  local leap=y%4==0 and (y%100~=0 or y%400==0)
+  local offsets={0,31,59,90,120,151,181,212,243,273,304,334,365}
+  local monthLength=offsets[m+1]-offsets[m]+(m==2 and leap and 1 or 0)
+  if d<1 or d>monthLength then return nil end
+  local previous=y-1
+  local leapsThrough1969=477
+  local days=(y-1970)*365+math.floor(previous/4)-math.floor(previous/100)+math.floor(previous/400)-leapsThrough1969+offsets[m]+(m>2 and leap and 1 or 0)+d-1
+  return (((days*24+h)*60+mi)*60+s)*1000+ms
+ end
+ local clock=redis.call('TIME')
+ local now=tonumber(clock[1])*1000+math.floor(tonumber(clock[2])/1000)
+ local expired={}
+ for i,raw in ipairs(values) do
+  local value=cjson.decode(raw)
+  local reservation=value.sellerReservation
+  if value.version==1 and value.phase=='awaiting-payment' and value.paymentPhase==nil and value.sellerReservationPending==nil and value.archivedAt==nil and type(reservation)=='table' and reservation.committed==false then
+   local expires=expiryMilliseconds(reservation.expiresAt)
+   if expires and expires<=now then table.insert(expired,members[i]) end
+  end
+ end
+ if #expired>0 then
+  local unpackMembers=unpack or table.unpack
+  redis.call('ZREM',KEYS[1],unpackMembers(expired))
+  redis.call('SET',KEYS[2],ARGV[6])
+ end
+end
+`;
+
 /** Same atomic owner-scoped page, specialized to canonical admission summaries.
- * Native writer maximum4096 bytes; oversized/corrupt rows fail before return. */
+ * On a full first seller-pending page, remove only expired unpaid seats from
+ * this derived index. Return the original incomplete page and old revision:
+ * callers must stop, even if compaction made space for a later request. */
 export const MARKET_ORDER_REPOSITORY_ADMISSION_PAGE=MARKET_ORDER_REPOSITORY_HISTORY_PAGE
- .replace('-- bazaar-per-order-history-page-v3','-- bazaar-per-order-admission-page-v2')
+ .replace('-- bazaar-per-order-history-page-v3','-- bazaar-per-order-admission-page-v3')
+ .replace("if #KEYS~=2 or #ARGV~=5 then return -8 end", () => "if #KEYS~=2 or (ARGV[5]=='seller-pending' and (#ARGV~=6 or #ARGV[6]~=36 or not string.match(ARGV[6],'^[%x%-]+$')) or ARGV[5]~='seller-pending' and #ARGV~=5) then return -8 end")
  .replace("if role~='buyer' and role~='seller' and role~='participant' and role~='work' then return -8 end","if role~='buyer' and role~='seller' and role~='seller-pending' then return -8 end")
  .replace("local values={};local total=0","local values=cjson.decode('[]');local total=0")
  .replace("namespace..'history:'..id","namespace..'admission:'..id")
  .replace('#raw>196608','#raw>4096')
  .replace("role=='seller' and value.sellerOwnerId~=who","(role=='seller' or role=='seller-pending') and value.sellerOwnerId~=who")
- .replace('total+#raw+1>126976','total+#raw+1>204850');
+ .replace('total+#raw+1>126976','total+#raw+1>204850')
+ .replace("return {revision or '',members,values}",()=>PRUNE_EXPIRED_SELLER_PENDING+"return {revision or '',members,values}");

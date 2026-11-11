@@ -17,4 +17,3 @@ export async function readPublicDiscovery(): Promise<DiscoverySnapshot> {
   });
   return { cards, partialResults: body.partialResults, dynamicRegistry: body.dynamicRegistry };
 }
-

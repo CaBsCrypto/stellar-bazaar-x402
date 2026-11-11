@@ -56,4 +56,3 @@ export function createWorkspaceChatHandlers(deps: {
     responsePOST: (r: Request,id: string) => run(r,'response',id),
   };
 }
-

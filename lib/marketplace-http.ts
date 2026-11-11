@@ -59,7 +59,22 @@ export const marketHandlers={
  async read(request:Request,id:string){try{assertMarketEnabled();z.string().uuid().parse(id);const p=await authenticateWorkspaceRequest(request);try{const order=await readMarketOrder(p,id);if(order.buyerOwnerId===p.ownerId)scheduleMarketTextWake(order);return response({order});}catch(e){if(!(e instanceof WorkspaceError)||e.code!=='ORDER_CONTENT_EXPIRED')throw e;const recovery=await readMarketRecovery(p,id);return response({error:{code:'ORDER_CONTENT_EXPIRED'},recoveryOnly:true,...(recovery?{operation:recovery}:{}),instruction:'Content expired. Reconcile an uncertain payment by its original operationId; never pay again because history expired.'},410);}}catch(e){return workspaceFailure(e);}},
  async action(request:Request,id:string){try{assertMarketEnabled();const p=await authenticateWorkspaceRequest(request),body=await parseWorkspaceBody(request,orderActionSchema,18000);
  if(body.action==='prepare'||body.action==='pay'){throw new WorkspaceError('PAYMENT_PROTOCOL_MISMATCH',409);}
- if(body.action==='reconcile'){try{const order=await readMarketOrder(p,id);if(body.transactionHash&&!order.paymentProtocol)throw new WorkspaceError('X402_RECOVERY_SCOPE_MISMATCH',409);const recovered=order.paymentProtocol?await reconcileMarketX402Payment(p,id,undefined,body.transactionHash):await verifyMarketPayment(p,id);if(id===ORIGINAL_MARKET_PAYMENT_RECOVERY.operationId&&'phase' in recovered&&recovered.phase==='paid')scheduleMarketTextWake(recovered as typeof order);if(id!==ORIGINAL_MARKET_PAYMENT_RECOVERY.operationId&&marketPerOrderStorageEnabled(id)&&'phase' in recovered&&recovered.phase==='paid')scheduleMarketTextWake(recovered as typeof order);return response({order:recovered});}catch(e){if(!(e instanceof WorkspaceError)||e.code!=='ORDER_CONTENT_EXPIRED'||body.transactionHash!==undefined)throw e;const recovery=await readMarketRecovery(p,id);if(recovery?.paymentProtocol!=='x402-stellar-exact-v2')throw e;return response({operation:await reconcileMarketX402Payment(p,id),recoveryOnly:true,contentExpired:true});}}
+ if(body.action==='reconcile'){
+  let order:Awaited<ReturnType<typeof readMarketOrder>>;
+  try{order=await readMarketOrder(p,id);}
+  catch(e){
+   if(!(e instanceof WorkspaceError)||e.code!=='ORDER_CONTENT_EXPIRED'||body.transactionHash!==undefined)throw e;
+   const recovery=await readMarketRecovery(p,id);if(recovery?.paymentProtocol!=='x402-stellar-exact-v2')throw e;
+   const recovered=await reconcileMarketX402Payment(p,id);
+   if('phase' in recovered)throw new WorkspaceError('OPERATION_CONFLICT',409);
+   return response({operation:recovered,recoveryOnly:true,contentExpired:true});
+  }
+  if(body.transactionHash&&!order.paymentProtocol)throw new WorkspaceError('X402_RECOVERY_SCOPE_MISMATCH',409);
+  const recovered=order.paymentProtocol?await reconcileMarketX402Payment(p,id,undefined,body.transactionHash):await verifyMarketPayment(p,id);
+  if(!('phase' in recovered))return response({operation:recovered,recoveryOnly:true,contentExpired:true});
+  if(recovered.phase==='paid'&&(id===ORIGINAL_MARKET_PAYMENT_RECOVERY.operationId||marketPerOrderStorageEnabled(id)))scheduleMarketTextWake(recovered);
+  return response({order:recovered});
+ }
  return response({order:await sellerOrderAction(p,id,body)});
  }catch(e){return workspaceFailure(e);}},
  async control(request:Request){try{assertMarketEnabled();assertWorkspaceRequest(request);await marketOperator(request.headers.get('authorization'));const body=await parseWorkspaceBody(request,z.object({action:z.enum(['pause','resume'])}).strict(),1024);return response(await configuredMarketStore().transact(s=>{s.paused=body.action==='pause';return {paused:s.paused};}));}catch(e){return workspaceFailure(e);}},

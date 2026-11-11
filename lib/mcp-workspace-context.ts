@@ -25,7 +25,7 @@ export function workspaceMcpContext(incoming: Request) {
     listTasks: async () => envelope(await tasks(request('/api/agent-tasks'))),
     claim: async (body: unknown) => envelope(await claim(request('/api/agent-tasks',body))),
     respond: async (taskId: string,body:unknown) => envelope(await respond(request(`/api/agent-tasks/${encodeURIComponent(taskId)}/response`,body),{params:Promise.resolve({id:taskId})})),
-    recordOperation: async (body:unknown) => envelope(await recordOperation(request('/api/operations',body))),
-    recordActivity: async (body:unknown) => envelope(await recordActivity(request('/api/activity',body))),
+    recordOperation: async (body:unknown) => envelope(await recordOperation(inheritDemoIngress(incoming,request('/api/operations',body)))),
+    recordActivity: async (body:unknown) => envelope(await recordActivity(inheritDemoIngress(incoming,request('/api/activity',body)))),
   };
 }

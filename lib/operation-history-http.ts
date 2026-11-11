@@ -47,7 +47,7 @@ export function createHistoryHandlers(dependencies: {
       try {
         if (!allowedRequest(request)) return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await authenticate(request.headers.get("authorization"), true);
-        if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
+        if (principal.workspace) { await demoIngress(request); assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
         if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json") return fail("INVALID_OPERATION", 415);
         const reader = request.body?.getReader();
         if (!reader) return fail("INVALID_OPERATION", 400);

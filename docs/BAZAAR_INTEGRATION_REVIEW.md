@@ -19,3 +19,14 @@ El tip de #61 (`be9d1db`) y sus PR apilados son ancestros de `e9daaf1`, la líne
 | [#32](https://github.com/CaBsCrypto/stellar-bazaar-x402/pull/32) | Diseño futuro | El prototipo diverge del router de `main`. Conservar el requisito de demostrar compatibilidad del reparto con cliente, verificador y facilitador antes de adoptar ese flujo. |
 
 Validación local con Node 24: build de Next.js con Webpack, generación de tipos y `tsc`; `npm run test:integration` pasó 20 de 20, incluidos 67 casos x402, 6 de admisión, 11 de recuperación y 8 de MCP público. También pasaron las pruebas de historial, chat, conformidad WebMCP y contrato de pagos de `main`. Las pruebas usaron datos y transportes sintéticos; el build se ejecutó sin credenciales. No hubo publicación, configuración de infraestructura ni pagos reales. El estado operativo y el presupuesto del piloto deben revalidarse por separado.
+
+## Revisión final antes del PR
+
+- Presupuesto e identidad: las rutas privadas de historial, actividad y entrega pasan por el presupuesto compartido. MCP conserva un solo débito por petición. El acceso de recuperación de tesorería se limita a la ruta de rotación autorizada.
+- Pedidos y pagos: si se desborda la primera página de asientos del vendedor, se retiran del índice sólo los asientos impagos, no comprometidos y vencidos. La petición con la página incompleta se detiene. La reconciliación explícita de un pedido vencido usa únicamente la transacción ya guardada; si coincide con la evidencia de Stellar, guarda la recuperación sin contenido y conserva el control de la reserva, sin liquidar ni despachar otra vez.
+- Recorridos web: el catálogo respeta la sesión de Preview, la ficha elegida abre Comprar y el alta ofrece el enlace privado al chat. Las guías apuntan a rutas y kits que existen.
+- Publicación: la rama de integración está excluida de los despliegues automáticos de Git en `vercel.json`. La revisión se mantuvo local.
+
+Comprobaciones finales: 24 de 24 suites de integración, historial, chat, WebMCP, pagos, actividad, entregas, límites de entrega y vectores TypeScript del registro. Pasaron el build de Next.js con Webpack, TypeScript y el escaneo de credenciales del árbol actual. Se verificaron los dos kits contra sus manifiestos. Las comprobaciones usaron datos sintéticos y el build no leyó credenciales ni contactó servicios de pago.
+
+Antes de habilitar el perfil por pedido en un nuevo lanzamiento, falta validar la purga automática del contenido vencido que no se reconcilia. La API oculta ese contenido al vencer; el archivado introducido aquí ocurre cuando se confirma una recuperación explícita.

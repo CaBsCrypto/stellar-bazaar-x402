@@ -57,6 +57,7 @@ function load(file) {
       AbortSignal,
       TextEncoder,
       CustomEvent: globalThis.CustomEvent,
+      process: { env: {} },
       setTimeout,
       clearTimeout,
       Buffer,

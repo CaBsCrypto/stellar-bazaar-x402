@@ -17,15 +17,17 @@ import {queueMarketTextWake} from './market-text-seller-runtime.ts';
 import {assertPerOrderPaymentCapability,perOrderPaymentCapabilityKind,type PerOrderPaymentSimulationDependencies} from './per-order-payment-profile.ts';
 import {buyer,createMarketX402Challenge,marketX402OrderBinding,marketX402Authorization,parseProof,assertRecordBinding,paidResponse} from './marketplace-x402.ts';
 import {ensurePerOrderSellerPaymentReadiness} from './per-order-seller-readiness.ts';
+import {marketContentExpiresAt} from './market-file-delivery-schema.ts';
+import {marketRecoveryRecord,type MarketRecovery} from './market-retention-schema.ts';
 
 export type PerOrderX402Dependencies=PerOrderPaymentSimulationDependencies&{repository?:MarketOrderRepository};
 const uncertain=()=>new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
 function repository(id:string,deps:PerOrderX402Dependencies){assertPerOrderPaymentCapability(id,deps);if(perOrderPaymentCapabilityKind(id)==='production'&&deps.repository!==undefined)throw new WorkspaceError('PER_ORDER_PAYMENTS_NOT_ENABLED',503);return deps.repository??configuredMarketOrderRepository();}
-function orderIn(record:MarketOrderEnvelope,p:WorkspacePrincipal){
+function orderIn(record:MarketOrderEnvelope,p:WorkspacePrincipal,allowExpired=false){
  const order=record.order;if(!order||order.buyerOwnerId!==p.ownerId)throw new WorkspaceError('NOT_FOUND',404);
- buyer(p,order);assertMarketContentLive(order);return order;
+ buyer(p,order);if(!allowExpired)assertMarketContentLive(order);return order;
 }
-function bound(record:MarketOrderEnvelope,p:WorkspacePrincipal){const order=orderIn(record,p),settlement=record.settlement;if(!settlement)throw new WorkspaceError('X402_SETTLEMENT_BINDING_MISMATCH',409);assertRecordBinding(settlement,order);return {order,settlement};}
+function bound(record:MarketOrderEnvelope,p:WorkspacePrincipal,allowExpired=false){const order=orderIn(record,p,allowExpired),settlement=record.settlement;if(!settlement)throw new WorkspaceError('X402_SETTLEMENT_BINDING_MISMATCH',409);assertRecordBinding(settlement,order);return {order,settlement};}
 function matches(record:MarketOrderEnvelope,p:WorkspacePrincipal,attemptId:string,payloadHash:string,authorizationFingerprint:string){
  const value=bound(record,p);if(value.settlement.attemptId!==attemptId||value.settlement.payloadHash!==payloadHash||value.settlement.authorizationFingerprint!==authorizationFingerprint||value.order.settlementAttemptId!==attemptId)throw new WorkspaceError('OPERATION_CONFLICT',409);return value;
 }
@@ -85,17 +87,56 @@ async function finalize(repo:MarketOrderRepository,id:string,p:WorkspacePrincipa
   return {order:o,settlement:r};
  }
  if(!['settling','settled','uncertain'].includes(r.phase))throw uncertain();
- assertPerOrderPaymentCapability(id,deps);const chain=await deps.rpc.transaction(transaction);
- if(chain.status!=='SUCCESS'||!chain.envelopeXdr)throw uncertain();
- const proof=marketX402Authorization(chain.envelopeXdr,o,true);
- if(proof.transactionHash!==transaction||proof.fingerprint!==r.authorizationFingerprint)throw new WorkspaceError('X402_PAYMENT_NOT_VERIFIED',409);
- const submitted=TransactionBuilder.fromXDR(chain.envelopeXdr,Networks.TESTNET),feeSource=submitted instanceof FeeBumpTransaction?submitted.feeSource:submitted.source;
- if(feeSource===o.payer)throw new WorkspaceError('X402_PAYMENT_NOT_VERIFIED',409);
+ await verifySavedTransaction(id,deps,o,transaction,r.authorizationFingerprint);
  const receipt:SettleResponse={success:true,network:'stellar:testnet',payer:o.payer,transaction};
  return change(repo,id,p,r,(order,settlement)=>{
   if(!['settling','settled','uncertain'].includes(settlement.phase)||settlement.transactionHash!==transaction||order.transactionHash!==transaction||order.paymentVerifiedAt||!['payment-submitting','payment-uncertain'].includes(order.phase))throw new WorkspaceError('OPERATION_CONFLICT',409);
   settlement.phase='confirmed';settlement.outcome=receipt;order.phase='paid';order.paymentVerifiedAt=new Date().toISOString();
   queueMarketTextWake({version:1,services:[],orders:[]},order,Date.parse(order.paymentVerifiedAt));
+ });
+}
+
+async function verifySavedTransaction(id:string,deps:PerOrderX402Dependencies,order:MarketOrder,transaction:string,fingerprint:string){
+ assertPerOrderPaymentCapability(id,deps);
+ const chain=await deps.rpc.transaction(transaction);
+ if(chain.status!=='SUCCESS'||!chain.envelopeXdr)throw uncertain();
+ const proof=marketX402Authorization(chain.envelopeXdr,order,true);
+ const submitted=TransactionBuilder.fromXDR(chain.envelopeXdr,Networks.TESTNET);
+ const feeSource=submitted instanceof FeeBumpTransaction?submitted.feeSource:submitted.source;
+ if(proof.transactionHash!==transaction||proof.fingerprint!==fingerprint||feeSource===order.payer)throw new WorkspaceError('X402_PAYMENT_NOT_VERIFIED',409);
+}
+
+function ownedConfirmedRecovery(recovery:MarketRecovery,p:WorkspacePrincipal){
+ if(recovery.buyerOwnerId!==p.ownerId||!['human','agent'].includes(p.role))throw new WorkspaceError('NOT_FOUND',404);
+ if(recovery.paymentPhase!=='confirmed'||!recovery.transactionHash||!recovery.paymentVerifiedAt)throw uncertain();
+ return recovery;
+}
+
+function savedExpiredPayment(order:MarketOrder,record:MarketX402Settlement){
+ const transaction=record.transactionHash??record.outcome?.transaction;
+ if(!transaction||!/^[a-f0-9]{64}$/.test(transaction)||transaction!==order.transactionHash||!record.authorizationFingerprint||!record.attemptId||!record.payloadHash||order.settlementAttemptId!==record.attemptId)throw uncertain();
+ if(record.phase==='confirmed'){
+  if(!order.paymentVerifiedAt||!['paid','executing','execution-uncertain','delivered','delivery-failed'].includes(order.phase)||record.outcome?.transaction!==transaction||record.outcome?.success!==true)throw uncertain();
+ }else if(!['settling','settled','uncertain'].includes(record.phase)||!['payment-submitting','payment-uncertain'].includes(order.phase)||order.paymentVerifiedAt)throw uncertain();
+ return transaction;
+}
+
+async function reconcileExpiredPayment(repo:MarketOrderRepository,id:string,p:WorkspacePrincipal,order:MarketOrder,record:MarketX402Settlement,deps:PerOrderX402Dependencies){
+ const transaction=savedExpiredPayment(order,record),fingerprint=record.authorizationFingerprint!;
+ if(record.phase!=='confirmed')await verifySavedTransaction(id,deps,order,transaction,fingerprint);
+ return repo.transact(id,envelope=>{
+  if(envelope.recovery){
+   const recovered=ownedConfirmedRecovery(envelope.recovery,p);
+   if(recovered.transactionHash!==transaction||recovered.authorizationFingerprint!==fingerprint||recovered.orderBinding!==record.orderBinding)throw new WorkspaceError('OPERATION_CONFLICT',409);
+   return recovered;
+  }
+  const current=bound(envelope,p,true),now=Date.now();
+  if(Date.parse(marketContentExpiresAt(current.order))>now||savedExpiredPayment(current.order,current.settlement)!==transaction||current.settlement.authorizationFingerprint!==fingerprint||current.settlement.attemptId!==record.attemptId||current.settlement.payloadHash!==record.payloadHash)throw new WorkspaceError('OPERATION_CONFLICT',409);
+  // Store only the recovery controls. Expiry must never queue delivery or release the existing hold.
+  const recovery=marketRecoveryRecord(current.order,current.settlement,now);
+  envelope.recovery={...recovery,paymentPhase:'confirmed',paymentVerifiedAt:recovery.paymentVerifiedAt??recovery.archivedAt};
+  delete envelope.order;delete envelope.settlement;
+  return envelope.recovery;
  });
 }
 
@@ -148,7 +189,12 @@ export async function executePerOrderX402Payment(p:WorkspacePrincipal,id:string,
 /** An explicit recovery request can only read the one already saved hash.
  * It never verifies again, adopts an arbitrary hash, settles or submits. */
 export async function reconcilePerOrderX402Payment(p:WorkspacePrincipal,id:string,deps:PerOrderX402Dependencies){
- const repo=repository(id,deps),current=await repo.read(id);if(!current)throw new WorkspaceError('NOT_FOUND',404);const {settlement}=bound(current,p);
+ const repo=repository(id,deps),current=await repo.read(id);if(!current)throw new WorkspaceError('NOT_FOUND',404);
+ if(current.recovery)return ownedConfirmedRecovery(current.recovery,p);
+ const {order,settlement}=bound(current,p,true);
  if(!settlement.transactionHash&&!settlement.outcome?.transaction)throw uncertain();
- try{return (await finalize(repo,id,p,settlement,deps)).order;}catch(error){if(error instanceof WorkspaceError)throw error;throw uncertain();}
+ try{
+  if(Date.parse(marketContentExpiresAt(order))<=Date.now())return await reconcileExpiredPayment(repo,id,p,order,settlement,deps);
+  return (await finalize(repo,id,p,settlement,deps)).order;
+ }catch(error){if(error instanceof WorkspaceError)throw error;throw uncertain();}
 }

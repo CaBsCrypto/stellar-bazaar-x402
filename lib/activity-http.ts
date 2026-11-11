@@ -267,7 +267,7 @@ export function createActivityHandlers(
         if ((origin && origin !== expectedOrigin) || url.search)
           return fail("INVALID_REQUEST", 400);
         const principal: ResolvedHistoryPrincipal = await auth(request.headers.get("authorization"), true);
-        if (principal.workspace) { assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
+        if (principal.workspace) { await demoIngress(request); assertWorkspaceRequest(request, true); await configuredWorkspaceStore().consumeRequest(principal.ownerId, principal.workspace.generation); }
         if (
           request.headers.get("content-type")?.split(";")[0] !==
           "application/json"
