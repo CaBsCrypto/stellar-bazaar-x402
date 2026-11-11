@@ -3,6 +3,7 @@ import {continuousPerOrderStorage} from './per-order-storage-profile.ts';
 import {MARKET_ORDER_REPOSITORY_READ,MARKET_ORDER_REPOSITORY_HISTORY_READ,MARKET_ORDER_REPOSITORY_PAGE,MARKET_ORDER_REPOSITORY_HISTORY_PAGE,MARKET_ORDER_REPOSITORY_BATCH_READ,MARKET_ORDER_REPOSITORY_ADMISSION_PAGE} from './market-order-repository-lua.ts';
 import type {NativeRedisDescriptor} from './catalog-budget.ts';
 import {createHash} from 'node:crypto';
+import {perOrderRetentionRedisDescriptor} from './per-order-retention-redis.ts';
 
 const uuid='[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}';
 const original='31c97193-be74-4b9d-b0a3-f3890b0a41e8';
@@ -41,6 +42,10 @@ export async function perOrderNativeRedisDescriptor(body:unknown):Promise<Native
  if(!continuousPerOrderStorage())return undefined;
  if(!Array.isArray(body)||typeof body[0]!=='string'||body[0].toLowerCase()!=='eval'||typeof body[1]!=='string')return undefined;
  const namespace=process.env.BAZAAR_MARKET_PREFIX!+':orders:v2:';
+ if(typeof body[2]==='number'||typeof body[2]==='string'){
+  const count=Number(body[2]);
+  if(Number.isSafeInteger(count)&&count>=1&&count<=29){const retention=perOrderRetentionRedisDescriptor(body[1],body.slice(3,3+count),body.slice(3+count),namespace);if(retention)return retention;}
+ }
  const {MARKET_ORDER_REPOSITORY_ADMISSION_READ}=await import('./market-order-repository-lua.ts');
  const known=[MARKET_ORDER_REPOSITORY_READ,MARKET_ORDER_REPOSITORY_HISTORY_READ,MARKET_ORDER_REPOSITORY_PAGE,MARKET_ORDER_REPOSITORY_HISTORY_PAGE,MARKET_ORDER_REPOSITORY_ADMISSION_READ,MARKET_ORDER_REPOSITORY_BATCH_READ,MARKET_ORDER_REPOSITORY_ADMISSION_PAGE];
  const compound=known.includes(body[1])?undefined:(await compoundScripts(process.env.BAZAAR_WORKSPACE_PREFIX!)).find(row=>row.script===body[1]);

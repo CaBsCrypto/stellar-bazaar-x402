@@ -46,14 +46,19 @@ export function perOrderBinding(o:MarketOrder){return sha(canonical({operationId
 function immutable(o:MarketOrder){return sha(canonical({operationId:o.operationId,buyerOwnerId:o.buyerOwnerId,sellerOwnerId:o.sellerOwnerId,serviceId:o.serviceId,cardHash:o.cardHash,card:o.card,input:o.input,payer:o.payer,destination:o.destination,amount:o.amount,memoHash:o.memoHash,settlement:o.settlement,paymentProtocol:o.paymentProtocol,inputHash:o.inputHash,executionMode:o.executionMode,createdAt:o.createdAt,sellerReservation:o.sellerReservation?{day:o.sellerReservation.day,expiresAt:o.sellerReservation.expiresAt}:undefined}));}
 function fingerprint(record:MarketOrderEnvelope){return record.settlement?.authorizationFingerprint??record.recovery?.authorizationFingerprint??'';}
 function pending(record:MarketOrderEnvelope){return Boolean(record.order&&!['delivered','delivery-failed'].includes(record.order.phase)||record.recovery&&(record.recovery.paymentPhase==='uncertain'||record.recovery.sellerReservationPending));}
-function recoveryImmutable(r:MarketRecovery){return sha(canonical({operationId:r.operationId,buyerOwnerId:r.buyerOwnerId,sellerOwnerId:r.sellerOwnerId,intentHash:r.intentHash,cardHash:r.cardHash,inputHash:r.inputHash,orderBinding:r.orderBinding,payer:r.payer,destination:r.destination,amount:r.amount,settlement:r.settlement,paymentProtocol:r.paymentProtocol,archivedAt:r.archivedAt}));}
 export function assertPerOrderArchiveTransition(order:MarketOrder,settlement:MarketX402Settlement|undefined,next:MarketRecovery){
- const archivedAt=Date.parse(next.archivedAt),expected=marketRecoveryRecord(order,settlement,archivedAt);
+ const archivedAt=Date.parse(next.archivedAt);
+ if(!Number.isFinite(archivedAt)||Date.parse(marketContentExpiresAt(order))>archivedAt)fail('PER_ORDER_RECOVERY_BINDING_CHANGED',409);
+ const expected=marketRecoveryRecord(order,settlement,archivedAt);
  if(canonical(expected)===canonical(next))return;
  // Reconciliation has already checked the ledger. Here enforce the exact
  // content-free projection and require the same previously saved payment.
  const knownTransaction=settlement?.transactionHash??settlement?.outcome?.transaction;
- if(expected.paymentPhase!=='uncertain'||!expected.authorizationFingerprint||!knownTransaction||knownTransaction!==order.transactionHash||!settlement?.attemptId||settlement.attemptId!==order.settlementAttemptId||!settlement.payloadHash||!['settling','settled','uncertain'].includes(settlement.phase)||!['payment-submitting','payment-uncertain'].includes(order.phase)||Date.parse(marketContentExpiresAt(order))>archivedAt||canonical({...expected,paymentPhase:'confirmed',paymentVerifiedAt:expected.archivedAt})!==canonical(next))fail('PER_ORDER_RECOVERY_BINDING_CHANGED',409);
+ if(expected.paymentPhase!=='uncertain'||!expected.authorizationFingerprint||!knownTransaction||knownTransaction!==order.transactionHash||!settlement?.attemptId||settlement.attemptId!==order.settlementAttemptId||!settlement.payloadHash||!['settling','settled','uncertain'].includes(settlement.phase)||!['payment-submitting','payment-uncertain'].includes(order.phase)||canonical({...expected,paymentPhase:'confirmed',paymentVerifiedAt:expected.archivedAt})!==canonical(next))fail('PER_ORDER_RECOVERY_BINDING_CHANGED',409);
+}
+function assertPerOrderRecoveryUpdate(previous:MarketRecovery,next:MarketRecovery){
+ if(canonical(previous)===canonical(next))return;
+ if(previous.paymentPhase!=='uncertain'||!previous.transactionHash||!previous.authorizationFingerprint||previous.paymentVerifiedAt||!next.paymentVerifiedAt||canonical({...previous,paymentPhase:'confirmed',paymentVerifiedAt:next.paymentVerifiedAt})!==canonical(next))fail('PER_ORDER_RECOVERY_BINDING_CHANGED',409);
 }
 function validate(record:MarketOrderEnvelope){
  const allowed=['version','budgetProfile','revision','operationId','buyerOwnerId','sellerOwnerId','createdAt','intentHash','binding','immutableHash','challengeHash','readinessAttemptId','reserved','order','settlement','recovery'];
@@ -212,7 +217,7 @@ export function createMarketOrderRepository(redis:MarketRedis,prefix:string,opti
    if(next.budgetProfile!==record.budgetProfile||next.operationId!==record.operationId||next.buyerOwnerId!==record.buyerOwnerId||next.sellerOwnerId!==record.sellerOwnerId||next.createdAt!==record.createdAt||next.intentHash!==record.intentHash||next.binding!==record.binding||next.immutableHash!==record.immutableHash||canonical(next.reserved)!==canonical(record.reserved)||record.challengeHash&&next.challengeHash!==record.challengeHash||record.readinessAttemptId&&next.readinessAttemptId!==record.readinessAttemptId||record.recovery&&!next.recovery||fingerprint(record)&&fingerprint(next)!==fingerprint(record))fail('PER_ORDER_IMMUTABLE_BINDING_CHANGED',409);
    if(next.settlement&&!next.challengeHash)next.challengeHash=sha(canonical(next.settlement.challenge));
    if(next.recovery&&!record.recovery&&record.order)assertPerOrderArchiveTransition(record.order,record.settlement,next.recovery);
-   if(record.recovery&&next.recovery&&recoveryImmutable(next.recovery)!==recoveryImmutable(record.recovery))fail('PER_ORDER_RECOVERY_BINDING_CHANGED',409);
+   if(record.recovery&&next.recovery)assertPerOrderRecoveryUpdate(record.recovery,next.recovery);
    validate(next);if(canonical(next)!==canonical(record)||opts.guard){next.revision=randomUUID();await commit(raw,next,opts.guard);}return clonedResult;
   },
   async list(id,opts={}){if(opts.role)return repository.indexSnapshot(id,opts.role,opts);owner(id);return page(indexKey(id,'participant'),'participant:'+sha(id),opts,{ownerId:id,role:'participant'});},

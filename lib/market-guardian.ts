@@ -15,7 +15,9 @@ import {marketContentExpiresAt} from './market-file-delivery-schema.ts';
 import {assertWorkspaceRequest,parseWorkspaceBody,workspaceFailure,workspaceHeaders} from './workspace-http.ts';
 import {demoIngress} from './demo-http.ts';
 import {assertMarketGuardianCronRequest} from './market-guardian-cron.ts';
-import {COMPACT_GUARDIAN_BUDGET,compactGuardianBudgetEnabled,withCompactGuardianBudget,outsideGuardianBudget,withWorkspaceMaintenanceBudget} from './guardian-budget.ts';
+import {COMPACT_GUARDIAN_BUDGET,compactGuardianBudgetEnabled,withCompactGuardianBudget,outsideGuardianBudget,withWorkspaceMaintenanceBudget,withPerOrderGuardianBudget} from './guardian-budget.ts';
+import {continuousPerOrderStorage} from './per-order-storage-profile.ts';
+import type {runPerOrderRetentionPass} from './per-order-retention.ts';
 export {assertMarketGuardianCronRequest} from './market-guardian-cron.ts';
 
 export const MARKET_GUARDIAN_LIMITS=Object.freeze({durationMs:45000,reconciliations:2,expiredOrders:2,workspaces:20,deliveryPendingMs:360000});
@@ -63,6 +65,7 @@ export type MarketGuardianDependencies={
  marketIndex:()=>Promise<GuardianMarketIndex>;
  reserveBackground:(commands:number,transferBytes:number)=>Promise<unknown>;
  dispatch:(operationId:string)=>Promise<unknown>;
+ perOrderRetention:typeof runPerOrderRetentionPass;
  now:()=>number;
 };
 /** Dependency injection is internal to local tests; the HTTP handlers always
@@ -74,15 +77,17 @@ export function createMarketGuardianRunner(overrides:Partial<MarketGuardianDepen
  marketIndex:async()=>{const store=deps.marketStore() as MarketStore&{maintenanceIndex?:()=>Promise<GuardianMarketIndex>};if(!store.maintenanceIndex)throw new WorkspaceError('MAINTENANCE_UNAVAILABLE',503);return store.maintenanceIndex();},
  reserveBackground:async(commands,transferBytes)=>{const {reserveContinuousFreeBackground}=await import('./continuous-free-budget.ts');return reserveContinuousFreeBackground({commands,transferBytes,reason:'guardian'});},
  dispatch:async(operationId)=>{const {dispatchMarketTextWake}=await import('./market-text-seller-runtime.ts');return dispatchMarketTextWake(operationId);},
+ perOrderRetention:async input=>(await import('./per-order-retention.ts')).runPerOrderRetentionPass(input),
  now:Date.now,...overrides};
- return async function run(){return withCompactGuardianBudget(async()=>{
+ return async function run(){
+ const started=deps.now();let observed=started,timeBound=false,fullPassReserved=false;
+ const available=()=>{if(timeBound)return false;const current=deps.now();if(!Number.isSafeInteger(current)||current<observed){timeBound=true;return false;}observed=current;if(current-started>=MARKET_GUARDIAN_LIMITS.durationMs){timeBound=true;return false;}return true;};
+ if(!Number.isSafeInteger(started)||started<0)throw new WorkspaceError('MAINTENANCE_UNAVAILABLE',503);
+ const legacy=await withCompactGuardianBudget(async()=>{
  const compact=compactGuardianBudgetEnabled(),workspaceLimit=compact?COMPACT_GUARDIAN_BUDGET.workspaces:MARKET_GUARDIAN_LIMITS.workspaces;
  const reconciliationLimit=compact?COMPACT_GUARDIAN_BUDGET.reconciliations:MARKET_GUARDIAN_LIMITS.reconciliations;
  const limits=compact?{...MARKET_GUARDIAN_LIMITS,workspaces:workspaceLimit,reconciliations:reconciliationLimit,expiredOrders:COMPACT_GUARDIAN_BUDGET.expiredOrders}:MARKET_GUARDIAN_LIMITS;
  const fullPassBytes=compact?COMPACT_GUARDIAN_BUDGET.wireBytes+COMPACT_GUARDIAN_BUDGET.httpAllowanceBytes:64_000_000;
- const started=deps.now();let observed=started,timeBound=false,fullPassReserved=false;
- const available=()=>{if(timeBound)return false;const current=deps.now();if(!Number.isSafeInteger(current)||current<observed){timeBound=true;return false;}observed=current;if(current-started>=MARKET_GUARDIAN_LIMITS.durationMs){timeBound=true;return false;}return true;};
- if(!Number.isSafeInteger(started)||started<0)throw new WorkspaceError('MAINTENANCE_UNAVAILABLE',503);
  if(process.env.BAZAAR_FREE_DEMO_MODE==='continuous'){
   // This reservation includes the credential check done by the HTTP tick.
   // Only tiny maintenance projections are read while no work is due.
@@ -175,7 +180,32 @@ export function createMarketGuardianRunner(overrides:Partial<MarketGuardianDepen
  const incidents=snapshot.incidents.filter(i=>!i.canReconcile);
  const needsOperator=timeBound||incidents.length>0||reconciliation.some(r=>!r.confirmed)||Boolean(registryCode)||Boolean(cleanup&&('code'in cleanup||cleanup.incidents.length))||workspaces.some(w=>'code'in w);
  return {reconciliation,cleanup,workspaces,...(registryCode?{registryCode}:{}),incidents,processedWorkspaceCount:workspaces.length,timeBound,needsOperator,paymentResubmission:false,limits:MARKET_GUARDIAN_LIMITS};
- });};
+ });
+ if(process.env.BAZAAR_MARKET_ORDER_STORAGE!=='per-order-v1')return legacy;
+ const deferred=(code:string)=>({...legacy,idle:false,needsOperator:true,timeBound,perOrderRetention:{code}});
+ try{
+  if(!continuousPerOrderStorage())return legacy;
+  if(!available())return deferred('PER_ORDER_RETENTION_TIME_BOUND');
+  const {PER_ORDER_RETENTION_SCAN_BUDGET,PER_ORDER_RETENTION_ARCHIVE_BUDGET}=await import('./per-order-retention.ts');
+  const reserve=async(limit:{commands:number;wireBytes:number})=>{
+   try{await outsideGuardianBudget(()=>deps.reserveBackground(limit.commands,limit.wireBytes));}
+   catch{throw new WorkspaceError('PER_ORDER_RETENTION_BUDGET',503,60);}
+  };
+  if(!available())return deferred('PER_ORDER_RETENTION_TIME_BOUND');
+  await reserve(PER_ORDER_RETENTION_SCAN_BUDGET);
+  if(!available())return deferred('PER_ORDER_RETENTION_TIME_BOUND');
+  const {scanned,archived,more}=await withPerOrderGuardianBudget(PER_ORDER_RETENTION_SCAN_BUDGET,()=>deps.perOrderRetention({
+   owners:()=>deps.workspaceStore().retentionOwnerIds(),available,
+   archive:async work=>{
+    if(!available())return false;
+    await reserve(PER_ORDER_RETENTION_ARCHIVE_BUDGET);
+    if(!available())return false;
+    return withPerOrderGuardianBudget(PER_ORDER_RETENTION_ARCHIVE_BUDGET,work);
+   },
+  }));
+  return {...legacy,...(archived||more||timeBound?{idle:false}:{}),timeBound,needsOperator:legacy.needsOperator||timeBound,perOrderRetention:{scanned,archived,more}};
+ }catch(error){return deferred(error instanceof WorkspaceError&&error.code==='PER_ORDER_RETENTION_BUDGET'?error.code:'PER_ORDER_RETENTION_UNCONFIRMED');}
+ };
 }
 export async function runMarketGuardian(){return createMarketGuardianRunner()();}
 async function operator(request:Request){await demoIngress(request);assertWorkspaceRequest(request);await marketOperator(request.headers.get('authorization'));}

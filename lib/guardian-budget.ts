@@ -18,6 +18,13 @@ export async function withCompactGuardianBudget<T>(handler:()=>Promise<T>):Promi
  if(scope.getStore())return handler();
  return scope.run({commands:0,allocatedBytes:0,requests:0,failed:false,wireLimit:COMPACT_GUARDIAN_BUDGET.wireBytes,commandLimit:COMPACT_GUARDIAN_BUDGET.commands},async()=>{try{return await handler();}catch(e){scope.getStore()!.failed=true;throw e;}});
 }
+/** Per-order discovery and each archive have separate, already admitted
+ * background debits. This is called only by the authenticated guardian. */
+export async function withPerOrderGuardianBudget<T>(limit:{commands:number;wireBytes:number},handler:()=>Promise<T>):Promise<T>{
+ if(!compactGuardianBudgetEnabled()||!Number.isSafeInteger(limit.commands)||limit.commands<1||limit.commands>COMPACT_GUARDIAN_BUDGET.commands||!Number.isSafeInteger(limit.wireBytes)||limit.wireBytes<1||limit.wireBytes>COMPACT_GUARDIAN_BUDGET.wireBytes)throw failure();
+ const context={commands:0,allocatedBytes:0,requests:0,failed:false,wireLimit:limit.wireBytes,commandLimit:limit.commands};
+ return scope.run(context,async()=>{try{return await handler();}catch(error){context.failed=true;throw error;}});
+}
 /** Text wakes retain their own independent debit and transport scopes.
  * Reconciliation stays inside the maintenance allowance. */
 export function outsideGuardianBudget<T>(handler:()=>Promise<T>):Promise<T>{return scope.exit(handler);}

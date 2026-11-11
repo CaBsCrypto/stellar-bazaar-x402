@@ -29,4 +29,12 @@ Validación local con Node 24: build de Next.js con Webpack, generación de tipo
 
 Comprobaciones finales: 24 de 24 suites de integración, historial, chat, WebMCP, pagos, actividad, entregas, límites de entrega y vectores TypeScript del registro. Pasaron el build de Next.js con Webpack, TypeScript y el escaneo de credenciales del árbol actual. Se verificaron los dos kits contra sus manifiestos. Las comprobaciones usaron datos sintéticos y el build no leyó credenciales ni contactó servicios de pago.
 
-Antes de habilitar el perfil por pedido en un nuevo lanzamiento, falta validar la purga automática del contenido vencido que no se reconcilia. La API oculta ese contenido al vencer; el archivado introducido aquí ocurre cuando se confirma una recuperación explícita.
+## Purga automática de pedidos por pedido
+
+El guardián ya barre los pedidos de texto del perfil continuo por pedido. Usa la hora de Redis y el índice por comprador, que cubre pedidos anteriores, entregados y de compradores revocados, sin migración ni escaneo global. Cada pasada revisa hasta cuatro compradores y tres proyecciones por comprador, archiva como máximo un pedido y guarda un cursor pequeño para la siguiente pasada. Un conflicto o una escritura incierta no adelanta el cursor.
+
+El mismo CAS sustituye el pedido y su historial por los controles de recuperación, y elimina la autorización XDR, la entrada y la entrega. Conserva el hash conocido, la huella antirrepetición, la asignación y la reserva de pago. La reconciliación posterior comprueba únicamente la transacción guardada; si no hay hash, conserva el estado incierto y no consulta Stellar. El guardián no firma, liquida, despacha al vendedor ni libera reservas.
+
+La búsqueda y el archivo tienen débitos globales separados (32 comandos y 160 KiB de transporte para buscar, 64 comandos y 768 KiB para archivar, más el coste del débito). Si faltan presupuesto o tiempo, el siguiente ciclo continúa. La API sigue ocultando el contenido desde los siete días; la eliminación efectiva depende del avance del guardián. Los pedidos legados conservan su ruta y un archivo externo inesperado queda intacto para revisión. No se ha medido el presupuesto disponible en producción.
+
+Validación local: 37 pruebas de integración, historial, flujo de pagos, escaneo de credenciales, build y TypeScript. En una prueba con los scripts Lua reales sobre un Redis emulado, se archivó un registro previo y se comprobó que el pedido, su proyección de historial y su proyección de admisión quedaron sin contenido; la asignación, la reserva de pago y el estado legado se conservaron. El archivo usó 54 comandos según el descriptor. No hubo conexiones a Redis o Stellar reales.

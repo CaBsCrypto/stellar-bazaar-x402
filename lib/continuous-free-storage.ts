@@ -5,7 +5,8 @@ import {compactTransportV2,COMPACT_TRANSPORT_V2_MARKET_MAX_BYTES} from './free-p
 
 export const CONTINUOUS_FREE_STORAGE_MAX=200_000_000;
 // Reserved for native key names, Redis object overhead, the command ledger,
-// bounded rate counters and the provider's separately scoped checkpoint.
+// bounded rate counters, the per-order retention checkpoint and the provider's
+// separately scoped checkpoint.
 export const CONTINUOUS_FREE_STORAGE_TECHNICAL_RESERVE=10_000_000;
 export const CONTINUOUS_FREE_STORAGE_LEDGER_MAX=2_000_000;
 export type ContinuousStorageWrite={key:string;expectedRaw:string|null;nextRaw:string|null;reservedBytes?:number};

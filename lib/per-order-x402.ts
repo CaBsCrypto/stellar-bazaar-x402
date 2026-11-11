@@ -15,10 +15,11 @@ import type {MarketCommitGuard} from './marketplace-capacity.ts';
 import type {MarketX402Settlement} from './marketplace-x402-store.ts';
 import {queueMarketTextWake} from './market-text-seller-runtime.ts';
 import {assertPerOrderPaymentCapability,perOrderPaymentCapabilityKind,type PerOrderPaymentSimulationDependencies} from './per-order-payment-profile.ts';
-import {buyer,createMarketX402Challenge,marketX402OrderBinding,marketX402Authorization,parseProof,assertRecordBinding,paidResponse} from './marketplace-x402.ts';
+import {buyer,createMarketX402Challenge,marketX402OrderBinding,marketX402Authorization,parseProof,assertRecordBinding,paidResponse,MARKET_X402_PROTOCOL} from './marketplace-x402.ts';
 import {ensurePerOrderSellerPaymentReadiness} from './per-order-seller-readiness.ts';
 import {marketContentExpiresAt} from './market-file-delivery-schema.ts';
 import {marketRecoveryRecord,type MarketRecovery} from './market-retention-schema.ts';
+import {isCanonicalUsdcTestnet} from './payment-assets.ts';
 
 export type PerOrderX402Dependencies=PerOrderPaymentSimulationDependencies&{repository?:MarketOrderRepository};
 const uncertain=()=>new WorkspaceError('X402_PAYMENT_OUTCOME_UNCERTAIN',409);
@@ -96,7 +97,7 @@ async function finalize(repo:MarketOrderRepository,id:string,p:WorkspacePrincipa
  });
 }
 
-async function verifySavedTransaction(id:string,deps:PerOrderX402Dependencies,order:MarketOrder,transaction:string,fingerprint:string){
+async function verifySavedTransaction(id:string,deps:PerOrderX402Dependencies,order:Pick<MarketOrder,'settlement'|'payer'|'destination'|'amount'>,transaction:string,fingerprint:string){
  assertPerOrderPaymentCapability(id,deps);
  const chain=await deps.rpc.transaction(transaction);
  if(chain.status!=='SUCCESS'||!chain.envelopeXdr)throw uncertain();
@@ -106,10 +107,32 @@ async function verifySavedTransaction(id:string,deps:PerOrderX402Dependencies,or
  if(proof.transactionHash!==transaction||proof.fingerprint!==fingerprint||feeSource===order.payer)throw new WorkspaceError('X402_PAYMENT_NOT_VERIFIED',409);
 }
 
-function ownedConfirmedRecovery(recovery:MarketRecovery,p:WorkspacePrincipal){
- if(recovery.buyerOwnerId!==p.ownerId||!['human','agent'].includes(p.role))throw new WorkspaceError('NOT_FOUND',404);
- if(recovery.paymentPhase!=='confirmed'||!recovery.transactionHash||!recovery.paymentVerifiedAt)throw uncertain();
- return recovery;
+function assertOwnedRecovery(recovery:MarketRecovery,p:WorkspacePrincipal,id:string){
+ if(recovery.operationId!==id||recovery.buyerOwnerId!==p.ownerId||!['human','agent'].includes(p.role))throw new WorkspaceError('NOT_FOUND',404);
+}
+
+function confirmArchivedRecovery(envelope:MarketOrderEnvelope,p:WorkspacePrincipal,expected:MarketRecovery){
+ const current=envelope.recovery;
+ if(!current||envelope.order||envelope.settlement)throw new WorkspaceError('OPERATION_CONFLICT',409);
+ assertOwnedRecovery(current,p,expected.operationId);
+ const {paymentPhase,paymentVerifiedAt,...controls}=current;
+ const {paymentPhase:priorPhase,paymentVerifiedAt:priorVerification,...priorControls}=expected;
+ if(canonical(controls)!==canonical(priorControls))throw new WorkspaceError('OPERATION_CONFLICT',409);
+ if(paymentPhase==='confirmed'&&paymentVerifiedAt)return current;
+ if(paymentPhase!=='uncertain'||priorPhase!=='uncertain'||paymentVerifiedAt||priorVerification)throw new WorkspaceError('OPERATION_CONFLICT',409);
+ // Only the status and verification timestamp change. The saved nonce claim,
+ // payment binding, and seller reservation remain exactly as archived.
+ envelope.recovery={...current,paymentPhase:'confirmed',paymentVerifiedAt:new Date().toISOString()};
+ return envelope.recovery;
+}
+
+async function reconcileArchivedPayment(repo:MarketOrderRepository,id:string,p:WorkspacePrincipal,record:MarketRecovery,deps:PerOrderX402Dependencies){
+ assertOwnedRecovery(record,p,id);
+ if(record.paymentProtocol!==MARKET_X402_PROTOCOL||!isCanonicalUsdcTestnet(record.settlement)||!record.transactionHash||!/^[a-f0-9]{64}$/.test(record.transactionHash))throw uncertain();
+ if(record.paymentPhase==='confirmed'&&record.paymentVerifiedAt)return record;
+ if(record.paymentPhase!=='uncertain'||record.paymentVerifiedAt||!record.authorizationFingerprint||!/^[a-f0-9]{64}$/.test(record.authorizationFingerprint))throw uncertain();
+ await verifySavedTransaction(id,deps,record,record.transactionHash,record.authorizationFingerprint);
+ return repo.transact(id,envelope=>confirmArchivedRecovery(envelope,p,record));
 }
 
 function savedExpiredPayment(order:MarketOrder,record:MarketX402Settlement){
@@ -125,11 +148,9 @@ async function reconcileExpiredPayment(repo:MarketOrderRepository,id:string,p:Wo
  const transaction=savedExpiredPayment(order,record),fingerprint=record.authorizationFingerprint!;
  if(record.phase!=='confirmed')await verifySavedTransaction(id,deps,order,transaction,fingerprint);
  return repo.transact(id,envelope=>{
-  if(envelope.recovery){
-   const recovered=ownedConfirmedRecovery(envelope.recovery,p);
-   if(recovered.transactionHash!==transaction||recovered.authorizationFingerprint!==fingerprint||recovered.orderBinding!==record.orderBinding)throw new WorkspaceError('OPERATION_CONFLICT',409);
-   return recovered;
-  }
+  // The guardian may have archived the expired order while the RPC was in
+  // flight. Reuse the one verified result only if the archived controls match.
+  if(envelope.recovery)return confirmArchivedRecovery(envelope,p,marketRecoveryRecord(order,record,Date.parse(envelope.recovery.archivedAt)));
   const current=bound(envelope,p,true),now=Date.now();
   if(Date.parse(marketContentExpiresAt(current.order))>now||savedExpiredPayment(current.order,current.settlement)!==transaction||current.settlement.authorizationFingerprint!==fingerprint||current.settlement.attemptId!==record.attemptId||current.settlement.payloadHash!==record.payloadHash)throw new WorkspaceError('OPERATION_CONFLICT',409);
   // Store only the recovery controls. Expiry must never queue delivery or release the existing hold.
@@ -190,10 +211,10 @@ export async function executePerOrderX402Payment(p:WorkspacePrincipal,id:string,
  * It never verifies again, adopts an arbitrary hash, settles or submits. */
 export async function reconcilePerOrderX402Payment(p:WorkspacePrincipal,id:string,deps:PerOrderX402Dependencies){
  const repo=repository(id,deps),current=await repo.read(id);if(!current)throw new WorkspaceError('NOT_FOUND',404);
- if(current.recovery)return ownedConfirmedRecovery(current.recovery,p);
- const {order,settlement}=bound(current,p,true);
- if(!settlement.transactionHash&&!settlement.outcome?.transaction)throw uncertain();
  try{
+  if(current.recovery)return await reconcileArchivedPayment(repo,id,p,current.recovery,deps);
+  const {order,settlement}=bound(current,p,true);
+  if(!settlement.transactionHash&&!settlement.outcome?.transaction)throw uncertain();
   if(Date.parse(marketContentExpiresAt(order))<=Date.now())return await reconcileExpiredPayment(repo,id,p,order,settlement,deps);
   return (await finalize(repo,id,p,settlement,deps)).order;
  }catch(error){if(error instanceof WorkspaceError)throw error;throw uncertain();}

@@ -126,7 +126,7 @@ Respect `429` and `Retry-After`; preserve state and stop on `503` until capacity
 
 Inspect the same order. An existing-order read may resume its recorded delivery notice, without signing/submitting a new payment. Verify payment, delivery status and content integrity separately. Follow effective delivery capabilities; private files are disabled in the current text stage.
 
-Order/history access belongs to the authenticated workspace. Public ChatGPT discovery grants none. Visible inputs, query text and results expire after seven days, without extension by reads. A `410` may return minimal recovery data without content and never authorizes re-payment. With per-order storage, a successful reconciliation of the already recorded transaction archives the content-free recovery record. Background deletion for unreconciled per-order content is not guaranteed by the API cutoff. Stellar transactions remain publicly on-chain independently.
+Order/history access belongs to the authenticated workspace. Public ChatGPT discovery grants none. Visible inputs, query text and results expire after seven days, without extension by reads. A `410` may return minimal recovery data without content and never authorizes re-payment. In continuous per-order storage, the scheduled guardian removes expired content in bounded passes when the maintenance budget allows. Recovery can still verify the already recorded transaction after the content is removed; an unknown transaction stays unresolved. Stellar transactions remain publicly on-chain independently.
 
 ## Acceptance checklist
 
