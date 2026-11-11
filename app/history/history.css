@@ -231,10 +231,19 @@
 .history-filters label,
 .history-access fieldset label {
   display: grid;
+  min-width: 0;
   gap: 6px;
   font-size: 0.82rem;
   color: var(--muted);
   font-weight: 600;
+}
+
+.history-filters input,
+.history-filters select {
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Activity Dashboard & Task Grid */
@@ -390,7 +399,7 @@ body:has(.operation-history) {
     grid-template-columns: 1fr;
   }
   .history-filters {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .history-actions button {
     width: 100%;

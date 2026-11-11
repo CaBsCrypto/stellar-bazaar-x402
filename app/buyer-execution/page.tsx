@@ -2,13 +2,12 @@ import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Footer } from "@/components/Footer";
-import { BuyerExecutionDemo } from "@/components/BuyerExecutionDemo";
 import { WebsiteIntelligenceConsumption } from "@/components/WebsiteIntelligenceConsumption";
 
 export default function BuyerExecutionPage() {
   return (
     <main>
-      <div className="mock-banner">BUYER WORKSPACE · TESTNET EVIDENCE + LOCAL CONTRACT FIXTURES · NON-CUSTODIAL</div>
+      <div className="mock-banner">BUYER WORKSPACE · HISTORICAL TESTNET EVIDENCE · NON-CUSTODIAL</div>
       <Navbar />
       <div className="shell" style={{ marginTop: "1rem", marginBottom: "4rem" }}>
         <Breadcrumbs
@@ -51,7 +50,6 @@ export default function BuyerExecutionPage() {
           }
         />
         <WebsiteIntelligenceConsumption />
-        <BuyerExecutionDemo />
       </div>
       <Footer />
     </main>

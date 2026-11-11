@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useRef } from "react";
 import { usePathname } from "next/navigation";
-import { initWebMCP } from "@/lib/webmcp/polyfill";
+import { initWebMCPAsync } from "@/lib/webmcp/polyfill";
 import { registerBazaarTools } from "@/lib/webmcp/register";
+import { createOwnedRegistration } from "@/lib/webmcp/owned-registration";
 import { ModelContextRegistry, WebMCPActivityLog, WebMCPToolDefinition, AgentPolicyConfig } from "@/lib/webmcp/types";
 import { services } from "@/lib/catalog";
 
@@ -47,6 +48,11 @@ export function WebMCPProvider() {
   });
 
   useEffect(() => {
+    let cancelled = false;
+    let dispose: (() => void) | undefined;
+    // Strict Mode's discarded mount must not register native tools.
+    queueMicrotask(async () => {
+    if (cancelled) return;
     try {
       const nativeDetected = Boolean(
         (typeof navigator !== "undefined" && navigator.modelContext) ||
@@ -54,13 +60,20 @@ export function WebMCPProvider() {
       );
       setIsNative(nativeDetected);
 
-      const registry: ModelContextRegistry = initWebMCP();
+      const registry: ModelContextRegistry = await initWebMCPAsync();
+      if (cancelled) return;
       registryRef.current = registry;
-      registerBazaarTools(registry);
+      const owned = createOwnedRegistration(registry);
+      dispose = () => {
+        owned.dispose();
+        if (registryRef.current === registry) registryRef.current = null;
+      };
+      registerBazaarTools(owned.registry);
 
       const toolList = registry.getTools?.() || [];
       setTools(toolList);
       setStatus("ready");
+      window.dispatchEvent(new Event("webmcp-ready"));
 
       const handleActivity = (e: Event) => {
         const customEvent = e as CustomEvent<WebMCPActivityLog>;
@@ -70,13 +83,19 @@ export function WebMCPProvider() {
       };
 
       window.addEventListener("webmcp-activity", handleActivity);
-      return () => {
+      const disposeTools = dispose;
+      dispose = () => {
         window.removeEventListener("webmcp-activity", handleActivity);
+        disposeTools();
+        if (registryRef.current === registry) registryRef.current = null;
       };
     } catch (err) {
+      dispose?.();
       console.error("[WebMCP] Initialization error:", err);
       setStatus("error");
     }
+    });
+    return () => { cancelled = true; dispose?.(); };
   }, []);
 
   const handleToolChange = (toolName: string) => {

@@ -2,8 +2,10 @@
 import { ActivityDashboard } from "./ActivityDashboard";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ModelContextRegistry } from "@/lib/webmcp/types";
+import { createOwnedRegistration } from "@/lib/webmcp/owned-registration";
+import { serializedPrivateRead } from "@/lib/private-read-queue";
 
 type Locale = "es" | "en";
 type Entry = {
@@ -19,9 +21,9 @@ const copy = {
   es: {
     title: "Lo que tu agente ha preparado", subtitle: "Explora tus entregas y prepara preguntas para conversar con tu agente.",
     catalog: "Catálogo", heading: "Biblioteca privada", token: "Acceso de lectura al historial", unlock: "Consultar historial", lock: "Bloquear y borrar vista", refresh: "Actualizar",
-    access: "Introduce únicamente el token de lectura que te proporcionó el operador para tu historial. Se mantiene en memoria durante esta vista. Nunca introduzcas una clave de wallet ni un token de escritura.",
+    access: "Usa tu acceso humano o de lectura, proporcionado por tu agente u operador. Se mantiene en memoria durante esta vista. Nunca introduzcas una clave de wallet ni el acceso del agente.",
     note: "Este registro muestra lo reportado por tu agente. Un hash declarado no verifica el pago ni la calidad de la entrega. Consultarlo no solicita aprobaciones ni interrumpe al agente.",
-    locked: "Historial bloqueado. Introduce tu acceso de lectura para consultar tus operaciones.", loading: "Consultando tus operaciones…", unauthorized: "El acceso de lectura no es válido o ha caducado. Solicita uno válido al operador.", unavailable: "El historial no está habilitado o su almacenamiento no está disponible. El operador debe revisar la configuración; no se muestran datos de ejemplo como compras.", error: "No pudimos consultar el historial. Inténtalo nuevamente.", empty: "Aún no hay operaciones registradas para este acceso. No se reconstruyen compras a partir de transferencias antiguas.",
+    locked: "Historial bloqueado. Introduce tu acceso de lectura para consultar tus operaciones.", loading: "Consultando tus operaciones…", unauthorized: "El acceso de lectura no es válido o fue revocado. Solicita uno válido al operador.", unavailable: "El historial no está habilitado o su almacenamiento no está disponible. El operador debe revisar la configuración; no se muestran datos de ejemplo como compras.", error: "No pudimos consultar el historial. Inténtalo nuevamente.", empty: "Aún no hay operaciones registradas para este acceso. No se reconstruyen compras a partir de transferencias antiguas.",
     provider: "Proveedor", agent: "Agente declarado", unidentified: "No identificado", recorded: "Registrado", payment: "Pago", delivery: "Entrega", recipient: "Destinatario declarado", amount: "Importe declarado (unidades atómicas)", asset: "Activo", network: "Red", result: "Ver resultado reportado", absent: "Sin resultado almacenado", transaction: "Ver transacción declarada en Testnet", evidence: "Reportado por agente · sin verificación independiente", latest: "Últimas 20 operaciones registradas", origin: "Origen declarado", op: "Referencia de operación",
     statuses: { "not-requested": "No solicitado", "reported-unverified": "Reportado · pago no verificado", failed: "Fallo reportado", pending: "Pendiente", unknown: "Desconocido · requiere conciliación", "reported-delivered": "Entrega reportada · no verificada" },
     modes: { fixture: "Fixture de prueba", mock: "Simulación", testnet: "Testnet" },
@@ -29,9 +31,9 @@ const copy = {
   en: {
     title: "What your agent consumes", subtitle: "Review its operations, recipients and results in a private history.",
     catalog: "Catalogue", heading: "Operation history", token: "Read-only history access", unlock: "View history", lock: "Lock and clear view", refresh: "Refresh",
-    access: "Enter only the read token supplied by the operator for your history. It stays in memory while this view is open. Never enter a wallet key or write token.",
+    access: "Use your human or read access, supplied by your agent or operator. It stays in memory while this view is open. Never enter a wallet key or agent access.",
     note: "This journal shows what your agent reported. A declared hash does not verify payment or delivery quality. Reading it requires no purchase approvals and does not interrupt the agent.",
-    locked: "History locked. Enter your read access to view your operations.", loading: "Loading your operations…", unauthorized: "Read access is invalid or expired. Request valid access from the operator.", unavailable: "History is disabled or storage is unavailable. The operator must check configuration; example data is not shown as purchases.", error: "History could not be loaded. Please try again.", empty: "No operations have been recorded for this access yet. Purchases are not reconstructed from old transfers.",
+    locked: "History locked. Enter your read access to view your operations.", loading: "Loading your operations…", unauthorized: "Read access is invalid or revoked. Request valid access from the operator.", unavailable: "History is disabled or storage is unavailable. The operator must check configuration; example data is not shown as purchases.", error: "History could not be loaded. Please try again.", empty: "No operations have been recorded for this access yet. Purchases are not reconstructed from old transfers.",
     provider: "Provider", agent: "Declared agent", unidentified: "Not identified", recorded: "Recorded", payment: "Payment", delivery: "Delivery", recipient: "Declared recipient", amount: "Declared amount (atomic units)", asset: "Asset", network: "Network", result: "View reported result", absent: "No stored result", transaction: "View declared Testnet transaction", evidence: "Agent-reported · not independently verified", latest: "Latest 20 recorded operations", origin: "Declared origin", op: "Operation reference",
     statuses: { "not-requested": "Not requested", "reported-unverified": "Reported · payment unverified", failed: "Reported failure", pending: "Pending", unknown: "Unknown · reconciliation needed", "reported-delivered": "Reported delivery · unverified" },
     modes: { fixture: "Test fixture", mock: "Simulation", testnet: "Testnet" },
@@ -41,10 +43,11 @@ const copy = {
 const short = (value: string) => value.length > 20 ? `${value.slice(0, 8)}…${value.slice(-6)}` : value;
 
 export function HistoryAmount({ atomic, asset }: { atomic: string; asset: string }) {
-  if ((asset === "USDC" || asset === "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA") && /^\d{1,40}$/.test(atomic)) {
+  const symbol = asset === "XLM" || asset === "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC" ? "XLM" : asset === "USDC" || asset === "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA" ? "USDC" : undefined;
+  if (symbol && /^\d{1,40}$/.test(atomic)) {
     const value = BigInt(atomic);
     const fraction = (value % 10000000n).toString().padStart(7, "0").replace(/0+$/, "");
-    return <span>{`${value / 10000000n}${fraction ? `.${fraction}` : ""} USDC`} <small>({atomic} atomic)</small></span>;
+    return <span>{`${value / 10000000n}${fraction ? `.${fraction}` : ""} ${symbol}`} <small>({atomic} atomic)</small></span>;
   }
   return <span>{atomic} atomic</span>;
 }
@@ -57,7 +60,7 @@ import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Footer } from "@/components/Footer";
 
-export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {initialAccess?: string; onLocked?: () => void; onExploreDemo?: () => void} = {}) {
+export function OperationHistory({initialAccess, onLocked, onExploreDemo, children}: {initialAccess?: string; onLocked?: () => void; onExploreDemo?: () => void; children?: ReactNode} = {}) {
   const [locale, setLocale] = useState<Locale>("es");
   const [token, setToken] = useState("");
   const [state, setState] = useState<ViewState>("locked");
@@ -91,10 +94,10 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
           const request = ++generation.current;
           setState("loading"); setEntries([]);
           try {
-            const response = await fetch("/api/operations?limit=20", {
+            const response = await serializedPrivateRead(clean, controller.signal, () => fetch("/api/operations?limit=20", {
               headers: { Authorization: `Bearer ${clean}` },
-              cache: "no-store", credentials: "omit", signal: controller.signal, redirect: "error",
-            });
+              cache: "no-store", credentials: "same-origin", signal: controller.signal, redirect: "error",
+            }));
             if (request !== generation.current) return;
             if (!response.ok) {
               setState(response.status === 401 || response.status === 403 ? "unauthorized" : response.status === 503 ? "unavailable" : "error");
@@ -117,10 +120,11 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
   useEffect(() => {
     if (!agentAccess || !token.trim() || !native.current) return;
     const context = native.current;
+    const owned = createOwnedRegistration(context);
     let connected = true;
     const requests = new Set<AbortController>();
     try {
-      context.registerTool({
+      owned.registry.registerTool({
         name: "bazaar_get_operation_history",
         description: "Read the connected private agent-reported journal. No payment or delivery verification. No token arguments.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
@@ -129,7 +133,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
           if (!connected || !input || Object.keys(input).length !== 0) return failure;
           const controller = new AbortController(); requests.add(controller);
           try {
-            const response = await fetch("/api/operations?limit=20", { headers: { Authorization: `Bearer ${token.trim()}` }, credentials: "omit", cache: "no-store", redirect: "error", signal: controller.signal });
+            const response = await serializedPrivateRead(token.trim(), controller.signal, () => fetch("/api/operations?limit=20", { headers: { Authorization: `Bearer ${token.trim()}` }, credentials: "same-origin", cache: "no-store", redirect: "error", signal: controller.signal }));
             if (!response.ok || !connected) return failure;
             const data = await response.json();
             if (!connected || data.version !== "1" || !Array.isArray(data.records)) return failure;
@@ -140,7 +144,7 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
     } catch { setAgentAccess(false); setNativeAvailable(false); }
     return () => {
       connected = false; requests.forEach(request => request.abort());
-      try { context.unregisterTool?.("bazaar_get_operation_history"); } catch { /* The disconnected closure cannot return data. */ }
+      owned.dispose();
     };
   }, [agentAccess, token]);
 
@@ -158,10 +162,10 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
     const request = ++generation.current;
     setState("loading"); setEntries([]);
     try {
-      const response = await fetch("/api/operations?limit=20", {
+      const response = await serializedPrivateRead(token.trim(), controller.signal, () => fetch("/api/operations?limit=20", {
         headers: { Authorization: `Bearer ${token.trim()}` },
-        cache: "no-store", credentials: "omit", signal: controller.signal, redirect: "error",
-      });
+        cache: "no-store", credentials: "same-origin", signal: controller.signal, redirect: "error",
+      }));
       if (request !== generation.current) return;
       if (!response.ok) {
         setState(response.status === 401 || response.status === 403 ? "unauthorized" : response.status === 503 ? "unavailable" : "error");
@@ -188,18 +192,20 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column" }}>
-      <Navbar />
+      <Navbar prefetch={false} />
 
       <main className="operation-history shell" lang={locale} style={{ flex: 1, paddingBottom: "4rem" }}>
         {onExploreDemo && ["unauthorized","unavailable","error"].includes(state) && <button onClick={onExploreDemo}>Explorar demostración</button>}
         <Breadcrumbs
+          prefetch={false}
           items={[{ label: "Mi Historial Privado" }]}
           backHref="/catalogo"
           backLabel="← Volver al Catálogo"
           actions={
             <div style={{ display: "flex", gap: "8px" }}>
-              <Link
+              {process.env.NEXT_PUBLIC_BAZAAR_MARKETPLACE !== 'true' && <Link
                 href="/history/review"
+                prefetch={false}
                 style={{
                   fontSize: "0.8rem",
                   padding: "5px 12px",
@@ -212,9 +218,10 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
                 }}
               >
                 👁️ Ver Demo de Entregables
-              </Link>
+              </Link>}
               <Link
-                href="/agent-chat"
+                href={token ? `/agent-chat#token=${encodeURIComponent(token)}` : "/agent-chat"}
+                prefetch={false}
                 style={{
                   fontSize: "0.8rem",
                   padding: "5px 12px",
@@ -235,11 +242,12 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
         <header style={{ marginTop: "1rem", marginBottom: "2rem" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
             <span className="kicker" style={{ margin: 0 }}>
-              🔒 {c.heading.toUpperCase()} · CLOUDFLARE R2 & STELLAR TESTNET
+              🔒 {c.heading.toUpperCase()}
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <label style={{ fontSize: "0.82rem", color: "var(--muted)" }}>Idioma:</label>
+              <label htmlFor="history-locale" style={{ fontSize: "0.82rem", color: "var(--muted)" }}>Idioma:</label>
               <select
+                id="history-locale"
                 value={locale}
                 onChange={(event) => setLocale(event.target.value as Locale)}
                 style={{
@@ -526,9 +534,10 @@ export function OperationHistory({initialAccess, onLocked, onExploreDemo}: {init
             </section>
           </details>
         )}
+        {children}
       </main>
 
-      <Footer />
+      <Footer prefetch={false} />
     </div>
   );
 }

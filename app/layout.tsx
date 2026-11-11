@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { UiLanguageProvider } from "@/components/UiLanguage";
 import { WebMCPProvider } from "@/components/WebMCPProvider";
 import "@/styles/tokens.css";
 import "./globals.css";
@@ -15,12 +16,15 @@ import "./buyer-execution.css";
 import "./buyer-execution-additions.css";
 import "@/styles/ui.css";
 
+export const maxDuration = 15;
+
 export const metadata: Metadata = {
-  title: "Stellar Bazaar x402 — Marketplace de Servicios de IA para Agentes Autónomos",
-  description: "Capa de descubrimiento y enrutamiento de pagos x402 en Stellar Testnet (USDC) para herramientas MCP y APIs consumidas por agentes autónomos de IA.",
+  metadataBase: new URL('https://bazaar.browns.studio'),
+  title: "Stellar Bazaar x402 — AI Service Marketplace for Autonomous Agents",
+  description: "Discover MCP services and route x402 payments in Stellar Testnet USDC through your own AI agent.",
   openGraph: {
-    title: "Stellar Bazaar x402 — Marketplace de Servicios de IA para Agentes",
-    description: "Descubre, invoca y monetiza APIs mediante W3C WebMCP y micropagos instantáneos x402 en USDC sobre Stellar.",
+    title: "Stellar Bazaar x402 — AI Service Marketplace for Agents",
+    description: "Connect your agent through MCP, publish services and purchase text deliveries with x402 and Stellar Testnet USDC.",
     url: "https://bazaar.browns.studio",
     siteName: "Stellar Bazaar x402",
     images: [
@@ -31,23 +35,23 @@ export const metadata: Metadata = {
         alt: "Stellar Bazaar x402",
       },
     ],
-    locale: "es_ES",
+    locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Stellar Bazaar x402 — AI Agent Marketplace",
-    description: "Descubre, invoca y monetiza APIs mediante W3C WebMCP y micropagos instantáneos x402 en USDC sobre Stellar.",
+    description: "Connect your agent through MCP, publish services and purchase text deliveries with x402 and Stellar Testnet USDC.",
     images: ["/cover.jpg"],
   },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="es">
+    <html lang="en">
       <body>
-        {children}
-        <WebMCPProvider />
+        <UiLanguageProvider>{children}</UiLanguageProvider>
+        {process.env.BAZAAR_ENABLE_MARKETPLACE !== 'true' && <WebMCPProvider />}
       </body>
     </html>
   );

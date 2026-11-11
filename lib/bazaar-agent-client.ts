@@ -1,3 +1,7 @@
+import { TESTNET_ASSETS, selectPaymentOption, type AssetBalances } from "./payment-options.ts";
+import { assertPaymentJournal, paymentBinding, type PaymentJournalStore, type PaymentJournal } from "./pilot-payment-store.ts";
+import { readTestnetBalances } from "./testnet-balances.ts";
+import { paymentRequirementMismatches } from "./x402-requirements.ts";
 import { preserveDeliverable, type DeliveryCopyInput, type DeliveryCopyResult } from "./deliverable-client.ts";
 import { createEd25519Signer } from "@x402/stellar";
 import { ExactStellarScheme } from "@x402/stellar/exact/client";
@@ -39,6 +43,7 @@ export interface SettlementReceiptContext {
   expected: {
     network: string;
     asset: string;
+    contract?: string;
     amount: string;
     destination: string;
     scheme?: PaymentScheme;
@@ -51,6 +56,9 @@ export interface BazaarClientOptions {
   baseUrl: string;
   payerSecretKey?: string;
   maxPriceAllowedUsdc?: number;
+  maxAmountByAsset?: Partial<Record<"USDC"|"XLM",string>>;
+  paymentJournal?: PaymentJournalStore;
+  readBalances?: () => Promise<AssetBalances>;
   allowedNetworks?: string[];
   allowedAssets?: string[];
   allowedSchemes?: PaymentScheme[];
@@ -110,7 +118,7 @@ export class BazaarAgentClient {
   private eventSequence = 0;
   private async reportStep(kind: ActivityInput["kind"], title: string, operationId?: string, serviceId?: string) {
     if (!this.history?.taskId) return;
-    const event: ActivityInput = { eventId: String(Date.now()) + ":" + String(++this.eventSequence).padStart(8,"0") + ":" + crypto.randomUUID(), taskId: this.history.taskId, title, kind,
+    const event: ActivityInput = { eventId: operationId ? `${operationId}:${kind}` : (kind === "task-started" || kind === "task-completed") ? `${this.history.taskId}:${kind}` : String(Date.now()) + ":" + String(++this.eventSequence).padStart(8,"0") + ":" + crypto.randomUUID(), taskId: this.history.taskId, title, kind,
       mode: this.history.mode ?? "testnet", agentId: this.history.agentId, operationId, serviceId };
     if(await appendActivity(this.baseUrl,this.history,event)==="failed") this.activityFailed=true;
   }
@@ -144,12 +152,18 @@ export class BazaarAgentClient {
   private treasuryAddress: string;
   private receiptVerifier?: BazaarClientOptions["receiptVerifier"];
   private paidFetch: typeof fetch;
+  private budgets:Record<string,string>;
+  private paymentJournal?:PaymentJournalStore;
+  private readBalances?:()=>Promise<AssetBalances>;
 
   constructor(options: BazaarClientOptions) {
     this.history = options.history;
     this.baseUrl = options.baseUrl.replace(/\/$/, "");
     this.payerSecretKey = options.payerSecretKey?.trim();
     this.maxPriceAllowedUsdc = options.maxPriceAllowedUsdc ?? 1.0;
+    this.budgets = {USDC:String(this.maxPriceAllowedUsdc),...options.maxAmountByAsset};
+    this.paymentJournal=options.paymentJournal;
+    this.readBalances=options.readBalances;
     this.allowedNetworks = options.allowedNetworks ?? ["stellar:testnet"];
     this.allowedAssets = options.allowedAssets ?? ["USDC"];
     this.allowedSchemes = options.allowedSchemes ?? ["exact", "split-exact"];
@@ -242,13 +256,11 @@ export class BazaarAgentClient {
       return { allowed: false, reason: `Scheme ${card.payment.scheme} is not permitted by agent policy.` };
     }
 
-    const priceUsdc = Number(card.payment.amount);
-    if (isNaN(priceUsdc) || priceUsdc > this.maxPriceAllowedUsdc) {
-      return {
-        allowed: false,
-        reason: `Declared price ${card.payment.amount} USDC exceeds maximum permitted budget of ${this.maxPriceAllowedUsdc} USDC.`,
-      };
-    }
+    try {
+      const limit=this.budgets[card.payment.asset];
+      if(limit === undefined || BigInt(decimalToAtomic(card.payment.amount)) > BigInt(decimalToAtomic(limit))) return {allowed:false,reason:`Declared price exceeds maximum permitted budget for ${card.payment.asset}.`};
+      if(card.payment.asset === "XLM" && card.payment.scheme !== "exact") return {allowed:false,reason:"XLM requires exact scheme."};
+    } catch {return {allowed:false,reason:"Invalid monetary amount or budget."};}
 
     if (card.payment.scheme === "split-exact") {
       if (card.payment.destination === this.treasuryAddress) {
@@ -335,19 +347,59 @@ export class BazaarAgentClient {
     };
   }
 
-  async executeService<T = unknown>(
+  async executeService<T = unknown>(card:ServiceCard, params:Record<string,string|number|boolean>, options?:{operationId:string;preferredAsset?:"USDC"|"XLM"}):Promise<BazaarAgentExecutionResult<T>> {
+    if(!card.paymentOptions && card.payment.asset !== "XLM" && !options) return this.executeServiceRecorded<T>(card,params);
+    if(card.id !== "swap-risk-quote") throw Error("MULTI_ASSET_PILOT_SANDBOX_ONLY");
+    if(!options?.operationId || !/^[a-zA-Z0-9_-]{8,128}$/.test(options.operationId) || !this.paymentJournal) throw Error("DURABLE_OPERATION_REQUIRED: provide operationId and private paymentJournal.");
+    if(!this.payerSecretKey || !this.receiptVerifier) throw Error("PAYER_AND_RECEIPT_VERIFIER_REQUIRED");
+    const binding=paymentBinding({card,params,preferredAsset:options.preferredAsset ?? null,base:this.baseUrl,payer:createEd25519Signer(this.payerSecretKey,"stellar:testnet").address,owner:this.history?.writeToken ?? null,task:this.history?.taskId ?? null,agent:this.history?.agentId ?? null});
+    return this.paymentJournal.exclusive(options.operationId,async(read,save)=>{
+      let state=await read();
+      if(state !== undefined) assertPaymentJournal(state);
+      if(state && state.binding !== binding) throw Error("OPERATION_CONFLICT");
+      if(!state){
+        const balances=await (this.readBalances?.() ?? readTestnetBalances(this.payerSecretKey!));
+        const selectable=card.paymentOptions ? card : {...card,paymentOptions:[{...card.payment,scheme:"exact" as const,asset:card.payment.asset as "USDC"|"XLM",contract:TESTNET_ASSETS[card.payment.asset as "USDC"|"XLM"]}]};
+        const selected=selectPaymentOption(selectable,{allowedAssets:this.allowedAssets,budgets:this.budgets,balances,preferredAsset:options.preferredAsset});
+        const selectedCard={...card,payment:selected};
+        const policy=this.validatePaymentPolicy(selectedCard);if(!policy.allowed)throw Error(`AGENT_POLICY_VIOLATION: ${policy.reason}`);
+        state={binding,phase:"started",card:selectedCard};
+        await save(state); // Must succeed before any signing or payment request.
+      } else {
+        const candidates = card.paymentOptions ?? [{...card.payment,scheme:"exact" as const,asset:card.payment.asset as "USDC"|"XLM",contract:TESTNET_ASSETS[card.payment.asset as "USDC"|"XLM"]}];
+        if (!candidates.some(payment => (!options.preferredAsset || payment.asset === options.preferredAsset) && paymentBinding({...card,payment}) === paymentBinding(state!.card))) throw Error("PAYMENT_JOURNAL_INVALID: selected card changed");
+        if(!state.response && !state.outcome) throw Error("PAYMENT_PENDING: reconcile this operation; do not pay again.");
+        if(state.phase === "completed" && !state.response) throw Error("PAYMENT_JOURNAL_INVALID: completed buyer response missing");
+      }
+      const persisted=state as PaymentJournal;
+      return this.executeServiceRecorded<T>(persisted.card!,params,options.operationId,async()=>{
+        // Replay only the conserved response through receipt verification. Never
+        // trust a cached outcome or issue another request during recovery.
+        const outcome=await this.executeServiceCore<T>(persisted.card!,params,{
+          operationId:options.operationId, response:persisted.response,
+          saveResponse:async response=>{persisted.response=response;persisted.phase="response";await save(persisted);}
+        });
+        if(persisted.phase === "completed" && paymentBinding(persisted.outcome) !== paymentBinding(outcome)) throw Error("PAYMENT_JOURNAL_INVALID: conserved outcome differs from verified response");
+        persisted.outcome=outcome;persisted.phase="completed";await save(persisted);
+        return outcome;
+      });
+    });
+  }
+
+  private async executeServiceRecorded<T = unknown>(
     card: ServiceCard,
     params: Record<string, string | number | boolean>,
+    operationId?:string, run?:()=>Promise<BazaarAgentExecutionResult<T>>,
   ): Promise<BazaarAgentExecutionResult<T>> {
-    const clientOperationId = crypto.randomUUID();
+    const clientOperationId = operationId ?? crypto.randomUUID();
     await this.ensureTask();
     await this.reportStep("service-selected", "Servicio seleccionado", clientOperationId, card.id);
     await this.reportStep("request-started", "Preparando solicitud al proveedor", clientOperationId, card.id);
     let outcome: BazaarAgentExecutionResult<T>;
     try {
-      outcome = await this.executeServiceCore<T>(card, params);
+      outcome = await (run ? run() : this.executeServiceCore<T>(card, params));
     } catch (error) {
-      if (this.history) {
+      if (this.history && !run) { // Durable attempts record uncertainty as events, not an immutable purchase that would block recovery.
         try {
           await appendOperationHistory(this.baseUrl, this.history, {
             clientOperationId, taskId: this.history.taskId, mode: this.history.mode ?? "testnet", agentId: this.history.agentId,
@@ -390,6 +442,7 @@ export class BazaarAgentClient {
   private async executeServiceCore<T = unknown>(
     card: ServiceCard,
     params: Record<string, string | number | boolean>,
+    durable?:{operationId:string;response?:PaymentJournal["response"];saveResponse:(response:NonNullable<PaymentJournal["response"]>)=>Promise<void>},
   ): Promise<BazaarAgentExecutionResult<T>> {
     const policyCheck = this.validatePaymentPolicy(card);
     if (!policyCheck.allowed) {
@@ -404,9 +457,25 @@ export class BazaarAgentClient {
       );
     }
 
-    const targetUrl = providerRequestUrl(card, params);
+    const targetUrl = providerRequestUrl(card, params,!!durable && card.id === "swap-risk-quote");
 
-    const response = await this.paidFetch(targetUrl);
+    let response:Response;
+    if(durable?.response) response=new Response(durable.response.body,{status:durable.response.status,headers:durable.response.headers});
+    else if(durable){
+      const payment=card.payment as import("./types.ts").PaymentOption;
+      const target=new URL(targetUrl);
+      const expected={scheme:"exact",network:card.network,asset:payment.contract,payTo:payment.destination,amount:decimalToAtomic(payment.amount),maxTimeoutSeconds:60,resourceUrl:targetUrl,method:"GET",route:target.pathname,inputHash:Buffer.from(`${String(params.pair).toUpperCase()}|${Number(params.amount)}|${params.side}`).toString("base64url")};
+      const client=new x402Client((_version,requirements)=>{
+        const matches=requirements.filter(r=>paymentRequirementMismatches(r,expected).length === 0);
+        if(matches.length !== 1)throw Error("PAYMENT_REQUIREMENTS_MISMATCH: "+requirements.map(r=>paymentRequirementMismatches(r,expected).join(",")).join(";"));return matches[0];
+      }).register("stellar:testnet",new ExactStellarScheme(createEd25519Signer(this.payerSecretKey,"stellar:testnet")));
+      client.setSpendControls({allowedAssets:[{network:"stellar:testnet",asset:payment.contract,maxAmountPerPayment:expected.amount}]});
+      let signed=false;
+      client.onBeforePaymentCreation(async()=>{if(signed)throw Error("PAYMENT_ALREADY_ATTEMPTED");signed=true;});
+      response=await wrapFetchWithPayment(fetch,client)(targetUrl,{redirect:"error",headers:{"Idempotency-Key":durable.operationId}});
+      const body=await response.clone().text();
+      if(response.headers.has("payment-response")) await durable.saveResponse({status:response.status,body,headers:{"payment-response":response.headers.get("payment-response")!,"content-type":"application/json"}});
+    } else response = await this.paidFetch(targetUrl);
     const status = response.status;
     const body = (await response.json()) as Record<string, unknown>;
 
@@ -439,6 +508,7 @@ export class BazaarAgentClient {
       expected: {
         network: card.network,
         asset: card.payment.asset,
+        ...(durable ? {contract:(card.payment as import("./types.ts").PaymentOption).contract} : {}),
         amount: card.payment.amount,
         destination: card.payment.destination,
         scheme: card.payment.scheme,

@@ -1,3 +1,5 @@
+import { assertPaymentOptions } from "./payment-options.ts";
+import { decimalToAtomic } from "./operation-history-client.ts";
 import type { PaidService, RankedService, ServiceCard, ValidationOutcome } from "./types.ts";
 
 const aliases: Record<string, string[]> = {
@@ -32,7 +34,7 @@ export function rankServices(items: PaidService[], query: string): RankedService
       const tags = new Set<string>(service.tags.flatMap(tokens));
       const description = new Set<string>(tokens(service.description));
       const kind = new Set<string>([service.kind]);
-      const asset = new Set<string>(tokens(service.payment.asset));
+      const asset = new Set<string>(tokens((service.paymentOptions ?? [service.payment]).map(o=>o.asset).join(" ")));
       let score = 0;
       const reasons: string[] = [];
       for (const term of expanded) {
@@ -63,13 +65,15 @@ export function filterServices(
   items: PaidService[],
   filters: { kind?: string; scheme?: string; asset?: string; network?: string; maxPrice?: number },
 ) {
+  if(filters.maxPrice !== undefined && (!Number.isFinite(filters.maxPrice) || filters.maxPrice < 0 || !/^\d+(\.\d{1,7})?$/.test(String(filters.maxPrice)))) return [];
   return items.filter(
     (s) =>
       (!filters.kind || s.kind === filters.kind) &&
       (!filters.scheme || s.payment.scheme === filters.scheme) &&
-      (!filters.asset || s.payment.asset.toUpperCase() === filters.asset.toUpperCase()) &&
-      (!filters.network || s.network === filters.network) &&
-      (!filters.maxPrice || Number(s.payment.amount) <= filters.maxPrice),
+      (s.paymentOptions ?? [s.payment]).some(o =>
+        (!filters.asset || o.asset.toUpperCase() === filters.asset.toUpperCase()) &&
+        (filters.maxPrice === undefined || (o.asset.toUpperCase() === (filters.asset ?? "USDC").toUpperCase() && BigInt(decimalToAtomic(o.amount)) <= BigInt(decimalToAtomic(String(filters.maxPrice)))))) &&
+      (!filters.network || s.network === filters.network),
   );
 }
 
@@ -136,5 +140,8 @@ export function validateServiceCard(card: ServiceCard): ValidationOutcome[] {
     "Añade una descripción de al menos 20 caracteres.",
     "warning",
   );
+  if (card.paymentOptions) {
+    try { assertPaymentOptions(card); } catch { rule("payment.options",false,"","Opciones de pago inválidas."); }
+  }
   return out;
 }

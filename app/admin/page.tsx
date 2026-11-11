@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AdminOperationsDashboard } from "@/components/AdminOperationsDashboard";
+import { ProviderReviewAdmin } from "@/components/ProviderReviewAdmin";
 
 export default function AdminPage() {
   return (
@@ -26,7 +26,8 @@ export default function AdminPage() {
       </nav>
 
       <div className="shell" style={{ marginTop: "2rem", marginBottom: "4rem" }}>
-        <AdminOperationsDashboard />
+        <ProviderReviewAdmin />
+        <p><Link href="/admin/operations">Panel de operaciones existente</Link></p>
       </div>
 
       <footer className="shell" style={{ borderTop: "1px solid rgba(255, 255, 255, 0.06)", paddingTop: "2rem", paddingBottom: "3rem" }}>

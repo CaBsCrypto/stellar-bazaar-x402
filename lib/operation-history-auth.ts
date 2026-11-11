@@ -1,5 +1,5 @@
 import { createHash, timingSafeEqual, randomBytes } from "node:crypto";
-import { Redis } from "@upstash/redis";
+
 
 export type HistoryPrincipal = { ownerId: string; permission: "read" | "write" };
 export class HistoryAuthError extends Error {
@@ -56,20 +56,16 @@ export function authenticateHistory(authorization: string | null, write = false,
     if (timingSafeEqual(digest, Buffer.from(account.writeTokenHash, "hex"))) principal = { ownerId: account.ownerId, permission: "write" };
   }
 
-  // If not found in env config, check self-anchored prefix if structured
-  if (!principal) {
-    const raw = match[1];
-    if (raw.startsWith("bz_read_") || raw.startsWith("bz_write_") || raw.startsWith("review-")) {
-      const derivedOwner = "dyn_" + digest.subarray(0, 12).toString("hex");
-      if (raw.startsWith("bz_read_") || raw.startsWith("review-reader-")) {
-        principal = { ownerId: derivedOwner, permission: "read" };
-      } else {
-        principal = { ownerId: derivedOwner, permission: "write" };
-      }
-    }
-  }
-
   if (!principal) throw new HistoryAuthError("UNAUTHORIZED");
   if (write && principal.permission !== "write") throw new HistoryAuthError("FORBIDDEN");
   return principal;
+}
+
+/** Validate the legacy registry through its unchanged synchronous authenticator. */
+export function legacyHistoryReservations(): { ownerIds: string[]; hashes: string[] } {
+  if (process.env.BAZAAR_HISTORY_ACCOUNTS_JSON === undefined) return { ownerIds: [], hashes: [] };
+  try { authenticateHistory("Bearer " + "a".repeat(43)); }
+  catch (e) { if (!(e instanceof HistoryAuthError) || e.code === "HISTORY_UNAVAILABLE") throw new HistoryAuthError("HISTORY_UNAVAILABLE"); }
+  const accounts = JSON.parse(process.env.BAZAAR_HISTORY_ACCOUNTS_JSON) as { ownerId: string; readTokenHash: string; writeTokenHash: string }[];
+  return { ownerIds: accounts.map(a => a.ownerId), hashes: accounts.flatMap(a => [a.readTokenHash, a.writeTokenHash]) };
 }

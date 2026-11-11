@@ -1,16 +1,20 @@
 import { historyConnection } from "../history-connection.ts";
 import type { ModelContextRegistry, WebMCPToolDefinition } from "./types.ts";
 import { services } from "../catalog.ts";
-import { rankServices, validateServiceCard } from "../discovery.ts";
+import { filterServices, rankServices, validateServiceCard } from "../discovery.ts";
 import { workflowBundles } from "../workflow-bundles.ts";
 import { getPaymentFlow, paymentFlowCapability } from "../payment-flow.ts";
 import { pilotCards, pilotSearchServices } from "../pilot-cards.ts";
 import type { ServiceCard } from "../types.ts";
+import { toPaidService } from "../service-card.ts";
+import { readPublicDiscovery, type DiscoverySnapshot } from "../public-discovery.ts";
 
 /**
  * Registers all Stellar Bazaar tools to the active ModelContext registry (native or polyfilled).
  */
-export function registerBazaarTools(registry: ModelContextRegistry, options: {privateExecution?: boolean} = {}): void {
+export function registerBazaarTools(registry: ModelContextRegistry, options: {privateExecution?: boolean; discoverySource?: () => Promise<DiscoverySnapshot>} = {}): void {
+  const discover = options.discoverySource ?? readPublicDiscovery;
+  const present = (card: ServiceCard) => ({ ...toPaidService(card), latency: "No declarada", output: ["Formato no declarado en la ficha"] });
   // 1. List Services Tool (Full Catalog & Registry)
   const listServicesTool: WebMCPToolDefinition<{ includePilots?: boolean }> = {
     name: "bazaar_list_services",
@@ -22,7 +26,8 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
       },
     },
     execute: async (input) => {
-      const baseServices = services.map((s) => ({
+      const snapshot = await discover();
+      const baseServices = snapshot.cards.map(present).map((s) => ({
         id: s.id,
         name: s.name,
         eyebrow: s.eyebrow,
@@ -35,6 +40,7 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
           asset: s.payment.asset,
           amount: s.payment.amount,
         },
+        ...(s.paymentOptions ? {paymentOptions: s.paymentOptions} : {}),
         routeTemplate: s.routeTemplate,
         provider: s.provider,
         latency: s.latency,
@@ -55,6 +61,8 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
       return {
         type: "json",
         data: {
+          partialResults: snapshot.partialResults,
+          dynamicRegistry: snapshot.dynamicRegistry,
           total: allServices.length,
           services: allServices,
           mode: "read-only-discovery",
@@ -73,18 +81,20 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
       properties: {
         query: { type: "string", description: "Search query string (e.g. 'finance', 'nlp', 'image')" },
         tag: { type: "string", description: "Filter by tag or category (e.g. 'data', 'finance', 'ai')" },
-        maxPrice: { type: "number", description: "Maximum price filter in USD/XLM" },
+        maxPrice: { type: "number", description: "Maximum price in USDC only; other assets are not converted or compared." },
       },
     },
     execute: async (input) => {
       const searchParam = input.query || input.tag || "";
-      let ranked = rankServices([...services, ...pilotSearchServices], searchParam);
+      const snapshot = await discover();
+      let ranked = rankServices([...snapshot.cards.map(present), ...pilotSearchServices], searchParam);
 
       if (input.tag) {
         ranked = ranked.filter((r) => r.service.tags.includes(input.tag!));
       }
       if (input.maxPrice !== undefined) {
-        ranked = ranked.filter((r) => Number(r.service.payment.amount) <= input.maxPrice!);
+        const matching = new Set(filterServices(ranked.map(r => r.service), {asset: "USDC", maxPrice: input.maxPrice}).map(service => service.id));
+        ranked = ranked.filter(r => matching.has(r.service.id));
       }
 
       // Broadcast visual filter event to the page UI
@@ -104,6 +114,8 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
       return {
         type: "json",
         data: {
+          partialResults: snapshot.partialResults,
+          dynamicRegistry: snapshot.dynamicRegistry,
           total: ranked.length,
           services: ranked.map((r) => {
             const pilot = pilotCards.find((card) => card.id === r.service.id);
@@ -116,6 +128,7 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
                   kind: r.service.kind,
                   amount: r.service.payment.amount,
                   asset: r.service.payment.asset,
+                  ...(r.service.paymentOptions ? {paymentOptions: r.service.paymentOptions} : {}),
                   tags: r.service.tags,
                   routeTemplate: r.service.routeTemplate,
                   provider: r.service.provider,
@@ -140,13 +153,14 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
       required: ["serviceId"],
     },
     execute: async (input) => {
-      const service = services.find((s) => s.id === input.serviceId)
+      const snapshot = await discover();
+      const service = snapshot.cards.map(present).find((s) => s.id === input.serviceId)
         ?? pilotCards.find((card) => card.id === input.serviceId);
       if (!service) {
         return {
           type: "json",
           isError: true,
-          data: { error: `Service not found: ${input.serviceId}` },
+          data: { error: snapshot.partialResults ? "DISCOVERY_INCOMPLETE" : `Service not found: ${input.serviceId}`, partialResults: snapshot.partialResults, dynamicRegistry: snapshot.dynamicRegistry },
         };
       }
 
@@ -161,7 +175,7 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
 
       return {
         type: "json",
-        data: service,
+        data: { ...service, partialResults: snapshot.partialResults, dynamicRegistry: snapshot.dynamicRegistry },
       };
     },
   };
@@ -269,6 +283,9 @@ export function registerBazaarTools(registry: ModelContextRegistry, options: {pr
         return { type: "json", data: { ...evidence, operation: "recover-historical-delivery", newPaymentPerformed: false } };
       }
       
+      if (!["swap-risk-quote", "script-creator"].includes(args.serviceId)) {
+        return { type: "json", isError: true, data: { error: "EXTERNAL_EXECUTION_REQUIRES_BUYER", serviceId: args.serviceId, paymentStatus: "not-performed" } };
+      }
       // Deterministic local-reference computation. This is never payment proof.
       let executionResult: Record<string, unknown> = {};
       if (args.serviceId === "swap-risk-quote") {

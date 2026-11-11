@@ -1,0 +1,14 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "bazaar-public-catalogue": {
+      "type": "streamable-http",
+      "url": "https://bazaar.browns.studio/api/chatgpt/mcp",
+      "extensions": {
+        "com.openai": {
+          "auth": { "type": "none" }
+        }
+      }
+    }
+  }
+}
