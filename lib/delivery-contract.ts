@@ -5,7 +5,18 @@
  */
 export type DeliveryMode = "sync" | "async";
 
+/** Optional for legacy cards; every new order preserves its reviewed descriptor. */
+export type DeliveryStorage =
+  | { mode: 'text' }
+  | { mode: 'external'; maxFiles: number }
+  | { mode: 'bazaar'; maxFiles: number; maxTotalBytes: number; maxFileBytes: number };
+
+export function deliveryStorage(contract?: DeliveryContract): DeliveryStorage {
+  return contract?.storage ?? { mode: 'text' };
+}
+
 export interface DeliveryContract {
+  storage?: DeliveryStorage;
   mode: DeliveryMode;
   estimatedDurationMs: number;
   result: {

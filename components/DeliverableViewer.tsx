@@ -37,12 +37,13 @@ const stages: Record<string, string> = {
   error: "Interrupción",
 };
 function amount(atomic: string, asset: string) {
-  if (asset !== "USDC") return atomic + " unidades · " + asset;
+  const symbol = asset === "XLM" || asset === "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC" ? "XLM" : asset === "USDC" || asset === "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA" ? "USDC" : undefined;
+  if (!symbol || !/^\d{1,40}$/.test(atomic)) return atomic + " unidades · " + asset;
   const value = BigInt(atomic);
   const fraction = String(value % 10000000n)
     .padStart(7, "0")
     .replace(/0+$/, "");
-  return String(value / 10000000n) + (fraction ? "." + fraction : "") + " USDC";
+  return String(value / 10000000n) + (fraction ? "." + fraction : "") + " " + symbol;
 }
 const formats = (bytes: number) =>
   bytes >= 1000000

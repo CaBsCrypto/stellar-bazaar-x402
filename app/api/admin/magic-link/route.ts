@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isAuthorizedAdminEmail, createMagicLinkToken } from "@/lib/admin-guard";
+import { limitReviewAdminRequest } from "@/lib/provider-review-limits";
+import { requireReviewOrigin, reviewJson, reviewError } from "@/lib/provider-admin-session";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({}));
+    const reviewMode=process.env.BAZAAR_ENABLE_PROVIDER_REVIEW_ADMIN==='true';
+    if(reviewMode)requireReviewOrigin(request);
+    const body = reviewMode?await reviewJson(request):await request.json().catch(() => ({}));
     const email = typeof body?.email === "string" ? body.email.trim().toLowerCase() : "";
+    if(reviewMode){const limit=await limitReviewAdminRequest(request,'mail:'+email,5,900);if(!limit.ok)return NextResponse.json({ok:false,error:{code:limit.code}},{status:limit.status,headers:{'Cache-Control':'no-store','Retry-After':String(limit.retryAfter)}});}
 
     if (!email || !isAuthorizedAdminEmail(email)) {
       // Return 200 with generic message to prevent email enumeration
@@ -16,11 +21,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    const resendApiKey = process.env.RESEND_API_KEY?.trim();
+    const configuredOrigin = process.env.NEXT_PUBLIC_APP_URL;
+    if (!resendApiKey || !configuredOrigin) return NextResponse.json({success:false,error:"ADMIN_DELIVERY_NOT_CONFIGURED"},{status:503});
+    const origin = new URL(configuredOrigin);
+    if (origin.protocol !== "https:" || origin.username || origin.password || origin.pathname !== "/" || origin.search || origin.hash) return NextResponse.json({success:false,error:"ADMIN_ORIGIN_INVALID"},{status:503});
     const token = await createMagicLinkToken(email);
-    const origin = request.nextUrl.origin || "https://bazaar.browns.studio";
-    const magicLink = `${origin}/admin#key=${token}`;
-
-    const resendApiKey = process.env.RESEND_API_KEY;
+    const magicLink = origin.origin + "/admin#key=" + token;
 
     if (resendApiKey) {
       const emailRes = await fetch("https://api.resend.com/emails", {
@@ -53,22 +60,18 @@ export async function POST(request: NextRequest) {
       });
 
       if (!emailRes.ok) {
-        console.warn("[MAGIC_LINK_RESEND_ERROR]", await emailRes.text());
+        return NextResponse.json({success:false,error:"ADMIN_DELIVERY_FAILED"},{status:503});
       }
-    } else {
-      // In local dev without RESEND_API_KEY, log the link to console
-      console.log(`\n========================================\n[DEV MAGIC LINK for ${email}]\n${magicLink}\n========================================\n`);
     }
 
     return NextResponse.json({
       success: true,
       message: "Si tu correo está autorizado, recibirás un enlace de acceso en breve.",
-      // Include dev link in response only when in development
-      ...(process.env.NODE_ENV !== "production" ? { devMagicLink: magicLink } : {}),
     });
   } catch (error) {
+    if(process.env.BAZAAR_ENABLE_PROVIDER_REVIEW_ADMIN==='true')return reviewError(error);
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : "Internal Error" },
+      { success: false, error: "ADMIN_LINK_UNAVAILABLE" },
       { status: 500 }
     );
   }

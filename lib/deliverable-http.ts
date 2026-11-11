@@ -15,6 +15,11 @@ import {
   DeliverableError,
 } from "./deliverable-store.ts";
 import { configuredPrivateS3 } from "./deliverable-s3.ts";
+import { resolveHistoryPrincipal, type ResolvedHistoryPrincipal } from "./workspace-auth.ts";
+import { configuredWorkspaceStore } from "./workspace-store.ts";
+import { WorkspaceError } from "./workspace-types.ts";
+import { assertWorkspaceRequest, workspaceFailure, workspaceRequestOrigin } from "./workspace-http.ts";
+import { demoIngress } from "./demo-http.ts";
 const headers = {
   "Cache-Control": "private, no-store",
   Vary: "Authorization",
@@ -50,13 +55,13 @@ async function json(request: Request) {
 }
 export function createDeliverableHandlers(
   deps: {
-    auth?: typeof authenticateHistory;
+    auth?: typeof authenticateHistory | typeof resolveHistoryPrincipal;
     history?: typeof configuredHistoryStore;
     store?: typeof configuredDeliverableStore;
     objects?: typeof configuredPrivateS3;
   } = {},
 ) {
-  const auth = deps.auth ?? authenticateHistory,
+  const auth = deps.auth ?? resolveHistoryPrincipal,
     history = deps.history ?? configuredHistoryStore,
     store = deps.store ?? configuredDeliverableStore,
     objects = deps.objects ?? configuredPrivateS3;
@@ -67,12 +72,30 @@ export function createDeliverableHandlers(
     try {
       const url = new URL(request.url),
         origin = request.headers.get("origin");
-      if (origin && origin !== url.origin)
+      const expectedOrigin = workspaceRequestOrigin(request);
+      if (origin && origin !== expectedOrigin)
         throw new DeliverableError("INVALID_ORIGIN", 400);
-      const principal = auth(
+      const principal: ResolvedHistoryPrincipal = await auth(
         request.headers.get("authorization"),
         ["create", "upload", "confirm"].includes(action),
       );
+      if (principal.workspace) {
+        assertWorkspaceRequest(request, true);
+        if (action !== "list") throw new WorkspaceError("WORKSPACE_UPLOADS_DISABLED", 403);
+        if ([...url.searchParams.keys()].some((key) => key !== "operationId"))
+          throw new DeliverableError("INVALID_QUERY", 400);
+        const operationId = id.parse(url.searchParams.get("operationId"));
+        await demoIngress(request);
+        const workspaceStore = configuredWorkspaceStore();
+        await workspaceStore.consumeRequest(principal.ownerId, principal.workspace.generation);
+        const operation = (await workspaceStore.forPrincipal(principal.workspace).operations.all(principal.ownerId)).find(
+          (record) => record.clientOperationId === operationId,
+        );
+        if (!operation) throw new DeliverableError("OPERATION_NOT_FOUND", 404);
+        // Inline results already belong to the authenticated operation. No external
+        // file store or upload credentials are needed or enabled for open workspaces.
+        return Response.json({ versions: [], inlineOnly: true }, { headers });
+      }
       if (action === "list") {
         if ([...url.searchParams.keys()].some((k) => k !== "operationId"))
           throw new DeliverableError("INVALID_QUERY", 400);
@@ -159,6 +182,7 @@ export function createDeliverableHandlers(
         { headers },
       );
     } catch (error) {
+      if (error instanceof WorkspaceError) return workspaceFailure(error);
       const code =
         error instanceof DeliverableError
           ? error.code

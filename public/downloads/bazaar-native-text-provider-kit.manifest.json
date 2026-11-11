@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "name": "bazaar-native-text-provider-kit",
+  "packageVersion": "1.0.0",
+  "archive": "/downloads/bazaar-native-text-provider-kit.tgz",
+  "sha256": "dc42e87f6d40fba30a1adbfae738918f501ea40127fec11f1ad3d54c86e00df7",
+  "bytes": 45383,
+  "node": "24.x",
+  "directDependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
+    "@stellar/stellar-sdk": "14.4.2"
+  },
+  "lockedDependencyPackages": 137,
+  "sourceLockSha256": "31b9e80f846729e5db359204aac776adb78bf29353f4f5f5867787d918c5e382",
+  "payloadManifestSha256": "6c6d5240367f393f32fec829f34a31034cf825ed9c373ca8ef7a5398453bec1f",
+  "files": [
+    {
+      "path": "adapter-template.mjs",
+      "bytes": 340,
+      "sha256": "db590b882c35d47970de36e3df8a21409a60d197f8f92f099b41fb22c8458fc4"
+    },
+    {
+      "path": "configuration.example.json",
+      "bytes": 2630,
+      "sha256": "50504990f6789bd534e5f96163699717d6758627990860aa6f9daa34dc9e8f8a"
+    },
+    {
+      "path": "configure.mjs",
+      "bytes": 1262,
+      "sha256": "d1927c24d82e1194fb2781d593c9cbb0fa562bf81b9602b26c5748a7458b96d2"
+    },
+    {
+      "path": "definition.example.json",
+      "bytes": 547,
+      "sha256": "f44c1974d9e5a0de0ee6f3bb5a79fc46502ef330e93f9febde8d70422451fe2e"
+    },
+    {
+      "path": "examples/buyer-portable-secret-store.mjs",
+      "bytes": 8375,
+      "sha256": "21cb1c6156134e5869ddac237f0fd0329d4ab860fd5d47a307a508f17a86102c"
+    },
+    {
+      "path": "examples/buyer-private-input.mjs",
+      "bytes": 1852,
+      "sha256": "89b08d826ccf8d0fdb1708972af442e0960eeb2887497991bf68d54ce7e0ccf7"
+    },
+    {
+      "path": "examples/market-price.mjs",
+      "bytes": 783,
+      "sha256": "5bee11f95d5268c81cd3765e56243ad6d07be94073c57f3dfcb0e0b74499ee2e"
+    },
+    {
+      "path": "examples/marketplace-seller-mcp.mjs",
+      "bytes": 11503,
+      "sha256": "4c393bd885d5a16508e3274ab254f25c795ed9ff38afcb19073e2827b1bde4b8"
+    },
+    {
+      "path": "examples/private-mcp-client.mjs",
+      "bytes": 1523,
+      "sha256": "58cc789188a84ace20dbdcc60ea43226664f195d7cca4bc028940dab93b40c4d"
+    },
+    {
+      "path": "examples/seller-http-adapter.mjs",
+      "bytes": 2853,
+      "sha256": "ab987afa9a9c01fc2e4252aacb251fa145bbbe0f62318957b08b2d3de3da4fab"
+    },
+    {
+      "path": "examples/seller-marketplace-capacity.mjs",
+      "bytes": 5874,
+      "sha256": "5c0ec69970724ca450e4d9f762de93181cb13ebd8c8b9a9798ef0e140ec0c707"
+    },
+    {
+      "path": "examples/seller-marketplace-supervisor.mjs",
+      "bytes": 17627,
+      "sha256": "65f5bbd2de07e7e4d04f992d6c2a767cd5200c918f62b402524eb5ba3e94cefa"
+    },
+    {
+      "path": "examples/seller-marketplace-worker.mjs",
+      "bytes": 13271,
+      "sha256": "227513927df781e650efc2b0d02aaa98b4cba4fae6570e6bf0cd2f7258c1cdb2"
+    },
+    {
+      "path": "examples/seller-mcp-transport.mjs",
+      "bytes": 3410,
+      "sha256": "e9f3abdbcf848e6d94ca8aea4a08627fa51ad6d28079aecb5a8031cf4f072ac3"
+    },
+    {
+      "path": "examples/seller-runtime.mjs",
+      "bytes": 6554,
+      "sha256": "d3059ba22930381400708489805dc89c4f6cebc1986c3955575a5dc9aa36c663"
+    },
+    {
+      "path": "examples/seller-service-card.mjs",
+      "bytes": 4309,
+      "sha256": "c3ef177818d5ed2066e5686ce7c5770b32b27f265cf453d72f68228dfc3a7c59"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 647,
+      "sha256": "a759c32a1d96cd85adb6e3e30bcddafc09457730cef498eabc2da01ac82b81b5"
+    },
+    {
+      "path": "native-text-service-card.example.json",
+      "bytes": 2052,
+      "sha256": "eff7e273e5f6d7d00b33225c8dfabba0aa024e50446a51315f8630b67dfefbaa"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 62576,
+      "sha256": "5e66e82ebf970281100eb390ecda4f0b6fb0c499274491a9454a96a570529341"
+    },
+    {
+      "path": "package.json",
+      "bytes": 574,
+      "sha256": "a0b4357b5d180fd8d6bbd55a816c46e48e50dc0fb1679fbbad47094663b360a0"
+    },
+    {
+      "path": "README.md",
+      "bytes": 7086,
+      "sha256": "9507261493b5dfaf52cee82458176c31d99bd79b9a276e581749f88594503bef"
+    },
+    {
+      "path": "self-check.mjs",
+      "bytes": 1645,
+      "sha256": "121a99b778d92f35e0245ad7b01ed22ca72cd06b009a4cee26a072656a0c6b30"
+    },
+    {
+      "path": "MANIFEST.json",
+      "bytes": 3883,
+      "sha256": "6c6d5240367f393f32fec829f34a31034cf825ed9c373ca8ef7a5398453bec1f"
+    }
+  ],
+  "reproducibleArchive": {
+    "order": "sorted paths",
+    "mtime": 0,
+    "uid": 0,
+    "gid": 0,
+    "mode": "0644",
+    "textLineEndings": "LF"
+  },
+  "networkRequests": 0,
+  "credentialsIncluded": false,
+  "adapterReadyByDefault": false
+}

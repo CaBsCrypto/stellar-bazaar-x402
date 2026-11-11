@@ -1,0 +1,112 @@
+{
+  "version": "bazaar.public-catalogue-snapshot/v1",
+  "asOf": "2026-10-13T19:30:07.278Z",
+  "publishedAt": "2026-10-16T02:39:31.267Z",
+  "services": [
+    {
+      "submissionId": "f85db5bc-3ec4-4855-a25c-b6e3d0cacd64",
+      "card": {
+        "skill": {
+          "version": "1",
+          "title": "Guion breve de prueba",
+          "instructions": "Servicio exclusivamente Stellar Testnet. topic: texto de 1 a 200 caracteres; tone: texto de 1 a 40 caracteres; durationSeconds: entero entre 15 y 30. Crear una orden, pagar mediante HTTP x402 con firma local y consultar el mismo UUID hasta recibir el texto. No repetir el pago o la ejecución para recuperar una respuesta perdida. El proveedor usa un algoritmo, no ejecuta código del comprador y la entrega privada vence a los siete días."
+        },
+        "version": "bazaar.service-card/v0",
+        "id": "guionista-bazaar-production-text-v1",
+        "name": "Guion breve algorítmico",
+        "description": "Guion breve de texto generado de forma algorítmica para probar compras y entrega privada en Stellar Testnet.",
+        "kind": "http",
+        "url": "https://ai-video-scriptwriter.vercel.app",
+        "routeTemplate": "/v1/marketplace-text",
+        "input": [
+          {
+            "name": "topic",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "tone",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "durationSeconds",
+            "type": "number",
+            "required": true
+          }
+        ],
+        "network": "stellar:testnet",
+        "payment": {
+          "scheme": "exact",
+          "asset": "USDC",
+          "amount": "0.01",
+          "destination": "GAHV4MBWHHMFJ6P55UJNQPUAUDGFV6DGJY4TSZ22JGT3CVFIYYSWDJ2C",
+          "identity": {
+            "kind": "stellar-classic-credit",
+            "network": "stellar:testnet",
+            "code": "USDC",
+            "issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+            "sacContract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+          },
+          "marketplace": {
+            "protocol": "x402-stellar-exact-v2",
+            "resourceTemplate": "/api/market/orders/{operationId}/x402"
+          }
+        },
+        "provider": {
+          "name": "Guionista Bazaar"
+        },
+        "tags": [
+          "text",
+          "script",
+          "x402",
+          "testnet"
+        ],
+        "delivery": {
+          "mode": "async",
+          "estimatedDurationMs": 1000,
+          "result": {
+            "schemaVersion": "seller-text/v1",
+            "contentType": "text/plain",
+            "terminalStatuses": [
+              "delivered",
+              "delivery-failed"
+            ],
+            "hash": {
+              "algorithm": "sha256",
+              "required": true,
+              "scope": "canonical-result"
+            }
+          },
+          "status": {
+            "required": true,
+            "urlTemplate": "/api/market/orders/{operationId}",
+            "pollAfterMs": 60000
+          },
+          "callback": {
+            "supported": false,
+            "required": false,
+            "authentication": "none"
+          },
+          "retention": {
+            "resultTtlHours": 168,
+            "durable": true
+          },
+          "idempotency": {
+            "required": true,
+            "key": "Idempotency-Key",
+            "replay": "return-original"
+          },
+          "retry": {
+            "retryable": false,
+            "maxAttempts": 1,
+            "failureSemantics": "terminal-error"
+          }
+        }
+      },
+      "cardHash": "fa0890b56563deb08a983fb6e75d020a6105babc0b4bd3a6b834f4468897cefc",
+      "execution": "seller-mcp-task",
+      "status": "activated"
+    }
+  ]
+}

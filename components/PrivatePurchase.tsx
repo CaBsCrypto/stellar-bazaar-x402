@@ -11,6 +11,7 @@ import {
 import type { DeliveryFile, SavedDeliverable } from "@/lib/deliverable";
 
 import type { ActivityEvent } from "@/lib/activity";
+import { serializedPrivateRead } from "@/lib/private-read-queue";
 
 import {
   PurchaseWorkspace,
@@ -37,6 +38,8 @@ export function PrivatePurchase({
     [selectedId, setSelectedId] = useState<string>(),
     [notice, setNotice] = useState(""),
     generation = useRef(0);
+  const refresh = useRef<() => void>(() => {});
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const current = ++generation.current;
@@ -49,18 +52,19 @@ export function PrivatePurchase({
     async function load() {
       if (busy) return;
       busy = true;
+      setRefreshing(true);
       try {
-        const res = await fetch(
+        const res = await serializedPrivateRead(token, controller.signal, () => fetch(
           "/api/deliveries?operationId=" +
             encodeURIComponent(record.clientOperationId),
           {
             headers: { Authorization: "Bearer " + token },
             cache: "no-store",
-            credentials: "omit",
+            credentials: "same-origin",
             redirect: "error",
             signal: controller.signal,
           },
-        );
+        ));
         if (current !== generation.current) return;
         if (res.status === 401 || res.status === 403) {
           onUnauthorized?.();
@@ -83,18 +87,17 @@ export function PrivatePurchase({
           );
       } finally {
         busy = false;
+        if (current === generation.current) setRefreshing(false);
       }
     }
 
+    refresh.current = () => { void load(); };
     void load();
-    const timer = setInterval(() => {
-      if (document.visibilityState === "visible") void load();
-    }, 5000);
 
     return () => {
       generation.current++;
       controller.abort();
-      clearInterval(timer);
+      refresh.current = () => {};
     };
   }, [record.clientOperationId, token, onUnauthorized]);
 
@@ -115,7 +118,7 @@ export function PrivatePurchase({
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ versionId, fileId: file.id, download }),
-        credentials: "omit",
+        credentials: "same-origin",
         cache: "no-store",
         redirect: "error",
         signal,
@@ -146,6 +149,8 @@ export function PrivatePurchase({
   }
 
   return (
+    <>
+    <button type="button" onClick={() => refresh.current()} disabled={refreshing} style={{minHeight:44,marginBottom:12}}>Actualizar entrega</button>
     <PurchaseWorkspace
       record={record}
       versions={versions}
@@ -172,5 +177,6 @@ export function PrivatePurchase({
         </section>
       }
     />
+    </>
   );
 }

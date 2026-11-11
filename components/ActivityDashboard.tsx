@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { TaskSummary, ActivityEvent } from "@/lib/activity";
 import type { OperationHistoryRecord } from "@/lib/operation-history";
 import { connectPrivateHistory } from "@/lib/webmcp/private-history";
+import { serializedPrivateRead } from "@/lib/private-read-queue";
 type Purchase = Omit<OperationHistoryRecord, "delivery"> & {
   delivery: Omit<OperationHistoryRecord["delivery"], "artifact"> & {
     artifact?:
@@ -166,13 +167,13 @@ export function ActivityDashboard({
       const controller = new AbortController();
       controllers.current.add(controller);
       try {
-        const res = await fetch("/api/activity?" + q, {
+        const res = await serializedPrivateRead(token, controller.signal, () => fetch("/api/activity?" + q, {
           headers: { Authorization: "Bearer " + token },
-          credentials: "omit",
+          credentials: "same-origin",
           cache: "no-store",
           redirect: "error",
           signal: controller.signal,
-        });
+        }));
         if (!res.ok)
           throw Error(
             res.status === 401 || res.status === 403
@@ -268,14 +269,10 @@ export function ActivityDashboard({
       return;
     }
     void refresh();
-    const interval = setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
-    }, 5000);
     return () => {
       generation.current++;
       controllers.current.forEach((c) => c.abort());
       controllers.current.clear();
-      clearInterval(interval);
     };
     // Pagination cursors intentionally do not restart the lifecycle. Refresh replaces the current page set.
   }, [refresh, review]);
@@ -326,17 +323,17 @@ export function ActivityDashboard({
         const controller = new AbortController();
         controllers.current.add(controller);
         try {
-          const res = await fetch(
+          const res = await serializedPrivateRead(token, controller.signal, () => fetch(
             "/api/activity?download=1&operationId=" +
               encodeURIComponent(record.id),
             {
               headers: { Authorization: "Bearer " + token },
-              credentials: "omit",
+              credentials: "same-origin",
               cache: "no-store",
               redirect: "error",
               signal: controller.signal,
             },
-          );
+          ));
           if (!res.ok) throw Error();
           blob = await res.blob();
         } finally {
@@ -579,7 +576,7 @@ function PrivateConnection({ readToken }: { readToken: string }) {
           Authorization: "Bearer " + readToken,
           "X-History-Write-Access": "Bearer " + writeToken,
         },
-        credentials: "omit",
+        credentials: "same-origin",
         cache: "no-store",
         redirect: "error",
       });

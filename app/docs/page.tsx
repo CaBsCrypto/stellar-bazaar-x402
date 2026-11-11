@@ -1,20 +1,24 @@
+import { bazaarRoles, skillPackage } from "@/lib/bazaar-skills";
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
 import { Footer } from "@/components/Footer";
 import { DocsCodeTabs } from "@/components/DocsCodeTabs";
 import "@/app/docs.css";
+import {UiText} from '@/components/UiLanguage';
+import {AgentHub} from '@/components/AgentHub';
+import {ButtonLink} from '@/components/ui';
 
 export const metadata = {
   title: "Developer Hub & Agent Kit | Stellar Bazaar x402",
   description: "Machine-readable integration guides for AI Agents (Claude, Cursor, LangChain, CrewAI) and API Providers on Stellar.",
 };
 
-export default function DocsPage() {
+function LegacyDocsPage() {
   return (
     <main className="docs-page">
       <div className="mock-banner">
-        DEVELOPER HUB · MCP STREAMABLE HTTP READ-ONLY · x402 TESTNET EVIDENCE
+        DEVELOPER HUB · MCP STREAMABLE HTTP · SKILLS Y SOLICITUDES · x402 TESTNET EVIDENCE
       </div>
 
       <Navbar />
@@ -39,7 +43,7 @@ export default function DocsPage() {
                   fontWeight: 600,
                 }}
               >
-                🚀 Publicar Skill
+                Preparar servicio
               </Link>
               <a
                 href="/llms.txt"
@@ -66,17 +70,17 @@ export default function DocsPage() {
       <header className="docs-shell docs-hero">
         <span className="kicker">DEVELOPER HUB & AGENT KIT</span>
         <h1>
-          Integra tu Agente o Monetiza tu API.
+          Conecta tu agente o prepara tu servicio.
           <br />
-          <em>En menos de 3 minutos.</em>
+          <em>Descubrimiento, validación y revisión.</em>
         </h1>
         <p>
-          Conecta agentes para descubrir e inspeccionar servicios mediante MCP read-only. La ejecución pagada exige un
-          cliente externo con política y conciliación de recibo; Bazaar no firma ni custodia.
+          Tu agente corre en tu equipo. Bazaar conserva conversaciones, tareas y ejemplos en un espacio privado,
+          y recibe servicios para revisión. Esta beta no habilita pagos ni aloja un modelo de IA.
         </p>
       </header>
 
-      <nav className="docs-shell docs-index" aria-label="Índice de documentación"><a href="#inicio-rapido">Inicio rápido</a><a href="#entornos">Entornos compatibles</a><a href="#proveedores">Para proveedores</a><a href="#endpoints">Endpoints</a></nav>
+      <nav className="docs-shell docs-index" aria-label="Índice de documentación"><a href="#inicio-rapido">Inicio rápido</a><a href="#espacio">Mi espacio</a><a href="#skills">Skills</a><a href="#proveedores">Para proveedores</a><a href="#endpoints">Endpoints</a></nav>
       <section className="docs-shell docs-section" id="inicio-rapido">
         <h2>⚡ Quickstart para Agentes de IA</h2>
         <p className="subtitle">
@@ -86,49 +90,50 @@ export default function DocsPage() {
       </section>
 
       <section className="docs-shell docs-section" id="entornos">
-        <h2>🤖 Modelos y Asistentes Soportados</h2>
+        <h2>🤖 Requisitos de tu cliente</h2>
         <p className="subtitle">
-          Stellar Bazaar expone un servidor MCP nativo compatible con los principales entornos de IA agéntica.
+          Usa un cliente MCP Streamable HTTP con cabeceras de autenticación configurables para los accesos privados. Comprueba esa capacidad en tu cliente; una plantilla no demuestra compatibilidad de todas sus versiones.
         </p>
         <div className="docs-grid-3">
           <div className="docs-card">
             <h3>Claude Desktop & Anthropic</h3>
-            <p>Conexión directa vía <code>claude_desktop_config.json</code> usando transporte MCP Streamable HTTP.</p>
+            <p>Consulta la configuración de tu versión: debe admitir MCP remoto y cabecera Authorization para herramientas privadas. No entregues el secreto de recuperación a su conexión de agente.</p>
             <code>URL: /api/mcp</code>
           </div>
           <div className="docs-card">
             <h3>Cursor IDE & Windsurf</h3>
-            <p>Agrega el endpoint MCP para discovery y validación read-only; no expone tools de pago o escritura.</p>
-            <code>Protocol: MCP v1.30</code>
+            <p>Agrega el endpoint MCP para descubrimiento, validación y solicitudes de proveedores; no expone herramientas de pago ni administración.</p>
+            <code>Transporte: MCP Streamable HTTP</code>
           </div>
           <div className="docs-card">
             <h3>LangChain, CrewAI & AutoGen</h3>
             <p>Crea clients de discovery/política en Python o TypeScript sin introducir seeds en prompts o tools.</p>
-            <code>Read-only discovery SDK</code>
+            <code>Descubrimiento y accesos separados</code>
           </div>
         </div>
       </section>
 
-      <section className="docs-shell docs-section" id="proveedores">
-        <h2>💰 Para Proveedores: Monetiza tu API en 3 Pasos</h2>
+      <section className="docs-shell docs-section" id="espacio"><h2>Un espacio privado para tu agente</h2><p>Prepara y guarda tus accesos antes del alta. El humano conversa y lee entregas; su agente consulta tareas, responde y registra ejemplos inline gratuitos o simulados. Actualización manual, sin conexión permanente. El alta puede estar cerrada o limitada: comprueba capacidades antes de actuar.</p><p><a href="/WORKSPACE_AGENT.md">Requisitos y comandos reproducibles</a> · <Link href="/agent-chat">Abrir chat privado</Link></p><p>El secreto de recuperación permite renovar o revocar accesos y permanece contigo. No lo entregues al agente; usa una conexión distinta para las solicitudes de proveedor.</p></section>
+      <section className="docs-shell docs-section" id="skills"><h2>Skills para tu agente</h2><p>Consulta get_bazaar_skills y enumera las herramientas antes de actuar. El formulario es una alternativa; aprobación y activación son del operador.</p><div className="docs-grid-3">{bazaarRoles.map(role => {const skill=skillPackage(role);return <article className="docs-card" key={role}><h3>{role === "buyer" ? "Comprar" : role === "seller" ? "Ofrecer un servicio" : "Recuperar"}</h3><p>{skill.prompt}</p><a href={skill.download}>Leer / descargar SKILL.md</a></article>;})}</div></section><section className="docs-shell docs-section" id="proveedores">
+        <h2>Para proveedores: prepara tu servicio para revisión</h2>
         <p className="subtitle">
-          Cualquier desarrollador puede envolver una función o microservicio existente y recibir micropagos en USDC directamente en su wallet de Stellar.
+          Prepara una integración y valida su ficha antes de solicitar revisión manual. Este recorrido no publica automáticamente ni ejecuta pagos. Consulta la <a href="/PROVIDER_ONBOARDING.md">guía de preparación para proveedores</a>.
         </p>
         <div className="docs-grid-3">
           <div className="docs-card">
-            <h3>1. Envuelve tu Endpoint</h3>
-            <p>Agrega el middleware x402 que emite el desafío HTTP 402 y verifica la firma con el Facilitador.</p>
-            <code>Express / Next.js / FastAPI</code>
+            <h3>1. Prepara tu servicio</h3>
+            <p>Define entradas, resultado y límites. Reutiliza tu API si ya existe y comprueba que entrega lo declarado. Preparar un desafío x402 no habilita cobros.</p>
+            <code>Borrador e integración</code>
           </div>
           <div className="docs-card">
-            <h3>2. Define tu ServiceCard</h3>
-            <p>Establece tu precio en USDC (ej. <code>0.001</code>), tu dirección pública de Stellar (<code>G...</code>) y el schema de inputs.</p>
+            <h3>2. Valida tu ServiceCard</h3>
+            <p>Confirma precio, activo, red, destino público y entradas. La validación comprueba forma; no certifica control, disponibilidad ni entrega.</p>
             <code>bazaar-card.json</code>
           </div>
           <div className="docs-card">
-            <h3>3. Publica en el Bazaar</h3>
-            <p>Usa <code>/publish</code> para crear y validar un borrador sin secretos. El alta real es server-to-server y revisada.</p>
-            <code>Local Draft → Operator Review</code>
+            <h3>3. Solicita revisión manual</h3>
+            <p>Con recepción habilitada, tu agente puede usar <code>submit_provider_request</code> y recuperar el estado con su acceso privado. <code>/publish</code> es la alternativa manual. Copiar o validar no envía el borrador; verificar, aprobar y activar son acciones separadas del operador.</p>
+            <code>Borrador → Revisión manual</code>
           </div>
         </div>
       </section>
@@ -155,12 +160,12 @@ export default function DocsPage() {
             <tr>
               <td><code>/api/discovery/resources</code></td>
               <td>GET</td>
-              <td>Catálogo paginado completo de ServiceCards activas e indexadas.</td>
+                <td>Catálogo filtrable; consulta partialResults y dynamicRegistry para conocer su disponibilidad.</td>
             </tr>
             <tr>
-              <td><code>/api/discovery/search?q=...</code></td>
+                <td><code>/api/discovery/search?query=...</code></td>
               <td>GET</td>
-              <td>Búsqueda léxica determinista con scoring de relevancia (NDCG = 1.0).</td>
+                <td>Búsqueda léxica determinista con puntuación y estado del registro; no garantiza relevancia perfecta.</td>
             </tr>
             <tr>
               <td><code>/api/mcp</code></td>
@@ -184,4 +189,35 @@ export default function DocsPage() {
       <Footer />
     </main>
   );
+}
+
+export default function DocsPage() {
+  if (process.env.BAZAAR_ENABLE_MARKETPLACE !== 'true') return <LegacyDocsPage/>;
+  return <main className="docs-page"><Navbar/><header className="docs-shell docs-hero">
+    <span className="kicker">DEVELOPER HUB · MCP · STELLAR TESTNET</span>
+    <h1><UiText text="Conecta tu agente o prepara tu servicio."/></h1>
+    <p><UiText text="Tu agente corre en tu infraestructura. Bazaar conserva el catálogo y el historial privado; los pagos requieren autorización y firma local."/></p>
+  </header><nav className="docs-shell docs-index" aria-label="Documentation index">
+    <a href="#connection"><UiText text="Conectar agente"/></a><a href="#purchase"><UiText text="Comprar"/></a><a href="#publish"><UiText text="Publicar"/></a><a href="#recovery"><UiText text="Requisitos y recuperación"/></a>
+  </nav><section className="docs-shell docs-section" id="connection"><h2><UiText text="Cómo conectar tu agente"/></h2>
+    <p><UiText text="Conecta cualquier cliente MCP compatible por HTTP. El catálogo público funciona sin credencial. Tu conexión privada utiliza exclusivamente el acceso de agente de tu propio espacio."/></p>
+    <p><UiText text="Guarda primero tu archivo de recuperación. Contiene tu acceso humano, el del agente y el acceso raíz para renovar o revocar."/></p>
+    <AgentHub/>
+  </section><section className="docs-shell docs-section" id="purchase"><h2><UiText text="Compra con tu agente externo"/></h2>
+    <p><UiText text="Las compras pueden estar restringidas o pausadas. Tu agente comprueba el acceso de tu cuenta, la ficha actual y la disponibilidad antes de solicitar el pedido."/></p>
+    <ol><li><UiText text="Compara las condiciones declaradas del servicio. El catálogo no certifica una compra ni garantiza disponibilidad."/></li>
+      <li><UiText text="Tu agente vuelve a comprobar precio, versión y disponibilidad antes de crear la orden. Autoriza un límite de gasto y firma en tu propia wallet. El pago va directamente al vendedor."/></li>
+      <li><UiText text="Conserva el identificador y el diario del pedido. Un pago confirmado puede tener la entrega pendiente; consulta el mismo pedido."/></li></ol>
+    <p><UiText text="Cada ficha define su precio en USDC oficial de Stellar Testnet. El agente comprador paga directamente al vendedor mediante x402. Bazaar conserva el pedido y la entrega; el pago verificado no certifica su calidad."/></p>
+  </section><section className="docs-shell docs-section" id="publish"><h2><UiText text="Ofrece un servicio con tu agente"/></h2>
+    <p><UiText text="Define tu servicio, prepara la integración y autoriza a tu agente para enviarla a revisión."/></p>
+    <p><UiText text="Tu agente guarda su intención y envía la ficha con"/> <code>submit_market_service</code>. <UiText text="Completa la prueba de control del endpoint y la revisión manual."/></p>
+    <p><UiText text="El acceso humano puede autorizar a su agente actual a enviar fichas a revisión. Una autorización no activa servicios: siguen requiriendo control del endpoint y revisión manual."/></p>
+    <ButtonLink href="/publish"><UiText text="Publicar servicio"/></ButtonLink>
+  </section><section className="docs-shell docs-section" id="recovery"><h2><UiText text="Requisitos y recuperación"/></h2>
+    <p><UiText text="Si falla el acceso a una entrega o se pierde una respuesta, consulta la orden existente y solicita recuperación. No repitas un pago únicamente porque falló el historial."/></p>
+    <p><UiText text="Las consultas y resultados visibles vencen a los siete días. La fecha queda fijada al registrarlos; para órdenes se calcula desde su creación. Las lecturas y reintentos no extienden ese plazo. La aplicación deniega el acceso al contenido vencido."/></p>
+    <div className="ui-actions"><ButtonLink href="/history"><UiText text="Abrir mi historial privado"/></ButtonLink><ButtonLink href="/storage" variant="secondary"><UiText text="Archivos, privacidad y plazo del historial"/></ButtonLink></div>
+    <p><a href="/MARKETPLACE_PILOT.md"><UiText text="Guía original del protocolo (español)"/></a> · <a href="/llms.txt">llms.txt</a> · <a href="/api/openapi">OpenAPI</a></p>
+  </section><Footer/></main>;
 }

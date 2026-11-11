@@ -5,3 +5,9 @@
 contracts/**/target/** linguist-vendored
 work/** linguist-vendored
 public/demo-deliveries/** linguist-vendored
+# Acceptance receipts and frozen provider snapshots must retain their exact bytes.
+docs/evidence/sprint-marketplace/usdc-*.json -text
+docs/evidence/sprint-marketplace/usdc-*.txt -text
+docs/evidence/sprint-marketplace/provider-faucet-*.json -text
+docs/evidence/sprint-marketplace/provider-usdc-source-archive.json -text
+docs/evidence/sprint-marketplace/provider-usdc-source/**/*.source -text linguist-vendored

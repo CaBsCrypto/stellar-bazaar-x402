@@ -1,5 +1,12 @@
 # Conectar actividad y entregas al panel humano
 
+En el Bazaar abierto, las compras verificadas se consultan en «Compras y
+ventas», con `list_market_orders` y `get_market_order` por MCP. El catálogo
+canónico y paginado es `/api/market/catalog`; la compra x402 y la entrega de texto
+se describen en `/BUYER.md` y `/SELLER_AGENT_KIT.md`. Los accesos anteriores y
+sus registros permanecen disponibles en «Otras operaciones». Las instrucciones
+de actividad y WebMCP de este documento corresponden a esos registros anteriores.
+
 El piloto conserva accesos separados de lectura y escritura, asignados por el operador a un propietario. No utiliza una wallet para identificar automáticamente a una persona. No pegues credenciales en prompts, URLs ni argumentos de herramientas.
 
 ## Cliente comprador externo

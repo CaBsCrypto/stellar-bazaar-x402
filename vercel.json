@@ -1,0 +1,32 @@
+{
+  "buildCommand": "next build --webpack",
+  "regions": [
+    "iad1"
+  ],
+  "crons": [
+    {
+      "path": "/api/market/guardian/tick",
+      "schedule": "0 * * * *"
+    }
+  ],
+  "functions": {
+    "app/api/**/route.ts": {
+      "maxDuration": 60
+    }
+  },
+  "git": {
+    "deploymentEnabled": {
+      "main": false,
+      "integration/bazaar-verified-20261111": false,
+      "codex/bazaar-open-release": false,
+      "mission/identity-pilot": false,
+      "fix/operational-guards": false,
+      "review/base-webmcp": false,
+      "review/history-identity": false,
+      "review/usdc-xlm-recovery": false,
+      "review/shared-payment-control": false,
+      "review/consistent-discovery": false,
+      "review/buyer-entry-validation": false
+    }
+  }
+}

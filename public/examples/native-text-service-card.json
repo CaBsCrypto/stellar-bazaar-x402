@@ -1,0 +1,45 @@
+{
+  "version": "bazaar.service-card/v0",
+  "id": "independent-text-example",
+  "name": "Informe de texto: ejemplo",
+  "description": "Ejemplo sintético: sustituye los valores antes de presentar un servicio.",
+  "kind": "http",
+  "url": "https://api.seller.example.com",
+  "routeTemplate": "/v1/marketplace-text",
+  "input": [{ "name": "topic", "type": "string", "required": true }],
+  "network": "stellar:testnet",
+  "payment": {
+    "scheme": "exact",
+    "asset": "USDC",
+    "amount": "0.01",
+    "destination": "GDVR2KDK5DSMNYZJKNISUIOBDC6FZK3XZOIQWSS7KL4BRMD5BMW6RMCQ",
+    "identity": {
+      "kind": "stellar-classic-credit",
+      "network": "stellar:testnet",
+      "code": "USDC",
+      "issuer": "GBBD47IF6LWK7P7MDEVSCWR7DPUWV3NY3DTQEVFL4NAT4AQH3ZLLFLA5",
+      "sacContract": "CBIELTK6YBZJU5UP2WWQEUCYKLPU6AUNZ2BQ4WWFEIE3USCIHMXQDAMA"
+    },
+    "marketplace": {
+      "protocol": "x402-stellar-exact-v2",
+      "resourceTemplate": "/api/market/orders/{operationId}/x402"
+    }
+  },
+  "provider": { "name": "Tu proveedor" },
+  "tags": ["example", "text", "x402"],
+  "delivery": {
+    "mode": "async",
+    "estimatedDurationMs": 1000,
+    "result": {
+      "schemaVersion": "seller-text/v1",
+      "contentType": "text/plain",
+      "terminalStatuses": ["delivered", "delivery-failed"],
+      "hash": { "algorithm": "sha256", "required": true, "scope": "canonical-result" }
+    },
+    "status": { "required": true, "urlTemplate": "/api/market/orders/{operationId}", "pollAfterMs": 60000 },
+    "callback": { "supported": false, "required": false, "authentication": "none" },
+    "retention": { "resultTtlHours": 168, "durable": true },
+    "idempotency": { "required": true, "key": "Idempotency-Key", "replay": "return-original" },
+    "retry": { "retryable": false, "maxAttempts": 1, "failureSemantics": "terminal-error" }
+  }
+}

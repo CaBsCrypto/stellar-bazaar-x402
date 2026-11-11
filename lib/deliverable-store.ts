@@ -141,5 +141,5 @@ export function configuredDeliverableStore() {
       process.env.UPSTASH_REDIS_REST_TOKEN ?? process.env.KV_REST_API_TOKEN;
   if (!url?.startsWith("https://") || !token)
     throw new DeliverableError("STORAGE_UNAVAILABLE");
-  return createDeliverableStore(new Redis({ url, token }));
+  return createDeliverableStore(new Redis({ url, token, retry: { retries: 0 } }));
 }
